@@ -8,8 +8,17 @@ include common.mk
 # Static libraries to build
 LIBS = $(LIBARITH) $(LIBEC) $(LIBSIGN)
 
+# Compile dynamic libraries if the user asked to
+ifeq ($(WITH_DYNAMIC_LIBS),1)
+LIBS += $(LIBARITH_DYN) $(LIBEC_DYN) $(LIBSIGN_DYN)
+endif
+
 # Executables to build
 TESTS_EXEC = $(BUILD_DIR)/ec_self_tests $(BUILD_DIR)/ec_utils
+# We also compile executables with dynamic linking if asked to
+ifeq ($(WITH_DYNAMIC_LIBS),1)
+TESTS_EXEC += $(BUILD_DIR)/ec_self_tests_dyn $(BUILD_DIR)/ec_utils_dyn
+endif
 
 # all and clean, as you might expect
 all: depend $(LIBS) $(TESTS_EXEC)
@@ -19,6 +28,7 @@ clean:
 	@find -name '*.o' -exec rm -f '{}' \;
 	@find -name '*.d' -exec rm -f '{}' \;
 	@find -name '*.a' -exec rm -f '{}' \;
+	@find -name '*.so' -exec rm -f '{}' \;
 	@find -name '*~'  -exec rm -f '{}' \;
 
 # library configuration files
@@ -37,11 +47,24 @@ src/external_deps/%.d: src/external_deps/%.c
 src/external_deps/%.o: src/external_deps/%.c
 	$(CC) $(LIB_CFLAGS) -c $< -o $@
 
-# utils module
+# utils module (for the ARITH layer, we only need
+# NN and FP - and not curves - related stuff. Same goes
+# for EC and SIGN. Hence the distinction between three
+# sets of utils objects.
 
-UTILS_SRC = $(wildcard src/utils/*.c)
-UTILS_OBJECTS = $(patsubst %.c, %.o, $(UTILS_SRC))
-UTILS_DEPS = $(patsubst %.c, %.d, $(UTILS_SRC))
+UTILS_ARITH_SRC = src/utils/utils.c
+UTILS_ARITH_SRC += $(wildcard src/utils/*_nn.c)
+UTILS_ARITH_SRC += $(wildcard src/utils/*_fp.c)
+UTILS_ARITH_OBJECTS = $(patsubst %.c, %.o, $(UTILS_ARITH_SRC))
+UTILS_ARITH_DEPS = $(patsubst %.c, %.d, $(UTILS_ARITH_SRC))
+
+UTILS_EC_SRC = $(wildcard src/utils/*_curves.c)
+UTILS_EC_OBJECTS = $(patsubst %.c, %.o, $(UTILS_EC_SRC))
+UTILS_EC_DEPS = $(patsubst %.c, %.d, $(UTILS_EC_SRC))
+
+UTILS_SIGN_SRC = $(wildcard src/utils/*_keys.c)
+UTILS_SIGN_OBJECTS = $(patsubst %.c, %.o, $(UTILS_SIGN_SRC))
+UTILS_SIGN_DEPS = $(patsubst %.c, %.d, $(UTILS_SIGN_SRC))
 
 src/utils/%.d: src/utils/%.c
 	$(CC) $(LIB_CFLAGS) -MM $< -MF $@
@@ -76,10 +99,16 @@ src/fp/%.o: src/fp/%.c $(NN_CONFIG) $(CFG_DEPS)
 	$(if $(filter $(wildcard src/fp/*.c), $<), $(CC) $(LIB_CFLAGS) -c $< -o $@)
 
 
-LIBARITH_OBJECTS = $(FP_OBJECTS) $(NN_OBJECTS) $(RAND_OBJECTS) $(UTILS_OBJECTS)
+LIBARITH_OBJECTS = $(FP_OBJECTS) $(NN_OBJECTS) $(RAND_OBJECTS) $(UTILS_ARITH_OBJECTS)
 $(LIBARITH): $(LIBARITH_OBJECTS)
 	$(AR) rcs $@ $^
 	$(RANLIB) $@
+
+# Compile dynamic libraries if the user asked to
+ifeq ($(WITH_DYNAMIC_LIBS),1)
+$(LIBARITH_DYN): $(LIBARITH_OBJECTS)
+	$(CC) $(LIB_DYN_CFLAGS) $^ -o $@
+endif
 
 # curve module
 
@@ -94,10 +123,16 @@ src/curves/%.o: src/curves/%.c $(NN_CONFIG) $(CFG_DEPS)
 	$(if $(filter $(wildcard src/curves/*.c), $<), $(CC) $(LIB_CFLAGS) -c $< -o $@)
 
 
-LIBEC_OBJECTS = $(LIBARITH_OBJECTS) $(CURVES_OBJECTS)
+LIBEC_OBJECTS = $(LIBARITH_OBJECTS) $(CURVES_OBJECTS) $(UTILS_EC_OBJECTS)
 $(LIBEC): $(LIBEC_OBJECTS)
 	$(AR) rcs $@ $^
 	$(RANLIB) $@
+
+# Compile dynamic libraries if the user asked to
+ifeq ($(WITH_DYNAMIC_LIBS),1)
+$(LIBEC_DYN): $(LIBEC_OBJECTS)
+	$(CC) $(LIB_DYN_CFLAGS) $^ -o $@
+endif
 
 # Hash module
 
@@ -136,10 +171,16 @@ $(KEY_OBJECTS): $(KEY_SRC) $(NN_CONFIG) $(CFG_DEPS)
 	$(if $(filter $(wildcard src/sig/*.c), $<), $(CC) $(LIB_CFLAGS) -c $< -o $@)
 
 
-LIBSIGN_OBJECTS = $(LIBEC_OBJECTS) $(HASH_OBJECTS) $(SIG_OBJECTS) $(KEY_OBJECTS)
+LIBSIGN_OBJECTS = $(LIBEC_OBJECTS) $(HASH_OBJECTS) $(SIG_OBJECTS) $(KEY_OBJECTS) $(UTILS_SIGN_OBJECTS)
 $(LIBSIGN): $(LIBSIGN_OBJECTS)
 	$(AR) rcs $@ $^
 	$(RANLIB) $@
+
+# Compile dynamic libraries if the user asked to
+ifeq ($(WITH_DYNAMIC_LIBS),1)
+$(LIBSIGN_DYN): $(LIBSIGN_OBJECTS)
+	$(CC) $(LIB_DYN_CFLAGS) $^ -o $@
+endif
 
 # Test elements (objects and binaries)
 
@@ -169,8 +210,17 @@ $(BUILD_DIR)/ec_self_tests: $(TESTS_OBJECTS_CORE) $(TESTS_OBJECTS_SELF_SRC) $(EX
 $(BUILD_DIR)/ec_utils: $(TESTS_OBJECTS_CORE) $(TESTS_OBJECTS_UTILS_SRC) $(EXT_DEPS_OBJECTS) $(LIBSIGN)
 	$(CC) $(BIN_CFLAGS) $(BIN_LDFLAGS) -DWITH_STDLIB  $^ -o $@
 
+# If the user asked for dynamic libraries, compile versions of our binaries against them
+ifeq ($(WITH_DYNAMIC_LIBS),1)
+$(BUILD_DIR)/ec_self_tests_dyn: $(TESTS_OBJECTS_CORE) $(TESTS_OBJECTS_SELF_SRC) $(EXT_DEPS_OBJECTS)
+	$(CC) $(BIN_CFLAGS) $(BIN_LDFLAGS) -L$(BUILD_DIR) $^ -lsign -o $@
 
-DEPENDS = $(EXT_DEPS_DEPS) $(UTILS_DEPS) $(NN_DEPS) $(FP_DEPS) $(CURVES_DEPS) \
+$(BUILD_DIR)/ec_utils_dyn: $(TESTS_OBJECTS_CORE) $(TESTS_OBJECTS_UTILS_SRC) $(EXT_DEPS_OBJECTS)
+	$(CC) $(BIN_CFLAGS) $(BIN_LDFLAGS) -L$(BUILD_DIR) -DWITH_STDLIB  $^ -lsign -o $@
+endif
+
+
+DEPENDS = $(EXT_DEPS_DEPS) $(UTILS_ARITH_DEPS) $(UTILS_EC_DEPS) $(UTILS_SIGN_DEPS) $(NN_DEPS) $(FP_DEPS) $(CURVES_DEPS) \
 	  $(HASH_DEPS) $(SIG_DEPS) $(KEY_DEPS) $(TESTS_OBJECTS_CORE_DEPS) $(TESTS_OBJECTS_SELF_DEPS) $(TESTS_OBJECTS_UTILS_DEPS)
 depend: $(DEPENDS)
 
