@@ -20,11 +20,13 @@ ifeq ($(WITH_DYNAMIC_LIBS),1)
 TESTS_EXEC += $(BUILD_DIR)/ec_self_tests_dyn $(BUILD_DIR)/ec_utils_dyn
 endif
 
+EXEC_TO_CLEAN = $(BUILD_DIR)/ec_self_tests $(BUILD_DIR)/ec_utils $(BUILD_DIR)/ec_self_tests_dyn $(BUILD_DIR)/ec_utils_dyn
+
 # all and clean, as you might expect
 all: depend $(LIBS) $(TESTS_EXEC)
 
 clean:
-	@rm -f $(LIBS) $(TESTS_EXEC)
+	@rm -f $(LIBS) $(EXEC_TO_CLEAN)
 	@find -name '*.o' -exec rm -f '{}' \;
 	@find -name '*.d' -exec rm -f '{}' \;
 	@find -name '*.a' -exec rm -f '{}' \;
