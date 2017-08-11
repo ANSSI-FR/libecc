@@ -109,7 +109,7 @@ endif
 ifndef USER_DEFINED_LDFLAGS
 BIN_LDFLAGS ?= $(LDFLAGS) $(FPIE_LDFLAGS)
 else
-BIN_LDFLAGS ?= $(LDFLAGS)
+BIN_LDFLAGS ?= $(USER_DEFINED_LDFLAGS)
 endif
 
 # Static libraries to produce or link to
