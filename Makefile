@@ -109,7 +109,7 @@ $(LIBARITH): $(LIBARITH_OBJECTS)
 # Compile dynamic libraries if the user asked to
 ifeq ($(WITH_DYNAMIC_LIBS),1)
 $(LIBARITH_DYN): $(LIBARITH_OBJECTS)
-	$(CC) $(LIB_DYN_CFLAGS) $^ -o $@
+	$(CC) $(LIB_CFLAGS) $(LIB_DYN_LDFLAGS) $^ -o $@
 endif
 
 # curve module
@@ -133,7 +133,7 @@ $(LIBEC): $(LIBEC_OBJECTS)
 # Compile dynamic libraries if the user asked to
 ifeq ($(WITH_DYNAMIC_LIBS),1)
 $(LIBEC_DYN): $(LIBEC_OBJECTS)
-	$(CC) $(LIB_DYN_CFLAGS) $^ -o $@
+	$(CC) $(LIB_CFLAGS) $(LIB_DYN_LDFLAGS) $^ -o $@
 endif
 
 # Hash module
@@ -181,7 +181,7 @@ $(LIBSIGN): $(LIBSIGN_OBJECTS)
 # Compile dynamic libraries if the user asked to
 ifeq ($(WITH_DYNAMIC_LIBS),1)
 $(LIBSIGN_DYN): $(LIBSIGN_OBJECTS)
-	$(CC) $(LIB_DYN_CFLAGS) $^ -o $@
+	$(CC) $(LIB_CFLAGS) $(LIB_DYN_LDFLAGS) $^ -o $@
 endif
 
 # Test elements (objects and binaries)
