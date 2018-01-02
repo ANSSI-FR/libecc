@@ -328,7 +328,7 @@ static int ec_structured_sig_export_to_buf(const u8 *sig, u32 siglen,
 	int curve_type;
 
 	/* We only deal with signatures of length < 256 */
-	MUST_HAVE(siglen < EC_MAX_SIGLEN);
+	MUST_HAVE(siglen <= EC_MAX_SIGLEN);
 
 	/* We first export the metadata consisting of:
 	 *      - One byte = the EC algorithm type
@@ -369,7 +369,7 @@ static int ec_structured_sig_import_from_buf(u8 *sig, u32 siglen,
 	u32 metadata_len = (3 * sizeof(u8));
 
 	/* We only deal with signatures of length < 256 */
-	MUST_HAVE(siglen < EC_MAX_SIGLEN);
+	MUST_HAVE(siglen <= EC_MAX_SIGLEN);
 
 	/* We first import the metadata consisting of:
 	 *      - One byte = the EC algorithm type
