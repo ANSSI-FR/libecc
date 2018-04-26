@@ -213,6 +213,7 @@ static int generate_and_export_key_pair(const char *ec_name,
 	ec_key_pair kp;
 	FILE *file;
 	int ret;
+	aff_pt Q_aff;
 
 	MUST_HAVE(ec_name != NULL);
 	MUST_HAVE(fname_prefix != NULL);
@@ -230,6 +231,13 @@ static int generate_and_export_key_pair(const char *ec_name,
 
 	/* Generate the key pair */
 	ec_key_pair_gen(&kp, &params, sig_type);
+
+	/* Get the affine representation and go back to projective for the public key.
+	 * This avoids ambiguity when exporting the point, and is mostly here
+	 * for compatibility with external libraries.
+	 */
+	prj_pt_to_aff(&Q_aff, &(kp.pub_key.y));
+	ec_shortw_aff_to_prj(&(kp.pub_key.y), &Q_aff);
 
 	/*************************/
 
