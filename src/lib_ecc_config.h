@@ -72,6 +72,6 @@
 #define WITH_SIG_ECGDSA
 #define WITH_SIG_ECRDSA
 
-#endif /* LIBECC_CONFIG_OVERRIDE */
+#endif /* WITH_LIBECC_CONFIG_OVERRIDE */
 
 #endif /* __LIB_ECC_CONFIG_H__ */
