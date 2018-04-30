@@ -1,7 +1,7 @@
 .SUFFIXES:
 
 # Where to put generated objects
-BUILD_DIR=build
+BUILD_DIR ?= build
 include common.mk
 
 
@@ -27,11 +27,11 @@ all: depend $(LIBS) $(TESTS_EXEC)
 
 clean:
 	@rm -f $(LIBS) $(EXEC_TO_CLEAN)
-	@find -name '*.o' -exec rm -f '{}' \;
-	@find -name '*.d' -exec rm -f '{}' \;
-	@find -name '*.a' -exec rm -f '{}' \;
-	@find -name '*.so' -exec rm -f '{}' \;
-	@find -name '*~'  -exec rm -f '{}' \;
+	@find . -name '*.o' -exec rm -f '{}' \;
+	@find . -name '*.d' -exec rm -f '{}' \;
+	@find . -name '*.a' -exec rm -f '{}' \;
+	@find . -name '*.so' -exec rm -f '{}' \;
+	@find . -name '*~'  -exec rm -f '{}' \;
 
 # library configuration files
 
