@@ -22,6 +22,18 @@
  * algorithms and signature/verification schemes).
  */
 
+/* It is possible to override the LIBECC configuration by defining 
+ * the WITH_LIBECC_CONFIG_OVERRIDE preprocessing flag in the CFLAGS. When
+ * this is done, it is expected that the user defines the curves,
+ * hash algorithms and signature schemes in the compilation
+ * command line (e.g. via the CFLAGS).
+ * For instance, in order to only use FRP256V1, SHA-256 and ECDSA, add to the CFLAGS:
+ *
+ *   -DWITH_LIBECC_CONFIG_OVERRIDE -DWITH_CURVE_FRP256V1 -DWITH_HASH_SHA256 -DWITH_SIG_ECDSA
+ *
+ */
+#ifndef WITH_LIBECC_CONFIG_OVERRIDE
+
 /* Supported curves */
 #define WITH_CURVE_FRP256V1
 #define WITH_CURVE_SECP192R1
@@ -59,5 +71,7 @@
 #define WITH_SIG_ECFSDSA
 #define WITH_SIG_ECGDSA
 #define WITH_SIG_ECRDSA
+
+#endif /* LIBECC_CONFIG_OVERRIDE */
 
 #endif /* __LIB_ECC_CONFIG_H__ */
