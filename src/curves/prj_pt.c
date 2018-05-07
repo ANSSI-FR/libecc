@@ -86,6 +86,43 @@ void prj_pt_zero(prj_pt_t out)
 	return;
 }
 
+/* Check if a projective point is indeed on its curve.
+ * Returns 1 if the point is on the curve, 0 if not.
+ */
+int prj_pt_is_on_curve(prj_pt_src_t in)
+{
+	int ret = 0;
+	aff_pt in_aff;
+	fp l, r;
+
+	prj_pt_check_initialized(in);
+
+	/* Move to the affine unique representation */
+	prj_pt_to_aff(&in_aff, in);
+
+	/* Check for that the coordinates using the Weierstrass equation:
+	 * y^2 % p = (x^3 + a * x + b) % p
+	 */
+	fp_init(&l, in_aff.x.ctx);
+	fp_init(&r, in_aff.x.ctx);
+	/* Compute y^2 % p */
+	fp_sqr(&l, &(in_aff.y));
+	/* Compute x * (x^2 + a) + b mod p */
+	fp_sqr(&r, &(in_aff.x));
+	fp_add(&r, &r, &(in_aff.crv->a));
+	fp_mul(&r, &r, &(in_aff.x));
+	fp_add(&r, &r, &(in_aff.crv->b));
+
+	/* Check the equality of left and right terms */
+	ret = (fp_cmp(&r, &l) == 0) ? 1 : 0;
+
+	aff_pt_uninit(&in_aff);
+	fp_uninit(&l);
+	fp_uninit(&r);
+
+	return ret;
+}
+
 void prj_pt_copy(prj_pt_t out, prj_pt_src_t in)
 {
 	prj_pt_check_initialized(in);
@@ -231,6 +268,14 @@ int prj_pt_import_from_buf(prj_pt_t pt,
 
 	/* Mark the point as initialized */
 	pt->magic = PRJ_PT_MAGIC;
+
+	/* Check that the point is indeed on the provided curve, uninitialize it
+	 * if this is not the case.
+	 */
+	if(!prj_pt_is_on_curve(pt)){
+		prj_pt_uninit(pt);
+		return -1;
+	}
 
 	return 0;
 }

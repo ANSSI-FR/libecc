@@ -51,6 +51,8 @@ void prj_pt_zero(prj_pt_t out);
 
 int prj_pt_iszero(prj_pt_src_t in);
 
+int prj_pt_is_on_curve(prj_pt_src_t in);
+
 void prj_pt_copy(prj_pt_t out, prj_pt_src_t in);
 
 void prj_pt_to_aff(aff_pt_t out, prj_pt_src_t in);
