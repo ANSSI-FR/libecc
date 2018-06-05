@@ -10,7 +10,7 @@ See [LICENSE](LICENSE) file at the root folder of the project.
 
   * Ryad BENADJILA (<mailto:ryadbenadjila@gmail.com>)
   * Arnaud EBALARD (<mailto:arnaud.ebalard@ssi.gouv.fr>)
-  * Jean-Pierre FLORI (<mailto:jean-pierre.flori@ssi.gouv.fr>)
+  * Jean-Pierre FLORI (<mailto:jpflori@gmail.com>)
 
 ## Contributors
   * Nicolas VIVET (<mailto:nicolas.vivet@ssi.gouv.fr>)
