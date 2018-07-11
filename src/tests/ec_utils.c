@@ -1148,7 +1148,9 @@ int main(int argc, char *argv[])
 			printf("\targ3 = file name prefix\n");
 			return -1;
 		}
-		generate_and_export_key_pair(argv[2], argv[3], argv[4]);
+		if(generate_and_export_key_pair(argv[2], argv[3], argv[4])){
+			return -1;
+		}
 	}
 	else if (are_str_equal(argv[1], "sign")) {
 		/* Sign something --------------------------------
@@ -1181,8 +1183,10 @@ int main(int argc, char *argv[])
 			printf("\targ6 = output file containing the signature\n");
 			return -1;
 		}
-		sign_bin_file(argv[2], argv[3], argv[4], argv[5], argv[6],
-			      argv[7], NULL, NULL);
+		if(sign_bin_file(argv[2], argv[3], argv[4], argv[5], argv[6],
+			      argv[7], NULL, NULL)){
+			return -1;
+		}
 	}
 	else if (are_str_equal(argv[1], "verify")) {
 		/* Verify something ------------------------------
@@ -1256,8 +1260,10 @@ int main(int argc, char *argv[])
 			printf("\targ8 = version of the metadata header\n");
 			return -1;
 		}
-		sign_bin_file(argv[2], argv[3], argv[4], argv[5], argv[6],
-			      argv[7], argv[8], argv[9]);
+		if(sign_bin_file(argv[2], argv[3], argv[4], argv[5], argv[6],
+			      argv[7], argv[8], argv[9])){
+			return -1;
+		}
 	}
 	else if (are_str_equal(argv[1], "struct_verify")) {
 		/* Verify something ------------------------------
