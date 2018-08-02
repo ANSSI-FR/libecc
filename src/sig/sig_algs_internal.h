@@ -290,6 +290,14 @@ static const ec_sig_mapping ec_sig_maps[] = {
 #endif /* WITH_SIG_ECRDSA */
 	{.type = UNKNOWN_SIG_ALG,	/* Needs to be kept last */
 	 .name = "UNKNOWN",
+	 .siglen = 0,
+	 .init_pub_key = NULL,
+	 .sign_init = NULL,
+	 .sign_update = NULL,
+	 .sign_finalize = NULL,
+	 .verify_init = NULL,
+	 .verify_update = NULL,
+	 .verify_finalize = NULL,
 	 },
 };
 

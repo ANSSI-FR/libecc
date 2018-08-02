@@ -244,7 +244,7 @@ int ec_structured_priv_key_export_to_buf(const ec_priv_key *priv_key,
 	u8 metadata_len = (3 * sizeof(u8));
 	const u8 *curve_name;
 	u8 curve_name_len;
-	int curve_type;
+	ec_curve_type curve_type;
 
 	priv_key_check_initialized(priv_key);
 
@@ -259,10 +259,10 @@ int ec_structured_priv_key_export_to_buf(const ec_priv_key *priv_key,
 	MUST_HAVE(priv_key->params->curve_name != NULL);
 
 	/* Push the key type */
-	priv_key_buf[0] = EC_PRIVKEY;
+	priv_key_buf[0] = (u8)EC_PRIVKEY;
 
 	/* Push the algorithm type */
-	priv_key_buf[1] = priv_key->key_type;
+	priv_key_buf[1] = (u8)priv_key->key_type;
 
 	/* Push the curve type */
 	curve_name = priv_key->params->curve_name;
@@ -343,7 +343,7 @@ int ec_structured_pub_key_export_to_buf(const ec_pub_key *pub_key,
 	u8 metadata_len = (3 * sizeof(u8));
 	const u8 *curve_name;
 	u8 curve_name_len;
-	int curve_type;
+	ec_curve_type curve_type;
 
 	pub_key_check_initialized(pub_key);
 
@@ -358,10 +358,10 @@ int ec_structured_pub_key_export_to_buf(const ec_pub_key *pub_key,
 	MUST_HAVE(pub_key->params->curve_name != NULL);
 
 	/* Push the key type */
-	pub_key_buf[0] = EC_PUBKEY;
+	pub_key_buf[0] = (u8)EC_PUBKEY;
 
 	/* Push the algorithm type */
-	pub_key_buf[1] = pub_key->key_type;
+	pub_key_buf[1] = (u8)pub_key->key_type;
 
 	/* Push the curve type */
 	curve_name = pub_key->params->curve_name;

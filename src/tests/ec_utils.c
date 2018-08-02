@@ -333,7 +333,7 @@ static int ec_structured_sig_export_to_buf(const u8 *sig, u32 siglen,
 {
 	u32 metadata_len = (3 * sizeof(u8));
 	u8 curve_name_len;
-	int curve_type;
+	ec_curve_type curve_type;
 
 	/* We only deal with signatures of length < 256 */
 	MUST_HAVE(siglen <= EC_MAX_SIGLEN);
@@ -349,8 +349,8 @@ static int ec_structured_sig_export_to_buf(const u8 *sig, u32 siglen,
 		return -1;
 	}
 
-	out_buf[0] = sig_type;
-	out_buf[1] = hash_type;
+	out_buf[0] = (u8)sig_type;
+	out_buf[1] = (u8)hash_type;
 	curve_name_len = (u8)local_strlen((const char *)curve_name) + 1;
 	curve_type = ec_get_curve_type_by_name(curve_name, curve_name_len);
 	out_buf[2] = (u8)curve_type;

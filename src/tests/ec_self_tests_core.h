@@ -3811,11 +3811,11 @@ typedef enum {
 
 static u32 encode_error_value(const ec_test_case *c, test_err_kind failed_test)
 {
-	u8 ctype = ec_get_curve_type_by_name(c->ec_str_p->name->buf,
+	ec_curve_type ctype = ec_get_curve_type_by_name(c->ec_str_p->name->buf,
 					     c->ec_str_p->name->buflen);
-	u8 stype = c->sig_type;
-	u8 htype = c->hash_type;
-	u8 etype = failed_test;
+	ec_sig_alg_type stype = c->sig_type;
+	hash_alg_type htype = c->hash_type;
+	test_err_kind etype = failed_test;
 
 	return (((u32)ctype << 24) |
 		((u32)stype << 16) |
