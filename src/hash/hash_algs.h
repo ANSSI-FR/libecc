@@ -210,6 +210,7 @@ static const hash_mapping hash_maps[] = {
 #endif /* MAX_HASH_ALG_NAME_LEN */
 #endif /* WITH_HASH_SHA3_512 */
 	{.type = UNKNOWN_HASH_ALG,	/* Needs to be kept last */
+	 .name = "UNKNOWN",
 	 .digest_size = 0,
 	 .block_size = 0,
 	 .hfunc_init = NULL,
