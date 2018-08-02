@@ -172,6 +172,7 @@ static const ec_sig_mapping ec_sig_maps[] = {
 #ifdef WITH_SIG_ECDSA
 	{.type = ECDSA,
 	 .name = "ECDSA",
+	 .siglen = ecdsa_siglen,
 	 .init_pub_key = ecdsa_init_pub_key,
 	 .sign_init = _ecdsa_sign_init,
 	 .sign_update = _ecdsa_sign_update,
@@ -179,7 +180,6 @@ static const ec_sig_mapping ec_sig_maps[] = {
 	 .verify_init = _ecdsa_verify_init,
 	 .verify_update = _ecdsa_verify_update,
 	 .verify_finalize = _ecdsa_verify_finalize,
-	 .siglen = ecdsa_siglen,
 	 },
 #if (MAX_SIG_ALG_NAME_LEN < 6)
 #undef MAX_SIG_ALG_NAME_LEN
@@ -189,6 +189,7 @@ static const ec_sig_mapping ec_sig_maps[] = {
 #ifdef WITH_SIG_ECKCDSA
 	{.type = ECKCDSA,
 	 .name = "ECKCDSA",
+	 .siglen = eckcdsa_siglen,
 	 .init_pub_key = eckcdsa_init_pub_key,
 	 .sign_init = _eckcdsa_sign_init,
 	 .sign_update = _eckcdsa_sign_update,
@@ -196,7 +197,6 @@ static const ec_sig_mapping ec_sig_maps[] = {
 	 .verify_init = _eckcdsa_verify_init,
 	 .verify_update = _eckcdsa_verify_update,
 	 .verify_finalize = _eckcdsa_verify_finalize,
-	 .siglen = eckcdsa_siglen,
 	 },
 #if (MAX_SIG_ALG_NAME_LEN < 8)
 #undef MAX_SIG_ALG_NAME_LEN
@@ -206,6 +206,7 @@ static const ec_sig_mapping ec_sig_maps[] = {
 #ifdef WITH_SIG_ECSDSA
 	{.type = ECSDSA,
 	 .name = "ECSDSA",
+	 .siglen = ecsdsa_siglen,
 	 .init_pub_key = ecsdsa_init_pub_key,
 	 .sign_init = _ecsdsa_sign_init,
 	 .sign_update = _ecsdsa_sign_update,
@@ -213,7 +214,6 @@ static const ec_sig_mapping ec_sig_maps[] = {
 	 .verify_init = _ecsdsa_verify_init,
 	 .verify_update = _ecsdsa_verify_update,
 	 .verify_finalize = _ecsdsa_verify_finalize,
-	 .siglen = ecsdsa_siglen,
 	 },
 #if (MAX_SIG_ALG_NAME_LEN < 7)
 #undef MAX_SIG_ALG_NAME_LEN
@@ -223,6 +223,7 @@ static const ec_sig_mapping ec_sig_maps[] = {
 #ifdef WITH_SIG_ECOSDSA
 	{.type = ECOSDSA,
 	 .name = "ECOSDSA",
+	 .siglen = ecosdsa_siglen,
 	 .init_pub_key = ecosdsa_init_pub_key,
 	 .sign_init = _ecosdsa_sign_init,
 	 .sign_update = _ecosdsa_sign_update,
@@ -230,7 +231,6 @@ static const ec_sig_mapping ec_sig_maps[] = {
 	 .verify_init = _ecosdsa_verify_init,
 	 .verify_update = _ecosdsa_verify_update,
 	 .verify_finalize = _ecosdsa_verify_finalize,
-	 .siglen = ecosdsa_siglen,
 	 },
 #if (MAX_SIG_ALG_NAME_LEN < 8)
 #undef MAX_SIG_ALG_NAME_LEN
@@ -240,6 +240,7 @@ static const ec_sig_mapping ec_sig_maps[] = {
 #ifdef WITH_SIG_ECFSDSA
 	{.type = ECFSDSA,
 	 .name = "ECFSDSA",
+	 .siglen = ecfsdsa_siglen,
 	 .init_pub_key = ecfsdsa_init_pub_key,
 	 .sign_init = _ecfsdsa_sign_init,
 	 .sign_update = _ecfsdsa_sign_update,
@@ -247,7 +248,6 @@ static const ec_sig_mapping ec_sig_maps[] = {
 	 .verify_init = _ecfsdsa_verify_init,
 	 .verify_update = _ecfsdsa_verify_update,
 	 .verify_finalize = _ecfsdsa_verify_finalize,
-	 .siglen = ecfsdsa_siglen,
 	 },
 #if (MAX_SIG_ALG_NAME_LEN < 8)
 #undef MAX_SIG_ALG_NAME_LEN
@@ -257,6 +257,7 @@ static const ec_sig_mapping ec_sig_maps[] = {
 #ifdef WITH_SIG_ECGDSA
 	{.type = ECGDSA,
 	 .name = "ECGDSA",
+	 .siglen = ecgdsa_siglen,
 	 .init_pub_key = ecgdsa_init_pub_key,
 	 .sign_init = _ecgdsa_sign_init,
 	 .sign_update = _ecgdsa_sign_update,
@@ -264,7 +265,6 @@ static const ec_sig_mapping ec_sig_maps[] = {
 	 .verify_init = _ecgdsa_verify_init,
 	 .verify_update = _ecgdsa_verify_update,
 	 .verify_finalize = _ecgdsa_verify_finalize,
-	 .siglen = ecgdsa_siglen,
 	 },
 #if (MAX_SIG_ALG_NAME_LEN < 7)
 #undef MAX_SIG_ALG_NAME_LEN
@@ -274,6 +274,7 @@ static const ec_sig_mapping ec_sig_maps[] = {
 #ifdef WITH_SIG_ECRDSA
 	{.type = ECRDSA,
 	 .name = "ECRDSA",
+	 .siglen = ecrdsa_siglen,
 	 .init_pub_key = ecrdsa_init_pub_key,
 	 .sign_init = _ecrdsa_sign_init,
 	 .sign_update = _ecrdsa_sign_update,
@@ -281,7 +282,6 @@ static const ec_sig_mapping ec_sig_maps[] = {
 	 .verify_init = _ecrdsa_verify_init,
 	 .verify_update = _ecrdsa_verify_update,
 	 .verify_finalize = _ecrdsa_verify_finalize,
-	 .siglen = ecrdsa_siglen,
 	 },
 #if (MAX_SIG_ALG_NAME_LEN < 7)
 #undef MAX_SIG_ALG_NAME_LEN
