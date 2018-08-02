@@ -388,8 +388,8 @@ static int ec_structured_sig_import_from_buf(u8 *sig, u32 siglen,
 	if (outlen > (siglen + metadata_len))
 		return -1;
 
-	*sig_type = out_buf[0];
-	*hash_type = out_buf[1];
+	*sig_type = (ec_sig_alg_type)out_buf[0];
+	*hash_type = (hash_alg_type)out_buf[1];
 	if (ec_get_curve_name_by_type((ec_curve_type) out_buf[2],
 				      curve_name, MAX_CURVE_NAME_LEN)) {
 		return -1;

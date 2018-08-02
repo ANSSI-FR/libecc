@@ -21,7 +21,7 @@
  */
 u8 are_equal(const void *a, const void *b, u32 len)
 {
-	const u8 *la = a, *lb = b;
+	const u8 *la = (const u8*)a, *lb = (const u8*)b;
 	u8 ret = 1;
 	u32 i;
 
@@ -37,8 +37,8 @@ u8 are_equal(const void *a, const void *b, u32 len)
 /* This function is a simple (non-optimized) reimplementation of memcpy() */
 void local_memcpy(void *dst, const void *src, u32 n)
 {
-	const u8 *lsrc = src;
-	u8 *ldst = dst;
+	const u8 *lsrc = (const u8*)src;
+	u8 *ldst = (u8*)dst;
 	u32 i;
 
 	for (i = 0; i < n; i++) {
@@ -51,7 +51,7 @@ void local_memcpy(void *dst, const void *src, u32 n)
 /* This function is a simple (non-optimized) reimplementation of memset() */
 void local_memset(void *v, u8 c, u32 n)
 {
-	volatile u8 *p = v;
+	volatile u8 *p = (volatile u8*)v;
 	u32 i;
 
 	for (i = 0; i < n; i++) {
