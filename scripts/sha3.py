@@ -13,7 +13,7 @@
 # *  This software is licensed under a dual BSD and GPL v2 license.
 # *  See LICENSE file at the root folder of the project.
 # */
-import struct
+import struct, sys
 
 keccak_rc = [
         0x0000000000000001, 0x0000000000008082, 0x800000000000808A, 0x8000000080008000,
@@ -32,6 +32,11 @@ keccak_rot = [
         [ 27, 20, 39,  8, 14 ],
 ]
 
+def is_python_2():
+    if sys.version_info[0] < 3:
+        return True
+    else:
+        return False
 
 # Keccak function
 def keccak_rotl(x, l):
@@ -41,7 +46,10 @@ def keccakround(bytestate, rc):
 	# Import little endian state
 	state = [0] * 25
 	for i in range(0, 25):
-		(state[i],) = struct.unpack('<Q', ''.join(bytestate[(8*i):(8*i)+8]))
+		to_unpack = ''.join(bytestate[(8*i):(8*i)+8])
+		if is_python_2() == False:
+			to_unpack = to_unpack.encode('latin-1')
+		(state[i],) = struct.unpack('<Q', to_unpack)
 	# Proceed with the KECCAK core
 	bcd = [0] * 25
 	# Theta
@@ -65,13 +73,16 @@ def keccakround(bytestate, rc):
 	# Pack the output state
 	output = [0] * (25 * 8)
 	for i in range(0, 25):
-		output[(8*i):(8*i)+1] = struct.pack('<Q', state[i])
+		packed = struct.pack('<Q', state[i])
+		if is_python_2() == True:
+			output[(8*i):(8*i)+1] = packed
+		else:
+			output[(8*i):(8*i)+1] = packed.decode('latin-1')
 	return output
 
 def keccakf(bytestate):
 	for rnd in range(0, 24):
-		bytestate = keccakround(bytestate, rnd)
-		
+		bytestate = keccakround(bytestate, rnd)	
 	return bytestate
 
 # SHA-3 context class
@@ -86,6 +97,8 @@ class Sha3_ctx(object):
 	def block_size(self):
 		return self.block_size
 	def update(self, message):
+		if (is_python_2() == False):
+			message = message.decode('latin-1')
 		for i in range(0, len(message)):
 			self.state[self.idx] = chr(ord(self.state[self.idx]) ^ ord(message[i]))
 			self.idx = self.idx + 1
@@ -94,6 +107,9 @@ class Sha3_ctx(object):
 				self.idx = 0
 	def digest(self):
 		self.state[self.idx] = chr(ord(self.state[self.idx]) ^ 0x06)
-		self.state[self.block_size - 1] = chr(ord(self.state[self.block_size - 1]) ^ 0x80)
+		self.state[int(self.block_size - 1)] = chr(ord(self.state[int(self.block_size - 1)]) ^ 0x80)
 		self.state = keccakf(self.state)
-		return ''.join(self.state[:self.digest_size])
+		digest = ''.join(self.state[:int(self.digest_size)])
+		if is_python_2() == False:
+			digest = digest.encode('latin-1')
+		return digest

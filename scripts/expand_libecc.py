@@ -22,10 +22,25 @@ import random, sys, re, math, os, getopt, glob, copy, hashlib, binascii, string,
 # for SHA-3 functions for now
 import sha3
 
+# Handle Python 2/3 issues
+from builtins import input
+from past.builtins import xrange
+
 ### Ctrl-C handler
 def handler(signal, frame):
-    print "\nSIGINT caught: exiting ..."
+    print("\nSIGINT caught: exiting ...")
     exit(0)
+
+# Helper to ask the user for something
+def get_user_input(prompt):
+    # Handle the Python 2/3 issue
+    return input(prompt)
+
+def is_python_2():
+    if sys.version_info[0] < 3:
+        return True
+    else:
+        return False
 
 ##########################################################
 #### Math helpers
@@ -50,8 +65,8 @@ def compute_monty_coef(prime, pbitlen, wlen):
     of p in bits. It is expected to be a multiple of word
     bit size.
     """
-    r = (1 << pbitlen) % prime
-    r_square = (1 << (2 * pbitlen)) % prime
+    r = (1 << int(pbitlen)) % prime
+    r_square = (1 << (2 * int(pbitlen))) % prime
     mpinv = 2**wlen - (modinv(prime, 2**wlen))
     return r, r_square, mpinv
 
@@ -64,10 +79,10 @@ def compute_div_coef(prime, pbitlen, wlen):
     while tmp != 0:
         tmp = tmp >> 1
         cnt += 1
-    pshift = pbitlen - cnt
+    pshift = int(pbitlen - cnt)
     primenorm = prime << pshift
     B = 2**wlen
-    prec = B**3 / ((primenorm >> (pbitlen - 2*wlen)) + 1) - B
+    prec = B**3 // ((primenorm >> int(pbitlen - 2*wlen)) + 1) - B
     return pshift, primenorm, prec
 
 def is_probprime(n):
@@ -100,7 +115,7 @@ def is_probprime(n):
     return True # no base tested showed n as composite
 
 def legendre_symbol(a, p):
-    ls = pow(a, (p - 1) / 2, p)
+    ls = pow(a, (p - 1) // 2, p)
     return -1 if ls == p - 1 else ls
 
 # Tonelli-Shanks algorithm to find square roots
@@ -114,7 +129,7 @@ def mod_sqrt(a, p):
     elif p == 2:
         return a
     elif p % 4 == 3:
-        return pow(a, (p + 1) / 4, p)
+        return pow(a, (p + 1) // 4, p)
     s = p - 1
     e = 0
     while s % 2 == 0:
@@ -123,7 +138,7 @@ def mod_sqrt(a, p):
     n = 2
     while legendre_symbol(n, p) != -1:
         n += 1
-    x = pow(a, (s + 1) / 2, p)
+    x = pow(a, (s + 1) // 2, p)
     b = pow(a, s, p)
     g = pow(n, s, p)
     r = e
@@ -295,14 +310,14 @@ def getbitlen(bint):
     """
     Returns the number of bits encoding an integer
     """
-    return bint.bit_length()
+    return int(bint).bit_length()
 
 def getbytelen(bint):
     """
     Returns the number of bytes encoding an integer
     """
     bitsize = getbitlen(bint)
-    bytesize = bitsize / 8
+    bytesize = int(bitsize // 8)
     if bitsize % 8 != 0:
         bytesize += 1
     return bytesize
@@ -315,7 +330,7 @@ def stringtoint(bitstring):
     return acc
 
 def inttostring(a):
-    size = getbytelen(a)
+    size = int(getbytelen(a))
     outstr = ""
     for i in range(0, size):
         outstr = outstr + chr((a >> (8*(size - 1 - i))) & 0xFF)
@@ -342,7 +357,7 @@ def truncate(bitstring, bitlen, keep):
     # Check if truncation is needed
     if strbitlen > bitlen:
         if keep == "LEFT":
-            return expand(inttostring(stringtoint(bitstring) >> (strbitlen - bitlen)), bitlen, "LEFT")
+            return expand(inttostring(stringtoint(bitstring) >> int(strbitlen - bitlen)), bitlen, "LEFT")
         elif keep == "RIGHT":
             mask = (2**bitlen)-1
             return expand(inttostring(stringtoint(bitstring) & mask), bitlen, "LEFT")
@@ -356,43 +371,83 @@ def truncate(bitstring, bitlen, keep):
 ### Hash algorithms
 def sha224(message):
     ctx = hashlib.sha224()
-    ctx.update(message)
-    return (ctx.digest(), ctx.digest_size, ctx.block_size)
+    if(is_python_2() == True):
+        ctx.update(message)
+        digest = ctx.digest()
+    else:
+        ctx.update(message.encode('latin-1'))
+        digest = ctx.digest().decode('latin-1')
+    return (digest, ctx.digest_size, ctx.block_size)
 
 def sha256(message):
     ctx = hashlib.sha256()
-    ctx.update(message)
-    return (ctx.digest(), ctx.digest_size, ctx.block_size)
+    if(is_python_2() == True):
+        ctx.update(message)
+        digest = ctx.digest()
+    else:
+        ctx.update(message.encode('latin-1'))
+        digest = ctx.digest().decode('latin-1')
+    return (digest, ctx.digest_size, ctx.block_size)
 
 def sha384(message):
     ctx = hashlib.sha384()
-    ctx.update(message)
-    return (ctx.digest(), ctx.digest_size, ctx.block_size)
+    if(is_python_2() == True):
+        ctx.update(message)
+        digest = ctx.digest()
+    else:
+        ctx.update(message.encode('latin-1'))
+        digest = ctx.digest().decode('latin-1')
+    return (digest, ctx.digest_size, ctx.block_size)
 
 def sha512(message):
     ctx = hashlib.sha512()
-    ctx.update(message)
-    return (ctx.digest(), ctx.digest_size, ctx.block_size)
+    if(is_python_2() == True):
+        ctx.update(message)
+        digest = ctx.digest()
+    else:
+        ctx.update(message.encode('latin-1'))
+        digest = ctx.digest().decode('latin-1')
+    return (digest, ctx.digest_size, ctx.block_size)
 
 def sha3_224(message):
     ctx = sha3.Sha3_ctx(224)
-    ctx.update(message)
-    return (ctx.digest(), ctx.digest_size, ctx.block_size) 
+    if(is_python_2() == True):
+        ctx.update(message)
+        digest = ctx.digest()
+    else:
+        ctx.update(message.encode('latin-1'))
+        digest = ctx.digest().decode('latin-1')
+    return (digest, ctx.digest_size, ctx.block_size)
 
 def sha3_256(message):
     ctx = sha3.Sha3_ctx(256)
-    ctx.update(message)
-    return (ctx.digest(), ctx.digest_size, ctx.block_size) 
+    if(is_python_2() == True):
+        ctx.update(message)
+        digest = ctx.digest()
+    else:
+        ctx.update(message.encode('latin-1'))
+        digest = ctx.digest().decode('latin-1')
+    return (digest, ctx.digest_size, ctx.block_size)
 
 def sha3_384(message):
     ctx = sha3.Sha3_ctx(384)
-    ctx.update(message)
-    return (ctx.digest(), ctx.digest_size, ctx.block_size) 
+    if(is_python_2() == True):
+        ctx.update(message)
+        digest = ctx.digest()
+    else:
+        ctx.update(message.encode('latin-1'))
+        digest = ctx.digest().decode('latin-1')
+    return (digest, ctx.digest_size, ctx.block_size)
 
 def sha3_512(message):
     ctx = sha3.Sha3_ctx(512)
-    ctx.update(message)
-    return (ctx.digest(), ctx.digest_size, ctx.block_size) 
+    if(is_python_2() == True):
+        ctx.update(message)
+        digest = ctx.digest()
+    else:
+        ctx.update(message.encode('latin-1'))
+        digest = ctx.digest().decode('latin-1')
+    return (digest, ctx.digest_size, ctx.block_size)
 
 ##########################################################
 ### Signature algorithms
@@ -469,8 +524,8 @@ def ecdsa_verify(hashfunc, keypair, message, sig):
     # Extract r and s
     if len(sig) != 2*getbytelen(q):
         raise Exception("ECDSA verify: bad signature length!")
-    r = stringtoint(sig[0:len(sig)/2])
-    s = stringtoint(sig[len(sig)/2:])
+    r = stringtoint(sig[0:int(len(sig)/2)])
+    s = stringtoint(sig[int(len(sig)/2):])
     if r == 0 or s == 0:
         return False
     # Compute the hash
@@ -578,8 +633,8 @@ def eckcdsa_verify(hashfunc, keypair, message, sig):
         r_len = int(math.ceil(q_limit_len / 8.))
     else:
         r_len = hsize
-    r = stringtoint(sig[0:r_len])
-    s = stringtoint(sig[r_len:])
+    r = stringtoint(sig[0:int(r_len)])
+    s = stringtoint(sig[int(r_len):])
     if (s >= q) or (s < 0):
         return False
     # Compute the certificate data
@@ -662,10 +717,10 @@ def ecfsdsa_verify(hashfunc, keypair, message, sig):
     # Extract coordinates from r and s from signature
     if len(sig) != (2*getbytelen(p)) + getbytelen(q):
         raise Exception("ECFSDSA verify: bad signature length!")
-    wx = sig[:getbytelen(p)]
-    wy = sig[getbytelen(p):2*getbytelen(p)]
+    wx = sig[:int(getbytelen(p))]
+    wy = sig[int(getbytelen(p)):int(2*getbytelen(p))]
     r = wx + wy
-    s = stringtoint(sig[2*getbytelen(p):(2*getbytelen(p))+getbytelen(q)])
+    s = stringtoint(sig[int(2*getbytelen(p)):int((2*getbytelen(p))+getbytelen(q))])
     # Check r is on the curve
     W = Point(pubkey.curve, stringtoint(wx), stringtoint(wy))
     # Check s is in ]0,q[
@@ -740,8 +795,8 @@ def ecrdsa_verify(hashfunc, keypair, message, sig):
     # Extract coordinates from r and s from signature
     if len(sig) != 2*getbytelen(q):
         raise Exception("ECRDSA verify: bad signature length!")
-    r = stringtoint(sig[:getbytelen(q)])
-    s = stringtoint(sig[getbytelen(q):2*getbytelen(q)])
+    r = stringtoint(sig[:int(getbytelen(q))])
+    s = stringtoint(sig[int(getbytelen(q)):int(2*getbytelen(q))])
     if r == 0 or r > q:
         raise Exception("ECRDSA verify: r not in ]0,q[")
     if s == 0 or s > q:
@@ -816,8 +871,8 @@ def ecgdsa_verify(hashfunc, keypair, message, sig):
     # Extract coordinates from r and s from signature
     if len(sig) != 2*getbytelen(q):
         raise Exception("ECGDSA verify: bad signature length!")
-    r = stringtoint(sig[:getbytelen(q)])
-    s = stringtoint(sig[getbytelen(q):2*getbytelen(q)])
+    r = stringtoint(sig[:int(getbytelen(q))])
+    s = stringtoint(sig[int(getbytelen(q)):int(2*getbytelen(q))])
     if r == 0 or r > q:
         raise Exception("ECGDSA verify: r not in ]0,q[")
     if s == 0 or s > q:
@@ -902,8 +957,8 @@ def ecsdsa_common_verify(hashfunc, keypair, message, sig, optimized):
     # Extract coordinates from r and s from signature
     if len(sig) != hlen + getbytelen(q):
         raise Exception("EC[O]SDSA verify: bad signature length!")
-    r = stringtoint(sig[:hlen])
-    s = stringtoint(sig[hlen:hlen+getbytelen(q)])
+    r = stringtoint(sig[:int(hlen)])
+    s = stringtoint(sig[int(hlen):int(hlen+getbytelen(q))])
     if s == 0 or s > q:
         raise Exception("EC[O]DSA verify: s not in ]0,q[")
     e = (-r) % q
@@ -914,7 +969,7 @@ def ecsdsa_common_verify(hashfunc, keypair, message, sig, optimized):
         (r_, _, _) = hashfunc(expand(inttostring(W_.x), 8*getbytelen(p), "LEFT") + expand(inttostring(W_.y), 8*getbytelen(p), "LEFT") + message)
     else:    
         (r_, _, _) = hashfunc(expand(inttostring(W_.x), 8*getbytelen(p), "LEFT") + message)
-    if sig[:hlen] == r_:
+    if sig[:int(hlen)] == r_:
         return True
     else:
         return False
@@ -948,7 +1003,7 @@ def pretty_print_curr_test(num_test, total_gen_tests):
     sys.stdout.flush()
     sys.stdout.write(format_buf % (num_test, total_gen_tests))
     if num_test == total_gen_tests:
-        print ""
+        print("")
     return
 
 def gen_self_test(curve, hashfunc, sig_alg_sign, sig_alg_verify, sig_alg_genkeypair, num, hashfunc_name, sig_alg_name, total_gen_tests):
@@ -1010,11 +1065,8 @@ def gen_self_tests(curve, num):
     global curr_test
     curr_test = 0
     total_gen_tests = len(all_hash_funcs) * len(all_sig_algs)
-    vectors = map(lambda (sign, verify, genkp, sig_alg_name) :
-    map(lambda (hashf, hash_name):
-    gen_self_test(curve, hashf, sign, verify, genkp, num, hash_name, sig_alg_name, total_gen_tests)
-    , all_hash_funcs)
-    , all_sig_algs)
+    vectors = [[ gen_self_test(curve, hashf, sign, verify, genkp, num, hash_name, sig_alg_name, total_gen_tests)
+               for (hashf, hash_name) in all_hash_funcs ] for (sign, verify, genkp, sig_alg_name) in all_sig_algs ]
     return vectors
 
 ##########################################################
@@ -1095,7 +1147,7 @@ def parse_DER_ECParameters(derbuf):
         return (False, default_ret)
     # Does the OID correspond to a prime field?
     if(Oid != "\x2A\x86\x48\xCE\x3D\x01\x01"):
-        print "DER parse error: only prime fields are supported ..."
+        print("DER parse error: only prime fields are supported ...")
         return (False, default_ret)    
     # Get prime p of prime field
     (check, size_P, P) = extract_DER_integer(FieldID[size_Oid:])
@@ -1140,8 +1192,8 @@ def parse_DER_ECParameters(derbuf):
         if len(ECPoint[1:]) % 2 != 0:
             return (False, default_ret)
         ECPoint = ECPoint[1:]
-        gx = stringtoint(ECPoint[:len(ECPoint)/2])
-        gy = stringtoint(ECPoint[len(ECPoint)/2:])
+        gx = stringtoint(ECPoint[:int(len(ECPoint)/2)])
+        gy = stringtoint(ECPoint[int(len(ECPoint)/2):])
     elif (ECPoint_type == 0x02) or (ECPoint_type == 0x03):
         # Compressed point: uncompress it, see X9.62-1998 section 4.2.1
         ECPoint = ECPoint[1:]
@@ -1155,7 +1207,7 @@ def parse_DER_ECParameters(derbuf):
         else:
             gy = prime - beta
     else:
-        print "DER parse error: hybrid points are unsupported!"
+        print("DER parse error: hybrid points are unsupported!")
         return (False, default_ret)        
     return (True, (a, b, prime, order, cofactor, gx, gy))
 
@@ -1165,9 +1217,9 @@ def bigint_to_C_array(bint, size):
     """
     Format a python big int to a C hex array
     """
-    hexstr = format(bint, 'x')
+    hexstr = format(int(bint), 'x')
     # Left pad to the size!
-    hexstr = ("0"*((2*size)-len(hexstr)))+hexstr
+    hexstr = ("0"*int((2*size)-len(hexstr)))+hexstr
     hexstr = ("0"*(len(hexstr) % 2))+hexstr
     out_str = "{\n"
     for i in range(0, len(hexstr) - 1, 2):
@@ -1231,9 +1283,11 @@ def remove_file(fname):
     os.remove(fname)
 
 def remove_files_pattern(fpattern):
-    map(os.remove, glob.glob(fpattern))
+    [remove_file(x) for x in glob.glob(fpattern)]
 
 def buffer_remove_pattern(buff, pat):
+    if is_python_2() == False:
+        buff = buff.decode('latin-1')
     if re.search(pat, buff) == None:
         return (False, buff) # pattern does not occur in file so we are done.
     # Remove the pattern
@@ -1267,20 +1321,20 @@ def curve_params(name, prime, pbitlen, a, b, gx, gy, order, cofactor, oid):
     Take as input some elliptic curve parameters and generate the 
     C parameters in a string
     """
-    bytesize = pbitlen / 8
+    bytesize = int(pbitlen / 8)
     if pbitlen % 8 != 0:
         bytesize += 1 
     # Compute the rounded word size for each word size
     if bytesize % 8 != 0:
-        wordsbitsize64 = 8*(((bytesize/8)+1)*8)
+        wordsbitsize64 = 8*((int(bytesize/8)+1)*8)
     else:
         wordsbitsize64 = 8*bytesize
     if bytesize % 4 != 0:
-        wordsbitsize32 = 8*(((bytesize/4)+1)*4)
+        wordsbitsize32 = 8*((int(bytesize/4)+1)*4)
     else:
         wordsbitsize32 = 8*bytesize
     if bytesize % 2 != 0:
-        wordsbitsize16 = 8*(((bytesize/2)+1)*2)
+        wordsbitsize16 = 8*((int(bytesize/2)+1)*2)
     else:
         wordsbitsize16 = 8*bytesize
     # Compute some parameters
@@ -1413,61 +1467,61 @@ def curve_params(name, prime, pbitlen, a, b, gx, gy, order, cofactor, oid):
     return ec_params_string
 
 def usage():
-    print "This script is intented to *statically* expand the ECC library with user defined curves."
-    print "By statically we mean that the source code of libecc is expanded with new curves parameters through"
-    print "automatic code generation filling place holders in the existing code base of the library. Though the"
-    print "choice of static code generation versus dynamic curves import (such as what OpenSSL does) might be"
-    print "argued, this choice has been driven by simplicity and security design decisions: we want libecc to have"
-    print "all its parameters (such as memory consumption) set at compile time and statically adapted to the curves."
-    print "Since libecc only supports curves over prime fields, the script can only add this kind of curves."
-    print "This script implements elliptic curves and ISO signature algorithms from scratch over Python's multi-precision"
-    print "big numbers library. Addition and doubling over curves use naive formulas. Please DO NOT use the functions of this"
-    print "script for production code: they are not securely implemented and are very inefficient. Their only purpose is to expand"
-    print "libecc and produce test vectors."
-    print ""
-    print "In order to add a curve, there are two ways:"
-    print "Adding a user defined curve with explicit parameters:"
-    print "-----------------------------------------------------"
-    print sys.argv[0]+" --name=\"YOURCURVENAME\" --prime=... --order=... --a=... --b=... --gx=... --gy=... --cofactor=... --oid=THEOID"
-    print "\t> name: name of the curve in the form of a string"
-    print "\t> prime: prime number representing the curve prime field"
-    print "\t> order: prime number representing the generator order"
-    print "\t> cofactor: cofactor of the curve"
-    print "\t> a: 'a' coefficient of the short Weierstrass equation of the curve"
-    print "\t> b: 'b' coefficient of the short Weierstrass equation of the curve"
-    print "\t> gx: x coordinate of the generator G"
-    print "\t> gy: y coordinate of the generator G"
-    print "\t> oid: optional OID of the curve"
-    print "  Notes:"
-    print "  ******"
-    print "\t1) These elements are verified to indeed satisfy the curve equation."
-    print "\t2) All the numbers can be given either in decimal or hexadecimal format with a prepending '0x'."
-    print "\t3) The script automatically generates all the necessary files for the curve to be included in the library." 
-    print "\tYou will find the new curve definition in the usual 'lib_ecc_config.h' file (one can activate it or not at compile time)."
-    print ""
-    print "Adding a user defined curve through RFC3279 ASN.1 parameters:"
-    print "-------------------------------------------------------------"
-    print sys.argv[0]+" --name=\"YOURCURVENAME\" --ECfile=... --oid=THEOID"
-    print "\t> ECfile: the DER or PEM encoded file containing the curve parameters (see RFC3279)"
-    print "  Notes:"
-    print "\tCurve parameters encoded in DER or PEM format can be generated with tools like OpenSSL (among others). As an illustrative example,"
-    print "\tone can list all the supported curves under OpenSSL with:"
-    print "\t  $ openssl ecparam -list_curves"
-    print "\tOnly the listed so called \"prime\" curves are supported. Then, one can extract an explicit curve representation in ASN.1"
-    print "\tas defined in RFC3279, for example for BRAINPOOLP320R1:"
-    print "\t  $ openssl ecparam -param_enc explicit -outform DER -name brainpoolP320r1 -out brainpoolP320r1.der"
-    print ""
-    print "Removing user defined curves:"
-    print "-----------------------------"
-    print "\t*All the user defined curves can be removed with the --remove-all toggle."
-    print "\t*A specific named user define curve can be removed with the --remove toggle: in this case the --name option is used to "
-    print "\tlocate which named curve must be deleted."
-    print ""
-    print "Test vectors:"
-    print "-------------"
-    print "\tTest vectors can be automatically generated and added to the library self tests when providing the --add-test-vectors=X toggle."
-    print "\tIn this case, X test vectors will be generated for *each* (curve, sign algorithm, hash algorithm) 3-uplet (beware of combinatorial"
-    print "\tissues when X is big!). These tests are transparently added and compiled with the self tests."
+    print("This script is intented to *statically* expand the ECC library with user defined curves.")
+    print("By statically we mean that the source code of libecc is expanded with new curves parameters through")
+    print("automatic code generation filling place holders in the existing code base of the library. Though the")
+    print("choice of static code generation versus dynamic curves import (such as what OpenSSL does) might be")
+    print("argued, this choice has been driven by simplicity and security design decisions: we want libecc to have")
+    print("all its parameters (such as memory consumption) set at compile time and statically adapted to the curves.")
+    print("Since libecc only supports curves over prime fields, the script can only add this kind of curves.")
+    print("This script implements elliptic curves and ISO signature algorithms from scratch over Python's multi-precision")
+    print("big numbers library. Addition and doubling over curves use naive formulas. Please DO NOT use the functions of this")
+    print("script for production code: they are not securely implemented and are very inefficient. Their only purpose is to expand")
+    print("libecc and produce test vectors.")
+    print("")
+    print("In order to add a curve, there are two ways:")
+    print("Adding a user defined curve with explicit parameters:")
+    print("-----------------------------------------------------")
+    print(sys.argv[0]+" --name=\"YOURCURVENAME\" --prime=... --order=... --a=... --b=... --gx=... --gy=... --cofactor=... --oid=THEOID")
+    print("\t> name: name of the curve in the form of a string")
+    print("\t> prime: prime number representing the curve prime field")
+    print("\t> order: prime number representing the generator order")
+    print("\t> cofactor: cofactor of the curve")
+    print("\t> a: 'a' coefficient of the short Weierstrass equation of the curve")
+    print("\t> b: 'b' coefficient of the short Weierstrass equation of the curve")
+    print("\t> gx: x coordinate of the generator G")
+    print("\t> gy: y coordinate of the generator G")
+    print("\t> oid: optional OID of the curve")
+    print("  Notes:")
+    print("  ******")
+    print("\t1) These elements are verified to indeed satisfy the curve equation.")
+    print("\t2) All the numbers can be given either in decimal or hexadecimal format with a prepending '0x'.")
+    print("\t3) The script automatically generates all the necessary files for the curve to be included in the library." )
+    print("\tYou will find the new curve definition in the usual 'lib_ecc_config.h' file (one can activate it or not at compile time).")
+    print("")
+    print("Adding a user defined curve through RFC3279 ASN.1 parameters:")
+    print("-------------------------------------------------------------")
+    print(sys.argv[0]+" --name=\"YOURCURVENAME\" --ECfile=... --oid=THEOID")
+    print("\t> ECfile: the DER or PEM encoded file containing the curve parameters (see RFC3279)")
+    print("  Notes:")
+    print("\tCurve parameters encoded in DER or PEM format can be generated with tools like OpenSSL (among others). As an illustrative example,")
+    print("\tone can list all the supported curves under OpenSSL with:")
+    print("\t  $ openssl ecparam -list_curves")
+    print("\tOnly the listed so called \"prime\" curves are supported. Then, one can extract an explicit curve representation in ASN.1")
+    print("\tas defined in RFC3279, for example for BRAINPOOLP320R1:")
+    print("\t  $ openssl ecparam -param_enc explicit -outform DER -name brainpoolP320r1 -out brainpoolP320r1.der")
+    print("")
+    print("Removing user defined curves:")
+    print("-----------------------------")
+    print("\t*All the user defined curves can be removed with the --remove-all toggle.")
+    print("\t*A specific named user define curve can be removed with the --remove toggle: in this case the --name option is used to ")
+    print("\tlocate which named curve must be deleted.")
+    print("")
+    print("Test vectors:")
+    print("-------------")
+    print("\tTest vectors can be automatically generated and added to the library self tests when providing the --add-test-vectors=X toggle.")
+    print("\tIn this case, X test vectors will be generated for *each* (curve, sign algorithm, hash algorithm) 3-uplet (beware of combinatorial")
+    print("\tissues when X is big!). These tests are transparently added and compiled with the self tests.")
     return
 
 def get_int(instring):
@@ -1527,7 +1581,7 @@ def parse_cmd_line(args):
         elif o in ("--ECfile"):
             ECfile = arg
         else:
-            print "unhandled option"
+            print("unhandled option")
             usage()
             return False
 
@@ -1542,18 +1596,18 @@ def parse_cmd_line(args):
     # If remove is True, we have been asked to remove already existing user defined curves
     if remove == True:
         if name == None:
-            print "--remove option expects a curve name provided with --name"
+            print("--remove option expects a curve name provided with --name")
             return False
         asked = ""
         while asked != "y" and asked != "n":
-            asked = raw_input("You asked to remove everything related to user defined "+name.replace("user_defined_", "")+" curve. Enter y to confirm, n to cancel [y/n]. ")
+            asked = get_user_input("You asked to remove everything related to user defined "+name.replace("user_defined_", "")+" curve. Enter y to confirm, n to cancel [y/n]. ")
         if asked == "n":
-            print "NOT removing curve "+name.replace("user_defined_", "")+" (cancelled)."
+            print("NOT removing curve "+name.replace("user_defined_", "")+" (cancelled).")
             return True
         # Remove any user defined stuff with given name
-        print "Removing user defined curve "+name.replace("user_defined_", "")+" ..."
+        print("Removing user defined curve "+name.replace("user_defined_", "")+" ...")
         if name == None:
-            print "Error: you must provide a curve name with --remove"
+            print("Error: you must provide a curve name with --remove")
             return False
         file_remove_pattern(curves_list_path + "curves_list.h", ".*"+name+".*")
         file_remove_pattern(curves_list_path + "curves_list.h", ".*"+name.upper()+".*")
@@ -1564,23 +1618,23 @@ def parse_cmd_line(args):
         try:
             remove_file(ec_params_path + "ec_params_"+name+".h")
         except:
-            print "Error: curve name "+name+" does not seem to be present in the sources!"
+            print("Error: curve name "+name+" does not seem to be present in the sources!")
             return False
         try:
             remove_file(ec_self_tests_path + "ec_self_tests_core_"+name+".h")
         except:
-            print "Warning: curve name "+name+" self tests do not seem to be present ..."
+            print("Warning: curve name "+name+" self tests do not seem to be present ...")
             return True
         return True
     if remove_all == True:
         asked = ""
         while asked != "y" and asked != "n":
-            asked = raw_input("You asked to remove everything related to ALL user defined curves. Enter y to confirm, n to cancel [y/n]. ")
+            asked = get_user_input("You asked to remove everything related to ALL user defined curves. Enter y to confirm, n to cancel [y/n]. ")
         if asked == "n":
-            print "NOT removing user defined curves (cancelled)."
+            print("NOT removing user defined curves (cancelled).")
             return True
         # Remove any user defined stuff with given name
-        print "Removing ALL user defined curves ..."
+        print("Removing ALL user defined curves ...")
         # Remove any user defined stuff (whatever name)
         file_remove_pattern(curves_list_path + "curves_list.h", ".*user_defined.*")
         file_remove_pattern(curves_list_path + "curves_list.h", ".*USER_DEFINED.*")
@@ -1600,7 +1654,7 @@ def parse_cmd_line(args):
         else:
             # This is probably a generator encapsulated in a bit string
             if g[0:2] != "04":
-                print "Error: provided generator g is not conforming!"
+                print("Error: provided generator g is not conforming!")
                 return False
             else:
                 g = g[2:]
@@ -1609,53 +1663,53 @@ def parse_cmd_line(args):
     if ECfile != None:
         # ASN.1 DER input incompatible with other options
         if (prime != None) or (a != None) or (b != None) or (gx != None) or (gy != None) or (order != None) or (cofactor != None):
-            print "Error: option ECfile incompatible with explicit (prime, a, b, gx, gy, order, cofactor) options!"
+            print("Error: option ECfile incompatible with explicit (prime, a, b, gx, gy, order, cofactor) options!")
             return False
         # We need at least a name
         if (name == None):
-            print "Error: option ECfile needs a curve name!"
+            print("Error: option ECfile needs a curve name!")
             return False
         # Open the file
         try:
             buf = open(ECfile, 'rb').read()            
         except:
-            print "Error: cannot open ECfile file "+ECfile
+            print("Error: cannot open ECfile file "+ECfile)
             return False
         # Check if we have a PEM or a DER file
         (check, derbuf) = buffer_remove_pattern(buf, "-----.*-----")
         if (check == True):
             # This a PEM file, proceed with base64 decoding
             if(is_base64(derbuf) == False):
-                print "Error: error when decoding ECfile file "+ECfile+" (seems to be PEM, but failed to decode)"
+                print("Error: error when decoding ECfile file "+ECfile+" (seems to be PEM, but failed to decode)")
                 return False
             derbuf = base64.b64decode(derbuf)
         (check, (a, b, prime, order, cofactor, gx, gy)) = parse_DER_ECParameters(derbuf)
         if (check == False):
-            print "Error: error when parsing ECfile file "+ECfile+" (malformed or unsupported ASN.1)"
+            print("Error: error when parsing ECfile file "+ECfile+" (malformed or unsupported ASN.1)")
             return False
         
     else:
         if (prime == None) or (a == None) or (b == None) or (gx == None) or (gy == None) or (order == None) or (cofactor == None) or (name == None):
             err_string = (prime == None)*"prime "+(a == None)*"a "+(b == None)*"b "+(gx == None)*"gx "+(gy == None)*"gy "+(order == None)*"order "+(cofactor == None)*"cofactor "+(name == None)*"name "
-            print "Error: missing "+err_string+" in explicit curve definition (name, prime, a, b, gx, gy, order, cofactor)!"
-            print "See the help with -h or --help"
+            print("Error: missing "+err_string+" in explicit curve definition (name, prime, a, b, gx, gy, order, cofactor)!")
+            print("See the help with -h or --help")
             return False
 
     # Some sanity checks here
     # Check that prime is indeed a prime
     if is_probprime(prime) == False:
-        print "Error: given prime is *NOT* prime!"
+        print("Error: given prime is *NOT* prime!")
         return False
     if is_probprime(order) == False:
-        print "Error: given order is *NOT* prime!"
+        print("Error: given order is *NOT* prime!")
         return False
     if (a > prime) or (b > prime) or (gx > prime) or (gy > prime):
         err_string = (a > prime)*"a "+(b > prime)*"b "+(gx > prime)*"gx "+(gy > prime)*"gy "
-        print "Error: "+err_string+"is > prime"
+        print("Error: "+err_string+"is > prime")
         return False
     # Check that the provided generator is on the curve
     if pow(gy, 2, prime) != ((pow(gx, 3, prime) + (a*gx) + b) % prime):
-        print "Error: the given parameters (prime, a, b, gx, gy) do not verify the elliptic curve equation!"
+        print("Error: the given parameters (prime, a, b, gx, gy) do not verify the elliptic curve equation!")
         return False
     
     # Now that we have our parameters, call the function to get bitlen
@@ -1663,10 +1717,10 @@ def parse_cmd_line(args):
     ec_params = curve_params(name, prime, pbitlen, a, b, gx, gy, order, cofactor, oid)
     # Check if there is a name collision somewhere
     if os.path.exists(ec_params_path + "ec_params_"+name+".h") == True :
-        print "Error: file %s already exists!" % (ec_params_path + "ec_params_"+name+".h")
+        print("Error: file %s already exists!" % (ec_params_path + "ec_params_"+name+".h"))
         return False
     if (check_in_file(curves_list_path + "curves_list.h", "ec_params_"+name+"_str_params") == True) or (check_in_file(curves_list_path + "curves_list.h", "WITH_CURVE_"+name.upper()+"\n") == True) or (check_in_file(lib_ecc_types_path + "lib_ecc_types.h", "WITH_CURVE_"+name.upper()+"\n") == True):
-        print "Error: name %s already exists in files" % ("ec_params_"+name)
+        print("Error: name %s already exists in files" % ("ec_params_"+name))
         return False
     # Create a new file with the parameters
     if not os.path.exists(ec_params_path):
@@ -1700,7 +1754,7 @@ def parse_cmd_line(args):
     
     # Do we need to add some test vectors?
     if add_test_vectors != None:
-        print "Test vectors generation asked: this can take some time! Please wait ..."
+        print("Test vectors generation asked: this can take some time! Please wait ...")
         # Create curve
         c = Curve(a, b, prime, order, cofactor, gx, gy, cofactor * order, name, oid)
         # Generate key pair for the algorithm 
@@ -1728,5 +1782,6 @@ def parse_cmd_line(args):
 
 
 #### Main
-signal.signal(signal.SIGINT, handler)
-parse_cmd_line(sys.argv[1:])
+if __name__ == "__main__":
+    signal.signal(signal.SIGINT, handler)
+    parse_cmd_line(sys.argv[1:])

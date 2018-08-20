@@ -16,11 +16,12 @@
 #!/bin/sh
 
 CURVES=`openssl ecparam -list_curves | grep prime | cut -d':' -f1 | tr '\n' ' '`
+PYTHON=python
 
 for curve in $CURVES
 do
 	echo "Adding $curve"
 	openssl ecparam -param_enc explicit -outform DER -name $curve -out "$curve".der
-	python expand_libecc.py --name="$curve" --ECfile="$curve".der --add-test-vectors=2
+	$PYTHON expand_libecc.py --name="$curve" --ECfile="$curve".der --add-test-vectors=2
 	rm "$curve".der
 done
