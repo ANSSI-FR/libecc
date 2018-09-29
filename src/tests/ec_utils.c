@@ -1075,6 +1075,168 @@ static int verify_bin_file(const char *ec_name, const char *ec_sig_name,
 	return -1;
 }
 
+/* Compute 'scalar * Point' on the provided curve and prints
+ * the result.
+ */
+static int ec_scalar_mult(const char *ec_name,
+			  const char *scalar_file,
+			  const char *point_file,
+			  const char *outfile_name)
+{
+	const ec_str_params *ec_str_p;
+	ec_params curve_params;
+	int ret;
+	u8 buf[MAX_BUF_LEN];
+	size_t buf_len;
+	FILE *in_file;
+	FILE *out_file;
+	u16 coord_len;
+
+	/* Scalar (natural number) to import */
+	nn d;
+	/* Point to import */
+	prj_pt Q;
+	aff_pt Q_aff;
+#ifdef USE_SIG_BLINDING
+	/* Scalar when we use blinding */
+        nn scalar_b;
+#endif
+
+	MUST_HAVE(ec_name != NULL);
+	MUST_HAVE(scalar_file != NULL);
+	MUST_HAVE(point_file != NULL);
+	MUST_HAVE(outfile_name != NULL);
+
+	/* Get parameters from pretty names */
+	ret = string_to_params(ec_name, NULL, NULL, &ec_str_p,
+			       NULL, NULL);
+	if (ret) {
+		goto err;
+	}
+
+	/* Import the parameters */
+	import_params(&curve_params, ec_str_p);
+
+	/* Import the scalar in the local buffer from the file */	
+	/* Let's first get file size */
+	ret = get_file_size(scalar_file, &buf_len);
+	if (ret) {
+		printf("Error: cannot retrieve file %s size\n", scalar_file);
+		goto err;
+	}
+	if(buf_len > sizeof(buf)){
+		printf("Error: file %s content too large for our local buffers\n", scalar_file);
+		goto err;
+	}
+	/* Open main file to verify ... */
+	in_file = fopen(scalar_file, "r");
+	if (in_file == NULL) {
+		printf("Error: file %s cannot be opened\n", scalar_file);
+		goto err;
+	}
+	/* Read the content of the file */
+	if(fread(buf, 1, buf_len, in_file) != buf_len){
+		printf("Error: error when reading in %s\n", scalar_file);
+		goto err;
+	}
+	fclose(in_file);
+	/* Import the scalar */
+	nn_init_from_buf(&d, buf, buf_len);
+
+	/* Import the point in the local buffer from the file */
+	/* Let's first get file size */
+	ret = get_file_size(point_file, &buf_len);
+	if (ret) {
+		printf("Error: cannot retrieve file %s size\n", point_file);
+		goto err;
+	}
+	if(buf_len > sizeof(buf)){
+		printf("Error: file %s content too large for our local buffers\n", point_file);
+		goto err;
+	}
+	/* Open main file to verify ... */
+	in_file = fopen(point_file, "r");
+	if (in_file == NULL) {
+		printf("Error: file %s cannot be opened\n", point_file);
+		goto err;
+	}
+	/* Read the content of the file */
+	if(fread(buf, 1, buf_len, in_file) != buf_len){
+		printf("Error: error when reading in %s\n", point_file);
+		goto err;
+	}
+	fclose(in_file);
+	/* Import the point */
+	if(prj_pt_import_from_buf(&Q, buf, buf_len, &(curve_params.ec_curve))){
+		printf("Error: error when importing the projective point from %s\n", point_file);
+		goto err;
+	}	
+
+#ifdef USE_SIG_BLINDING
+        /* NB: we use a blind scalar multiplication here since we do not want our
+         * private d to leak ...
+         */
+        nn_init(&scalar_b, 0);
+        if (nn_get_random_mod(&scalar_b, &(curve_params.ec_gen_order))) {
+                goto err;
+        }
+        prj_pt_mul_monty_blind(&Q, &d, &Q, &scalar_b, &(curve_params.ec_gen_order));
+        /* Clear blinding scalar */
+        nn_uninit(&scalar_b);
+#else
+        prj_pt_mul_monty(&Q, &d, &Q);
+#endif
+	/* Move to affine representation to get the unique representation of the point */
+	prj_pt_to_aff(&Q_aff, &Q);
+	/* Back to projective for our export */
+	ec_shortw_aff_to_prj(&Q, &Q_aff);
+
+	/* Export the projective point in the local buffer */
+	coord_len = 3 * BYTECEIL((Q.crv)->a.ctx->p_bitlen);
+	if(coord_len > sizeof(buf)){
+		nn_uninit(&d);
+		prj_pt_uninit(&Q);
+		aff_pt_uninit(&Q_aff);
+		printf("Error: error when exporting the point\n");
+		goto err;
+	}
+	if(prj_pt_export_to_buf(&Q, buf, coord_len)){
+		nn_uninit(&d);
+		prj_pt_uninit(&Q);
+		aff_pt_uninit(&Q_aff);
+		printf("Error: error when exporting the point\n");
+		goto err;
+	}
+	/* Now save the coordinates in the output file */
+	out_file = fopen(outfile_name, "w");
+	if (out_file == NULL) {
+		nn_uninit(&d);
+		prj_pt_uninit(&Q);
+		aff_pt_uninit(&Q_aff);
+		printf("Error: file %s cannot be opened\n", outfile_name);
+		goto err;
+	}
+
+	/* Write in the file */
+	if(fwrite(buf, 1, coord_len, out_file) != coord_len){
+		nn_uninit(&d);
+		prj_pt_uninit(&Q);
+		aff_pt_uninit(&Q_aff);
+		printf("Error: error when writing to %s\n", outfile_name);
+		goto err;
+	}
+
+        /* Uninit local variables */
+	nn_uninit(&d);
+        prj_pt_uninit(&Q);
+        aff_pt_uninit(&Q_aff);
+
+	return 0;
+
+err:
+	return -1;
+}
+
 
 static void print_curves(void)
 {
@@ -1115,7 +1277,7 @@ static void print_sig_algs(void)
 static void print_help(const char *prog_name)
 {
 	printf("%s expects at least one argument\n", prog_name);
-	printf("\targ1 = 'gen_keys', 'sign', 'verify', 'struct_sign' or 'struct_verify'\n");
+	printf("\targ1 = 'gen_keys', 'sign', 'verify', 'struct_sign', 'struct_verify' or 'scalar_mult'\n");
 	return;
 }
 
@@ -1300,6 +1462,32 @@ int main(int argc, char *argv[])
 			printf("Signature check of %s OK\n", argv[5]);
 		}
 	}
+	else if (are_str_equal(argv[1], "scalar_mult")) {
+		/* Point scalar multiplication --------------------
+		 *
+		 * arg1 = curve name ("frp256v1", ...)
+		 * arg2 = scalar
+		 * arg3 = point to multiply
+		 * arg4 = file name where to save the result
+		 */
+		if (argc != 6) {
+			printf("Bad args number for %s %s:\n", argv[0],
+			       argv[1]);
+			printf("\targ1 = curve name: ");
+			print_curves();
+			printf("\n");
+
+			printf("\targ2 = scalar bin file\n");
+			printf("\targ3 = point to multiply bin file (projective coordinates)\n");
+			printf("\targ4 = file name where to save the result\n");
+			return -1;
+		}
+		if(ec_scalar_mult(argv[2], argv[3], argv[4], argv[5])){
+			printf("Scalar multiplication failed\n");
+			return -1;
+		}
+	}
+
 	else{
 		/* Bad first argument, print help */
 		printf("Bad first argument '%s'\n", argv[1]);
