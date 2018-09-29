@@ -32,16 +32,29 @@ void __ecsdsa_init_pub_key(ec_pub_key *out_pub, ec_priv_key *in_priv,
 			   ec_sig_alg_type key_type)
 {
 	prj_pt_src_t G;
+        /* Blinding mask for scalar multiplication */
+        nn scalar_b;
+        int ret;
 
 	priv_key_check_initialized_and_type(in_priv, key_type);
+        /* We use blinding for the scalar multiplication */
+        ret = nn_get_random_mod(&scalar_b, &(in_priv->params->ec_gen_order));
+        if (ret) {
+                goto err;
+        }
 
 	/* Y = xG */
 	G = &(in_priv->params->ec_gen);
-	prj_pt_mul_monty(&(out_pub->y), &(in_priv->x), G);
+        /* Use blinding with scalar_b when computing point scalar multiplication */
+        prj_pt_mul_monty_blind(&(out_pub->y), &(in_priv->x), G, &scalar_b, &(in_priv->params->ec_gen_order));
+        nn_uninit(&scalar_b);
 
 	out_pub->key_type = key_type;
 	out_pub->params = in_priv->params;
 	out_pub->magic = PUB_KEY_MAGIC;
+
+err:
+	return;
 }
 
 u8 __ecsdsa_siglen(u16 p_bit_len, u16 q_bit_len, u8 hsize, u8 blocksize)
@@ -113,6 +126,10 @@ int __ecsdsa_sign_init(struct ec_sign_context *ctx,
 	prj_pt kG;
 	aff_pt W_aff;
 	nn_src_t q;
+#ifdef USE_SIG_BLINDING
+	/* scalar_b is the scalar multiplication blinder */
+	nn scalar_b;
+#endif
 	int ret;
 	nn k;
 
@@ -148,7 +165,17 @@ int __ecsdsa_sign_init(struct ec_sign_context *ctx,
 	dbg_nn_print("k", &k);
 
 	/* 2. Compute W = kG = (Wx, Wy). */
-	prj_pt_mul_monty(&kG, &k, G);
+#ifdef USE_SIG_BLINDING
+        /* We use blinding for the scalar multiplication */
+        ret = nn_get_random_mod(&scalar_b, q);
+        if (ret) {
+                goto err;
+        }
+        prj_pt_mul_monty_blind(&kG, &k, G, &scalar_b, q);
+	nn_uninit(&scalar_b);
+#else
+        prj_pt_mul_monty(&kG, &k, G);
+#endif
 	prj_pt_to_aff(&W_aff, &kG);
 	prj_pt_uninit(&kG);
 	dbg_nn_print("W_x", &(W_aff.x.fp_val));
@@ -261,12 +288,12 @@ int __ecsdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 		goto err;
 	}
 
+	/* [RB] FIXME: We need some optional blinding here! */
 	/* 6. Compute s = (k + ex) mod q. */
-	nn_mul(&ex, x, &e);
+	nn_mul_mod(&ex, x, &e, q);
 	nn_zero(&e);
-	nn_add(&tmp, &(ctx->sign_data.ecsdsa.k), &ex);
+	nn_mod_add(&s, &(ctx->sign_data.ecsdsa.k), &ex, q);
 	nn_zero(&ex);
-	nn_mod(&s, &tmp, q);
 	nn_zero(&tmp);
 
 	dbg_nn_print("s", &s);

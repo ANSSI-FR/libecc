@@ -31,16 +31,29 @@
 void ecdsa_init_pub_key(ec_pub_key *out_pub, ec_priv_key *in_priv)
 {
 	prj_pt_src_t G;
+        /* Blinding mask for scalar multiplication */
+        nn scalar_b;
+        int ret;
 
 	priv_key_check_initialized_and_type(in_priv, ECDSA);
+        /* We use blinding for the scalar multiplication */
+        ret = nn_get_random_mod(&scalar_b, &(in_priv->params->ec_gen_order));
+        if (ret) {
+                goto err;
+        }
 
 	/* Y = xG */
 	G = &(in_priv->params->ec_gen);
-	prj_pt_mul_monty(&(out_pub->y), &(in_priv->x), G);
+        /* Use blinding with scalar_b when computing point scalar multiplication */
+        prj_pt_mul_monty_blind(&(out_pub->y), &(in_priv->x), G, &scalar_b, &(in_priv->params->ec_gen_order));
+	nn_uninit(&scalar_b);
 
 	out_pub->key_type = ECDSA;
 	out_pub->params = in_priv->params;
 	out_pub->magic = PUB_KEY_MAGIC;
+
+err:
+	return;
 }
 
 u8 ecdsa_siglen(u16 p_bit_len, u16 q_bit_len, u8 hsize, u8 blocksize)
@@ -142,6 +155,12 @@ int _ecdsa_sign_update(struct ec_sign_context *ctx,
 int _ecdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 {
 	nn k, r, e, tmp, tmp2, s, kinv;
+#ifdef USE_SIG_BLINDING
+        /* b is the blinding mask, and binv = b^-1 mod q */
+        nn b, binv;
+	/* scalar_b is the scalar multiplication blinder */
+	nn scalar_b;
+#endif
 	const ec_priv_key *priv_key;
 	prj_pt_src_t G;
 	u8 hash[MAX_DIGEST_SIZE];
@@ -225,7 +244,19 @@ int _ecdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	dbg_nn_print("k", &k);
 
 	/* 5. Compute W = (W_x,W_y) = kG */
+#ifdef USE_SIG_BLINDING
+	/* We use blinding for the scalar multiplication */
+	ret = nn_get_random_mod(&scalar_b, q);
+	if (ret) {
+		nn_uninit(&tmp2);
+		nn_uninit(&e);
+		goto err;
+	}
+	prj_pt_mul_monty_blind(&kG, &k, G, &scalar_b, q);
+	nn_uninit(&scalar_b);
+#else
 	prj_pt_mul_monty(&kG, &k, G);
+#endif /* USE_SIG_BLINDING */
 	prj_pt_to_aff(&W, &kG);
 	prj_pt_uninit(&kG);
 
@@ -242,15 +273,35 @@ int _ecdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 		goto restart;
 	}
 
+	/* Export r */
+	nn_export_to_buf(sig, q_len, &r);
+
+#ifdef USE_SIG_BLINDING
+	/* Note: if we use blinding, r and e are multiplied by
+	 * a random value b in ]0,q[ */
+	ret = nn_get_random_mod(&b, q);
+	if (ret) {
+		/* TODO: uninit everything necessary */
+		nn_uninit(&tmp2);
+		nn_uninit(&e);
+		goto err;
+	}
+	dbg_nn_print("b", &b);
+	/* Compute  b^-1 mod q */
+	nn_modinv(&binv, &b, q);
+
+	/* Blind r with b */
+	nn_mul_mod(&r, &r, &b, q);
+
+	/* Blind the message e */
+	nn_mul_mod(&e, &e, &b, q);
+#endif /* USE_SIG_BLINDING */
+
 	/* tmp = xr mod q */
-	nn_mul(&tmp, x, &r);
-	dbg_nn_print("x*r", &tmp);
-	nn_mod(&tmp2, &tmp, q);
-	dbg_nn_print("x*r mod q", &tmp2);
-	nn_uninit(&tmp);
+	nn_mul_mod(&tmp, x, &r, q);
+	dbg_nn_print("x*r mod q", &tmp);
 
 	/* 8. If e == rx, restart the process at step 4. */
-	nn_mul(&tmp, &r, x);
 	if (!nn_cmp(&e, &tmp)) {
 		goto restart;
 	}
@@ -258,9 +309,9 @@ int _ecdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	/* 9. Compute s = k^-1 * (xr + e) mod q */
 
 	/* tmp2 = (e + xr) mod q */
-	nn_add(&tmp, &tmp, &e);
+	nn_mod_add(&tmp2, &tmp, &e, q);
 	nn_uninit(&e);
-	nn_mod(&tmp2, &tmp, q);
+	nn_uninit(&tmp);
 	dbg_nn_print("(xr + e) mod q", &tmp2);
 
 	/* Compute k^-1 mod q */
@@ -269,12 +320,15 @@ int _ecdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 
 	dbg_nn_print("k^-1 mod q", &kinv);
 
+#ifdef USE_SIG_BLINDING
+	/* Unblind (xr + e) with b^-1 */
+	nn_mul_mod(&tmp2, &tmp2, &binv, q);
+#endif
+
 	/* s = k^-1 * tmp2 mod q */
-	nn_mul(&tmp, &tmp2, &kinv);
-	nn_mod(&s, &tmp, q);
+	nn_mul_mod(&s, &tmp2, &kinv, q);
 	nn_uninit(&kinv);
 	nn_uninit(&tmp2);
-	nn_uninit(&tmp);
 
 	dbg_nn_print("s", &s);
 
@@ -284,7 +338,6 @@ int _ecdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	}
 
 	/* 11. return (r,s) */
-	nn_export_to_buf(sig, q_len, &r);
 	nn_export_to_buf(sig + q_len, q_len, &s);
 
 	nn_uninit(&r);
@@ -500,8 +553,7 @@ int _ecdsa_verify_finalize(struct ec_verify_context *ctx)
 	dbg_nn_print("u = (s^-1)e mod q", &u);
 
 	/* 6. Compute v = (s^-1)r mod q */
-	nn_mul(&tmp, r, &sinv);
-	nn_mod(&v, &tmp, q);
+	nn_mul_mod(&v, r, &sinv, q);
 	dbg_nn_print("v = (s^-1)r mod q", &v);
 	nn_uninit(&sinv);
 	nn_uninit(&tmp);

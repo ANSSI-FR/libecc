@@ -87,5 +87,14 @@ int get_random(unsigned char *buf, u16 len)
 
 /* No platform detected, the user must provide an implementation! */
 #else
+/* WARNING: when providing/implementing the get_random function, one must:
+ * 	- Use a proper entropy source with a TRNG (True Random Number Generator)
+ *	basis and clean PRNG (Pseudo-Random Number Generator) post-processing
+ *	when needed.
+ *	- Use a non-leaking generator in contexts where attackers that have access
+ *	to side channels are a plausible threat (a process in an OS sharing memory
+ *	and caches with other possibly malicious processes, a microcontroller
+ *	that can be observed using EM probes or power consumtion, ...).
+ */
 #error "rand.c: you have to implement get_random with a proper entropy source!"
 #endif

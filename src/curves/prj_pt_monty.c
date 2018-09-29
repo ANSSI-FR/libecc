@@ -17,9 +17,11 @@
 #include "prj_pt.h"
 #include "prj_pt_monty.h"
 #include "../nn/nn_logical.h"
+#include "../nn/nn_add.h"
 #include "../fp/fp_add.h"
 #include "../fp/fp_mul.h"
 #include "../fp/fp_montgomery.h"
+#include "../fp/fp_rand.h"
 
 /*
  * http://www.hyperelliptic.org/EFD/g1p/auto-shortw-projective.html#addition-add-1998-cmo-2
@@ -326,4 +328,36 @@ void prj_pt_mul_ltr_monty(prj_pt_t out, nn_src_t m, prj_pt_src_t in)
 void prj_pt_mul_monty(prj_pt_t out, nn_src_t m, prj_pt_src_t in)
 {
 	prj_pt_mul_ltr_monty(out, m, in);
+}
+
+void prj_pt_mul_monty_blind(prj_pt_t out, nn_src_t m, prj_pt_src_t in, nn_t b, nn_src_t q)
+{
+        /* The projective coordinates blinding mask */
+        fp l;
+        int ret;
+	prj_pt tmp_pt;
+
+        /* Get a random value l in Fp */
+        ret = fp_get_random(&l, in->X.ctx);
+        if(ret){
+                goto err;
+        }
+        /* Blind the point with projective coordinates (X, Y, Z) => (l*X, l*Y, l*Z) 
+         */
+	prj_pt_init(&tmp_pt, in->crv);
+        fp_mul(&(tmp_pt.X), &(in->X), &l);
+        fp_mul(&(tmp_pt.Y), &(in->Y), &l);
+        fp_mul(&(tmp_pt.Z), &(in->Z), &l);
+
+	/* Blind the scalar m with (b*q) */
+	nn_mul(b, b, q);
+	nn_add(b, b, m);
+
+        /* Perform the scalar multiplication */
+	prj_pt_mul_ltr_monty(out, b, &tmp_pt);
+
+err:
+	/* Zero the mask to avoid information leak */
+	nn_zero(b);
+	fp_zero(&l);
 }

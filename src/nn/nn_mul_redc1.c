@@ -212,3 +212,46 @@ void nn_mul_redc1(nn_t out, nn_src_t in1, nn_src_t in2, nn_src_t p,
 		_nn_mul_redc1(out, in1, in2, p, mpinv);
 	}
 }
+
+/*
+ * Compute in1 * in2 mod p where in1 and in2 are numbers < p and
+ * p is an odd number. The function redcifies in1 and in2
+ * parameters, does the computation and then unredcifies the
+ * result.
+ *
+ * From a mathematical standpoint, the computation is equivalent
+ * to performing:
+ *
+ *   nn_mul(&tmp2, in1, in2);
+ *   nn_mod(&out, &tmp2, q);
+ *
+ * but the modular reduction is done progressively during
+ * Montgomery reduction.
+ */
+void nn_mul_mod(nn_t out, nn_src_t in1, nn_src_t in2, nn_src_t p)
+{
+	nn r, r_square;
+	nn in1_tmp, in2_tmp, tmp;
+	word_t mpinv;
+	nn one;
+
+	/* Compute Mongtomery coefs */
+	mpinv = nn_compute_redc1_coefs(&r, &r_square, p);
+	nn_uninit(&r);
+
+	/* redcify in1 and in2 */
+	nn_mul_redc1(&in1_tmp, in1, &r_square, p, mpinv);
+	nn_mul_redc1(&in2_tmp, in2, &r_square, p, mpinv);
+
+	/* Compute in1 * in2 mod p in montgomery world */
+	nn_mul_redc1(&tmp, &in1_tmp, &in2_tmp, p, mpinv);
+	nn_uninit(&in1_tmp);
+	nn_uninit(&in2_tmp);
+
+	/* Come back to real world by unredcifying result */
+	nn_init(&one, 0);
+	nn_one(&one);
+	nn_mul_redc1(out, &tmp, &one, p, mpinv);
+	nn_uninit(&tmp);
+	nn_uninit(&one);
+}

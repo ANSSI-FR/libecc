@@ -26,4 +26,6 @@ void prj_pt_mul_ltr_monty(prj_pt_t out, nn_src_t m, prj_pt_src_t in);
 
 void prj_pt_mul_monty(prj_pt_t out, nn_src_t m, prj_pt_src_t in);
 
+void prj_pt_mul_monty_blind(prj_pt_t out, nn_src_t m, prj_pt_src_t in, nn_t b, nn_src_t q);
+
 #endif /* __PRJ_PT_MONTY_H__ */

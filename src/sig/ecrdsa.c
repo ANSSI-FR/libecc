@@ -30,16 +30,29 @@
 void ecrdsa_init_pub_key(ec_pub_key *out_pub, ec_priv_key *in_priv)
 {
 	prj_pt_src_t G;
+        /* Blinding mask for scalar multiplication */
+        nn scalar_b;
+        int ret;
 
 	priv_key_check_initialized_and_type(in_priv, ECRDSA);
+        /* We use blinding for the scalar multiplication */
+        ret = nn_get_random_mod(&scalar_b, &(in_priv->params->ec_gen_order));
+        if (ret) {
+                goto err;
+        }
 
 	/* Y = xG */
 	G = &(in_priv->params->ec_gen);
-	prj_pt_mul_monty(&(out_pub->y), &(in_priv->x), G);
+        /* Use blinding with scalar_b when computing point scalar multiplication */
+        prj_pt_mul_monty_blind(&(out_pub->y), &(in_priv->x), G, &scalar_b, &(in_priv->params->ec_gen_order));
+	nn_uninit(&scalar_b);
 
 	out_pub->key_type = ECRDSA;
 	out_pub->params = in_priv->params;
 	out_pub->magic = PUB_KEY_MAGIC;
+
+err:
+	return;
 }
 
 u8 ecrdsa_siglen(u16 p_bit_len, u16 q_bit_len, u8 hsize, u8 blocksize)
@@ -125,6 +138,10 @@ int _ecrdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	bitcnt_t q_bit_len, p_bit_len;
 	const ec_priv_key *priv_key;
 	nn tmp, s, rx, ke, k, r, e;
+#ifdef USE_SIG_BLINDING
+        /* scalar_b is the scalar multiplication blinder */
+        nn scalar_b;
+#endif
 	u8 h_buf[MAX_DIGEST_SIZE];
 	prj_pt_src_t G;
 	prj_pt kG;
@@ -178,7 +195,17 @@ int _ecrdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	dbg_nn_print("k", &k);
 
 	/* 3. Compute W = kG = (Wx, Wy) */
-	prj_pt_mul_monty(&kG, &k, G);
+#ifdef USE_SIG_BLINDING
+        /* We use blinding for the scalar multiplication */
+        ret = nn_get_random_mod(&scalar_b, q);
+        if (ret) {
+                goto err;
+        }
+        prj_pt_mul_monty_blind(&kG, &k, G, &scalar_b, q);
+	nn_uninit(&scalar_b);
+#else
+        prj_pt_mul_monty(&kG, &k, G);
+#endif
 	prj_pt_to_aff(&W, &kG);
 	prj_pt_uninit(&kG);
 	dbg_nn_print("W_x", &(W.x.fp_val));
@@ -206,15 +233,18 @@ int _ecrdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	}
 	dbg_nn_print("e", &e);
 
+	/* [RB] FIXME: We *MIGHT* need some optional blinding here! 
+	 * To be checked since sensitive values x and k are both multiplied
+	 * before adding two unkown values.
+	 */
 	/* Compute s = (rx + ke) mod q */
-	nn_mul(&rx, &r, x);
-	nn_mul(&ke, &k, &e);
+	nn_mul_mod(&rx, &r, x, q);
+	nn_mul_mod(&ke, &k, &e, q);
 	nn_zero(&e);
 	nn_zero(&k);
-	nn_add(&tmp, &rx, &ke);
+	nn_mod_add(&s, &rx, &ke, q);
 	nn_zero(&rx);
 	nn_zero(&ke);
-	nn_mod(&s, &tmp, q);
 	nn_zero(&tmp);
 
 	/* If s is 0, restart the process at step 2. */
