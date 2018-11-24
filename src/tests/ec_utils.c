@@ -1162,6 +1162,7 @@ static int ec_scalar_mult(const char *ec_name,
 	}
 	/* Read the content of the file */
 	if(fread(buf, 1, buf_len, in_file) != buf_len){
+		fclose(in_file);
 		printf("Error: error when reading in %s\n", point_file);
 		goto err;
 	}
@@ -1219,6 +1220,7 @@ static int ec_scalar_mult(const char *ec_name,
 
 	/* Write in the file */
 	if(fwrite(buf, 1, coord_len, out_file) != coord_len){
+		fclose(out_file);
 		nn_uninit(&d);
 		prj_pt_uninit(&Q);
 		aff_pt_uninit(&Q_aff);
@@ -1226,6 +1228,7 @@ static int ec_scalar_mult(const char *ec_name,
 		goto err;
 	}
 
+	fclose(out_file);
         /* Uninit local variables */
 	nn_uninit(&d);
         prj_pt_uninit(&Q);
