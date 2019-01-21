@@ -42,12 +42,6 @@ typedef struct {
 /* Max stack working buffer size */
 #define MAX_BUF_LEN		8192
 
-/*
- * For a given raw signature, the structured version is produced by prepending
- * three bytes providing specific sig alg, hash alg and curve.
- */
-#define EC_STRUCTURED_SIG_EXPORT_SIZE(siglen)  (siglen + (3 * sizeof(u8)))
-
 typedef enum {
 	RAWBIN,
 	DOTH,
