@@ -24,7 +24,6 @@ import sha3
 
 # Handle Python 2/3 issues
 from builtins import input
-from past.builtins import xrange
 
 ### Ctrl-C handler
 def handler(signal, frame):
@@ -145,10 +144,16 @@ def mod_sqrt(a, p):
     while True:
         t = b
         m = 0
-        for m in xrange(r):
-            if t == 1:
-                break
-            t = pow(t, 2, p)
+        if is_python_2():
+            for m in xrange(r):
+                if t == 1:
+                    break
+                t = pow(t, 2, p)
+        else:
+            for m in range(r):
+                if t == 1:
+                    break
+                t = pow(t, 2, p)
         if m == 0:
             return x
         gs = pow(g, 2 ** (r - m - 1), p)
@@ -1018,7 +1023,10 @@ def gen_self_test(curve, hashfunc, sig_alg_sign, sig_alg_verify, sig_alg_genkeyp
         keypair = sig_alg_genkeypair(curve)
         # Generate a random message with a random size
         size = getrandomint(256)
-        message = ''.join([random.choice(string.ascii_letters + string.digits) for n in xrange(size)])
+        if is_python_2():
+            message = ''.join([random.choice(string.ascii_letters + string.digits) for n in xrange(size)])
+        else:
+            message = ''.join([random.choice(string.ascii_letters + string.digits) for n in range(size)])
         test_name = sig_alg_name + "_" + hashfunc_name + "_" + curve.name.upper() + "_" + str(test_num)
         # Sign the message
         (sig, k) = sig_alg_sign(hashfunc, keypair, message)
