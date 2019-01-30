@@ -23,7 +23,11 @@ import random, sys, re, math, os, getopt, glob, copy, hashlib, binascii, string,
 import sha3
 
 # Handle Python 2/3 issues
-from builtins import input
+def is_python_2():
+    if sys.version_info[0] < 3:
+        return True
+    else:
+        return False
 
 ### Ctrl-C handler
 def handler(signal, frame):
@@ -33,13 +37,10 @@ def handler(signal, frame):
 # Helper to ask the user for something
 def get_user_input(prompt):
     # Handle the Python 2/3 issue
-    return input(prompt)
-
-def is_python_2():
-    if sys.version_info[0] < 3:
-        return True
+    if is_python_2() == False:
+        return input(prompt)
     else:
-        return False
+        return raw_input(prompt)
 
 ##########################################################
 #### Math helpers
