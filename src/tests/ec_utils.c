@@ -1055,7 +1055,7 @@ static int ec_scalar_mult(const char *ec_name,
 	}
 	fclose(in_file);
 	/* Import the scalar */
-	nn_init_from_buf(&d, buf, buf_len);
+	nn_init_from_buf(&d, buf, (u16)buf_len);
 
 	/* Import the point in the local buffer from the file */
 	/* Let's first get file size */
@@ -1082,7 +1082,7 @@ static int ec_scalar_mult(const char *ec_name,
 	}
 	fclose(in_file);
 	/* Import the point */
-	if(prj_pt_import_from_buf(&Q, buf, buf_len, &(curve_params.ec_curve))){
+	if(prj_pt_import_from_buf(&Q, buf, (u16)buf_len, &(curve_params.ec_curve))){
 		printf("Error: error when importing the projective point from %s\n", point_file);
 		goto err;
 	}	
