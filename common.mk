@@ -52,6 +52,9 @@ LDFLAGS ?=
 # Default AR and RANLIB if not overriden by user
 AR ?= ar
 RANLIB ?= ranlib
+# Default AR flags and RANLIB flags if not overriden by user
+AR_FLAGS ?= rcs
+RANLIB_FLAGS ?= 
 
 # Our debug flags
 DEBUG_CFLAGS = -DDEBUG -O -g

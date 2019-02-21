@@ -103,8 +103,8 @@ src/fp/%.o: src/fp/%.c $(NN_CONFIG) $(CFG_DEPS)
 
 LIBARITH_OBJECTS = $(FP_OBJECTS) $(NN_OBJECTS) $(RAND_OBJECTS) $(UTILS_ARITH_OBJECTS)
 $(LIBARITH): $(LIBARITH_OBJECTS)
-	$(AR) rcs $@ $^
-	$(RANLIB) $@
+	$(AR) $(AR_FLAGS) $@ $^
+	$(RANLIB) $(RANLIB_FLAGS) $@
 
 # Compile dynamic libraries if the user asked to
 ifeq ($(WITH_DYNAMIC_LIBS),1)
@@ -127,8 +127,8 @@ src/curves/%.o: src/curves/%.c $(NN_CONFIG) $(CFG_DEPS)
 
 LIBEC_OBJECTS = $(LIBARITH_OBJECTS) $(CURVES_OBJECTS) $(UTILS_EC_OBJECTS)
 $(LIBEC): $(LIBEC_OBJECTS)
-	$(AR) rcs $@ $^
-	$(RANLIB) $@
+	$(AR) $(AR_FLAGS) $@ $^
+	$(RANLIB) $(RANLIB_FLAGS) $@
 
 # Compile dynamic libraries if the user asked to
 ifeq ($(WITH_DYNAMIC_LIBS),1)
@@ -175,8 +175,8 @@ $(KEY_OBJECTS): $(KEY_SRC) $(NN_CONFIG) $(CFG_DEPS)
 
 LIBSIGN_OBJECTS = $(LIBEC_OBJECTS) $(HASH_OBJECTS) $(SIG_OBJECTS) $(KEY_OBJECTS) $(UTILS_SIGN_OBJECTS)
 $(LIBSIGN): $(LIBSIGN_OBJECTS)
-	$(AR) rcs $@ $^
-	$(RANLIB) $@
+	$(AR) $(AR_FLAGS) $@ $^
+	$(RANLIB) $(RANLIB_FLAGS) $@
 
 # Compile dynamic libraries if the user asked to
 ifeq ($(WITH_DYNAMIC_LIBS),1)
