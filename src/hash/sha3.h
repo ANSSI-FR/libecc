@@ -18,7 +18,10 @@
 
 #include "../words/words.h"
 
-#define KECCAK_ROTL(x, y) (((x) << (y)) | ((x) >> ((sizeof(u64) * 8) - (y))))
+#define _KECCAK_ROTL_(x, y) (((x) << (y)) | ((x) >> ((sizeof(u64) * 8) - (y))))
+
+/* We handle the case where we rotate by more that 64 bits */
+#define KECCAK_ROTL(x, y) ((y < (sizeof(u64) * 8)) ? (_KECCAK_ROTL_(x, y)) : (x))
 
 /*
  * Round transformation of the state. Notations are the 
