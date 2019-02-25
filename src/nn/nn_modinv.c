@@ -186,9 +186,11 @@ int nn_modinv(nn_t out, nn_src_t x, nn_src_t m)
 	int sign, ret;
 	nn u, v;
 
-	/* Info: out is initialized by calling functions */
 	nn_check_initialized(x);
 	nn_check_initialized(m);
+	
+	/* Initialize out */
+	nn_init(out, 0);
 
 	if (nn_isodd(m)) {
 	        if(nn_cmp(x, m) >= 0){
