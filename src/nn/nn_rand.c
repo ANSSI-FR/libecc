@@ -118,8 +118,11 @@ int nn_get_random_mod(nn_t out, nn_src_t q)
 	ret = 0;
 
  err:
-	nn_uninit(&qprime);
-	nn_uninit(&tmp_rand);
-
+	if(nn_is_initialized(&qprime)){
+		nn_uninit(&qprime);
+	}
+	if(nn_is_initialized(&tmp_rand)){
+		nn_uninit(&tmp_rand);
+	}
 	return ret;
 }
