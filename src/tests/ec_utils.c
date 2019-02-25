@@ -321,7 +321,7 @@ static int store_sig(const char *in_fname, const char *out_fname,
 		     const u8 curve_name[MAX_CURVE_NAME_LEN],
 		     metadata_hdr * hdr)
 {
-	FILE *in_file, *out_file;
+	FILE *in_file = NULL, *out_file = NULL;
 	u8 buf[MAX_BUF_LEN];
 	size_t read, written;
 	int ret;
@@ -396,6 +396,12 @@ static int store_sig(const char *in_fname, const char *out_fname,
 	fclose(out_file);
 	return 0;
  err:
+        if(in_file != NULL){
+		fclose(in_file);
+        }
+        if(out_file != NULL){
+		fclose(out_file);
+        }
 	return -1;
 }
 
