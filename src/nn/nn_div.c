@@ -261,6 +261,7 @@ void nn_mod_normalized(nn_t r, nn_src_t a, nn_src_t b, word_t v)
 {
 	nn q;
 
+	nn_init(&q, 0);
 	nn_divrem_normalized(&q, r, a, b, v);
 	nn_uninit(&q);
 }
