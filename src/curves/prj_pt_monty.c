@@ -330,7 +330,7 @@ void prj_pt_mul_monty(prj_pt_t out, nn_src_t m, prj_pt_src_t in)
 	prj_pt_mul_ltr_monty(out, m, in);
 }
 
-void prj_pt_mul_monty_blind(prj_pt_t out, nn_src_t m, prj_pt_src_t in, nn_t b, nn_src_t q)
+int prj_pt_mul_monty_blind(prj_pt_t out, nn_src_t m, prj_pt_src_t in, nn_t b, nn_src_t q)
 {
         /* The projective coordinates blinding mask */
         fp l;
@@ -340,6 +340,7 @@ void prj_pt_mul_monty_blind(prj_pt_t out, nn_src_t m, prj_pt_src_t in, nn_t b, n
         /* Get a random value l in Fp */
         ret = fp_get_random(&l, in->X.ctx);
         if(ret){
+		ret = -1;
                 goto err;
         }
         /* Blind the point with projective coordinates (X, Y, Z) => (l*X, l*Y, l*Z) 
@@ -356,8 +357,10 @@ void prj_pt_mul_monty_blind(prj_pt_t out, nn_src_t m, prj_pt_src_t in, nn_t b, n
         /* Perform the scalar multiplication */
 	prj_pt_mul_ltr_monty(out, b, &tmp_pt);
 
+	ret = 0;
 err:
 	/* Zero the mask to avoid information leak */
 	nn_zero(b);
 	fp_zero(&l);
+	return ret;
 }

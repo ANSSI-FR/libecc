@@ -44,7 +44,9 @@ void ecrdsa_init_pub_key(ec_pub_key *out_pub, ec_priv_key *in_priv)
 	/* Y = xG */
 	G = &(in_priv->params->ec_gen);
         /* Use blinding with scalar_b when computing point scalar multiplication */
-        prj_pt_mul_monty_blind(&(out_pub->y), &(in_priv->x), G, &scalar_b, &(in_priv->params->ec_gen_order));
+        if(prj_pt_mul_monty_blind(&(out_pub->y), &(in_priv->x), G, &scalar_b, &(in_priv->params->ec_gen_order))){
+		goto err;
+	}
 	nn_uninit(&scalar_b);
 
 	out_pub->key_type = ECRDSA;
@@ -189,6 +191,7 @@ int _ecrdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	/* 2. Get a random value k in ]0, q[ ... */
 	ret = ctx->rand(&k, q);
 	if (ret) {
+		ret = -1;
 		goto err;
 	}
 
@@ -199,9 +202,13 @@ int _ecrdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
         /* We use blinding for the scalar multiplication */
         ret = nn_get_random_mod(&scalar_b, q);
         if (ret) {
+		ret = -1;
                 goto err;
         }
-        prj_pt_mul_monty_blind(&kG, &k, G, &scalar_b, q);
+        if(prj_pt_mul_monty_blind(&kG, &k, G, &scalar_b, q)){
+		ret = -1;
+		goto err;
+	}
 	nn_uninit(&scalar_b);
 #else
         prj_pt_mul_monty(&kG, &k, G);

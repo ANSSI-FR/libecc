@@ -45,7 +45,9 @@ void ecdsa_init_pub_key(ec_pub_key *out_pub, ec_priv_key *in_priv)
 	/* Y = xG */
 	G = &(in_priv->params->ec_gen);
         /* Use blinding with scalar_b when computing point scalar multiplication */
-        prj_pt_mul_monty_blind(&(out_pub->y), &(in_priv->x), G, &scalar_b, &(in_priv->params->ec_gen_order));
+        if(prj_pt_mul_monty_blind(&(out_pub->y), &(in_priv->x), G, &scalar_b, &(in_priv->params->ec_gen_order))){
+		goto err;
+	}
 	nn_uninit(&scalar_b);
 
 	out_pub->key_type = ECDSA;
@@ -239,6 +241,7 @@ int _ecdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	if (ret) {
 		nn_uninit(&tmp2);
 		nn_uninit(&e);
+		ret = -1;
 		goto err;
 	}
 	dbg_nn_print("k", &k);
@@ -250,9 +253,13 @@ int _ecdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	if (ret) {
 		nn_uninit(&tmp2);
 		nn_uninit(&e);
+		ret = -1;
 		goto err;
 	}
-	prj_pt_mul_monty_blind(&kG, &k, G, &scalar_b, q);
+	if(prj_pt_mul_monty_blind(&kG, &k, G, &scalar_b, q)){
+		ret = -1;
+		goto err;
+	}
 	nn_uninit(&scalar_b);
 #else
 	prj_pt_mul_monty(&kG, &k, G);
