@@ -21,7 +21,7 @@
 #define _KECCAK_ROTL_(x, y) (((x) << (y)) | ((x) >> ((sizeof(u64) * 8) - (y))))
 
 /* We handle the case where we rotate by more that 64 bits */
-#define KECCAK_ROTL(x, y) ((y < (sizeof(u64) * 8)) ? (_KECCAK_ROTL_(x, y)) : (x))
+#define KECCAK_ROTL(x, y) (((y) < (sizeof(u64) * 8)) ? (_KECCAK_ROTL_(x, y)) : (x))
 
 /*
  * Round transformation of the state. Notations are the 
@@ -56,7 +56,7 @@ static const u8 keccak_rot[KECCAK_SLICES][KECCAK_SLICES] =
 #define SWAP64_Idx(a)   ((sizeof(u64) * ((a) / sizeof(u64))) + (sizeof(u64) - 1 - ((a) % sizeof(u64))))
 
 #define Idx_slices(x, y)	((x) + (KECCAK_SLICES * (y)))
-#define Idx(A, x, y)    	(A[Idx_slices(x, y)])
+#define Idx(A, x, y)    	((A)[Idx_slices(x, y)])
 
 #define KECCAKROUND(A, RC) do {	                                                        \
         int x, y;                                                                       \
@@ -90,7 +90,7 @@ static const u8 keccak_rot[KECCAK_SLICES][KECCAK_SLICES] =
                 }                                                                       \
         }                                                                               \
         /* Iota step */                                                                 \
-        Idx(A, 0, 0) ^= RC;                                                             \
+        Idx(A, 0, 0) ^= (RC);                                                           \
 } while(0)
 
 #define KECCAKF(A) do {		               		        	                \

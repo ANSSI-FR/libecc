@@ -79,7 +79,7 @@ typedef u16 bitcnt_t;
 #define WRSHIFT(w, c) (((c) >= WORD_BITS) ? WORD(0) : (word_t)((w) >> (c)))
 
 /* To be fixed: not really constant-time. */
-#define WORD_MIN(a, b) (a > b ? b : a)
+#define WORD_MIN(a, b) ((a) > (b) ? (b) : (a))
 
 /* WORD_MASK[_IF[NOT]ZERO]: mask of word size and associated macros. */
 #define WORD_MASK WORD_MAX
@@ -100,10 +100,10 @@ typedef u16 bitcnt_t;
 	word_t tmpm1, tmpm2;						\
 	word_t carrym, carryl;						\
 	/* Get high and low half words. */				\
-	in1h = in1 >> HWORD_BITS;					\
-	in1l = in1 & HWORD_MASK;					\
-	in2h = in2 >> HWORD_BITS;					\
-	in2l = in2 & HWORD_MASK;					\
+	in1h = (in1) >> HWORD_BITS;					\
+	in1l = (in1) & HWORD_MASK;					\
+	in2h = (in2) >> HWORD_BITS;					\
+	in2l = (in2) & HWORD_MASK;					\
 	/* Compute low product. */					\
 	tmpl = in2l * in1l;						\
 	/* Compute middle product. */					\
@@ -113,16 +113,16 @@ typedef u16 bitcnt_t;
 	/* Store middle product carry. */				\
 	carrym = tmpm < tmpm1;						\
 	/* Compute full low product. */					\
-	outl = tmpl;							\
-	outl += (tmpm & HWORD_MASK) << HWORD_BITS;			\
+	(outl) = tmpl;							\
+	(outl) += (tmpm & HWORD_MASK) << HWORD_BITS;			\
 	/* Store full low product carry. */				\
-	carryl = outl < tmpl;						\
+	carryl = (outl) < tmpl;						\
 	/* Compute full high product. */				\
 	carryl += tmpm >> HWORD_BITS;					\
 	carryl += carrym << HWORD_BITS;					\
 	tmph = in2h * in1h;						\
 	/* No carry can occur below. */					\
-	outh = tmph + carryl;						\
+	(outh) = tmph + carryl;						\
 	} while (0)
 
 #endif /* __WORDS_H__ */

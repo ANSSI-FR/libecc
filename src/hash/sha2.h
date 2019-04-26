@@ -104,20 +104,20 @@ do {						\
 #define CH(x, y, z)	(((x) & (y)) ^ ((~(x)) & (z)))
 #define MAJ(x, y, z)	(((x) & (y)) ^ ((x) & (z)) ^ ((y) & (z)))
 
-#define UPDATEW(w, i, sha_type) (w[i] = SIGMA_MIN1_##sha_type(w[i-2]) + w[i-7] + SIGMA_MIN0_##sha_type(w[i-15]) + w[i-16])
+#define UPDATEW(w, i, sha_type) ((w)[(i)] = SIGMA_MIN1_##sha_type((w)[(i)-2]) + (w)[(i)-7] + SIGMA_MIN0_##sha_type((w)[(i)-15]) + w[(i)-16])
 
 #define SHA2CORE(a, b, c, d, e, f, g, h, w, k, sha_word_type, sha_type) do {\
 	sha_word_type t1, t2;\
-	t1 = h + SIGMA_MAJ1_##sha_type(e) + CH(e, f, g) + k + w;\
-	t2 = SIGMA_MAJ0_##sha_type(a) + MAJ(a, b, c);\
-	h = g;\
-	g = f;\
-	f = e;\
-	e = d + t1;\
-	d = c;\
-	c = b;\
-	b = a;\
-	a = t1 + t2;\
+	t1 = (h) + SIGMA_MAJ1_##sha_type((e)) + CH((e), (f), (g)) + (k) + (w);\
+	t2 = SIGMA_MAJ0_##sha_type((a)) + MAJ((a), (b), (c));\
+	(h) = (g);\
+	(g) = (f);\
+	(f) = (e);\
+	(e) = (d) + t1;\
+	(d) = (c);\
+	(c) = (b);\
+	(b) = (a);\
+	(a) = t1 + t2;\
 } while(0);
 
 #if (defined(WITH_HASH_SHA224) || defined(WITH_HASH_SHA256))
