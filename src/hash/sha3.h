@@ -20,8 +20,11 @@
 
 #define _KECCAK_ROTL_(x, y) (((x) << (y)) | ((x) >> ((sizeof(u64) * 8) - (y))))
 
-/* We handle the case where we rotate by more that 64 bits */
-#define KECCAK_ROTL(x, y) (((y) < (sizeof(u64) * 8)) ? (_KECCAK_ROTL_(x, y)) : (x))
+/* We handle the case where one of the shifts is more than 64-bit: in this
+ * case, behaviour is undefined as per ANSI C definition. In this case, we
+ * return the untouched input.
+ */
+#define KECCAK_ROTL(x, y) ((((y) < (sizeof(u64) * 8)) && ((y) > 0)) ? (_KECCAK_ROTL_(x, y)) : (x))
 
 /*
  * Round transformation of the state. Notations are the 
