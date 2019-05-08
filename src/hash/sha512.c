@@ -114,6 +114,7 @@ void sha512_update(sha512_context *ctx, const u8 *input, u32 ilen)
 	if (remain_ilen > 0) {
 		local_memcpy(ctx->sha512_buffer + left, data_ptr, remain_ilen);
 	}
+	return;
 }
 
 /* Finalize */
