@@ -104,7 +104,7 @@ do {						\
 #define CH(x, y, z)	(((x) & (y)) ^ ((~(x)) & (z)))
 #define MAJ(x, y, z)	(((x) & (y)) ^ ((x) & (z)) ^ ((y) & (z)))
 
-#define UPDATEW(w, i, sha_type) ((w)[(i)] = SIGMA_MIN1_##sha_type((w)[(i)-2]) + (w)[(i)-7] + SIGMA_MIN0_##sha_type((w)[(i)-15]) + w[(i)-16])
+#define UPDATEW(w, i, sha_type) ((w)[(i)] = SIGMA_MIN1_##sha_type((w)[(i)-2]) + (w)[(i)-7] + SIGMA_MIN0_##sha_type((w)[(i)-15]) + (w)[(i)-16])
 
 #define SHA2CORE(a, b, c, d, e, f, g, h, w, k, sha_word_type, sha_type) do {\
 	sha_word_type t1, t2;\
@@ -126,7 +126,7 @@ do {						\
 
 /* SHA-224 and SHA-256 */
 #define SHR_SHA256(x, n)       (((u32)(x)) >> (n))
-#define ROTR_SHA256(x, n)      ((((u32)(x)) >> (n)) | (((u32)(x)) << (32-n)))
+#define ROTR_SHA256(x, n)      ((((u32)(x)) >> (n)) | (((u32)(x)) << (32-(n))))
 #define SIGMA_MAJ0_SHA256(x)   (ROTR_SHA256(x, 2)  ^ ROTR_SHA256(x, 13) ^ ROTR_SHA256(x, 22))
 #define SIGMA_MAJ1_SHA256(x)   (ROTR_SHA256(x, 6)  ^ ROTR_SHA256(x, 11) ^ ROTR_SHA256(x, 25))
 #define SIGMA_MIN0_SHA256(x)   (ROTR_SHA256(x, 7)  ^ ROTR_SHA256(x, 18) ^ SHR_SHA256(x, 3))
@@ -162,7 +162,7 @@ static const u32 K_SHA256[] = {
 
 /* SHA-384 and SHA-512 */
 #define SHR_SHA512(x, n)       (((u64)(x)) >> (n))
-#define ROTR_SHA512(x, n)      ((((u64)(x)) >> (n)) | (((u64)(x)) << (64-n)))
+#define ROTR_SHA512(x, n)      ((((u64)(x)) >> (n)) | (((u64)(x)) << (64-(n))))
 #define SIGMA_MAJ0_SHA512(x)   (ROTR_SHA512(x, 28) ^ ROTR_SHA512(x, 34) ^ ROTR_SHA512(x, 39))
 #define SIGMA_MAJ1_SHA512(x)   (ROTR_SHA512(x, 14) ^ ROTR_SHA512(x, 18) ^ ROTR_SHA512(x, 41))
 #define SIGMA_MIN0_SHA512(x)   (ROTR_SHA512(x, 1)  ^ ROTR_SHA512(x, 8)	^ SHR_SHA512(x, 7))
