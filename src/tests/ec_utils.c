@@ -345,6 +345,7 @@ static int store_sig(const char *in_fname, const char *out_fname,
 		if (written != sizeof(metadata_hdr)) {
 			fclose(in_file);
 			fclose(out_file);
+			in_file = out_file = NULL;
 			goto err;
 		}
 	}
@@ -357,6 +358,7 @@ static int store_sig(const char *in_fname, const char *out_fname,
 			       out_fname);
 			fclose(in_file);
 			fclose(out_file);
+			in_file = out_file = NULL;
 			goto err;
 		}
 		if (read != sizeof(buf)) {
@@ -368,6 +370,7 @@ static int store_sig(const char *in_fname, const char *out_fname,
 				       in_fname);
 				fclose(in_file);
 				fclose(out_file);
+				in_file = out_file = NULL;
 				goto err;
 			}
 		}
@@ -389,6 +392,7 @@ static int store_sig(const char *in_fname, const char *out_fname,
 		printf("Error: error when writing to %s\n", out_fname);
 		fclose(in_file);
 		fclose(out_file);
+		in_file = out_file = NULL;
 		goto err;
 	}
 
