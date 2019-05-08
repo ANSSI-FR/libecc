@@ -36,7 +36,7 @@ static int nn_cmp_shift(nn_src_t in1, nn_src_t in2, u8 shift)
 	u8 i;
 	int ret, mask;
 
-	MUST_HAVE(in1->wlen >= in2->wlen + shift);
+	MUST_HAVE(in1->wlen >= (in2->wlen + shift));
 
 	ret = 0;
 	for (i = in2->wlen; i > 0; i--) {
@@ -79,7 +79,7 @@ static word_t nn_submul_word_shift(nn_t out, nn_src_t in, word_t w, u8 shift)
 	word_t borrow = WORD(0), prod_high, prod_low, tmp;
 	u8 i;
 
-	MUST_HAVE(out->wlen >= in->wlen + shift);
+	MUST_HAVE(out->wlen >= (in->wlen + shift));
 
 	for (i = 0; i < in->wlen; i++) {
 		/*
@@ -152,7 +152,7 @@ static void _nn_divrem_normalized(nn_t q, nn_t r, nn_src_t a, nn_src_t b, word_t
 
 	MUST_HAVE(b->wlen > 0);
 	MUST_HAVE((b->val[b->wlen - 1] >> (WORD_BITS - 1)) == WORD(1));
-	MUST_HAVE(a->wlen > b->wlen && nn_cmp_shift(a, b, a->wlen - b->wlen) < 0);
+	MUST_HAVE((a->wlen > b->wlen) && (nn_cmp_shift(a, b, a->wlen - b->wlen) < 0));
 
 	/* Handle trivial aliasing for a and r */
 	if (r != a) {
@@ -532,8 +532,8 @@ word_t wreciprocal(word_t dh, word_t dl)
 	word_t carry;
 	word_t r[2], t[2];
 
-	if ((word_t)(dh + WORD(1)) == WORD(0)
-	    && (word_t)(dl + WORD(1)) == WORD(0))
+	if (((word_t)(dh + WORD(1)) == WORD(0))
+	    && ((word_t)(dl + WORD(1)) == WORD(0)))
 		return WORD(0);
 
 	if ((word_t)(dh + WORD(1)) == WORD(0)) {
@@ -555,7 +555,7 @@ word_t wreciprocal(word_t dh, word_t dl)
 
 	t[0] = dl + WORD(1);
 	t[1] = dh;
-	while (carry || wcmp_22(r, t) >= 0) {
+	while (carry || (wcmp_22(r, t) >= 0)) {
 		q++;
 		carry -= wsub_22(r, t);
 	}

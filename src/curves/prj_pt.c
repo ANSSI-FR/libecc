@@ -246,7 +246,7 @@ int prj_pt_import_from_buf(prj_pt_t pt,
 
 	fp_init_from_buf(&(pt->X), ctx, pt_buf, coord_len);
 	fp_init_from_buf(&(pt->Y), ctx, pt_buf + coord_len, coord_len);
-	fp_init_from_buf(&(pt->Z), ctx, pt_buf + 2 * coord_len, coord_len);
+	fp_init_from_buf(&(pt->Z), ctx, pt_buf + (2 * coord_len), coord_len);
 
 	/* Set the curve */
 	pt->crv = crv;
@@ -289,7 +289,7 @@ int prj_pt_export_to_buf(prj_pt_src_t pt, u8 *pt_buf, u32 pt_buf_len)
 	/* Export the three coordinates */
 	fp_export_to_buf(pt_buf, coord_len, &(pt->X));
 	fp_export_to_buf(pt_buf + coord_len, coord_len, &(pt->Y));
-	fp_export_to_buf(pt_buf + 2 * coord_len, coord_len, &(pt->Z));
+	fp_export_to_buf(pt_buf + (2 * coord_len), coord_len, &(pt->Z));
 
 	return 0;
 }

@@ -631,8 +631,8 @@ static int sign_bin_file(const char *ec_name, const char *ec_sig_name,
 	clearerr(in_file);
 	while (raw_data_len && !eof) {
 		to_read =
-			raw_data_len <
-			sizeof(buf) ? raw_data_len : sizeof(buf);
+			(raw_data_len <
+			sizeof(buf)) ? raw_data_len : sizeof(buf);
 		read = fread(buf, 1, to_read, in_file);
 		if (read != to_read) {
 			/* Check if this was EOF */
@@ -967,7 +967,7 @@ static int verify_bin_file(const char *ec_name, const char *ec_sig_name,
 	eof = 0;
 	clearerr(in_file);
 	while (exp_len && !eof) {
-		to_read = exp_len < sizeof(buf) ? exp_len : sizeof(buf);
+		to_read = (exp_len < sizeof(buf)) ? exp_len : sizeof(buf);
 		read = fread(buf, 1, to_read, in_file);
 		if (read != to_read) {
 			/* Check if this was EOF */

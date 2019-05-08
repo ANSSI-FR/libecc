@@ -102,7 +102,7 @@ char *local_strncpy(char *dst, const char *src, u32 n)
 {
 	u32 i;
 
-	for (i = 0; i < n && src[i]; i++) {
+	for (i = 0; (i < n) && src[i]; i++) {
 		dst[i] = src[i];
 	}
 	for (; i < n; i++) {
@@ -118,7 +118,7 @@ char *local_strncat(char *dst, const char *src, u32 n)
 	u32 dst_len, i;
 
 	dst_len = local_strlen(dst);
-	for (i = 0; i < n && src[i]; i++) {
+	for (i = 0; (i < n) && src[i]; i++) {
 		dst[dst_len + i] = src[i];
 	}
 	dst[dst_len + i] = 0;

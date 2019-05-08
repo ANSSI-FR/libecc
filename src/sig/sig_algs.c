@@ -304,7 +304,7 @@ int ec_verify_init(struct ec_verify_context *ctx, const ec_pub_key *pub_key,
 	ret = -1;
 	for (i = 0, sm = &ec_sig_maps[i];
 	     sm->type != UNKNOWN_SIG_ALG; sm = &ec_sig_maps[++i]) {
-		if (sm->type == sig_type && sm->verify_init != NULL) {
+		if ((sm->type == sig_type) && (sm->verify_init != NULL)) {
 			ret = 0;
 			break;
 		}
