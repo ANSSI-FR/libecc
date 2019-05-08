@@ -160,7 +160,7 @@ static int string_to_params(const char *ec_name, const char *ec_sig_name,
 	const ec_str_params *curve_params;
 	const ec_sig_mapping *sm;
 	const hash_mapping *hm;
-	u8 curve_name_len;
+	u32 curve_name_len;
 
 	if (sig_type != NULL) {
 		/* Get sig type from signature alg name */
@@ -175,9 +175,13 @@ static int string_to_params(const char *ec_name, const char *ec_sig_name,
 
 	if (ec_str_p != NULL) {
 		/* Get curve params from curve name */
-		curve_name_len = (u8)local_strlen((const char *)ec_name) + 1;
+		curve_name_len = local_strlen((const char *)ec_name) + 1;
+		if(curve_name_len > 255){
+			/* Sanity check */
+			goto err;
+		}
 		curve_params = ec_get_curve_params_by_name((const u8 *)ec_name,
-							   curve_name_len);
+							   (u8)curve_name_len);
 		if (!curve_params) {
 			printf("Error: EC curve %s is unknown!\n", ec_name);
 			goto err;
