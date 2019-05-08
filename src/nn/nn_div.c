@@ -445,19 +445,19 @@ static word_t wsub_22(word_t a[2], word_t b[2])
 /* Conditional subtraction of a one limb number from a two limbs number. */
 #define WORD_CND_SUB_21(cnd, ah, al, b) do {				\
 		word_t tmp, mask;					\
-		mask = WORD_MASK_IFNOTZERO(cnd);			\
-		tmp = al - ((b) & mask);				\
-		ah -= tmp > al;						\
-		al = tmp;						\
+		mask = WORD_MASK_IFNOTZERO((cnd));			\
+		tmp = (al) - ((b) & mask);				\
+		(ah) -= tmp > (al);					\
+		(al) = tmp;						\
 	} while (0)
 /* Conditional subtraction of a two limbs number from a two limbs number. */
 #define WORD_CND_SUB_22(cnd, ah, al, bh, bl) do {			\
 		word_t tmp, mask;					\
-		mask = WORD_MASK_IFNOTZERO(cnd);			\
-		tmp = al - ((bl) & mask);				\
-		ah -= tmp > al;						\
-		al = tmp;						\
-		ah -= (bh) & mask;					\
+		mask = WORD_MASK_IFNOTZERO((cnd));			\
+		tmp = (al) - ((bl) & mask);				\
+		(ah) -= tmp > (al);					\
+		(al) = tmp;						\
+		(ah) -= (bh) & mask;					\
 	} while (0)
 
 /*
@@ -472,11 +472,11 @@ static word_t wsub_22(word_t a[2], word_t b[2])
 		word_t qh, ql;						\
 		word_t rhl[2], rm;					\
 		word_t phl[2];						\
-		MUST_HAVE(WRSHIFT(b, (WORD_BITS - 1)) == WORD(1));	\
-		bh = WRSHIFT(b, HWORD_BITS);				\
-		bl = WLSHIFT(b, HWORD_BITS);				\
-		rhl[1] = ah;						\
-		rhl[0] = al;						\
+		MUST_HAVE(WRSHIFT((b), (WORD_BITS - 1)) == WORD(1));	\
+		bh = WRSHIFT((b), HWORD_BITS);				\
+		bl = WLSHIFT((b), HWORD_BITS);				\
+		rhl[1] = (ah);						\
+		rhl[0] = (al);						\
 		/*                                                      \
 		 * Compute high part of the quotient. We know from      \
 		 * MUST_HAVE() check above that bh (a word_t) is not 0  \
@@ -511,10 +511,10 @@ static word_t wsub_22(word_t a[2], word_t b[2])
 		wsub_22(rhl, phl);					\
 		/* Set outputs. */					\
 		MUST_HAVE(rhl[1] == WORD(0));				\
-		MUST_HAVE(rhl[0] < b);					\
-		q = WLSHIFT(qh, HWORD_BITS) | ql;			\
-		r = rhl[0];						\
-		MUST_HAVE((word_t) (q*(b) + r) == al);			\
+		MUST_HAVE(rhl[0] < (b));				\
+		(q) = WLSHIFT(qh, HWORD_BITS) | ql;			\
+		(r) = rhl[0];						\
+		MUST_HAVE((word_t) ((q)*(b) + (r)) == (al));		\
 	} while (0)
 
 /*
