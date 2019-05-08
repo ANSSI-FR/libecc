@@ -53,7 +53,10 @@ int nn_get_random_maxlen(nn_t out, u16 max_len)
 
 	MUST_HAVE(max_len <= NN_MAX_BYTE_LEN);
 
-	get_random((u8 *)&len, 2);
+	if(get_random((u8 *)&len, 2)){
+		/* Failure of get_random */
+		return -1;
+	}
 	len %= max_len + 1;
 
 	return nn_get_random_len(out, len);
