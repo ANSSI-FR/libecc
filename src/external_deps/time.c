@@ -30,7 +30,7 @@ int get_ms_time(u64 *time)
 	if (ret < 0) {
 		goto err;
 	}
-	*time = (u64)((tv.tv_sec) * 1000 + (tv.tv_usec) / 1000);
+	*time = (u64)(((tv.tv_sec) * 1000) + ((tv.tv_usec) / 1000));
 
 	return 0;
  err:
