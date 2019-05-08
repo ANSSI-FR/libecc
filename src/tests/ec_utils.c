@@ -55,6 +55,7 @@ static int export_private_key(FILE * file, const char *name,
 	u8 priv_key_buf[EC_STRUCTURED_PRIV_KEY_MAX_EXPORT_SIZE];
 	int ret;
 	u32 i;
+	size_t written;
 
 	priv_key_check_initialized(priv_key);
 	MUST_HAVE(file != NULL);
@@ -83,7 +84,11 @@ static int export_private_key(FILE * file, const char *name,
 		ret = 0;
 		break;
 	case RAWBIN:
-		fwrite(priv_key_buf, export_buf_size, 1, file);
+		written = fwrite(priv_key_buf, 1, export_buf_size, file);
+		if(written != export_buf_size){
+			ret = -1;
+			goto err;
+		}
 		ret = 0;
 		break;
 	default:
@@ -102,6 +107,7 @@ static int export_public_key(FILE * file, const char *name,
 	u8 export_buf_size;
 	int ret;
 	u32 i;
+	size_t written;
 
 	pub_key_check_initialized(pub_key);
 	MUST_HAVE(file != NULL);
@@ -131,7 +137,11 @@ static int export_public_key(FILE * file, const char *name,
 		ret = 0;
 		break;
 	case RAWBIN:
-		fwrite(pub_key_buf, export_buf_size, 1, file);
+		written = fwrite(pub_key_buf, 1, export_buf_size, file);
+		if(written != export_buf_size){
+			ret = -1;
+			goto err;
+		}
 		ret = 0;
 		break;
 	default:
