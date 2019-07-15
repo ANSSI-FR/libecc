@@ -20,6 +20,11 @@ ifeq ($(WITH_DYNAMIC_LIBS),1)
 TESTS_EXEC += $(BUILD_DIR)/ec_self_tests_dyn $(BUILD_DIR)/ec_utils_dyn
 endif
 
+# Do we want to use blinding to secure signature against some side channels?
+ifeq ($(BLINDING),1)
+LIB_CFLAGS += -DUSE_SIG_BLINDING
+endif
+
 EXEC_TO_CLEAN = $(BUILD_DIR)/ec_self_tests $(BUILD_DIR)/ec_utils $(BUILD_DIR)/ec_self_tests_dyn $(BUILD_DIR)/ec_utils_dyn
 
 # all and clean, as you might expect

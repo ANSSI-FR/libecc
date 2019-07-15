@@ -862,7 +862,9 @@ the ROM size limitation of 32KB that can be solved using [bank switching](http:/
 which will involve some code and compilation tuning. Another issue would be the RAM size of 8KB and 
 properly handling the stack pointer base as described in the [previous sections](#compiling-libecc-for-arm-cortex-m-with-GNU-gcc-arm).
 
-## libecc and constant time
+## libecc, side channel attacks and constant time
+
+### Constant time
 
 Though **some efforts** have been made to have (most of) the core algorithms 
 constant time, turning libecc into a library shielded against side channel attacks 
@@ -882,6 +884,29 @@ leakage sources.
 
 For a thorough discussion about cryptography and constant time challenges, 
 one can check [this page](https://bearssl.org/constanttime.html).
+
+### Signature algorithm blinding
+
+In order to avoid a range of attacks on the signature algorithm exploiting various
+side channel attacks and leading to the recovery of the secret key
+(see [here](https://www.nccgroup.trust/globalassets/our-research/us/whitepapers/2018/rohnp-return-of-the-hidden-number-problem.pdf) 
+for more details), **blinding** operations can be used.
+
+Since such security countermeasures have a **significant performance hit** on the signature algorithm, we have
+decided to leave the activation of such countermeasures as a **voluntary decision** to the end user.
+The performance impact might be acceptable or not depending on the context where the signature is performed, and whether attackers exploiting side channels 
+are indeed considered in the threat model of the specific use case. 
+Of course, for **security critical use cases we recommend the blinding usage
+despite its performance cost**.
+
+Compiling the library with blinding is as simple as using the ``BLINDIG=1`` environment variable (or the ``-DUSE_SIG_BLINDING`` C flag):
+
+<pre>
+	$ BLINDING=1 make
+</pre>
+
+NOTE: if you are **unsure** about your current security context, use the ``BLINDING=1`` by
+default!
 
 ## Software architecture
 The source code is composed of eight main parts that consist of the 
