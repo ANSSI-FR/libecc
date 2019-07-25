@@ -158,8 +158,8 @@ int _ecdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 {
 	nn k, r, e, tmp, tmp2, s, kinv;
 #ifdef USE_SIG_BLINDING
-        /* b is the blinding mask, and binv = b^-1 mod q */
-        nn b, binv;
+        /* b is the blinding mask */
+        nn b;
 	/* scalar_b is the scalar multiplication blinder */
 	nn scalar_b;
 #endif
@@ -246,16 +246,31 @@ int _ecdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	}
 	dbg_nn_print("k", &k);
 
-	/* 5. Compute W = (W_x,W_y) = kG */
 #ifdef USE_SIG_BLINDING
-	/* We use blinding for the scalar multiplication */
-	ret = nn_get_random_mod(&scalar_b, q);
-	if (ret) {
+	/* Note: if we use blinding, r and e are multiplied by
+	 * a random value b in ]0,q[ */
+        ret = nn_get_random_mod(&b, q);
+        if (ret) {
 		nn_uninit(&tmp2);
 		nn_uninit(&e);
 		ret = -1;
-		goto err;
-	}
+                goto err;
+        }
+        dbg_nn_print("b", &b);
+        /* We use blinding for the scalar multiplication */
+        ret = nn_get_random_mod(&scalar_b, q);
+        if (ret) {
+		nn_uninit(&tmp2);
+		nn_uninit(&e);
+		ret = -1;
+                goto err;
+        }
+        dbg_nn_print("scalar_b", &scalar_b);
+#endif /* USE_SIG_BLINDING */
+
+
+	/* 5. Compute W = (W_x,W_y) = kG */
+#ifdef USE_SIG_BLINDING
 	if(prj_pt_mul_monty_blind(&kG, &k, G, &scalar_b, q)){
 		ret = -1;
 		goto err;
@@ -284,19 +299,6 @@ int _ecdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	nn_export_to_buf(sig, q_len, &r);
 
 #ifdef USE_SIG_BLINDING
-	/* Note: if we use blinding, r and e are multiplied by
-	 * a random value b in ]0,q[ */
-	ret = nn_get_random_mod(&b, q);
-	if (ret) {
-		/* TODO: uninit everything necessary */
-		nn_uninit(&tmp2);
-		nn_uninit(&e);
-		goto err;
-	}
-	dbg_nn_print("b", &b);
-	/* Compute  b^-1 mod q */
-	nn_modinv(&binv, &b, q);
-
 	/* Blind r with b */
 	nn_mul_mod(&r, &r, &b, q);
 
@@ -321,16 +323,17 @@ int _ecdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	nn_uninit(&tmp);
 	dbg_nn_print("(xr + e) mod q", &tmp2);
 
+#ifdef USE_SIG_BLINDING
+	/* In case of blinding, we compute (b*k)^-1, and 
+	 * b^-1 will automatically unblind (r*x) in the following
+	 */
+	nn_mul_mod(&k, &k, &b, q);
+#endif
 	/* Compute k^-1 mod q */
 	nn_modinv(&kinv, &k, q);
 	nn_uninit(&k);
 
 	dbg_nn_print("k^-1 mod q", &kinv);
-
-#ifdef USE_SIG_BLINDING
-	/* Unblind (xr + e) with b^-1 */
-	nn_mul_mod(&tmp2, &tmp2, &binv, q);
-#endif
 
 	/* s = k^-1 * tmp2 mod q */
 	nn_mul_mod(&s, &tmp2, &kinv, q);
@@ -367,6 +370,10 @@ int _ecdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	VAR_ZEROIFY(q_bit_len);
 	VAR_ZEROIFY(rshift);
 	VAR_ZEROIFY(hsize);
+
+#ifdef USE_SIG_BLINDING
+        nn_zero(&b);
+#endif /* USE_SIG_BLINDING */
 
 	return ret;
 }

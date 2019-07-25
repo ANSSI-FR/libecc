@@ -159,6 +159,8 @@ int _ecgdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	nn_src_t q, x;
 	nn tmp, tmp2, s, e, kr, k, r;
 #ifdef USE_SIG_BLINDING
+        /* b is the blinding mask */
+        nn b, binv;
         /* scalar_b is the scalar multiplication blinder */
         nn scalar_b;
 #endif
@@ -241,8 +243,18 @@ int _ecgdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 		goto err;
 	}
 
-	/* 4. Compute W = kG = (Wx, Wy) */
 #ifdef USE_SIG_BLINDING
+        /* Note: if we use blinding, e and e are multiplied by
+         * a random value b in ]0,q[ */
+        ret = nn_get_random_mod(&b, q);
+        if (ret) {
+		nn_uninit(&tmp2);
+		nn_uninit(&tmp);
+		nn_uninit(&e);
+		ret = -1;
+                goto err;
+        }
+        dbg_nn_print("b", &b);
         /* We use blinding for the scalar multiplication */
         ret = nn_get_random_mod(&scalar_b, q);
         if (ret) {
@@ -252,6 +264,13 @@ int _ecgdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 		ret = -1;
                 goto err;
         }
+        dbg_nn_print("scalar_b", &scalar_b);
+#endif /* USE_SIG_BLINDING */
+
+
+	/* 4. Compute W = kG = (Wx, Wy) */
+#ifdef USE_SIG_BLINDING
+        /* We use blinding for the scalar multiplication */
         if(prj_pt_mul_monty_blind(&kG, &k, G, &scalar_b, q)){
 		ret = -1;
 		goto err;
@@ -259,7 +278,7 @@ int _ecgdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	nn_uninit(&scalar_b);
 #else
         prj_pt_mul_monty(&kG, &k, G);
-#endif
+#endif /* USE_SIG_BLINDING */
 	prj_pt_to_aff(&W, &kG);
 	prj_pt_uninit(&kG);
 
@@ -276,7 +295,14 @@ int _ecgdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 		goto restart;
 	}
 
-	/* [RB] FIXME: We need some optional blinding here! */
+	/* Export r */
+	nn_export_to_buf(sig, r_len, &r);
+
+#ifdef USE_SIG_BLINDING
+	/* Blind e and r with b */
+	nn_mul_mod(&e, &e, &b, q);
+	nn_mul_mod(&r, &r, &b, q);
+#endif /* USE_SIG_BLINDING */
 	/* 7. Compute s = x(kr + e) mod q */
 	nn_mul_mod(&kr, &k, &r, q);
 	nn_uninit(&k);
@@ -286,6 +312,11 @@ int _ecgdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	nn_uninit(&tmp);
 	nn_mul_mod(&s, x, &tmp2, q);
 	nn_uninit(&tmp2);
+#ifdef USE_SIG_BLINDING
+	/* Unblind s */
+	nn_modinv(&binv, &b, q);
+	nn_mul_mod(&s, &s, &binv, q);
+#endif
 	dbg_nn_print("s", &s);
 
 	/* 8. If s is 0, restart the process at step 4. */
@@ -294,7 +325,6 @@ int _ecgdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	}
 
 	/* 9. Return (r,s) */
-	nn_export_to_buf(sig, r_len, &r);
 	nn_export_to_buf(sig + r_len, s_len, &s);
 
 	nn_uninit(&r);
@@ -321,6 +351,11 @@ int _ecgdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	PTR_NULLIFY(x);
 	PTR_NULLIFY(priv_key);
 	PTR_NULLIFY(G);
+
+#ifdef USE_SIG_BLINDING
+        nn_zero(&b);
+        nn_zero(&binv);
+#endif /* USE_SIG_BLINDING */
 
 	return ret;
 }

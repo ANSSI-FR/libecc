@@ -263,6 +263,11 @@ int _ecfsdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	int ret = -1;
 	u8 *r;
 
+#ifdef USE_SIG_BLINDING
+        /* b is the blinding mask */
+        nn b, binv;
+#endif /* USE_SIG_BLINDING */
+
 	/*
 	 * First, verify context has been initialized and private
 	 * part too. This guarantees the context is an ECFSDSA
@@ -288,6 +293,15 @@ int _ecfsdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 		goto err;
 	}
 
+#ifdef USE_SIG_BLINDING
+        ret = nn_get_random_mod(&b, q);
+        if (ret) {
+		ret = -1;
+                goto err;
+        }
+        dbg_nn_print("b", &b);
+#endif /* USE_SIG_BLINDING */
+
 	/*  5. Compute h = H(r||m) */
 	ctx->h->hfunc_finalize(&(ctx->sign_data.ecfsdsa.h_ctx), e_buf);
 	dbg_buf_print("h(R||m)", e_buf, hsize);
@@ -297,14 +311,27 @@ int _ecfsdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	local_memset(e_buf, 0, hsize);
 	nn_mod(&e, &tmp, q);
 
-        /* [RB] FIXME: We need some optional blinding here! */
+#ifdef USE_SIG_BLINDING
+	/* Blind e with b */
+	nn_mul_mod(&e, &e, &b, q);
+#endif /* USE_SIG_BLINDING */
 	/*  7. Compute s = (k + ex) mod q */
 	nn_mul_mod(&ex, &e, x, q);
 	nn_uninit(&e);
+#ifdef USE_SIG_BLINDING
+	/* Blind k with b */
+	nn_mul_mod(&s, k, &b, q);
+	nn_mod_add(&s, &s, &ex, q);
+#else
 	nn_mod_add(&s, k, &ex, q);
+#endif /* USE_SIG_BLINDING */
 	nn_uninit(&ex);
 	nn_uninit(&tmp);
-
+#ifdef USE_SIG_BLINDING
+	/* Unblind s */
+        nn_modinv(&binv, &b, q);
+	nn_mul_mod(&s, &s, &binv, q);	
+#endif /* USE_SIG_BLINDING */
 	dbg_nn_print("s: ", &s);
 
 	/*
@@ -344,6 +371,11 @@ int _ecfsdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	VAR_ZEROIFY(q_bit_len);
 	VAR_ZEROIFY(r_len);
 	VAR_ZEROIFY(s_len);
+
+#ifdef USE_SIG_BLINDING
+        nn_zero(&b);
+        nn_zero(&binv);
+#endif /* USE_SIG_BLINDING */
 
 	return ret;
 }

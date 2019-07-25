@@ -141,9 +141,11 @@ int _ecrdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	const ec_priv_key *priv_key;
 	nn tmp, s, rx, ke, k, r, e;
 #ifdef USE_SIG_BLINDING
+        /* b is the blinding mask */
+        nn b, binv;
         /* scalar_b is the scalar multiplication blinder */
         nn scalar_b;
-#endif
+#endif /* USE_SIG_BLINDING */
 	u8 h_buf[MAX_DIGEST_SIZE];
 	prj_pt_src_t G;
 	prj_pt kG;
@@ -196,15 +198,25 @@ int _ecrdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	}
 
 	dbg_nn_print("k", &k);
+#ifdef USE_SIG_BLINDING
+        /* Note: if we use blinding, k and e are multiplied by
+         * a random value b in ]0,q[ */
+        ret = nn_get_random_mod(&b, q);
+        if (ret) {
+                goto err;
+        }
+        dbg_nn_print("b", &b);
+        /* We use blinding for the scalar multiplication */
+        ret = nn_get_random_mod(&scalar_b, q);
+        if (ret) {
+                goto err;
+        }
+        dbg_nn_print("scalar_b", &scalar_b);
+#endif /* USE_SIG_BLINDING */
 
 	/* 3. Compute W = kG = (Wx, Wy) */
 #ifdef USE_SIG_BLINDING
         /* We use blinding for the scalar multiplication */
-        ret = nn_get_random_mod(&scalar_b, q);
-        if (ret) {
-		ret = -1;
-                goto err;
-        }
         if(prj_pt_mul_monty_blind(&kG, &k, G, &scalar_b, q)){
 		ret = -1;
 		goto err;
@@ -212,7 +224,7 @@ int _ecrdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	nn_uninit(&scalar_b);
 #else
         prj_pt_mul_monty(&kG, &k, G);
-#endif
+#endif /* USE_SIG_BLINDING */
 	prj_pt_to_aff(&W, &kG);
 	prj_pt_uninit(&kG);
 	dbg_nn_print("W_x", &(W.x.fp_val));
@@ -228,6 +240,9 @@ int _ecrdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	}
 	dbg_nn_print("r", &r);
 
+	/* Export r */
+	nn_export_to_buf(sig, r_len, &r);
+
 	/* 6. Compute e = OS2I(h) mod q. If e is 0, set e to 1. */
 	local_memset(h_buf, 0, hsize);
 	ctx->h->hfunc_finalize(&(ctx->sign_data.ecrdsa.h_ctx), h_buf);
@@ -240,10 +255,12 @@ int _ecrdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	}
 	dbg_nn_print("e", &e);
 
-	/* [RB] FIXME: We *MIGHT* need some optional blinding here! 
-	 * To be checked since sensitive values x and k are both multiplied
-	 * before adding two unkown values.
-	 */
+#ifdef USE_SIG_BLINDING
+        /* In case of blinding, we blind r and e */
+        nn_mul_mod(&r, &r, &b, q);
+        nn_mul_mod(&e, &e, &b, q);
+#endif /* USE_SIG_BLINDING */
+
 	/* Compute s = (rx + ke) mod q */
 	nn_mul_mod(&rx, &r, x, q);
 	nn_mul_mod(&ke, &k, &e, q);
@@ -253,6 +270,11 @@ int _ecrdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	nn_zero(&rx);
 	nn_zero(&ke);
 	nn_zero(&tmp);
+#ifdef USE_SIG_BLINDING
+	/* Unblind s */
+        nn_modinv(&binv, &b, q);
+	nn_mul_mod(&s, &s, &binv, q);
+#endif /* USE_SIG_BLINDING */
 
 	/* If s is 0, restart the process at step 2. */
 	if (nn_iszero(&s)) {
@@ -262,7 +284,6 @@ int _ecrdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	dbg_nn_print("s", &s);
 
 	/* Return (r,s) */
-	nn_export_to_buf(sig, r_len, &r);
 	nn_export_to_buf(sig + r_len, s_len, &s);
 	nn_zero(&r);
 	nn_zero(&s);
@@ -286,6 +307,11 @@ int _ecrdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	PTR_NULLIFY(G);
 	PTR_NULLIFY(q);
 	PTR_NULLIFY(x);
+
+#ifdef USE_SIG_BLINDING
+        nn_zero(&b);
+        nn_zero(&binv);
+#endif /* USE_SIG_BLINDING */
 
 	return ret;
 }
