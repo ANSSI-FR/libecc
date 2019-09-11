@@ -44,5 +44,16 @@ void ec_shortw_crv_init(ec_shortw_crv_t crv, fp_src_t a, fp_src_t b)
 	fp_copy(&(crv->b), b);
 	fp_redcify(&(crv->a_monty), a);
 
+#ifdef USE_COMPLETE_FORMULAS
+	fp_init(&(crv->b3), b->ctx);
+	fp_init(&(crv->b_monty), b->ctx);
+	fp_init(&(crv->b3_monty), b->ctx);
+
+	fp_add(&(crv->b3), b, b);
+	fp_add(&(crv->b3), &(crv->b3), b);
+	fp_redcify(&(crv->b_monty), b);
+	fp_redcify(&(crv->b3_monty), &(crv->b3));
+#endif
+
 	crv->magic = EC_SHORTW_CRV_MAGIC;
 }

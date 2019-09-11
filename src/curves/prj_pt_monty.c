@@ -24,11 +24,88 @@
 #include "../fp/fp_rand.h"
 
 /*
+ * If USE_COMPLETE_FORMULAS flag is defined addition formulas from Algorithm 1
+ * of https://joostrenes.nl/publications/complete.pdf are used, otherwise
  * http://www.hyperelliptic.org/EFD/g1p/auto-shortw-projective.html#addition-add-1998-cmo-2
  */
 static void __prj_pt_add_monty(prj_pt_t out, prj_pt_src_t in1,
 			       prj_pt_src_t in2)
 {
+#ifdef USE_COMPLETE_FORMULAS
+	fp t0, t1, t2, t3, t4, t5;
+
+	/* Info: initialization check of in1 and in2 done at upper level */
+	MUST_HAVE(in1->crv == in2->crv);
+
+	prj_pt_init(out, in1->crv);
+
+	fp_init(&t0, out->crv->a.ctx);
+	fp_init(&t1, out->crv->a.ctx);
+	fp_init(&t2, out->crv->a.ctx);
+	fp_init(&t3, out->crv->a.ctx);
+	fp_init(&t4, out->crv->a.ctx);
+	fp_init(&t5, out->crv->a.ctx);
+
+	MUST_HAVE(out->crv == in1->crv);
+	MUST_HAVE(out->crv == in2->crv);
+	MUST_HAVE(!prj_pt_iszero(in1));
+	MUST_HAVE(!prj_pt_iszero(in2));
+
+	fp_mul_monty(&t0, &in1->X, &in2->X);
+	fp_mul_monty(&t1, &in1->Y, &in2->Y);
+	fp_mul_monty(&t2, &in1->Z, &in2->Z);
+	fp_add_monty(&t3, &in1->X, &in1->Y);
+	fp_add_monty(&t4, &in2->X, &in2->Y);
+
+	fp_mul_monty(&t3, &t3, &t4);
+	fp_add_monty(&t4, &t0, &t1);
+	fp_sub_monty(&t3, &t3, &t4);
+	fp_add_monty(&t4, &in1->X, &in1->Z);
+	fp_add_monty(&t5, &in2->X, &in2->Z);
+
+	fp_mul_monty(&t4, &t4, &t5);
+	fp_add_monty(&t5, &t0, &t2);
+	fp_sub_monty(&t4, &t4, &t5);
+	fp_add_monty(&t5, &in1->Y, &in1->Z);
+	fp_add_monty(&out->X, &in2->Y, &in2->Z);
+
+	fp_mul_monty(&t5, &t5, &out->X);
+	fp_add_monty(&out->X, &t1, &t2);
+	fp_sub_monty(&t5, &t5, &out->X);
+	fp_mul_monty(&out->Z, &in1->crv->a_monty, &t4);
+	fp_mul_monty(&out->X, &in1->crv->b3_monty, &t2);
+
+	fp_add_monty(&out->Z, &out->X, &out->Z);
+	fp_sub_monty(&out->X, &t1, &out->Z);
+	fp_add_monty(&out->Z, &t1, &out->Z);
+	fp_mul_monty(&out->Y, &out->X, &out->Z);
+	fp_add_monty(&t1, &t0, &t0);
+
+	fp_add_monty(&t1, &t1, &t0);
+	fp_mul_monty(&t2, &in1->crv->a_monty, &t2);
+	fp_mul_monty(&t4, &in1->crv->b3_monty, &t4);
+	fp_add_monty(&t1, &t1, &t2);
+	fp_sub_monty(&t2, &t0, &t2);
+
+	fp_mul_monty(&t2, &in1->crv->a_monty, &t2);
+	fp_add_monty(&t4, &t4, &t2);
+	fp_mul_monty(&t0, &t1, &t4);
+	fp_add_monty(&out->Y, &out->Y, &t0);
+	fp_mul_monty(&t0, &t5, &t4);
+
+	fp_mul_monty(&out->X, &t3, &out->X);
+	fp_sub_monty(&out->X, &out->X, &t0);
+	fp_mul_monty(&t0, &t3, &t1);
+	fp_mul_monty(&out->Z, &t5, &out->Z);
+	fp_add_monty(&out->Z, &out->Z, &t0);
+
+	fp_uninit(&t0);
+	fp_uninit(&t1);
+	fp_uninit(&t2);
+	fp_uninit(&t3);
+	fp_uninit(&t4);
+	fp_uninit(&t5);
+#else
 	fp Y1Z2, X1Z2, Z1Z2, u, uu, v, vv, vvv, R, A;
 
 	/* Info: in1 and in2 init check done in upper levels */
@@ -114,6 +191,7 @@ static void __prj_pt_add_monty(prj_pt_t out, prj_pt_src_t in1,
 	fp_uninit(&vvv);
 	fp_uninit(&R);
 	fp_uninit(&A);
+#endif
 }
 
 /* Aliased version */
@@ -139,6 +217,7 @@ void prj_pt_add_monty(prj_pt_t out, prj_pt_src_t in1, prj_pt_src_t in2)
 	prj_pt_check_initialized(in1);
 	prj_pt_check_initialized(in2);
 
+#ifndef USE_COMPLETE_FORMULAS
 	if (prj_pt_iszero(in1)) {
 		prj_pt_init(out, in2->crv);
 		prj_pt_copy(out, in2);
@@ -163,13 +242,75 @@ void prj_pt_add_monty(prj_pt_t out, prj_pt_src_t in1, prj_pt_src_t in2)
 	} else {
 		_prj_pt_add_monty(out, in1, in2);
 	}
+#else
+	_prj_pt_add_monty(out, in1, in2);
+#endif
 }
 
 /*
+ * If USE_COMPLETE_FORMULAS flag is defined addition formulas from Algorithm 3
+ * of https://joostrenes.nl/publications/complete.pdf are used, otherwise
  * http://www.hyperelliptic.org/EFD/g1p/auto-shortw-projective.html#doubling-dbl-2007-bl
  */
 static void __prj_pt_dbl_monty(prj_pt_t out, prj_pt_src_t in)
 {
+#ifdef USE_COMPLETE_FORMULAS
+	fp t0, t1, t2 ,t3;
+
+	/* Info: initialization check of in done at upper level */
+	prj_pt_init(out, in->crv);
+
+	fp_init(&t0, out->crv->a.ctx);
+	fp_init(&t1, out->crv->a.ctx);
+	fp_init(&t2, out->crv->a.ctx);
+	fp_init(&t3, out->crv->a.ctx);
+
+	MUST_HAVE(out->crv == in->crv);
+	MUST_HAVE(!prj_pt_iszero(in));
+
+	fp_mul_monty(&t0, &in->X, &in->X);
+	fp_mul_monty(&t1, &in->Y, &in->Y);
+	fp_mul_monty(&t2, &in->Z, &in->Z);
+	fp_mul_monty(&t3, &in->X, &in->Y);
+	fp_add_monty(&t3, &t3, &t3);
+
+	fp_mul_monty(&out->Z, &in->X, &in->Z);
+	fp_add_monty(&out->Z, &out->Z, &out->Z);
+	fp_mul_monty(&out->X, &in->crv->a_monty, &out->Z);
+	fp_mul_monty(&out->Y, &in->crv->b3_monty, &t2);
+	fp_add_monty(&out->Y, &out->X, &out->Y);
+
+	fp_sub_monty(&out->X, &t1, &out->Y);
+	fp_add_monty(&out->Y, &t1, &out->Y);
+	fp_mul_monty(&out->Y, &out->X, &out->Y);
+	fp_mul_monty(&out->X, &t3, &out->X);
+	fp_mul_monty(&out->Z, &in->crv->b3_monty, &out->Z);
+
+	fp_mul_monty(&t2, &in->crv->a_monty, &t2);
+	fp_sub_monty(&t3, &t0, &t2);
+	fp_mul_monty(&t3, &in->crv->a_monty, &t3);
+	fp_add_monty(&t3, &t3, &out->Z);
+	fp_add_monty(&out->Z, &t0, &t0);
+
+	fp_add_monty(&t0, &out->Z, &t0);
+	fp_add_monty(&t0, &t0, &t2);
+	fp_mul_monty(&t0, &t0, &t3);
+	fp_add_monty(&out->Y, &out->Y, &t0);
+	fp_mul_monty(&t2, &in->Y, &in->Z);
+
+	fp_add_monty(&t2, &t2, &t2);
+	fp_mul_monty(&t0, &t2, &t3);
+	fp_sub_monty(&out->X, &out->X, &t0);
+	fp_mul_monty(&out->Z, &t2, &t1);
+	fp_add_monty(&out->Z, &out->Z, &out->Z);
+
+	fp_add_monty(&out->Z, &out->Z, &out->Z);
+
+	fp_uninit(&t0);
+	fp_uninit(&t1);
+	fp_uninit(&t2);
+	fp_uninit(&t3);
+#else
 	fp XX, ZZ, w, s, ss, sss, R, RR, B, h;
 
 	/* Info: in init check done in upper levels */
@@ -249,6 +390,7 @@ static void __prj_pt_dbl_monty(prj_pt_t out, prj_pt_src_t in)
 	fp_uninit(&RR);
 	fp_uninit(&B);
 	fp_uninit(&h);
+#endif
 }
 
 /* Aliased version */
@@ -273,12 +415,16 @@ void prj_pt_dbl_monty(prj_pt_t out, prj_pt_src_t in)
 {
 	prj_pt_check_initialized(in);
 
+#ifndef USE_COMPLETE_FORMULAS
 	if (prj_pt_iszero(in)) {
 		prj_pt_init(out, in->crv);
 		prj_pt_zero(out);
 	} else {
 		_prj_pt_dbl_monty(out, in);
 	}
+#else
+	_prj_pt_dbl_monty(out, in);
+#endif
 }
 
 static void _prj_pt_mul_ltr_monty(prj_pt_t out, nn_src_t m, prj_pt_src_t in)

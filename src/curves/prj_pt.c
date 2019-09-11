@@ -295,10 +295,87 @@ int prj_pt_export_to_buf(prj_pt_src_t pt, u8 *pt_buf, u32 pt_buf_len)
 }
 
 /*
+ * If USE_COMPLETE_FORMULAS flag is defined addition formulas from Algorithm 1
+ * of https://joostrenes.nl/publications/complete.pdf are used, otherwise
  * http://www.hyperelliptic.org/EFD/g1p/auto-shortw-projective.html#addition-add-1998-cmo-2
  */
 static void __prj_pt_add(prj_pt_t out, prj_pt_src_t in1, prj_pt_src_t in2)
 {
+#ifdef USE_COMPLETE_FORMULAS
+	fp t0, t1, t2, t3, t4, t5;
+
+	/* Info: initialization check of in1 and in2 done at upper level */
+	MUST_HAVE(in1->crv == in2->crv);
+
+	prj_pt_init(out, in1->crv);
+
+	fp_init(&t0, out->crv->a.ctx);
+	fp_init(&t1, out->crv->a.ctx);
+	fp_init(&t2, out->crv->a.ctx);
+	fp_init(&t3, out->crv->a.ctx);
+	fp_init(&t4, out->crv->a.ctx);
+	fp_init(&t5, out->crv->a.ctx);
+
+	MUST_HAVE(out->crv == in1->crv);
+	MUST_HAVE(out->crv == in2->crv);
+	MUST_HAVE(!prj_pt_iszero(in1));
+	MUST_HAVE(!prj_pt_iszero(in2));
+
+	fp_mul(&t0, &in1->X, &in2->X);
+	fp_mul(&t1, &in1->Y, &in2->Y);
+	fp_mul(&t2, &in1->Z, &in2->Z);
+	fp_add(&t3, &in1->X, &in1->Y);
+	fp_add(&t4, &in2->X, &in2->Y);
+
+	fp_mul(&t3, &t3, &t4);
+	fp_add(&t4, &t0, &t1);
+	fp_sub(&t3, &t3, &t4);
+	fp_add(&t4, &in1->X, &in1->Z);
+	fp_add(&t5, &in2->X, &in2->Z);
+
+	fp_mul(&t4, &t4, &t5);
+	fp_add(&t5, &t0, &t2);
+	fp_sub(&t4, &t4, &t5);
+	fp_add(&t5, &in1->Y, &in1->Z);
+	fp_add(&out->X, &in2->Y, &in2->Z);
+
+	fp_mul(&t5, &t5, &out->X);
+	fp_add(&out->X, &t1, &t2);
+	fp_sub(&t5, &t5, &out->X);
+	fp_mul(&out->Z, &in1->crv->a, &t4);
+	fp_mul(&out->X, &in1->crv->b3, &t2);
+
+	fp_add(&out->Z, &out->X, &out->Z);
+	fp_sub(&out->X, &t1, &out->Z);
+	fp_add(&out->Z, &t1, &out->Z);
+	fp_mul(&out->Y, &out->X, &out->Z);
+	fp_add(&t1, &t0, &t0);
+
+	fp_add(&t1, &t1, &t0);
+	fp_mul(&t2, &in1->crv->a, &t2);
+	fp_mul(&t4, &in1->crv->b3, &t4);
+	fp_add(&t1, &t1, &t2);
+	fp_sub(&t2, &t0, &t2);
+
+	fp_mul(&t2, &in1->crv->a, &t2);
+	fp_add(&t4, &t4, &t2);
+	fp_mul(&t0, &t1, &t4);
+	fp_add(&out->Y, &out->Y, &t0);
+	fp_mul(&t0, &t5, &t4);
+
+	fp_mul(&out->X, &t3, &out->X);
+	fp_sub(&out->X, &out->X, &t0);
+	fp_mul(&t0, &t3, &t1);
+	fp_mul(&out->Z, &t5, &out->Z);
+	fp_add(&out->Z, &out->Z, &t0);
+
+	fp_uninit(&t0);
+	fp_uninit(&t1);
+	fp_uninit(&t2);
+	fp_uninit(&t3);
+	fp_uninit(&t4);
+	fp_uninit(&t5);
+#else
 	fp Y1Z2, X1Z2, Z1Z2, u, uu, v, vv, vvv, R, A;
 
 	/* Info: initialization check of in1 and in2 done at upper level */
@@ -380,6 +457,7 @@ static void __prj_pt_add(prj_pt_t out, prj_pt_src_t in1, prj_pt_src_t in2)
 	fp_uninit(&vvv);
 	fp_uninit(&R);
 	fp_uninit(&A);
+#endif
 }
 
 /* Aliased version */
@@ -406,6 +484,7 @@ void prj_pt_add(prj_pt_t out, prj_pt_src_t in1, prj_pt_src_t in2)
 	prj_pt_check_initialized(in1);
 	prj_pt_check_initialized(in2);
 
+#ifndef USE_COMPLETE_FORMULAS
 	if (prj_pt_iszero(in1)) {
 		prj_pt_init(out, in2->crv);
 		prj_pt_copy(out, in2);
@@ -422,13 +501,75 @@ void prj_pt_add(prj_pt_t out, prj_pt_src_t in1, prj_pt_src_t in2)
 	} else {
 		_prj_pt_add(out, in1, in2);
 	}
+#else
+	_prj_pt_add(out, in1, in2);
+#endif
 }
 
 /*
+ * If USE_COMPLETE_FORMULAS flag is defined addition formulas from Algorithm 3
+ * of https://joostrenes.nl/publications/complete.pdf are used, otherwise
  * http://www.hyperelliptic.org/EFD/g1p/auto-shortw-projective.html#doubling-dbl-2007-bl
  */
 static void __prj_pt_dbl(prj_pt_t out, prj_pt_src_t in)
 {
+#ifdef USE_COMPLETE_FORMULAS
+	fp t0, t1, t2 ,t3;
+
+	/* Info: initialization check of in done at upper level */
+	prj_pt_init(out, in->crv);
+
+	fp_init(&t0, out->crv->a.ctx);
+	fp_init(&t1, out->crv->a.ctx);
+	fp_init(&t2, out->crv->a.ctx);
+	fp_init(&t3, out->crv->a.ctx);
+
+	MUST_HAVE(out->crv == in->crv);
+	MUST_HAVE(!prj_pt_iszero(in));
+
+	fp_mul(&t0, &in->X, &in->X);
+	fp_mul(&t1, &in->Y, &in->Y);
+	fp_mul(&t2, &in->Z, &in->Z);
+	fp_mul(&t3, &in->X, &in->Y);
+	fp_add(&t3, &t3, &t3);
+
+	fp_mul(&out->Z, &in->X, &in->Z);
+	fp_add(&out->Z, &out->Z, &out->Z);
+	fp_mul(&out->X, &in->crv->a, &out->Z);
+	fp_mul(&out->Y, &in->crv->b3, &t2);
+	fp_add(&out->Y, &out->X, &out->Y);
+
+	fp_sub(&out->X, &t1, &out->Y);
+	fp_add(&out->Y, &t1, &out->Y);
+	fp_mul(&out->Y, &out->X, &out->Y);
+	fp_mul(&out->X, &t3, &out->X);
+	fp_mul(&out->Z, &in->crv->b3, &out->Z);
+
+	fp_mul(&t2, &in->crv->a, &t2);
+	fp_sub(&t3, &t0, &t2);
+	fp_mul(&t3, &in->crv->a, &t3);
+	fp_add(&t3, &t3, &out->Z);
+	fp_add(&out->Z, &t0, &t0);
+
+	fp_add(&t0, &out->Z, &t0);
+	fp_add(&t0, &t0, &t2);
+	fp_mul(&t0, &t0, &t3);
+	fp_add(&out->Y, &out->Y, &t0);
+	fp_mul(&t2, &in->Y, &in->Z);
+
+	fp_add(&t2, &t2, &t2);
+	fp_mul(&t0, &t2, &t3);
+	fp_sub(&out->X, &out->X, &t0);
+	fp_mul(&out->Z, &t2, &t1);
+	fp_add(&out->Z, &out->Z, &out->Z);
+
+	fp_add(&out->Z, &out->Z, &out->Z);
+
+	fp_uninit(&t0);
+	fp_uninit(&t1);
+	fp_uninit(&t2);
+	fp_uninit(&t3);
+#else
 	fp XX, ZZ, w, s, ss, sss, R, RR, B, h;
 
 	/* Info: initialization check of in done at upper level */
@@ -509,6 +650,7 @@ static void __prj_pt_dbl(prj_pt_t out, prj_pt_src_t in)
 	fp_uninit(&RR);
 	fp_uninit(&B);
 	fp_uninit(&h);
+#endif
 }
 
 /* Aliased version */
@@ -534,12 +676,16 @@ void prj_pt_dbl(prj_pt_t out, prj_pt_src_t in)
 {
 	prj_pt_check_initialized(in);
 
+#ifndef USE_COMPLETE_FORMULAS
 	if (prj_pt_iszero(in)) {
 		prj_pt_init(out, in->crv);
 		prj_pt_zero(out);
 	} else {
 		_prj_pt_dbl(out, in);
 	}
+#else
+	_prj_pt_dbl(out, in);
+#endif
 }
 
 static void _prj_pt_mul(prj_pt_t out, nn_src_t m, prj_pt_src_t in)
