@@ -1,0 +1,83 @@
+language: c
+os: linux
+dist:
+    - xenial
+
+
+addons:
+    apt:
+        update: true
+        packages:
+            - make
+            - gcc
+            - clang
+
+# We use docker for the cross-build
+services:
+  - docker
+
+# All our jobs
+jobs:
+    include:
+        # gcc stage
+        - stage: main_gcc
+          script:
+              - if [ "$TRAVIS_EVENT_TYPE" = "pull_request" ]; then git fetch github refs/pull/${TRAVIS_PULL_REQUEST}/head && git checkout FETCH_HEAD; fi
+              - make
+              - cd src/examples/ && make
+        - stage: main_gcc_blinding
+          script:
+              - if [ "$TRAVIS_EVENT_TYPE" = "pull_request" ]; then git fetch github refs/pull/${TRAVIS_PULL_REQUEST}/head && git checkout FETCH_HEAD; fi
+              - export BLINDING=1
+              - make
+              - cd src/examples/ && make
+        - stage: main_gcc_complete
+          script:
+              - if [ "$TRAVIS_EVENT_TYPE" = "pull_request" ]; then git fetch github refs/pull/${TRAVIS_PULL_REQUEST}/head && git checkout FETCH_HEAD; fi
+              - export COMPLETE=1
+              - make
+              - cd src/examples/ && make
+        - stage: main_gcc_complete_blinding
+          script:
+              - if [ "$TRAVIS_EVENT_TYPE" = "pull_request" ]; then git fetch github refs/pull/${TRAVIS_PULL_REQUEST}/head && git checkout FETCH_HEAD; fi
+              - export BLINDING=1
+              - export COMPLETE=1
+              - make
+              - cd src/examples/ && make
+        # clang stage
+        - stage: main_clang
+          script:
+              - if [ "$TRAVIS_EVENT_TYPE" = "pull_request" ]; then git fetch github refs/pull/${TRAVIS_PULL_REQUEST}/head && git checkout FETCH_HEAD; fi
+              - export CC=clang
+              - make
+              - cd src/examples/ && make
+        - stage: main_clang_blinding
+          script:
+              - if [ "$TRAVIS_EVENT_TYPE" = "pull_request" ]; then git fetch github refs/pull/${TRAVIS_PULL_REQUEST}/head && git checkout FETCH_HEAD; fi
+              - export CC=clang
+              - export BLINDING=1
+              - make
+              - cd src/examples/ && make
+        - stage: main_clang_complete
+          script:
+              - if [ "$TRAVIS_EVENT_TYPE" = "pull_request" ]; then git fetch github refs/pull/${TRAVIS_PULL_REQUEST}/head && git checkout FETCH_HEAD; fi
+              - export CC=clang
+              - export COMPLETE=1
+              - make
+              - cd src/examples/ && make
+        - stage: main_clang_complete_blinding
+          script:
+              - if [ "$TRAVIS_EVENT_TYPE" = "pull_request" ]; then git fetch github refs/pull/${TRAVIS_PULL_REQUEST}/head && git checkout FETCH_HEAD; fi
+              - export CC=clang
+              - export BLINDING=1
+              - export COMPLETE=1
+              - make
+              - cd src/examples/ && make
+
+notifications:
+  email:
+    recipients:
+      - ryadbenadjila@gmail.com
+    on_success: never
+    on_failure: always
+    on_pull_requests: always
