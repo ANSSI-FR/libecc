@@ -26,12 +26,12 @@ typedef struct {
 	fp a;
 	fp b;
 	fp a_monty;
-	word_t magic;
 #ifdef USE_COMPLETE_FORMULAS
 	fp b3;
 	fp b_monty;
 	fp b3_monty;
 #endif
+	word_t magic;
 } ec_shortw_crv;
 
 typedef ec_shortw_crv *ec_shortw_crv_t;
