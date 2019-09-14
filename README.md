@@ -15,6 +15,7 @@ See [LICENSE](LICENSE) file at the root folder of the project.
 ## Contributors
   * Nicolas VIVET (<mailto:nicolas.vivet@ssi.gouv.fr>)
   * Karim KHALFALLAH (<mailto:karim.khalfallah@ssi.gouv.fr>)
+  * Niels SAMWEL (<mailto:nsamwel@google.com>)
 
 ## Description
 This software implements a library for elliptic curves based
