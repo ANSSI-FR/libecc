@@ -25,6 +25,11 @@ ifeq ($(BLINDING),1)
 LIB_CFLAGS += -DUSE_SIG_BLINDING
 endif
 
+# Use complete formulasfor point addition
+ifeq ($(COMPLETE),1)
+LIB_CFLAGS += -DUSE_COMPLETE_FORMULAS
+endif
+
 EXEC_TO_CLEAN = $(BUILD_DIR)/ec_self_tests $(BUILD_DIR)/ec_utils $(BUILD_DIR)/ec_self_tests_dyn $(BUILD_DIR)/ec_utils_dyn
 
 # all and clean, as you might expect
