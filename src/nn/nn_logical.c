@@ -254,7 +254,7 @@ void nn_rrot(nn_t out, nn_src_t in, bitcnt_t cnt, bitcnt_t bitlen)
 	/* Mask the last word if necessary */
 	if (((bitlen % WORD_BITS) != 0) && (out->wlen > 0)) {
 		/* shift operation below is ok (less than WORD_BITS) */
-		word_t mask = (WORD(1) << (bitlen % WORD_BITS)) - 1;
+		word_t mask = ((word_t)(WORD(1) << (bitlen % WORD_BITS))) - 1;
 		out->val[out->wlen - 1] &= mask;
 	}
 
@@ -283,7 +283,7 @@ void nn_lrot(nn_t out, nn_src_t in, bitcnt_t cnt, bitcnt_t bitlen)
 	nn_xor(out, out, &tmp);
 	/* Mask the last word if necessary */
 	if (((bitlen % WORD_BITS) != 0) && (out->wlen > 0)) {
-		word_t mask = (WORD(1) << (bitlen % WORD_BITS)) - 1;
+		word_t mask = ((word_t)(WORD(1) << (bitlen % WORD_BITS))) - 1;
 		out->val[out->wlen - 1] &= mask;
 	}
 
