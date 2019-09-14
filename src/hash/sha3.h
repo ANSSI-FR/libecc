@@ -101,7 +101,7 @@ static const u8 keccak_rot[KECCAK_SLICES][KECCAK_SLICES] =
         for(round = 0; round < KECCAK_ROUNDS; round++){                         	\
                 KECCAKROUND(A, keccak_rc[round]); 	                    		\
         }                                                              			\
-} while(0);
+} while(0)
 
 
 typedef enum {

@@ -58,7 +58,7 @@
 #error "AFL Fuzzing needs the STDLIB!"
 #endif
 #include <stdlib.h>
-#define MUST_HAVE(x) do { if (!(x)) { exit(-1); } } while(0);
+#define MUST_HAVE(x) do { if (!(x)) { exit(-1); } } while(0)
 #define SHOULD_HAVE(x)
 #define KNOWN_FACT(x)
 
@@ -69,7 +69,7 @@
 #define SHOULD_HAVE(x) assert(x)
 #define KNOWN_FACT(x) assert(x)
 #else
-#define MUST_HAVE(x) do { if (!(x)) { while (1); } } while (0);
+#define MUST_HAVE(x) do { if (!(x)) { while (1); } } while (0)
 #define SHOULD_HAVE(x)
 #define KNOWN_FACT(x)
 #endif

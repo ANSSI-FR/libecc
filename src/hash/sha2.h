@@ -28,13 +28,13 @@
 	if((low) < (toadd)){\
 		(high)++;\
 	}\
-} while(0);
+} while(0)
 
 /* Store a 128-bit element in big endian format */
 #define PUT_UINT128_BE(low,high,b,i) do {\
 	PUT_UINT64_BE((high), (b), (i));\
 	PUT_UINT64_BE((low), (b), (i)+8);\
-} while(0);
+} while(0)
 
 /* Multiply a 128-bit element by 8 and store it in big endian
  * format
@@ -44,7 +44,7 @@
 	reslow = (low) << 3;\
 	reshigh = ((low) >> 61) ^ ((high) << 3);\
 	PUT_UINT128_BE(reslow,reshigh,(b),(i));\
-} while(0);
+} while(0)
 
 /*
  * 32-bit integer manipulation macros (big endian)
@@ -74,7 +74,7 @@ do {						\
  */
 #ifndef GET_UINT64_BE
 #define GET_UINT64_BE(n,b,i)				\
-{							\
+do {							\
     (n) = ( ((u64) (b)[(i)	   ]) << 56 )		\
 	| ( ((u64) (b)[(i) + 1]) << 48 )		\
 	| ( ((u64) (b)[(i) + 2]) << 40 )		\
@@ -83,12 +83,12 @@ do {						\
 	| ( ((u64) (b)[(i) + 5]) << 16 )		\
 	| ( ((u64) (b)[(i) + 6]) <<  8 )		\
 	| ( ((u64) (b)[(i) + 7])	    );		\
-}
+} while( 0 )
 #endif /* GET_UINT64_BE */
 
 #ifndef PUT_UINT64_BE
 #define PUT_UINT64_BE(n,b,i)		\
-{					\
+do {					\
     (b)[(i)    ] = (u8) ( (n) >> 56 );	\
     (b)[(i) + 1] = (u8) ( (n) >> 48 );	\
     (b)[(i) + 2] = (u8) ( (n) >> 40 );	\
@@ -97,7 +97,7 @@ do {						\
     (b)[(i) + 5] = (u8) ( (n) >> 16 );	\
     (b)[(i) + 6] = (u8) ( (n) >>  8 );	\
     (b)[(i) + 7] = (u8) ( (n)       );	\
-}
+} while( 0 )
 #endif /* PUT_UINT64_BE */
 
 /* Useful macros for the SHA-2 core function  */
@@ -118,7 +118,7 @@ do {						\
 	(c) = (b);\
 	(b) = (a);\
 	(a) = t1 + t2;\
-} while(0);
+} while(0)
 
 #if (defined(WITH_HASH_SHA224) || defined(WITH_HASH_SHA256))
 
