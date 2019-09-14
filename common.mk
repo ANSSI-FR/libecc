@@ -129,3 +129,13 @@ LIBSIGN_DYN = $(BUILD_DIR)/libsign.so
 # The ld flags to generate shared librarie
 LIB_DYN_LDFLAGS ?= -shared -Wl,-z,relro,-z,now
 endif
+
+# Do we want to use blinding to secure signature against some side channels?
+ifeq ($(BLINDING),1)
+CFLAGS += -DUSE_SIG_BLINDING
+endif
+
+# Use complete formulasfor point addition
+ifeq ($(COMPLETE),1)
+CFLAGS += -DUSE_COMPLETE_FORMULAS
+endif
