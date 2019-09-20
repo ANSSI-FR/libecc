@@ -17,63 +17,38 @@ services:
   - docker
 
 # All our jobs
-jobs:
-    include:
-        # gcc stage
-        - stage: main_gcc
-          script:
-              - if [ "$TRAVIS_EVENT_TYPE" = "pull_request" ]; then git fetch github refs/pull/${TRAVIS_PULL_REQUEST}/head && git checkout FETCH_HEAD; fi
-              - make
-              - cd src/examples/ && make
-        - stage: main_gcc_blinding
-          script:
-              - if [ "$TRAVIS_EVENT_TYPE" = "pull_request" ]; then git fetch github refs/pull/${TRAVIS_PULL_REQUEST}/head && git checkout FETCH_HEAD; fi
-              - export BLINDING=1
-              - make
-              - cd src/examples/ && make
-        - stage: main_gcc_complete
-          script:
-              - if [ "$TRAVIS_EVENT_TYPE" = "pull_request" ]; then git fetch github refs/pull/${TRAVIS_PULL_REQUEST}/head && git checkout FETCH_HEAD; fi
-              - export COMPLETE=1
-              - make
-              - cd src/examples/ && make
-        - stage: main_gcc_complete_blinding
-          script:
-              - if [ "$TRAVIS_EVENT_TYPE" = "pull_request" ]; then git fetch github refs/pull/${TRAVIS_PULL_REQUEST}/head && git checkout FETCH_HEAD; fi
-              - export BLINDING=1
-              - export COMPLETE=1
-              - make
-              - cd src/examples/ && make
-        # clang stage
-        - stage: main_clang
-          script:
-              - if [ "$TRAVIS_EVENT_TYPE" = "pull_request" ]; then git fetch github refs/pull/${TRAVIS_PULL_REQUEST}/head && git checkout FETCH_HEAD; fi
-              - export CC=clang
-              - make
-              - cd src/examples/ && make
-        - stage: main_clang_blinding
-          script:
-              - if [ "$TRAVIS_EVENT_TYPE" = "pull_request" ]; then git fetch github refs/pull/${TRAVIS_PULL_REQUEST}/head && git checkout FETCH_HEAD; fi
-              - export CC=clang
-              - export BLINDING=1
-              - make
-              - cd src/examples/ && make
-        - stage: main_clang_complete
-          script:
-              - if [ "$TRAVIS_EVENT_TYPE" = "pull_request" ]; then git fetch github refs/pull/${TRAVIS_PULL_REQUEST}/head && git checkout FETCH_HEAD; fi
-              - export CC=clang
-              - export COMPLETE=1
-              - make
-              - cd src/examples/ && make
-        - stage: main_clang_complete_blinding
-          script:
-              - if [ "$TRAVIS_EVENT_TYPE" = "pull_request" ]; then git fetch github refs/pull/${TRAVIS_PULL_REQUEST}/head && git checkout FETCH_HEAD; fi
-              - export CC=clang
-              - export BLINDING=1
-              - export COMPLETE=1
-              - make
-              - cd src/examples/ && make
+env:
+    matrix:      
+      - BLINDING=0 COMPLETE=0
+      - BLINDING=1 COMPLETE=0
+      - BLINDING=0 COMPLETE=1
+      - BLINDING=1 COMPLETE=1
+      - CC=clang BLINDING=0 COMPLETE=0
+      - CC=clang BLINDING=1 COMPLETE=0
+      - CC=clang BLINDING=0 COMPLETE=1
+      - CC=clang BLINDING=1 COMPLETE=1
 
+script:
+       - if [ "$TRAVIS_EVENT_TYPE" = "pull_request" ]; then git fetch github refs/pull/${TRAVIS_PULL_REQUEST}/head && git checkout FETCH_HEAD; fi
+       - make && ./build/ec_self_tests vectors vectors && ./build/ec_self_tests vectors rand
+       - cd src/examples/ && make clean && make && cd - && make clean
+       - make 16 && ./build/ec_self_tests vectors vectors && ./build/ec_self_tests vectors rand
+       - cd src/examples/ && make clean && make 16 && cd - && make clean
+       - make 32 && ./build/ec_self_tests vectors vectors && ./build/ec_self_tests vectors rand
+       - cd src/examples/ && make clean && make 32 && cd - && make clean
+       - make 64 && ./build/ec_self_tests vectors vectors && ./build/ec_self_tests vectors rand
+       - cd src/examples/ && make clean && make 64 && cd - && make clean
+       - make debug && ./build/ec_self_tests vectors vectors && ./build/ec_self_tests vectors rand
+       - cd src/examples/ && make clean && make debug && cd - && make clean
+       - make debug16 && ./build/ec_self_tests vectors vectors && ./build/ec_self_tests vectors rand
+       - cd src/examples/ && make clean && make debug16 && cd - && make clean
+       - make debug32 && ./build/ec_self_tests vectors vectors && ./build/ec_self_tests vectors rand
+       - cd src/examples/ && make clean && make debug32 && cd - && make clean
+       - make debug64 && ./build/ec_self_tests vectors vectors && ./build/ec_self_tests vectors rand
+       - cd src/examples/ && make clean && make debug64 && cd - && make clean
+       # Cross build jobs
+       - sh scripts/crossbuild.sh
+ 
 notifications:
   email:
     recipients:
