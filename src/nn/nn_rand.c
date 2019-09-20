@@ -113,7 +113,8 @@ int nn_get_random_mod(nn_t out, nn_src_t q)
 
 	/* 3) compute out = tmp_rand mod q' */
 	nn_init(out, (u16)q_len);
-	nn_mod(out, &tmp_rand, &qprime);
+	/* Use nn_mod_notrim to avoid exposing the generated random length */
+	nn_mod_notrim(out, &tmp_rand, &qprime);
 
 	/* 4) compute out += 1 */
 	nn_inc(out, out);
