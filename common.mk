@@ -135,10 +135,10 @@ ifeq ($(BLINDING),1)
 CFLAGS += -DUSE_SIG_BLINDING
 endif
 
-# Use complete formulas for point addition
+# Use complete formulas for point addition and doubling
 # NOTE: complete formulas are used as default since they are
 # more resilient against side channel attacks and they do not
 # have a major performance impact
-ifneq ($(COMPLETE),0)
-CFLAGS += -DUSE_COMPLETE_FORMULAS
+ifeq ($(COMPLETE),0)
+CFLAGS += -DNO_USE_COMPLETE_FORMULAS
 endif

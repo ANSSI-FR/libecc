@@ -122,7 +122,7 @@
  * Update: we also check here the consistency of using complete formulas
  * or not.
  */
-#ifndef USE_COMPLETE_FORMULAS
+#ifdef NO_USE_COMPLETE_FORMULAS
 #define _CONCATENATE(a, b, c, d) a##b##c##d
 #define CONCATENATE(a, b, c, d) _CONCATENATE(a, b, c, d)
 void CONCATENATE(nn_consistency_check_maxbitlen, NN_MAX_BASE, wordsize,
@@ -140,7 +140,7 @@ ATTRIBUTE_USED static inline void nn_check_libconsistency(void)
 	return;
 }
 #endif
-#else /* USE_COMPLETE_FORMULAS */
+#else /* NO_USE_COMPLETE_FORMULAS */
 #define _CONCATENATE(a, b, c, d, e) a##b##c##d##e
 #define CONCATENATE(a, b, c, d, e) _CONCATENATE(a, b, c, d, e)
 void CONCATENATE(nn_consistency_check_maxbitlen, NN_MAX_BASE, wordsize,
@@ -158,6 +158,6 @@ ATTRIBUTE_USED static inline void nn_check_libconsistency(void)
 	return;
 }
 #endif
-#endif /* USE_COMPLETE_FORMULAS */
+#endif /* NO_USE_COMPLETE_FORMULAS */
 
 #endif /* __NN_CONFIG_H__ */

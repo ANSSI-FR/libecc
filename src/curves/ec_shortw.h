@@ -26,7 +26,7 @@ typedef struct {
 	fp a;
 	fp b;
 	fp a_monty;
-#ifdef USE_COMPLETE_FORMULAS
+#ifndef NO_USE_COMPLETE_FORMULAS
 	fp b3;
 	fp b_monty;
 	fp b3_monty;

@@ -295,13 +295,13 @@ int prj_pt_export_to_buf(prj_pt_src_t pt, u8 *pt_buf, u32 pt_buf_len)
 }
 
 /*
- * If USE_COMPLETE_FORMULAS flag is defined addition formulas from Algorithm 1
+ * If NO_USE_COMPLETE_FORMULAS flag is not defined addition formulas from Algorithm 1
  * of https://joostrenes.nl/publications/complete.pdf are used, otherwise
  * http://www.hyperelliptic.org/EFD/g1p/auto-shortw-projective.html#addition-add-1998-cmo-2
  */
 static void __prj_pt_add(prj_pt_t out, prj_pt_src_t in1, prj_pt_src_t in2)
 {
-#ifdef USE_COMPLETE_FORMULAS
+#ifndef NO_USE_COMPLETE_FORMULAS
 	fp t0, t1, t2, t3, t4, t5;
 
 	/* Info: initialization check of in1 and in2 done at upper level */
@@ -482,7 +482,7 @@ void prj_pt_add(prj_pt_t out, prj_pt_src_t in1, prj_pt_src_t in2)
 	prj_pt_check_initialized(in1);
 	prj_pt_check_initialized(in2);
 
-#ifndef USE_COMPLETE_FORMULAS
+#ifdef NO_USE_COMPLETE_FORMULAS
 	if (prj_pt_iszero(in1)) {
 		prj_pt_init(out, in2->crv);
 		prj_pt_copy(out, in2);
@@ -505,13 +505,13 @@ void prj_pt_add(prj_pt_t out, prj_pt_src_t in1, prj_pt_src_t in2)
 }
 
 /*
- * If USE_COMPLETE_FORMULAS flag is defined addition formulas from Algorithm 3
+ * If NO_USE_COMPLETE_FORMULAS flag is not defined addition formulas from Algorithm 3
  * of https://joostrenes.nl/publications/complete.pdf are used, otherwise
  * http://www.hyperelliptic.org/EFD/g1p/auto-shortw-projective.html#doubling-dbl-2007-bl
  */
 static void __prj_pt_dbl(prj_pt_t out, prj_pt_src_t in)
 {
-#ifdef USE_COMPLETE_FORMULAS
+#ifndef NO_USE_COMPLETE_FORMULAS
 	fp t0, t1, t2 ,t3;
 
 	/* Info: initialization check of in done at upper level */
@@ -673,7 +673,7 @@ void prj_pt_dbl(prj_pt_t out, prj_pt_src_t in)
 {
 	prj_pt_check_initialized(in);
 
-#ifndef USE_COMPLETE_FORMULAS
+#ifdef NO_USE_COMPLETE_FORMULAS
 	if (prj_pt_iszero(in)) {
 		prj_pt_init(out, in->crv);
 		prj_pt_zero(out);
@@ -693,7 +693,7 @@ static void _prj_pt_mul(prj_pt_t out, nn_src_t m, prj_pt_src_t in)
 
         MUST_HAVE(!nn_iszero(m));
 
-#ifndef USE_COMPLETE_FORMULAS
+#ifdef NO_USE_COMPLETE_FORMULAS
         /* Case where we do not use the complete formulas.
          * WARNING: in this case, the MSB of the scalar m is searched, which
          * can be leaked through a side channel (such as timing). If you are in
