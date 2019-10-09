@@ -48,8 +48,6 @@ static void __prj_pt_add_monty(prj_pt_t out, prj_pt_src_t in1,
 
 	MUST_HAVE(out->crv == in1->crv);
 	MUST_HAVE(out->crv == in2->crv);
-	MUST_HAVE(!prj_pt_iszero(in1));
-	MUST_HAVE(!prj_pt_iszero(in2));
 
 	fp_mul_monty(&t0, &in1->X, &in2->X);
 	fp_mul_monty(&t1, &in1->Y, &in2->Y);
@@ -266,7 +264,6 @@ static void __prj_pt_dbl_monty(prj_pt_t out, prj_pt_src_t in)
 	fp_init(&t3, out->crv->a.ctx);
 
 	MUST_HAVE(out->crv == in->crv);
-	MUST_HAVE(!prj_pt_iszero(in));
 
 	fp_mul_monty(&t0, &in->X, &in->X);
 	fp_mul_monty(&t1, &in->Y, &in->Y);
@@ -433,13 +430,41 @@ static void _prj_pt_mul_ltr_monty(prj_pt_t out, nn_src_t m, prj_pt_src_t in)
 	bitcnt_t mlen;
 	int mbit;
 
-	MUST_HAVE(!prj_pt_iszero(in));
 	MUST_HAVE(!nn_iszero(m));
+
+#ifndef USE_COMPLETE_FORMULAS
+	/* Case where we do not use the complete formulas.
+	 * WARNING: in this case, the MSB of the scalar m is searched, which
+	 * can be leaked through a side channel (such as timing). If you are in
+	 * a context where side channel attacks matter, do not use incomplete
+	 * formulas!
+	 */
+	MUST_HAVE(!prj_pt_iszero(in));
 
 	prj_pt_copy(out, in);
 	prj_pt_init(&dbl, in->crv);
 
 	mlen = nn_bitlen(m) - 1;
+#else
+	/* When we use complete formulas, perform the double and add always loop in
+	 * constant time.
+	 */
+	prj_pt_copy(out, in);
+	/* Initialize dbl to the infinity point */
+	prj_pt_init(&dbl, in->crv);
+	prj_pt_zero(&dbl);
+
+	mlen = m->wlen * WORD_BITS;
+
+	/* Initialize out to either input point or inifity point
+	 * depending on the first bit value
+	 */
+	mbit = nn_getbit(m, mlen);
+	nn_cnd_swap(!mbit, &(out->X.fp_val), &(dbl.X.fp_val));
+	nn_cnd_swap(!mbit, &(out->Y.fp_val), &(dbl.Y.fp_val));
+	nn_cnd_swap(!mbit, &(out->Z.fp_val), &(dbl.Z.fp_val));
+#endif
+
 	while (mlen > 0) {
 		--mlen;
 		mbit = nn_getbit(m, mlen);

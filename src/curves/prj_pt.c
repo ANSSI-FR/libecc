@@ -318,8 +318,6 @@ static void __prj_pt_add(prj_pt_t out, prj_pt_src_t in1, prj_pt_src_t in2)
 
 	MUST_HAVE(out->crv == in1->crv);
 	MUST_HAVE(out->crv == in2->crv);
-	MUST_HAVE(!prj_pt_iszero(in1));
-	MUST_HAVE(!prj_pt_iszero(in2));
 
 	fp_mul(&t0, &in1->X, &in2->X);
 	fp_mul(&t1, &in1->Y, &in2->Y);
@@ -525,7 +523,6 @@ static void __prj_pt_dbl(prj_pt_t out, prj_pt_src_t in)
 	fp_init(&t3, out->crv->a.ctx);
 
 	MUST_HAVE(out->crv == in->crv);
-	MUST_HAVE(!prj_pt_iszero(in));
 
 	fp_mul(&t0, &in->X, &in->X);
 	fp_mul(&t1, &in->Y, &in->Y);
@@ -690,28 +687,56 @@ void prj_pt_dbl(prj_pt_t out, prj_pt_src_t in)
 
 static void _prj_pt_mul(prj_pt_t out, nn_src_t m, prj_pt_src_t in)
 {
-	prj_pt dbl;
-	bitcnt_t mlen;
-	int mbit;
+        prj_pt dbl;
+        bitcnt_t mlen;
+        int mbit;
 
-	MUST_HAVE(!prj_pt_iszero(in));
-	MUST_HAVE(!nn_iszero(m));
+        MUST_HAVE(!nn_iszero(m));
 
-	prj_pt_copy(out, in);
-	prj_pt_init(&dbl, in->crv);
+#ifndef USE_COMPLETE_FORMULAS
+        /* Case where we do not use the complete formulas.
+         * WARNING: in this case, the MSB of the scalar m is searched, which
+         * can be leaked through a side channel (such as timing). If you are in
+         * a context where side channel attacks matter, do not use incomplete
+         * formulas!
+         */
+        MUST_HAVE(!prj_pt_iszero(in));
 
-	mlen = nn_bitlen(m) - 1;
-	while (mlen > 0) {
-		--mlen;
-		mbit = nn_getbit(m, mlen);
-		prj_pt_dbl(&dbl, out);
-		prj_pt_add(out, &dbl, in);
-		nn_cnd_swap(!mbit, &(out->X.fp_val), &(dbl.X.fp_val));
-		nn_cnd_swap(!mbit, &(out->Y.fp_val), &(dbl.Y.fp_val));
-		nn_cnd_swap(!mbit, &(out->Z.fp_val), &(dbl.Z.fp_val));
-	}
+        prj_pt_copy(out, in);
+        prj_pt_init(&dbl, in->crv);
 
-	prj_pt_uninit(&dbl);
+        mlen = nn_bitlen(m) - 1;
+#else   
+        /* When we use complete formulas, perform the double and add always loop in
+         * constant time.
+         */
+        prj_pt_copy(out, in);
+        /* Initialize dbl to the infinity point */
+        prj_pt_init(&dbl, in->crv);
+        prj_pt_zero(&dbl);
+
+        mlen = m->wlen * WORD_BITS;
+
+        /* Initialize out to either input point or inifity point
+         * depending on the first bit value
+         */
+        mbit = nn_getbit(m, mlen);
+        nn_cnd_swap(!mbit, &(out->X.fp_val), &(dbl.X.fp_val));
+        nn_cnd_swap(!mbit, &(out->Y.fp_val), &(dbl.Y.fp_val));
+        nn_cnd_swap(!mbit, &(out->Z.fp_val), &(dbl.Z.fp_val));
+#endif
+
+        while (mlen > 0) {
+                --mlen;
+                mbit = nn_getbit(m, mlen);
+                prj_pt_dbl(&dbl, out);
+                prj_pt_add(out, &dbl, in);
+                nn_cnd_swap(!mbit, &(out->X.fp_val), &(dbl.X.fp_val));
+                nn_cnd_swap(!mbit, &(out->Y.fp_val), &(dbl.Y.fp_val));
+                nn_cnd_swap(!mbit, &(out->Z.fp_val), &(dbl.Z.fp_val));
+        }
+
+        prj_pt_uninit(&dbl);
 }
 
 /* Aliased version */
