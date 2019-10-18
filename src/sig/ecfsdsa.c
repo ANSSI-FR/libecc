@@ -118,6 +118,15 @@ int _ecfsdsa_sign_init(struct ec_sign_context *ctx)
 #ifdef USE_SIG_BLINDING
         /* scalar_b is the scalar multiplication blinder */
         nn scalar_b;
+#else
+  #ifdef NO_USE_COMPLETE_FORMULAS
+	/* When we don't use blinding and we don't use complete 
+	 * formulas, our scalar point multiplication must be
+	 * constant time. For this purpose, the scalar k is
+	 * added to a small multiple of the curve order.
+	 */
+        nn k_;
+  #endif
 #endif
 	u8 *r;
 	prj_pt kG;
@@ -170,6 +179,7 @@ int _ecfsdsa_sign_init(struct ec_sign_context *ctx)
 		goto err;
 	}
 
+	/*  2. Compute W = (W_x,W_y) = kG */
 #ifdef USE_SIG_BLINDING
         /* We use blinding for the scalar multiplication */
         ret = nn_get_random_mod(&scalar_b, q);
@@ -183,10 +193,31 @@ int _ecfsdsa_sign_init(struct ec_sign_context *ctx)
 	}
 	nn_uninit(&scalar_b);
 #else
+  #ifdef NO_USE_COMPLETE_FORMULAS
+        /* When we don't use blinding and we don't use complete
+         * formulas, the underlying scalar multiplication timing is
+         * inherently dependent on the size of the scalar.
+         * In this case, we follow the countermeasure described in
+         * https://eprint.iacr.org/2011/232.pdf, namely transform
+         * the scalar in the following way:
+         *   -
+         *  | k' = k + (2 * q) if [log(k + q)] == [log(q)],
+         *  | k' = k + q otherwise.
+         *   -
+         *
+         * This countermeasure has the advantage of having a limited
+         * impact on performance.
+         */
+        nn_add(&k_, k, q);
+        bitcnt_t k_bit_len = nn_bitlen(&k_);
+        bitcnt_t q_bit_len = nn_bitlen(q);
+        nn_cnd_add((k_bit_len == q_bit_len), &k_, &k_, q);
+        prj_pt_mul_monty(&kG, &k_, G);
+	nn_uninit(&k_);
+  #else
         prj_pt_mul_monty(&kG, k, G);
+  #endif
 #endif
-	/*  2. Compute W = (W_x,W_y) = kG */
-	prj_pt_mul_monty(&kG, k, G);
 	prj_pt_to_aff(&W, &kG);
 	prj_pt_uninit(&kG);
 
