@@ -212,7 +212,7 @@ int __ecsdsa_sign_init(struct ec_sign_context *ctx,
         prj_pt_mul_monty(&kG, &k_, G);
         nn_uninit(&k_);
   #else
-        prj_pt_mul_monty(&kG, k, G);
+        prj_pt_mul_monty(&kG, &k, G);
   #endif
 #endif
 	prj_pt_to_aff(&W_aff, &kG);

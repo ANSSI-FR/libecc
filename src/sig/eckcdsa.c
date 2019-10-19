@@ -366,7 +366,7 @@ int _eckcdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
         prj_pt_mul_monty(&kG, &k_, G);
         nn_uninit(&k_);
   #else
-        prj_pt_mul_monty(&kG, k, G);
+        prj_pt_mul_monty(&kG, &k, G);
   #endif
 #endif /* USE_SIG_BLINDING */
 	prj_pt_to_aff(&W, &kG);
