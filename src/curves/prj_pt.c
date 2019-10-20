@@ -758,11 +758,11 @@ static void _prj_pt_mul(prj_pt_t out, nn_src_t m, prj_pt_src_t in)
 	 * bit is 0 or 1.
 	 */
 #ifdef NO_USE_COMPLETE_FORMULAS
-	prj_pt_copy(&T[rbit], in);
+	prj_pt_copy(&T[rbit], &T[2]);
 #else
 	mbit = nn_getbit(m, mlen);
 	prj_pt_zero(&T[1-rbit]);
-	prj_pt_copy(&T[rbit], in);
+	prj_pt_copy(&T[rbit], &T[2]);
         /* NOTE: we avoid/limit leaking the first bit with using
          * the nn_cnd_swap primitive.
          */
