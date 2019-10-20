@@ -909,6 +909,31 @@ Compiling the library with blinding is as simple as using the ``BLINDIG=1`` envi
 NOTE: if you are **unsure** about your current security context, use the ``BLINDING=1`` by
 default!
 
+### Overview of SCA (Side Channel Attacks) countermeasures
+
+All in all, libecc has now the following approaches to limit SCA:
+    
+* SPA (Simple Power Analysis) is thwarted using Double and Add Always, plus complete formulas
+(see [here](https://joostrenes.nl/publications/complete.pdf)) to avoid leaking point at infinity (by avoiding exceptions). Constant time
+operations are (tentatively) used to limit leakage of different operations,
+even though this task is very complex to achieve (especially in pure C). See
+the discussion above.
+* DDPA (Data DPA) is thwarted using blinding of the point (projective
+coordinates) and of the scalar (with adding a random multiple of the
+curve order with maximum entropy). Because of its major impact on
+performance, blinding must be specifically turned on by the used using the
+BLINDING=1 switch, see the discussion above.
+* ADPA (Address-bit DPA) is limited using Itoh et al. Double and Add Always
+masked variant. See the article "A Practical Countermeasure against
+Address-Bit Differential Power Analysis" by Itoh, Izu and Takenaka for more information.
+
+
+All these countermeasures must, of course, be validated on the specific target
+where the library runs with leakage assessments. Because of the very nature of
+C code and CPU microarchitectural details, it is very complex without such a leakage
+assessment (that again depends on the target) to be sure that SCA protection
+is indeed efficient.
+
 ## Software architecture
 The source code is composed of eight main parts that consist of the 
 **core source code**:
