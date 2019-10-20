@@ -1,7 +1,7 @@
 language: c
 os: linux
 dist:
-    - xenial
+    - bionic
 
 
 addons:
@@ -11,6 +11,9 @@ addons:
             - make
             - gcc
             - clang
+            - qemu-user-static
+            - wine-stable
+            - wine32
 
 # We use docker for the cross-build
 services:
@@ -48,6 +51,8 @@ script:
        - cd src/examples/ && make clean && make debug64 && cd - && make clean
        # Cross build jobs
        - sh scripts/crossbuild.sh
+       # Test generated cross binaries through qemu-static
+       - sh scripts/crossrun.sh -cpu 1 
  
 notifications:
   email:

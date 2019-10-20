@@ -44,72 +44,72 @@ check_triplet_wordsize(){
 	############## Release compilation
 	echo "======== COMPILING RELEASE FOR $triplet / $wordsize" 2>&1 | tee -a $COMPILATION_LOG_FILE
 	# Self tests and utils
-	docker run --rm -e CROSS_TRIPLE=$triplet -v $ROOT_DIR:$ROOT_DIR -w $ROOT_DIR multiarch/crossbuild make "$wordsize" 2>&1 | tee -a $COMPILATION_LOG_FILE
+	docker run -e COMPLETE="$COMPLETE" -e BLINDING="$BLINDING" --rm -e CROSS_TRIPLE=$triplet -v $ROOT_DIR:$ROOT_DIR -w $ROOT_DIR multiarch/crossbuild make "$wordsize" 2>&1 | tee -a $COMPILATION_LOG_FILE
 	mkdir -p $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"
 	check_and_copy $ROOT_DIR/build/ec_self_tests $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"/ec_self_tests_"$triplet"_word"$wordsize" $ERROR_LOG_FILE
 	check_and_copy $ROOT_DIR/build/ec_utils $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"/ec_utils_"$triplet"_word"$wordsize" $ERROR_LOG_FILE
 	# Examples
-	docker run --rm -e CROSS_TRIPLE=$triplet -v $ROOT_DIR:$ROOT_DIR/ -w $ROOT_DIR/src/examples multiarch/crossbuild make "$wordsize" 2>&1 | tee -a $COMPILATION_LOG_FILE
+	docker run -e COMPLETE="$COMPLETE" -e BLINDING="$BLINDING" --rm -e CROSS_TRIPLE=$triplet -v $ROOT_DIR:$ROOT_DIR/ -w $ROOT_DIR/src/examples multiarch/crossbuild make "$wordsize" 2>&1 | tee -a $COMPILATION_LOG_FILE
 	check_and_copy $ROOT_DIR/src/examples/nn_pollard_rho $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"/nn_pollard_rho_"$triplet"_word"$wordsize" $ERROR_LOG_FILE
 	check_and_copy $ROOT_DIR/src/examples/fp_square_residue $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"/fp_square_residue_"$triplet"_word"$wordsize" $ERROR_LOG_FILE
 	check_and_copy $ROOT_DIR/src/examples/curve_basic_examples $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"/curve_basic_examples_"$triplet"_word"$wordsize" $ERROR_LOG_FILE
 	check_and_copy $ROOT_DIR/src/examples/curve_ecdh $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"/curve_ecdh_"$triplet"_word"$wordsize" $ERROR_LOG_FILE
 	# Clean
-	docker run --rm -e CROSS_TRIPLE=$triplet -v $ROOT_DIR:$ROOT_DIR -w $ROOT_DIR multiarch/crossbuild make clean
-	docker run --rm -e CROSS_TRIPLE=$triplet -v $ROOT_DIR:$ROOT_DIR/src/examples -w $ROOT_DIR/src/examples multiarch/crossbuild make clean
+	docker run -e COMPLETE="$COMPLETE" -e BLINDING="$BLINDING" --rm -e CROSS_TRIPLE=$triplet -v $ROOT_DIR:$ROOT_DIR -w $ROOT_DIR multiarch/crossbuild make clean
+	docker run -e COMPLETE="$COMPLETE" -e BLINDING="$BLINDING" --rm -e CROSS_TRIPLE=$triplet -v $ROOT_DIR:$ROOT_DIR/src/examples -w $ROOT_DIR/src/examples multiarch/crossbuild make clean
 	############## Debug compilation
 	echo "======== COMPILING DEBUG FOR $triplet / $wordsize" 2>&1 | tee -a $COMPILATION_LOG_FILE
 	############## Release compilation
 	# Self tests and utils
-	docker run --rm -e CROSS_TRIPLE=$triplet -v $ROOT_DIR:$ROOT_DIR -w $ROOT_DIR multiarch/crossbuild make debug"$wordsize" 2>&1 | tee -a $COMPILATION_LOG_FILE
+	docker run -e COMPLETE="$COMPLETE" -e BLINDING="$BLINDING" --rm -e CROSS_TRIPLE=$triplet -v $ROOT_DIR:$ROOT_DIR -w $ROOT_DIR multiarch/crossbuild make debug"$wordsize" 2>&1 | tee -a $COMPILATION_LOG_FILE
 	mkdir -p $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"
 	check_and_copy $ROOT_DIR/build/ec_self_tests $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"/ec_self_tests_"$triplet"_word"$wordsize"_debug $ERROR_LOG_FILE
 	check_and_copy $ROOT_DIR/build/ec_utils $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"/ec_utils_"$triplet"_word"$wordsize"_debug $ERROR_LOG_FILE
 	# Examples
-	docker run --rm -e CROSS_TRIPLE=$triplet -v $ROOT_DIR:$ROOT_DIR/ -w $ROOT_DIR/src/examples multiarch/crossbuild make debug"$wordsize" 2>&1 | tee -a $COMPILATION_LOG_FILE
+	docker run -e COMPLETE="$COMPLETE" -e BLINDING="$BLINDING" --rm -e CROSS_TRIPLE=$triplet -v $ROOT_DIR:$ROOT_DIR/ -w $ROOT_DIR/src/examples multiarch/crossbuild make debug"$wordsize" 2>&1 | tee -a $COMPILATION_LOG_FILE
 	check_and_copy $ROOT_DIR/src/examples/nn_pollard_rho $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"/nn_pollard_rho_"$triplet"_word"$wordsize"_debug $ERROR_LOG_FILE
 	check_and_copy $ROOT_DIR/src/examples/fp_square_residue $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"/fp_square_residue_"$triplet"_word"$wordsize"_debug $ERROR_LOG_FILE
 	check_and_copy $ROOT_DIR/src/examples/curve_basic_examples $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"/curve_basic_examples_"$triplet"_word"$wordsize"_debug $ERROR_LOG_FILE
 	check_and_copy $ROOT_DIR/src/examples/curve_ecdh $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"/curve_ecdh_"$triplet"_word"$wordsize"_debug $ERROR_LOG_FILE
 	# Clean
-	docker run --rm -e CROSS_TRIPLE=$triplet -v $ROOT_DIR:$ROOT_DIR -w $ROOT_DIR multiarch/crossbuild make clean
-	docker run --rm -e CROSS_TRIPLE=$triplet -v $ROOT_DIR:$ROOT_DIR/src/examples -w $ROOT_DIR/src/examples multiarch/crossbuild make clean
+	docker run -e COMPLETE="$COMPLETE" -e BLINDING="$BLINDING" --rm -e CROSS_TRIPLE=$triplet -v $ROOT_DIR:$ROOT_DIR -w $ROOT_DIR multiarch/crossbuild make clean
+	docker run -e COMPLETE="$COMPLETE" -e BLINDING="$BLINDING" --rm -e CROSS_TRIPLE=$triplet -v $ROOT_DIR:$ROOT_DIR/src/examples -w $ROOT_DIR/src/examples multiarch/crossbuild make clean
 	echo "===========================================" 2>&1 | tee -a $COMPILATION_LOG_FILE
 	# Compile static binaries for everyone except Mac OS (gcc on it does not support -static)
 	if [ "$triplet" != "i386-apple-darwin" ] && [ "$triplet" != "x86_64-apple-darwin" ]; then
 		############## Release compilation with static binaries (for emulation)
 		echo "======== COMPILING STATIC RELEASE FOR $triplet / $wordsize" 2>&1 | tee -a $COMPILATION_LOG_FILE
 		# Self tests and utils
-		docker run --rm -e CROSS_TRIPLE=$triplet -v $ROOT_DIR:$ROOT_DIR -w $ROOT_DIR -e BIN_LDFLAGS="-static" multiarch/crossbuild make "$wordsize" 2>&1 | tee -a $COMPILATION_LOG_FILE
+		docker run -e COMPLETE="$COMPLETE" -e BLINDING="$BLINDING" --rm -e CROSS_TRIPLE=$triplet -v $ROOT_DIR:$ROOT_DIR -w $ROOT_DIR -e BIN_LDFLAGS="-static" multiarch/crossbuild make "$wordsize" 2>&1 | tee -a $COMPILATION_LOG_FILE
 		mkdir -p $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"
 		check_and_copy $ROOT_DIR/build/ec_self_tests $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"/ec_self_tests_"$triplet"_word"$wordsize"_static $ERROR_LOG_FILE
 		check_and_copy $ROOT_DIR/build/ec_utils $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"/ec_utils_"$triplet"_word"$wordsize"_static $ERROR_LOG_FILE
 		# Examples
-		docker run --rm -e CROSS_TRIPLE=$triplet -v $ROOT_DIR:$ROOT_DIR/ -w $ROOT_DIR/src/examples -e BIN_LDFLAGS="-static" multiarch/crossbuild make "$wordsize" 2>&1 | tee -a $COMPILATION_LOG_FILE
+		docker run -e COMPLETE="$COMPLETE" -e BLINDING="$BLINDING" --rm -e CROSS_TRIPLE=$triplet -v $ROOT_DIR:$ROOT_DIR/ -w $ROOT_DIR/src/examples -e BIN_LDFLAGS="-static" multiarch/crossbuild make "$wordsize" 2>&1 | tee -a $COMPILATION_LOG_FILE
 		check_and_copy $ROOT_DIR/src/examples/nn_pollard_rho $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"/nn_pollard_rho_"$triplet"_word"$wordsize"_static $ERROR_LOG_FILE
 		check_and_copy $ROOT_DIR/src/examples/fp_square_residue $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"/fp_square_residue_"$triplet"_word"$wordsize"_static $ERROR_LOG_FILE
 		check_and_copy $ROOT_DIR/src/examples/curve_basic_examples $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"/curve_basic_examples_"$triplet"_word"$wordsize"_static $ERROR_LOG_FILE
 		check_and_copy $ROOT_DIR/src/examples/curve_ecdh $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"/curve_ecdh_"$triplet"_word"$wordsize"_static $ERROR_LOG_FILE
 		# Clean
-		docker run --rm -e CROSS_TRIPLE=$triplet -v $ROOT_DIR:$ROOT_DIR -w $ROOT_DIR multiarch/crossbuild make clean
-		docker run --rm -e CROSS_TRIPLE=$triplet -v $ROOT_DIR:$ROOT_DIR/src/examples -w $ROOT_DIR/src/examples multiarch/crossbuild make clean
+		docker run -e COMPLETE="$COMPLETE" -e BLINDING="$BLINDING" --rm -e CROSS_TRIPLE=$triplet -v $ROOT_DIR:$ROOT_DIR -w $ROOT_DIR multiarch/crossbuild make clean
+		docker run -e COMPLETE="$COMPLETE" -e BLINDING="$BLINDING" --rm -e CROSS_TRIPLE=$triplet -v $ROOT_DIR:$ROOT_DIR/src/examples -w $ROOT_DIR/src/examples multiarch/crossbuild make clean
 		############## Debug compilation with static binaries (for emulation)
 		echo "======== COMPILING STATIC DEBUG FOR $triplet / $wordsize" 2>&1 | tee -a $COMPILATION_LOG_FILE
 		############## Release compilation with static binaries (for emulation)
 		# Self tests and utils
-		docker run --rm -e CROSS_TRIPLE=$triplet -v $ROOT_DIR:$ROOT_DIR -w $ROOT_DIR -e BIN_LDFLAGS="-static" multiarch/crossbuild make debug"$wordsize" 2>&1 | tee -a $COMPILATION_LOG_FILE
+		docker run -e COMPLETE="$COMPLETE" -e BLINDING="$BLINDING" --rm -e CROSS_TRIPLE=$triplet -v $ROOT_DIR:$ROOT_DIR -w $ROOT_DIR -e BIN_LDFLAGS="-static" multiarch/crossbuild make debug"$wordsize" 2>&1 | tee -a $COMPILATION_LOG_FILE
 		mkdir -p $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"
 		check_and_copy $ROOT_DIR/build/ec_self_tests $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"/ec_self_tests_"$triplet"_word"$wordsize"_debug_static $ERROR_LOG_FILE
 		check_and_copy $ROOT_DIR/build/ec_utils $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"/ec_utils_"$triplet"_word"$wordsize"_debug_static $ERROR_LOG_FILE
 		# Examples
-		docker run --rm -e CROSS_TRIPLE=$triplet -v $ROOT_DIR:$ROOT_DIR/ -w $ROOT_DIR/src/examples -e BIN_LDFLAGS="-static" multiarch/crossbuild make debug"$wordsize" 2>&1 | tee -a $COMPILATION_LOG_FILE
+		docker run -e COMPLETE="$COMPLETE" -e BLINDING="$BLINDING" --rm -e CROSS_TRIPLE=$triplet -v $ROOT_DIR:$ROOT_DIR/ -w $ROOT_DIR/src/examples -e BIN_LDFLAGS="-static" multiarch/crossbuild make debug"$wordsize" 2>&1 | tee -a $COMPILATION_LOG_FILE
 		check_and_copy $ROOT_DIR/src/examples/nn_pollard_rho $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"/nn_pollard_rho_"$triplet"_word"$wordsize"_debug_static $ERROR_LOG_FILE
 		check_and_copy $ROOT_DIR/src/examples/fp_square_residue $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"/fp_square_residue_"$triplet"_word"$wordsize"_debug_static $ERROR_LOG_FILE
 		check_and_copy $ROOT_DIR/src/examples/curve_basic_examples $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"/curve_basic_examples_"$triplet"_word"$wordsize"_debug_static $ERROR_LOG_FILE
 		check_and_copy $ROOT_DIR/src/examples/curve_ecdh $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"/curve_ecdh_"$triplet"_word"$wordsize"_debug_static $ERROR_LOG_FILE
 		# Clean
-		docker run --rm -e CROSS_TRIPLE=$triplet -v $ROOT_DIR:$ROOT_DIR -w $ROOT_DIR multiarch/crossbuild make clean
-		docker run --rm -e CROSS_TRIPLE=$triplet -v $ROOT_DIR:$ROOT_DIR/src/examples -w $ROOT_DIR/src/examples multiarch/crossbuild make clean
+		docker run -e COMPLETE="$COMPLETE" -e BLINDING="$BLINDING" --rm -e CROSS_TRIPLE=$triplet -v $ROOT_DIR:$ROOT_DIR -w $ROOT_DIR multiarch/crossbuild make clean
+		docker run -e COMPLETE="$COMPLETE" -e BLINDING="$BLINDING" --rm -e CROSS_TRIPLE=$triplet -v $ROOT_DIR:$ROOT_DIR/src/examples -w $ROOT_DIR/src/examples multiarch/crossbuild make clean
 		echo "===========================================" 2>&1 | tee -a $COMPILATION_LOG_FILE
 	fi
 	# Cleanup compilation stuff
@@ -175,9 +175,9 @@ then
 	then
 		echo "Cleaning before running ..."
 		rm -rf $CROSSBUILD_OUTPUT/*
-		docker run --rm -v $SRC_DIR:/ecc -w /ecc multiarch/crossbuild make clean
-		docker run --rm -v $SRC_DIR:/ecc -w /ecc/src/examples multiarch/crossbuild make clean
-		docker run --rm -v $SRC_DIR:/ecc -w /ecc/src/arithmetic_tests multiarch/crossbuild make clean
+		docker run -e COMPLETE="$COMPLETE" -e BLINDING="$BLINDING" --rm -v $SRC_DIR:/ecc -w /ecc multiarch/crossbuild make clean
+		docker run -e COMPLETE="$COMPLETE" -e BLINDING="$BLINDING" --rm -v $SRC_DIR:/ecc -w /ecc/src/examples multiarch/crossbuild make clean
+		docker run -e COMPLETE="$COMPLETE" -e BLINDING="$BLINDING" --rm -v $SRC_DIR:/ecc -w /ecc/src/arithmetic_tests multiarch/crossbuild make clean
 	fi
 	# If no specific word size has been given, do all the sizes
 	if [ "$3" = "" ]
@@ -195,9 +195,9 @@ fi
 # Clean
 echo "Cleaning before running ..."
 rm -rf $CROSSBUILD_OUTPUT/*
-docker run --rm -v $SRC_DIR:/ecc -w /ecc multiarch/crossbuild make clean
-docker run --rm -v $SRC_DIR:/ecc -w /ecc/src/examples multiarch/crossbuild make clean
-docker run --rm -v $SRC_DIR:/ecc -w /ecc/src/arithmetic_tests multiarch/crossbuild make clean
+docker run -e COMPLETE="$COMPLETE" -e BLINDING="$BLINDING" --rm -v $SRC_DIR:/ecc -w /ecc multiarch/crossbuild make clean
+docker run -e COMPLETE="$COMPLETE" -e BLINDING="$BLINDING" --rm -v $SRC_DIR:/ecc -w /ecc/src/examples multiarch/crossbuild make clean
+docker run -e COMPLETE="$COMPLETE" -e BLINDING="$BLINDING" --rm -v $SRC_DIR:/ecc -w /ecc/src/arithmetic_tests multiarch/crossbuild make clean
 
 ALL_CHECKS=""
 for wordsize in 16 32 64;
