@@ -17,6 +17,7 @@
 #include "prj_pt.h"
 #include "../nn/nn_logical.h"
 #include "../nn/nn_add.h"
+#include "../nn/nn_rand.h"
 #include "../fp/fp_add.h"
 #include "../fp/fp_mul.h"
 #include "../fp/fp_montgomery.h"
@@ -112,7 +113,14 @@ void prj_pt_copy(prj_pt_t out, prj_pt_src_t in)
 {
 	prj_pt_check_initialized(in);
 
-	prj_pt_init(out, in->crv);
+	/* If output is already initialized, check curve */
+	if((out != NULL) && (out->magic == PRJ_PT_MAGIC)
+                  && (out->crv != NULL)){
+		MUST_HAVE(out->crv == in->crv);
+	}
+	else{
+		prj_pt_init(out, in->crv);
+	}
 
 	fp_copy(&(out->X), &(in->X));
 	fp_copy(&(out->Y), &(in->Y));
@@ -685,58 +693,101 @@ void prj_pt_dbl(prj_pt_t out, prj_pt_src_t in)
 #endif
 }
 
+/* Double and Add Always masked using Itoh et al. anti-ADPA
+ * (Address-bit DPA) countermeasure.
+ * See "A Practical Countermeasure against Address-Bit Differential Power Analysis"
+ * by Itoh, Izu and Takenaka for more information.
+ *
+ * NOTE: this masked variant of the Double and Add Always algorithm is always
+ * used as it has a very small impact on performance and is inherently more
+ * robust againt DPA.
+ */
 static void _prj_pt_mul(prj_pt_t out, nn_src_t m, prj_pt_src_t in)
 {
-        prj_pt dbl;
-        bitcnt_t mlen;
-        int mbit;
+	/* We use Itoh et al. notations here for T and the random r */
+	prj_pt T[3];
+	bitcnt_t mlen;
+	int mbit, rbit;
+	nn r;
 
-        MUST_HAVE(!nn_iszero(m));
+	/* 
+	 * Two implementations are provided here: using complete formulas
+	 * or incomplete formulas.
+	 * WARNING: in the case of incomplete formulas, the MSB of the scalar m
+	 * is searched, which can be leaked through a side channel (such as timing).
+	 * If you are in a context where side channel attacks matter, do not use incomplete
+	 * formulas!
+	 * 
+	 * When using complete formulas, double and add always is performed in constant
+	 * time wrt the size of the scalar.
+	 */
 
+	MUST_HAVE(!nn_iszero(m));
+
+	MUST_HAVE(!prj_pt_iszero(in));
+
+	/* Get a random r with the same size of m */
+	MUST_HAVE(!nn_get_random_len(&r, m->wlen * WORD_BYTES));
+
+	/* Initialize points */
+	prj_pt_init(&T[0], in->crv);
+	prj_pt_init(&T[1], in->crv);
+	prj_pt_copy(&T[2], in);
 #ifdef NO_USE_COMPLETE_FORMULAS
-        /* Case where we do not use the complete formulas.
-         * WARNING: in this case, the MSB of the scalar m is searched, which
-         * can be leaked through a side channel (such as timing). If you are in
-         * a context where side channel attacks matter, do not use incomplete
-         * formulas!
+	mlen = nn_bitlen(m) - 1;
+#else
+	mlen = (m->wlen * WORD_BITS) - 1;
+#endif
+	rbit = nn_getbit(&r, mlen);
+
+	/* Initialize initial value of T[r[n-1]] either to
+	 * input point or to infinity point depending on whether
+	 * we use complete formulas or not, and whether the first
+	 * bit is 0 or 1.
+	 */
+#ifdef NO_USE_COMPLETE_FORMULAS
+	prj_pt_copy(&T[rbit], in);
+#else
+	mbit = nn_getbit(m, mlen);
+	prj_pt_zero(&T[1-rbit]);
+	prj_pt_copy(&T[rbit], in);
+        /* NOTE: we avoid/limit leaking the first bit with using
+         * the nn_cnd_swap primitive.
          */
-        MUST_HAVE(!prj_pt_iszero(in));
-
-        prj_pt_copy(out, in);
-        prj_pt_init(&dbl, in->crv);
-
-        mlen = nn_bitlen(m) - 1;
-#else   
-        /* When we use complete formulas, perform the double and add always loop in
-         * constant time.
-         */
-        prj_pt_copy(out, in);
-        /* Initialize dbl to the infinity point */
-        prj_pt_init(&dbl, in->crv);
-        prj_pt_zero(&dbl);
-
-        mlen = m->wlen * WORD_BITS;
-
-        /* Initialize out to either input point or inifity point
-         * depending on the first bit value
-         */
-        mbit = nn_getbit(m, mlen);
-        nn_cnd_swap(!mbit, &(out->X.fp_val), &(dbl.X.fp_val));
-        nn_cnd_swap(!mbit, &(out->Y.fp_val), &(dbl.Y.fp_val));
-        nn_cnd_swap(!mbit, &(out->Z.fp_val), &(dbl.Z.fp_val));
+	nn_cnd_swap(!mbit, &(T[rbit].X.fp_val), &(T[1-rbit].X.fp_val));
+	nn_cnd_swap(!mbit, &(T[rbit].Y.fp_val), &(T[1-rbit].Y.fp_val));
+	nn_cnd_swap(!mbit, &(T[rbit].Z.fp_val), &(T[1-rbit].Z.fp_val));
 #endif
 
-        while (mlen > 0) {
-                --mlen;
-                mbit = nn_getbit(m, mlen);
-                prj_pt_dbl(&dbl, out);
-                prj_pt_add(out, &dbl, in);
-                nn_cnd_swap(!mbit, &(out->X.fp_val), &(dbl.X.fp_val));
-                nn_cnd_swap(!mbit, &(out->Y.fp_val), &(dbl.Y.fp_val));
-                nn_cnd_swap(!mbit, &(out->Z.fp_val), &(dbl.Z.fp_val));
-        }
+	/* Main loop of Double and Add Always */
+	while (mlen > 0) {
+		int rbit_next;
+		--mlen;
+		/* rbit is r[i+1], and rbit_next is r[i] */
+		rbit_next = nn_getbit(&r, mlen);
+		/* mbit is m[i] */
+		mbit = nn_getbit(m, mlen);
+		/* Double: T[r[i+1]] = ECDBL(T[r[i+1]]) */
+		prj_pt_dbl(&T[rbit], &T[rbit]);
+		/* Add:  T[1-r[i+1]] = ECADD(T[r[i+1]],T[2]) */
+		prj_pt_add(&T[1-rbit], &T[rbit], &T[2]);
+		/* T[r[i]] = T[d[i] ^ r[i+1]] 
+		 * NOTE: we use the low level nn_copy function here to avoid
+		 * any possible leakage on operands with prj_pt_copy
+		 */
+		nn_copy(&(T[rbit_next].X.fp_val), &(T[mbit ^ rbit].X.fp_val));
+		nn_copy(&(T[rbit_next].Y.fp_val), &(T[mbit ^ rbit].Y.fp_val));
+		nn_copy(&(T[rbit_next].Z.fp_val), &(T[mbit ^ rbit].Z.fp_val));
+		/* Update rbit */
+		rbit = rbit_next;
+	}
+	/* Output: T[r[0]] */
+	prj_pt_copy(out, &T[rbit]);
 
-        prj_pt_uninit(&dbl);
+	prj_pt_uninit(&T[0]);
+	prj_pt_uninit(&T[1]);
+	prj_pt_uninit(&T[2]);
+	nn_uninit(&r);
 }
 
 /* Aliased version */
