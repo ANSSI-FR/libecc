@@ -440,7 +440,10 @@ static void _prj_pt_mul_ltr_monty(prj_pt_t out, nn_src_t m, prj_pt_src_t in)
 	prj_pt T[3];
 	bitcnt_t mlen;
 	int mbit, rbit;
+	/* Random for masking the Double and Add Always algorithm */
 	nn r;
+	/* Random for projective coordinates masking */
+        fp l;
 
 	/* 
 	 * Two implementations are provided here: using complete formulas
@@ -460,11 +463,20 @@ static void _prj_pt_mul_ltr_monty(prj_pt_t out, nn_src_t m, prj_pt_src_t in)
 
 	/* Get a random r with the same size of m */
 	MUST_HAVE(!nn_get_random_len(&r, m->wlen * WORD_BYTES));
+        /* Get a random value l in Fp */
+	MUST_HAVE(!fp_get_random(&l, in->X.ctx));
 
 	/* Initialize points */
 	prj_pt_init(&T[0], in->crv);
 	prj_pt_init(&T[1], in->crv);
-	prj_pt_copy(&T[2], in);
+        /* Blind the point with projective coordinates (X, Y, Z) => (l*X, l*Y, l*Z)
+         */
+	prj_pt_init(&T[2], in->crv);
+        fp_mul(&(T[2].X), &(in->X), &l);
+        fp_mul(&(T[2].Y), &(in->Y), &l);
+        fp_mul(&(T[2].Z), &(in->Z), &l);
+
+
 #ifdef NO_USE_COMPLETE_FORMULAS
 	mlen = nn_bitlen(m) - 1;
 #else
@@ -520,6 +532,7 @@ static void _prj_pt_mul_ltr_monty(prj_pt_t out, nn_src_t m, prj_pt_src_t in)
 	prj_pt_uninit(&T[1]);
 	prj_pt_uninit(&T[2]);
 	nn_uninit(&r);
+	fp_uninit(&l);
 }
 
 /* Aliased version */
@@ -549,35 +562,17 @@ void prj_pt_mul_monty(prj_pt_t out, nn_src_t m, prj_pt_src_t in)
 
 int prj_pt_mul_monty_blind(prj_pt_t out, nn_src_t m, prj_pt_src_t in, nn_t b, nn_src_t q)
 {
-        /* The projective coordinates blinding mask */
-        fp l;
-        int ret;
-	prj_pt tmp_pt;
-
-        /* Get a random value l in Fp */
-        ret = fp_get_random(&l, in->X.ctx);
-        if(ret){
-		ret = -1;
-                goto err;
-        }
-        /* Blind the point with projective coordinates (X, Y, Z) => (l*X, l*Y, l*Z) 
-         */
-	prj_pt_init(&tmp_pt, in->crv);
-        fp_mul(&(tmp_pt.X), &(in->X), &l);
-        fp_mul(&(tmp_pt.Y), &(in->Y), &l);
-        fp_mul(&(tmp_pt.Z), &(in->Z), &l);
-
 	/* Blind the scalar m with (b*q) */
 	nn_mul(b, b, q);
 	nn_add(b, b, m);
+	/* NOTE: point blinding is performed in the lower
+	 * functions
+	 */
 
         /* Perform the scalar multiplication */
-	prj_pt_mul_ltr_monty(out, b, &tmp_pt);
+	prj_pt_mul_ltr_monty(out, b, in);
 
-	ret = 0;
-err:
 	/* Zero the mask to avoid information leak */
 	nn_zero(b);
-	fp_zero(&l);
-	return ret;
+	return 0;
 }
