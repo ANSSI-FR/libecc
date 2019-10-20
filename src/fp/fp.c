@@ -190,6 +190,9 @@ void fp_set_nn(fp_t out, nn_src_t in)
 	nn_copy(&(out->fp_val), in);
 
 	MUST_HAVE(nn_cmp(&(out->fp_val), &(out->ctx->p)) < 0);
+
+	/* Set the wlen to the length of p */
+	nn_set_wlen(&(out->fp_val), out->ctx->p.wlen);
 }
 
 /* Set 'out' to the element 0 of Fp (neutral element for addition) */
@@ -198,6 +201,8 @@ void fp_zero(fp_t out)
 	fp_check_initialized(out);
 
 	nn_set_word_value(&(out->fp_val), 0);
+	/* Set the wlen to the length of p */
+	nn_set_wlen(&(out->fp_val), out->ctx->p.wlen);
 }
 
 /* Set out to the element 1 of Fp (neutral element for multiplication) */
@@ -206,6 +211,8 @@ void fp_one(fp_t out)
 	fp_check_initialized(out);
 
 	nn_set_word_value(&(out->fp_val), 1);
+	/* Set the wlen to the length of p */
+	nn_set_wlen(&(out->fp_val), out->ctx->p.wlen);
 }
 
 /*

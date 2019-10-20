@@ -118,8 +118,6 @@ void nn_uninit(nn_t A)
 
 /*
  * Conditionally swap two nn's content *in constant time*
- * (only depending on the largest length of the inputs,
- * not on their values or on the condition bit).
  * Swapping is done if 'cnd' is not zero. Nothing is done otherwise.
  */
 void nn_cnd_swap(int cnd, nn_t in1, nn_t in2)
@@ -130,13 +128,16 @@ void nn_cnd_swap(int cnd, nn_t in1, nn_t in2)
 
 	nn_check_initialized(in1);
 	nn_check_initialized(in2);
+	MUST_HAVE(in1->wlen <= NN_MAX_WORD_LEN);
+	MUST_HAVE(in2->wlen <= NN_MAX_WORD_LEN);
 
 	len = (in1->wlen >= in2->wlen) ? in1->wlen : in2->wlen;
 
-	for (i = 0; i < len; i++) {
+	for (i = 0; i < NN_MAX_WORD_LEN; i++) {
+		word_t local_mask = WORD_MASK_IFNOTZERO((i < len));
 		t = (in1->val[i] ^ in2->val[i]) & mask;
-		in1->val[i] ^= t;
-		in2->val[i] ^= t;
+		in1->val[i] ^= (t & local_mask);
+		in2->val[i] ^= (t & local_mask);
 	}
 
 	t = (in1->wlen ^ in2->wlen) & mask;
@@ -148,6 +149,8 @@ void nn_cnd_swap(int cnd, nn_t in1, nn_t in2)
  * Adjust internal wlen attribute of given nn to new_wlen. If internal wlen
  * attribute value is reduced, words above that limit in A are zeroized.
  * new_wlen must be in [0, NN_MAX_WORD_LEN].
+ * The trimming is performed in constant time wrt to the length of the
+ * input to avoid leaking it.
  */
 void nn_set_wlen(nn_t A, u8 new_wlen)
 {
@@ -157,10 +160,10 @@ void nn_set_wlen(nn_t A, u8 new_wlen)
 	MUST_HAVE(new_wlen <= NN_MAX_WORD_LEN);
 	MUST_HAVE(A->wlen <= NN_MAX_WORD_LEN);
 
-	if (new_wlen < A->wlen) {	/* trim */
-		for (i = new_wlen; i < A->wlen; i++)
-			A->val[i] = WORD(0);
-	}
+        /* Trimming performed in constant time */
+        for (i = 0; i < NN_MAX_WORD_LEN; i++) {
+                A->val[i] &= WORD_MASK_IFZERO((i >= new_wlen));
+        }
 
 	A->wlen = new_wlen;
 }
@@ -168,7 +171,6 @@ void nn_set_wlen(nn_t A, u8 new_wlen)
 /*
  * Return 1 if given nn is zero. Return 0 otherwise.
  * Done *in constant time*
- * (only depending on the input length, not on its value).
  */
 int nn_iszero(nn_src_t A)
 {
@@ -176,18 +178,19 @@ int nn_iszero(nn_src_t A)
 	u8 i;
 
 	nn_check_initialized(A);
+	MUST_HAVE(A->wlen <= NN_MAX_WORD_LEN);
 
-	for (i = 0; i < A->wlen; i++) {
-		ret |= (A->val[i] != 0);
+	for (i = 0; i < NN_MAX_WORD_LEN; i++) {
+		int mask = ((i < A->wlen) ? 1 : 0);
+		ret |= ((A->val[i] != 0) & mask);
 	}
 
 	return !ret;
 }
 
 /* 
- * Return 1 if given nn is zero. Return 0 otherwise.
+ * Return 1 if given nn is one. Return 0 otherwise.
  * Done *in constant time*
- * (only depending on the input length, not on its value).
  */
 int nn_isone(nn_src_t A)
 {
@@ -195,11 +198,13 @@ int nn_isone(nn_src_t A)
 	u8 i;
 
 	nn_check_initialized(A);
+	MUST_HAVE(A->wlen <= NN_MAX_WORD_LEN);
 
 	/* val[0] access is ok no matter wlen value */
 	ret = (A->val[0] != 1);	
-	for (i = 1; i < A->wlen; i++) {
-		ret |= (A->val[i] != 0);
+	for (i = 1; i < NN_MAX_WORD_LEN; i++) {
+		int mask = ((i < A->wlen) ? 1 : 0);
+		ret |= ((A->val[i] != 0) & mask);
 	}
 
 	return !ret;
