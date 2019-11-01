@@ -115,6 +115,22 @@ else
 BIN_LDFLAGS ?= $(USER_DEFINED_LDFLAGS)
 endif
 
+# If the user wants to add extra flags to the existing flags,
+# check it and add them
+ifdef EXTRA_LIB_CFLAGS
+LIB_CFLAGS += $(EXTRA_LIB_CFLAGS)
+endif
+ifdef EXTRA_BIN_LDFLAGS
+BIN_LDFLAGS += $(EXTRA_BIN_LDFLAGS)
+endif
+ifdef EXTRA_CFLAGS
+CFLAGS += $(EXTRA_CFLAGS)
+endif
+ifdef EXTRA_LDFLAGS
+LDFLAGS += $(EXTRA_LDFLAGS)
+endif
+
+
 # Static libraries to produce or link to
 LIBARITH = $(BUILD_DIR)/libarith.a
 LIBEC = $(BUILD_DIR)/libec.a
