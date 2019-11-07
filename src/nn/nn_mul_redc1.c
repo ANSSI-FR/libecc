@@ -228,30 +228,45 @@ void nn_mul_redc1(nn_t out, nn_src_t in1, nn_src_t in2, nn_src_t p,
  * but the modular reduction is done progressively during
  * Montgomery reduction.
  */
-void nn_mul_mod(nn_t out, nn_src_t in1, nn_src_t in2, nn_src_t p)
+void nn_mul_mod(nn_t out, nn_src_t in1, nn_src_t in2, nn_src_t p_in)
 {
 	nn r, r_square;
 	nn in1_tmp, in2_tmp, tmp;
 	word_t mpinv;
 	nn one;
+	nn p;
+
+	nn_init(&p, 0);
+	nn_copy(&p, p_in);
+
+	/*
+	 * In order for our reciprocal division routines to work, it is
+	 * expected that the bit length (including leading zeroes) of
+	 * input prime p is >= 2 * wlen where wlen is the number of bits
+	 * of a word size.
+	 */
+	if (p.wlen < 2) {
+		nn_set_wlen(&p, 2);
+	}
 
 	/* Compute Mongtomery coefs */
-	mpinv = nn_compute_redc1_coefs(&r, &r_square, p);
+	mpinv = nn_compute_redc1_coefs(&r, &r_square, &p);
 	nn_uninit(&r);
 
 	/* redcify in1 and in2 */
-	nn_mul_redc1(&in1_tmp, in1, &r_square, p, mpinv);
-	nn_mul_redc1(&in2_tmp, in2, &r_square, p, mpinv);
+	nn_mul_redc1(&in1_tmp, in1, &r_square, &p, mpinv);
+	nn_mul_redc1(&in2_tmp, in2, &r_square, &p, mpinv);
 
 	/* Compute in1 * in2 mod p in montgomery world */
-	nn_mul_redc1(&tmp, &in1_tmp, &in2_tmp, p, mpinv);
+	nn_mul_redc1(&tmp, &in1_tmp, &in2_tmp, &p, mpinv);
 	nn_uninit(&in1_tmp);
 	nn_uninit(&in2_tmp);
 
 	/* Come back to real world by unredcifying result */
 	nn_init(&one, 0);
 	nn_one(&one);
-	nn_mul_redc1(out, &tmp, &one, p, mpinv);
+	nn_mul_redc1(out, &tmp, &one, &p, mpinv);
 	nn_uninit(&tmp);
 	nn_uninit(&one);
+	nn_uninit(&p);
 }
