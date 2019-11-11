@@ -75,12 +75,8 @@
 #endif
 #endif /* AFL_FUZZ or FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION */
 
-#ifndef MAX
-#define MAX(x, y) (((x) > (y)) ? (x) : (y))
-#endif
-#ifndef MIN
-#define MIN(x, y) (((x) < (y)) ? (x) : (y))
-#endif
+#define LOCAL_MAX(x, y) (((x) > (y)) ? (x) : (y))
+#define LOCAL_MIN(x, y) (((x) < (y)) ? (x) : (y))
 
 #define BYTECEIL(numbits) (((numbits) + 7) / 8)
 
