@@ -243,14 +243,22 @@ int fp_iszero(fp_src_t in)
 
 /*
  * Copy value of pointed Fp element (in) into pointed Fp element (out).
- * Output is initialized with the same field context as input.
+ * If output is already initialized, check that the Fp contexts are consistent.
+ * Else, output is initialized with the same field context as input.
  */
 void fp_copy(fp_t out, fp_src_t in)
 {
         fp_check_initialized(in);
         MUST_HAVE(out != NULL);
 
-        fp_init(out, in->ctx);
+        if((out != NULL) && (out->magic == FP_MAGIC)
+                  && (out->ctx != NULL)){
+                MUST_HAVE(out->ctx == in->ctx);
+        }
+        else{
+                fp_init(out, in->ctx);
+        }
+
         nn_copy(&(out->fp_val), &(in->fp_val));
 }
 
