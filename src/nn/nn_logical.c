@@ -93,7 +93,7 @@ void nn_lshift(nn_t out, nn_src_t in, bitcnt_t cnt)
 	}
 
 	/* Adapt output length accordingly */
-	owlen = (u8)MIN(BIT_LEN_WORDS(cnt + nn_bitlen(in)),
+	owlen = (u8)LOCAL_MIN(BIT_LEN_WORDS(cnt + nn_bitlen(in)),
 			BIT_LEN_WORDS(NN_MAX_BIT_LEN));
 	out->wlen = owlen;
 

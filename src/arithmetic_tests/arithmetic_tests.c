@@ -483,7 +483,7 @@ int test_##test_name(const char ATTRIBUTE_UNUSED *op, void **params, int test_nu
 	MUST_HAVE(memcmp(operation, op, sizeof(operation)) == 0);\
 	\
 	/* Sanity check: check that the parameters passed from the file are the same as the ones declared in the test */\
-	if(memcmp(global_parameters, parameters_types, MIN(MAX_PARAMS, strlen(parameters_types))) != 0){\
+	if(memcmp(global_parameters, parameters_types, LOCAL_MIN(MAX_PARAMS, strlen(parameters_types))) != 0){\
 		printf("Error: parameters %s given in the test file differ from the test expected parameters (%s)\n", parameters_types, global_parameters);\
 		return -1;\
 	}\
@@ -1078,7 +1078,7 @@ int main(int argc, char *argv[])
 			rec = t + 1;
 		}
 		/* Save current parameters format in the global variable */
-		memcpy(global_parameters, s, MIN(nrecs, MAX_PARAMS));
+		memcpy(global_parameters, s, LOCAL_MIN(nrecs, MAX_PARAMS));
 		curr_test_fun = NULL;
 		FIND_FUN_IN_DISPATCH_TABLE(op, curr_test_fun);
 		if (curr_test_fun == NULL) {

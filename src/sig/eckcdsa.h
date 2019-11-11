@@ -25,7 +25,7 @@
 #include "../hash/hash_algs.h"
 #include "../curves/curves.h"
 
-#define ECKCDSA_R_LEN(hsize, q_bit_len) MIN(hsize, BYTECEIL(q_bit_len))
+#define ECKCDSA_R_LEN(hsize, q_bit_len) LOCAL_MIN(hsize, BYTECEIL(q_bit_len))
 #define ECKCDSA_S_LEN(q_bit_len) (BYTECEIL(q_bit_len))
 #define ECKCDSA_SIGLEN(hsize, q_bit_len) (ECKCDSA_R_LEN(hsize, q_bit_len) + \
 					  ECKCDSA_S_LEN(q_bit_len))

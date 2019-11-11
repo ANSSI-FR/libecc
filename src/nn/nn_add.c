@@ -66,7 +66,7 @@ static word_t _nn_cnd_add(int cnd, nn_t out, nn_src_t in1, nn_src_t in2)
 	nn_check_initialized(in2);
 
 	/* Handle aliasing */
-	loop_wlen = MAX(in1->wlen, in2->wlen);
+	loop_wlen = LOCAL_MAX(in1->wlen, in2->wlen);
 	if ((out != in1) && (out != in2)) {
 		nn_init(out, loop_wlen * WORD_BYTES);
 	} else {
@@ -233,7 +233,7 @@ void nn_cnd_sub(int cnd, nn_t out, nn_src_t in1, nn_src_t in2)
 	nn_check_initialized(in2);
 
 	/* Handle aliasing */
-	loop_wlen = MAX(in1->wlen, in2->wlen);
+	loop_wlen = LOCAL_MAX(in1->wlen, in2->wlen);
 	if ((out != in1) && (out != in2)) {
 		nn_init(out, loop_wlen * WORD_BYTES);
 	} else {

@@ -159,7 +159,7 @@ static void buf_lshift(u8 *buf, u8 buflen, u8 shift)
 
 int _eckcdsa_sign_init(struct ec_sign_context *ctx)
 {
-	u8 tmp_buf[MAX(2 * BYTECEIL(CURVES_MAX_P_BIT_LEN), MAX_BLOCK_SIZE)];
+	u8 tmp_buf[LOCAL_MAX(2 * BYTECEIL(CURVES_MAX_P_BIT_LEN), MAX_BLOCK_SIZE)];
 	const ec_pub_key *pub_key;
 	aff_pt y_aff;
 	u8 p_len;
@@ -511,7 +511,7 @@ int _eckcdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 int _eckcdsa_verify_init(struct ec_verify_context *ctx,
 			 const u8 *sig, u8 siglen)
 {
-	u8 tmp_buf[MAX(2 * BYTECEIL(CURVES_MAX_P_BIT_LEN), MAX_BLOCK_SIZE)];
+	u8 tmp_buf[LOCAL_MAX(2 * BYTECEIL(CURVES_MAX_P_BIT_LEN), MAX_BLOCK_SIZE)];
 	u8 p_len, r_len, s_len, z_len;
 	bitcnt_t q_bit_len;
 	const ec_pub_key *pub_key;
