@@ -240,20 +240,20 @@ int fp_iszero(fp_src_t in)
 	return nn_iszero(&(in->fp_val));
 }
 
+
 /*
- * Copy value of pointed Fp element (in) into pointed Fp element (out). Both Fp
- * elements must have been initialized w/ the same context (i.e. belong to the
- * field) prior to the call.
+ * Copy value of pointed Fp element (in) into pointed Fp element (out).
+ * Output is initialized with the same field context as input.
  */
 void fp_copy(fp_t out, fp_src_t in)
 {
-	fp_check_initialized(in);
-	fp_check_initialized(out);
+        fp_check_initialized(in);
+        MUST_HAVE(out != NULL);
 
-	MUST_HAVE(out->ctx == in->ctx);
-
-	nn_copy(&(out->fp_val), &(in->fp_val));
+        fp_init(out, in->ctx);
+        nn_copy(&(out->fp_val), &(in->fp_val));
 }
+
 
 /*
  * Given a table 'tab' pointing to a set of 'tabsize' Fp elements, the
