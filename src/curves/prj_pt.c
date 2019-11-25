@@ -94,16 +94,37 @@ void prj_pt_zero(prj_pt_t out)
 int prj_pt_is_on_curve(prj_pt_src_t in)
 {
 	int ret = 0;
+	prj_pt in1, in2;
 	aff_pt in_aff;
 
 	prj_pt_check_initialized(in);
 
+	/* Point at infinity is trivially on the curve.
+	 * However, we do not want to leak that we are testing it,
+	 * and hence we test a dummy value if necessary.
+	 * The dummy point is not on the curve, but computations
+	 * are performed anyways!
+	 */
+	prj_pt_init(&in1, in->crv);
+	prj_pt_copy(&in1, in);
+	prj_pt_init(&in2, in->crv);
+	nn_copy(&(in2.X.fp_val), &((in2.crv)->a.fp_val));
+	nn_copy(&(in2.Y.fp_val), &((in2.crv)->b.fp_val));
+	nn_copy(&(in2.Z.fp_val), &((in2.crv)->a_monty.fp_val));
+
+	ret = prj_pt_iszero(in);
+	nn_cnd_swap(ret, &(in1.X.fp_val), &(in2.X.fp_val));
+	nn_cnd_swap(ret, &(in1.Y.fp_val), &(in2.Y.fp_val));
+	nn_cnd_swap(ret, &(in1.Z.fp_val), &(in2.Z.fp_val));
+
 	/* Move to the affine unique representation */
-	prj_pt_to_aff(&in_aff, in);
+	prj_pt_to_aff(&in_aff, &in1);
 
 	/* Check that the affine coordinates are on the curve */
-	ret = is_on_curve(&(in_aff.x), &(in_aff.y), in_aff.crv);
+	ret |= is_on_curve(&(in_aff.x), &(in_aff.y), in_aff.crv);
 
+	prj_pt_uninit(&in1);
+	prj_pt_uninit(&in2);
 	aff_pt_uninit(&in_aff);
 
 	return ret;
@@ -725,13 +746,12 @@ static void _prj_pt_mul(prj_pt_t out, nn_src_t m, prj_pt_src_t in)
 	 * time wrt the size of the scalar.
 	 */
 
-	MUST_HAVE(!nn_iszero(m));
-
 #ifdef NO_USE_COMPLETE_FORMULAS
+	MUST_HAVE(!nn_iszero(m));
 	MUST_HAVE(!prj_pt_iszero(in));
 #endif
 
-        /* Chack that the input is on the curve */
+        /* Check that the input is on the curve */
         MUST_HAVE(prj_pt_is_on_curve(in) == 1);
 
 	/* Get a random r with the same size of m */
@@ -798,7 +818,7 @@ static void _prj_pt_mul(prj_pt_t out, nn_src_t m, prj_pt_src_t in)
 		/* Update rbit */
 		rbit = rbit_next;
 	}
-        /* Chack that the output is on the curve */
+        /* Check that the output is on the curve */
         MUST_HAVE(prj_pt_is_on_curve(&T[rbit]) == 1);
 	/* Output: T[r[0]] */
 	prj_pt_copy(out, &T[rbit]);

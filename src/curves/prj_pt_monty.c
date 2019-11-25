@@ -457,13 +457,12 @@ static void _prj_pt_mul_ltr_monty(prj_pt_t out, nn_src_t m, prj_pt_src_t in)
 	 * time wrt the size of the scalar.
 	 */
 
-	MUST_HAVE(!nn_iszero(m));
-
 #ifdef NO_USE_COMPLETE_FORMULAS
+	MUST_HAVE(!nn_iszero(m));
 	MUST_HAVE(!prj_pt_iszero(in));
 #endif
 
-	/* Chack that the input is on the curve */
+	/* Check that the input is on the curve */
 	MUST_HAVE(prj_pt_is_on_curve(in) == 1);
 
 	/* Get a random r with the same size of m */
