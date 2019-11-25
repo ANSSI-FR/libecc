@@ -41,10 +41,18 @@ check_triplet_wordsize(){
 	mkdir -p $CROSSBUILD_OUTPUT/error_log
 	COMPILATION_LOG_FILE=$CROSSBUILD_OUTPUT/compilation_log/compilation_log_"$triplet"_"$wordsize"
 	ERROR_LOG_FILE=$CROSSBUILD_OUTPUT/error_log/error_log_"$triplet"_"$wordsize"
+	# NOTE: for 64 bit triplets, mltiarc/crossbuild docker's gcc 4.9 has a bug handling loop unrolling in -O3 and
+	# is mistaken in detecting arrays overflows at compilation time ... 
+	# See https://gcc.gnu.org/bugzilla/show_bug.cgi?id=64277
+	if [ "$triplet" = "x86_64-w64-mingw32" ] || [ "$triplet" = "aarch64-linux-gnu" ]; then
+		extra_lib_cflags="-O2"
+	else
+		extra_lib_cflags=""
+	fi
 	############## Release compilation
 	echo "======== COMPILING RELEASE FOR $triplet / $wordsize" 2>&1 | tee -a $COMPILATION_LOG_FILE
-	# Self tests and utils
-	docker run -e COMPLETE="$COMPLETE" -e BLINDING="$BLINDING" --rm -e CROSS_TRIPLE=$triplet -v $ROOT_DIR:$ROOT_DIR -w $ROOT_DIR multiarch/crossbuild make "$wordsize" 2>&1 | tee -a $COMPILATION_LOG_FILE
+	# Library, self tests and utils
+	docker run -e COMPLETE="$COMPLETE" -e BLINDING="$BLINDING" --rm -e CROSS_TRIPLE=$triplet -v $ROOT_DIR:$ROOT_DIR -w $ROOT_DIR -e EXTRA_LIB_CFLAGS="$extra_lib_cflags" multiarch/crossbuild make "$wordsize" 2>&1 | tee -a $COMPILATION_LOG_FILE
 	mkdir -p $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"
 	check_and_copy $ROOT_DIR/build/ec_self_tests $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"/ec_self_tests_"$triplet"_word"$wordsize" $ERROR_LOG_FILE
 	check_and_copy $ROOT_DIR/build/ec_utils $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"/ec_utils_"$triplet"_word"$wordsize" $ERROR_LOG_FILE
@@ -60,8 +68,8 @@ check_triplet_wordsize(){
 	############## Debug compilation
 	echo "======== COMPILING DEBUG FOR $triplet / $wordsize" 2>&1 | tee -a $COMPILATION_LOG_FILE
 	############## Release compilation
-	# Self tests and utils
-	docker run -e COMPLETE="$COMPLETE" -e BLINDING="$BLINDING" --rm -e CROSS_TRIPLE=$triplet -v $ROOT_DIR:$ROOT_DIR -w $ROOT_DIR multiarch/crossbuild make debug"$wordsize" 2>&1 | tee -a $COMPILATION_LOG_FILE
+	# Library, self tests and utils
+	docker run -e COMPLETE="$COMPLETE" -e BLINDING="$BLINDING" --rm -e CROSS_TRIPLE=$triplet -v $ROOT_DIR:$ROOT_DIR -w $ROOT_DIR -e EXTRA_LIB_CFLAGS="$extra_lib_cflags" multiarch/crossbuild make debug"$wordsize" 2>&1 | tee -a $COMPILATION_LOG_FILE
 	mkdir -p $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"
 	check_and_copy $ROOT_DIR/build/ec_self_tests $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"/ec_self_tests_"$triplet"_word"$wordsize"_debug $ERROR_LOG_FILE
 	check_and_copy $ROOT_DIR/build/ec_utils $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"/ec_utils_"$triplet"_word"$wordsize"_debug $ERROR_LOG_FILE
@@ -76,11 +84,11 @@ check_triplet_wordsize(){
 	docker run -e COMPLETE="$COMPLETE" -e BLINDING="$BLINDING" --rm -e CROSS_TRIPLE=$triplet -v $ROOT_DIR:$ROOT_DIR/src/examples -w $ROOT_DIR/src/examples multiarch/crossbuild make clean
 	echo "===========================================" 2>&1 | tee -a $COMPILATION_LOG_FILE
 	# Compile static binaries for everyone except Mac OS (gcc on it does not support -static)
-	if [ "$triplet" != "i386-apple-darwin" ] && [ "$triplet" != "x86_64-apple-darwin" ]; then
+	if [ "$triplet" != "i386-apple-darwin" ] && [ "$triplet" != "x86_64-apple-darwin" ] && [ "$triplet" != "x86_64h-apple-darwin" ]; then
 		############## Release compilation with static binaries (for emulation)
 		echo "======== COMPILING STATIC RELEASE FOR $triplet / $wordsize" 2>&1 | tee -a $COMPILATION_LOG_FILE
-		# Self tests and utils
-		docker run -e COMPLETE="$COMPLETE" -e BLINDING="$BLINDING" --rm -e CROSS_TRIPLE=$triplet -v $ROOT_DIR:$ROOT_DIR -w $ROOT_DIR -e BIN_LDFLAGS="-static" multiarch/crossbuild make "$wordsize" 2>&1 | tee -a $COMPILATION_LOG_FILE
+		# Library, self tests and utils
+		docker run -e COMPLETE="$COMPLETE" -e BLINDING="$BLINDING" --rm -e CROSS_TRIPLE=$triplet -v $ROOT_DIR:$ROOT_DIR -w $ROOT_DIR -e EXTRA_LIB_CFLAGS="$extra_lib_cflags" -e BIN_LDFLAGS="-static" multiarch/crossbuild make "$wordsize" 2>&1 | tee -a $COMPILATION_LOG_FILE
 		mkdir -p $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"
 		check_and_copy $ROOT_DIR/build/ec_self_tests $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"/ec_self_tests_"$triplet"_word"$wordsize"_static $ERROR_LOG_FILE
 		check_and_copy $ROOT_DIR/build/ec_utils $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"/ec_utils_"$triplet"_word"$wordsize"_static $ERROR_LOG_FILE
@@ -202,7 +210,7 @@ docker run -e COMPLETE="$COMPLETE" -e BLINDING="$BLINDING" --rm -v $SRC_DIR:/ecc
 ALL_CHECKS=""
 for wordsize in 16 32 64;
 do
-	for triplet in arm-linux-gnueabi arm-linux-gnueabihf powerpc64le-linux-gnu aarch64-linux-gnu mipsel-linux-gnu i386-apple-darwin x86_64-apple-darwin i686-w64-mingw32 x86_64-w64-mingw32;
+	for triplet in arm-linux-gnueabi arm-linux-gnueabihf powerpc64le-linux-gnu aarch64-linux-gnu mipsel-linux-gnu i386-apple-darwin x86_64-apple-darwin x86_64h-apple-darwin i686-w64-mingw32 x86_64-w64-mingw32;
 	do
 		ALL_CHECKS="$ALL_CHECKS\n-triplet $triplet $wordsize -automate"
 	done
@@ -225,3 +233,17 @@ fi
 echo "Parallelizing on $NCPU processors"
 # Unleash the kraken
 echo $ALL_CHECKS | xargs -n 4 -P $NCPU sh `readlink -f "$0"`
+
+# Check if we had an error, and if yes exit with error
+for wordsize in 16 32 64;
+do
+	for triplet in arm-linux-gnueabi arm-linux-gnueabihf powerpc64le-linux-gnu aarch64-linux-gnu mipsel-linux-gnu i386-apple-darwin x86_64-apple-darwin x86_64h-apple-darwin i686-w64-mingw32 x86_64-w64-mingw32;
+	do
+		ERROR_LOG_FILE=$CROSSBUILD_OUTPUT/error_log/error_log_"$triplet"_"$wordsize"
+		if [ -f "$ERROR_LOG_FILE" ]; then
+			echo "!!!!!!! There have been compilation errors for $triplet $wordsize ..."
+			exit 255
+		fi
+	done
+done
+echo "All compilations went OK!"
