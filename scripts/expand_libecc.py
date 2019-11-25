@@ -316,7 +316,11 @@ def getbitlen(bint):
     """
     Returns the number of bits encoding an integer
     """
-    return int(bint).bit_length()
+    if bint == 0:
+        # Zero is encoded on one bit
+        return 1
+    else:
+        return int(bint).bit_length()
 
 def getbytelen(bint):
     """

@@ -122,20 +122,23 @@ def compute_div_coef(nn_p, p_bitsize):
     pshift = p_bitsize - cnt
     nn_pnorm = nn_p << pshift
     B = 2**wlen
-    prec = B**3 / ((nn_pnorm >> (p_bitsize - 2*wlen)) + 1) - B
+    prec = B**3 // ((nn_pnorm >> (p_bitsize - 2*wlen)) + 1) - B
     return pshift, nn_pnorm, prec
 
 def getbitlen(bint):
     """
     Returns the number of bits encoding an integer
     """
-    return bint.bit_length()
+    if bint == 0:
+        return 1
+    else:
+        return int(bint).bit_length()
 
 def getwlenbitlen(bint, wlen):
     """
     Returns the number of bits encoding an integer
     """
-    rounded_wlen_bitlen = ((getbitlen(bint) + wlen - 1) / wlen) * wlen
+    rounded_wlen_bitlen = ((getbitlen(bint) + wlen - 1) // wlen) * wlen
     if(rounded_wlen_bitlen == 0):
         rounded_wlen_bitlen = wlen
     return rounded_wlen_bitlen
@@ -145,10 +148,10 @@ def format_int_string(bint, wlen):
     """
     Returns the string format of an integer rounded to wlen
     """
-    rounded_bytelen = (wlen/8) * ((getbitlen(bint) + wlen - 1) / wlen)
+    rounded_bytelen = (wlen/8) * ((getbitlen(bint) + wlen - 1) // wlen)
     # Special case of zero bit length
     if(rounded_bytelen == 0):
-        rounded_bytelen = wlen/8
+        rounded_bytelen = wlen//8
     return (("%%0%dx" % (2 * rounded_bytelen)) % bint)
 
 def get_random_bigint(wlen, maxwlensize):
@@ -227,7 +230,7 @@ if len(list(set(asked_tests) & set(all_tests))) != len(asked_tests):
 WORD_BOUNDARY_DELTA=3
 
 # Max size (in words) of input numbers (nn, fp) on which to perform tests
-MAX_INPUT_PARAM_WLEN= ((maxlen + wlen - 1) / wlen)
+MAX_INPUT_PARAM_WLEN= ((maxlen + wlen - 1) // wlen)
 
 test_funcs = { }
 
@@ -270,7 +273,7 @@ def test_NN_SHIFT(op):
             else: # NN_SHIFT_LEFT
                 outbitlen = nn_nbits + cnt
 		# Round the bit length to the word boundary
-		outbitlen = ((outbitlen + wlen - 1) / wlen) * wlen
+		outbitlen = ((outbitlen + wlen - 1) // wlen) * wlen
                 msk = (2 ** outbitlen) - 1
                 out = (nn_val << cnt) & msk
 
@@ -481,7 +484,7 @@ def test_NN_DIVREM(op):
     nn_c = get_random_bigint(wlen, MAX_INPUT_PARAM_WLEN)
     nn_d = get_random_bigint(wlen, MAX_INPUT_PARAM_WLEN)
 
-    nn_exp_q = (nn_c / nn_d)
+    nn_exp_q = (nn_c // nn_d)
     nn_exp_r = nn_c % nn_d
 
     fmt = "%s nnnn %s %s %s %s\n"
@@ -626,8 +629,8 @@ def format_fp_context(nn_p, wlen):
         nn_nbits = 2 * wlen
     nn_r, nn_r_square, mpinv = compute_monty_coef(nn_p, nn_nbits)
     pshift, nn_pnorm, prec = compute_div_coef(nn_p, nn_nbits)
-    f = "%%0%dx" % ((nn_nbits / 8) * 2)
-    fmpinv = "%%0%dx" % (((wlen / 8)) * 2)
+    f = "%%0%dx" % ((nn_nbits // 8) * 2)
+    fmpinv = "%%0%dx" % (((wlen // 8)) * 2)
     return ("%s%s%s%s%s%s%s" % (f % nn_p, f % nn_r, f % nn_r_square, fmpinv % mpinv,
                fmpinv % pshift, f % nn_pnorm, fmpinv % prec))
 
@@ -779,7 +782,7 @@ for test in asked_tests:
     # and create duplicates in the file.
     fd.flush()
 
-    n = max((ntests / numproc), 1)
+    n = max((ntests // numproc), 1)
     for k in range(0, ntests, n):
         # Create a pair of sockets for us and the child we'll spawn
         a, b = socket.socketpair()

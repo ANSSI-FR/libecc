@@ -459,7 +459,12 @@ static void _prj_pt_mul_ltr_monty(prj_pt_t out, nn_src_t m, prj_pt_src_t in)
 
 	MUST_HAVE(!nn_iszero(m));
 
+#ifdef NO_USE_COMPLETE_FORMULAS
 	MUST_HAVE(!prj_pt_iszero(in));
+#endif
+
+	/* Chack that the input is on the curve */
+	MUST_HAVE(prj_pt_is_on_curve(in) == 1);
 
 	/* Get a random r with the same size of m */
 	MUST_HAVE(!nn_get_random_len(&r, m->wlen * WORD_BYTES));
@@ -525,6 +530,8 @@ static void _prj_pt_mul_ltr_monty(prj_pt_t out, nn_src_t m, prj_pt_src_t in)
 		/* Update rbit */
 		rbit = rbit_next;
 	}
+	/* Chack that the output is on the curve */
+	MUST_HAVE(prj_pt_is_on_curve(&T[rbit]) == 1);
 	/* Output: T[r[0]] */
 	prj_pt_copy(out, &T[rbit]);
 
