@@ -3,6 +3,15 @@ os: linux
 dist:
     - bionic
 
+env:
+  global:
+    # COVERITY_SCAN_TOKEN
+    - secure: "pBKt9NLPRAfQC/m4WhUPnoCt1hXjAX97aRlfITcjt9VQOZMAqeASaPJRqA7QyODT4+6X9q/9hncY00i0KRcMW0W3yw6AFGg8fLxAv9vh49JZc6d4hntIJmIMv3OINAUT0nX5eYv6C6hPvk6rgc/btDKt7jlEXBeinvPEpOz/RJNJwI/yXWjUaiKIqVEdpp0YZgkiLPDIg5yJSD8E25TbgvYkHDn63QmtLc+u39WoryNRZWEenxlgY8ilt9KGnRhhufeka+v55naS6ceCi8xl+HaUMdEC1AiT6i/dz3ZB8+vM0jy6BfJJshirOs3twBrmz7ZPzCEGHdtSaPf+F+gMRSu+596VMHPZCR3amZvI1FfhOf8ATvKyxgau/7N3tIWhjEFmd+YhvvDHeXYi8cQfG/mofE5vXXQBTXhDbWJrkQ2Yi0BoXmXZXSYRiQLZAxoNw+j7c2edYZfB77bHUo49XNHQpYSnezI7qNjXOCsMqFn1Jz6g2irUDjlGgM1R/bDuw/guDvNIFIv9fJg4mTRE/ONt9/ca2ikjdJu/nQ93Q4Y72IB5rk9XKWYWTx+XP6uNhMDfuEBiQ0RH4ntQYnscJNxiNTgzdmTpg6xLJWgEOos+2JLsAH1QyhWYZLYgqWnJ3Il1GX/vo0wKi2sXQglm1imLfjZ6H2KQP0MtALJF7HU="
+
+
+before_install:
+  - echo -n | openssl s_client -connect https://scan.coverity.com:443 | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' | sudo tee -a /etc/ssl/certs/ca-
+
 
 addons:
     apt:
@@ -14,6 +23,18 @@ addons:
             - qemu-user-static
             - wine-stable
             - wine32
+            - wine64
+
+    coverity_scan:
+        project:
+            name: "rb-anssi/libecc"
+            description: "Build submitted via Travis CI of libecc"
+        notification_email: ryadbenadjila@gmail.com
+        build_command:   make
+        branch_pattern: coverity_scan
+
+cache:
+  apt: true
 
 # We use docker for the cross-build
 services:
@@ -21,38 +42,175 @@ services:
 
 # All our jobs
 env:
-    matrix:      
-      - BLINDING=0 COMPLETE=0
-      - BLINDING=1 COMPLETE=0
-      - BLINDING=0 COMPLETE=1
-      - BLINDING=1 COMPLETE=1
-      - CC=clang BLINDING=0 COMPLETE=0
-      - CC=clang BLINDING=1 COMPLETE=0
-      - CC=clang BLINDING=0 COMPLETE=1
-      - CC=clang BLINDING=1 COMPLETE=1
+    matrix:
+      # Vanilla tests (on native plaform)
+      - BLINDING=0 COMPLETE=0 CROSS_BUILD=0 
+      - BLINDING=1 COMPLETE=0 CROSS_BUILD=0
+      - BLINDING=0 COMPLETE=1 CROSS_BUILD=0
+      - BLINDING=1 COMPLETE=1 CROSS_BUILD=0
+      - CC=clang BLINDING=0 COMPLETE=0 CROSS_BUILD=0
+      - CC=clang BLINDING=1 COMPLETE=0 CROSS_BUILD=0
+      - CC=clang BLINDING=0 COMPLETE=1 CROSS_BUILD=0
+      - CC=clang BLINDING=1 COMPLETE=1 CROSS_BUILD=0
+      # Cross compilation tests (using docker and qemu-static)
+      # arm-linux-gnueabi
+      - BLINDING=0 COMPLETE=0 CROSS_BUILD=1 CROSS_TARGET=arm-linux-gnueabi CROSS_SIZE=16
+      - BLINDING=1 COMPLETE=0 CROSS_BUILD=1 CROSS_TARGET=arm-linux-gnueabi CROSS_SIZE=16
+      - BLINDING=0 COMPLETE=1 CROSS_BUILD=1 CROSS_TARGET=arm-linux-gnueabi CROSS_SIZE=16
+      - BLINDING=1 COMPLETE=1 CROSS_BUILD=1 CROSS_TARGET=arm-linux-gnueabi CROSS_SIZE=16
+      - BLINDING=0 COMPLETE=0 CROSS_BUILD=1 CROSS_TARGET=arm-linux-gnueabi CROSS_SIZE=32
+      - BLINDING=1 COMPLETE=0 CROSS_BUILD=1 CROSS_TARGET=arm-linux-gnueabi CROSS_SIZE=32
+      - BLINDING=0 COMPLETE=1 CROSS_BUILD=1 CROSS_TARGET=arm-linux-gnueabi CROSS_SIZE=32
+      - BLINDING=1 COMPLETE=1 CROSS_BUILD=1 CROSS_TARGET=arm-linux-gnueabi CROSS_SIZE=32
+      - BLINDING=0 COMPLETE=0 CROSS_BUILD=1 CROSS_TARGET=arm-linux-gnueabi CROSS_SIZE=64
+      - BLINDING=1 COMPLETE=0 CROSS_BUILD=1 CROSS_TARGET=arm-linux-gnueabi CROSS_SIZE=64
+      - BLINDING=0 COMPLETE=1 CROSS_BUILD=1 CROSS_TARGET=arm-linux-gnueabi CROSS_SIZE=64
+      - BLINDING=1 COMPLETE=1 CROSS_BUILD=1 CROSS_TARGET=arm-linux-gnueabi CROSS_SIZE=64
+      # arm-linux-gnueabihf
+      - BLINDING=0 COMPLETE=0 CROSS_BUILD=1 CROSS_TARGET=arm-linux-gnueabihf CROSS_SIZE=16
+      - BLINDING=1 COMPLETE=0 CROSS_BUILD=1 CROSS_TARGET=arm-linux-gnueabihf CROSS_SIZE=16
+      - BLINDING=0 COMPLETE=1 CROSS_BUILD=1 CROSS_TARGET=arm-linux-gnueabihf CROSS_SIZE=16
+      - BLINDING=1 COMPLETE=1 CROSS_BUILD=1 CROSS_TARGET=arm-linux-gnueabihf CROSS_SIZE=16
+      - BLINDING=0 COMPLETE=0 CROSS_BUILD=1 CROSS_TARGET=arm-linux-gnueabihf CROSS_SIZE=32
+      - BLINDING=1 COMPLETE=0 CROSS_BUILD=1 CROSS_TARGET=arm-linux-gnueabihf CROSS_SIZE=32
+      - BLINDING=0 COMPLETE=1 CROSS_BUILD=1 CROSS_TARGET=arm-linux-gnueabihf CROSS_SIZE=32
+      - BLINDING=1 COMPLETE=1 CROSS_BUILD=1 CROSS_TARGET=arm-linux-gnueabihf CROSS_SIZE=32
+      - BLINDING=0 COMPLETE=0 CROSS_BUILD=1 CROSS_TARGET=arm-linux-gnueabihf CROSS_SIZE=64
+      - BLINDING=1 COMPLETE=0 CROSS_BUILD=1 CROSS_TARGET=arm-linux-gnueabihf CROSS_SIZE=64
+      - BLINDING=0 COMPLETE=1 CROSS_BUILD=1 CROSS_TARGET=arm-linux-gnueabihf CROSS_SIZE=64
+      - BLINDING=1 COMPLETE=1 CROSS_BUILD=1 CROSS_TARGET=arm-linux-gnueabihf CROSS_SIZE=64
+      # powerpc64le-linux-gnu
+      - BLINDING=0 COMPLETE=0 CROSS_BUILD=1 CROSS_TARGET=powerpc64le-linux-gnu CROSS_SIZE=16
+      - BLINDING=1 COMPLETE=0 CROSS_BUILD=1 CROSS_TARGET=powerpc64le-linux-gnu CROSS_SIZE=16
+      - BLINDING=0 COMPLETE=1 CROSS_BUILD=1 CROSS_TARGET=powerpc64le-linux-gnu CROSS_SIZE=16
+      - BLINDING=1 COMPLETE=1 CROSS_BUILD=1 CROSS_TARGET=powerpc64le-linux-gnu CROSS_SIZE=16
+      - BLINDING=0 COMPLETE=0 CROSS_BUILD=1 CROSS_TARGET=powerpc64le-linux-gnu CROSS_SIZE=32
+      - BLINDING=1 COMPLETE=0 CROSS_BUILD=1 CROSS_TARGET=powerpc64le-linux-gnu CROSS_SIZE=32
+      - BLINDING=0 COMPLETE=1 CROSS_BUILD=1 CROSS_TARGET=powerpc64le-linux-gnu CROSS_SIZE=32
+      - BLINDING=1 COMPLETE=1 CROSS_BUILD=1 CROSS_TARGET=powerpc64le-linux-gnu CROSS_SIZE=32
+      - BLINDING=0 COMPLETE=0 CROSS_BUILD=1 CROSS_TARGET=powerpc64le-linux-gnu CROSS_SIZE=64
+      - BLINDING=1 COMPLETE=0 CROSS_BUILD=1 CROSS_TARGET=powerpc64le-linux-gnu CROSS_SIZE=64
+      - BLINDING=0 COMPLETE=1 CROSS_BUILD=1 CROSS_TARGET=powerpc64le-linux-gnu CROSS_SIZE=64
+      - BLINDING=1 COMPLETE=1 CROSS_BUILD=1 CROSS_TARGET=powerpc64le-linux-gnu CROSS_SIZE=64
+      # aarch64-linux-gnu
+      - BLINDING=0 COMPLETE=0 CROSS_BUILD=1 CROSS_TARGET=aarch64-linux-gnu CROSS_SIZE=16
+      - BLINDING=1 COMPLETE=0 CROSS_BUILD=1 CROSS_TARGET=aarch64-linux-gnu CROSS_SIZE=16
+      - BLINDING=0 COMPLETE=1 CROSS_BUILD=1 CROSS_TARGET=aarch64-linux-gnu CROSS_SIZE=16
+      - BLINDING=1 COMPLETE=1 CROSS_BUILD=1 CROSS_TARGET=aarch64-linux-gnu CROSS_SIZE=16
+      - BLINDING=0 COMPLETE=0 CROSS_BUILD=1 CROSS_TARGET=aarch64-linux-gnu CROSS_SIZE=32
+      - BLINDING=1 COMPLETE=0 CROSS_BUILD=1 CROSS_TARGET=aarch64-linux-gnu CROSS_SIZE=32
+      - BLINDING=0 COMPLETE=1 CROSS_BUILD=1 CROSS_TARGET=aarch64-linux-gnu CROSS_SIZE=32
+      - BLINDING=1 COMPLETE=1 CROSS_BUILD=1 CROSS_TARGET=aarch64-linux-gnu CROSS_SIZE=32
+      - BLINDING=0 COMPLETE=0 CROSS_BUILD=1 CROSS_TARGET=aarch64-linux-gnu CROSS_SIZE=64
+      - BLINDING=1 COMPLETE=0 CROSS_BUILD=1 CROSS_TARGET=aarch64-linux-gnu CROSS_SIZE=64
+      - BLINDING=0 COMPLETE=1 CROSS_BUILD=1 CROSS_TARGET=aarch64-linux-gnu CROSS_SIZE=64
+      - BLINDING=1 COMPLETE=1 CROSS_BUILD=1 CROSS_TARGET=aarch64-linux-gnu CROSS_SIZE=64
+      # mipsel-linux-gnu
+      - BLINDING=0 COMPLETE=0 CROSS_BUILD=1 CROSS_TARGET=mipsel-linux-gnu CROSS_SIZE=16
+      - BLINDING=1 COMPLETE=0 CROSS_BUILD=1 CROSS_TARGET=mipsel-linux-gnu CROSS_SIZE=16
+      - BLINDING=0 COMPLETE=1 CROSS_BUILD=1 CROSS_TARGET=mipsel-linux-gnu CROSS_SIZE=16
+      - BLINDING=1 COMPLETE=1 CROSS_BUILD=1 CROSS_TARGET=mipsel-linux-gnu CROSS_SIZE=16
+      - BLINDING=0 COMPLETE=0 CROSS_BUILD=1 CROSS_TARGET=mipsel-linux-gnu CROSS_SIZE=32
+      - BLINDING=1 COMPLETE=0 CROSS_BUILD=1 CROSS_TARGET=mipsel-linux-gnu CROSS_SIZE=32
+      - BLINDING=0 COMPLETE=1 CROSS_BUILD=1 CROSS_TARGET=mipsel-linux-gnu CROSS_SIZE=32
+      - BLINDING=1 COMPLETE=1 CROSS_BUILD=1 CROSS_TARGET=mipsel-linux-gnu CROSS_SIZE=32
+      - BLINDING=0 COMPLETE=0 CROSS_BUILD=1 CROSS_TARGET=mipsel-linux-gnu CROSS_SIZE=64
+      - BLINDING=1 COMPLETE=0 CROSS_BUILD=1 CROSS_TARGET=mipsel-linux-gnu CROSS_SIZE=64
+      - BLINDING=0 COMPLETE=1 CROSS_BUILD=1 CROSS_TARGET=mipsel-linux-gnu CROSS_SIZE=64
+      - BLINDING=1 COMPLETE=1 CROSS_BUILD=1 CROSS_TARGET=mipsel-linux-gnu CROSS_SIZE=64
+      # i386-apple-darwin
+      - BLINDING=0 COMPLETE=0 CROSS_BUILD=1 CROSS_TARGET=i386-apple-darwin CROSS_SIZE=16
+      - BLINDING=1 COMPLETE=0 CROSS_BUILD=1 CROSS_TARGET=i386-apple-darwin CROSS_SIZE=16
+      - BLINDING=0 COMPLETE=1 CROSS_BUILD=1 CROSS_TARGET=i386-apple-darwin CROSS_SIZE=16
+      - BLINDING=1 COMPLETE=1 CROSS_BUILD=1 CROSS_TARGET=i386-apple-darwin CROSS_SIZE=16
+      - BLINDING=0 COMPLETE=0 CROSS_BUILD=1 CROSS_TARGET=i386-apple-darwin CROSS_SIZE=32
+      - BLINDING=1 COMPLETE=0 CROSS_BUILD=1 CROSS_TARGET=i386-apple-darwin CROSS_SIZE=32
+      - BLINDING=0 COMPLETE=1 CROSS_BUILD=1 CROSS_TARGET=i386-apple-darwin CROSS_SIZE=32
+      - BLINDING=1 COMPLETE=1 CROSS_BUILD=1 CROSS_TARGET=i386-apple-darwin CROSS_SIZE=32
+      - BLINDING=0 COMPLETE=0 CROSS_BUILD=1 CROSS_TARGET=i386-apple-darwin CROSS_SIZE=64
+      - BLINDING=1 COMPLETE=0 CROSS_BUILD=1 CROSS_TARGET=i386-apple-darwin CROSS_SIZE=64
+      - BLINDING=0 COMPLETE=1 CROSS_BUILD=1 CROSS_TARGET=i386-apple-darwin CROSS_SIZE=64
+      - BLINDING=1 COMPLETE=1 CROSS_BUILD=1 CROSS_TARGET=i386-apple-darwin CROSS_SIZE=64
+      # x86_64-apple-darwin
+      - BLINDING=0 COMPLETE=0 CROSS_BUILD=1 CROSS_TARGET=x86_64-apple-darwin CROSS_SIZE=16
+      - BLINDING=1 COMPLETE=0 CROSS_BUILD=1 CROSS_TARGET=x86_64-apple-darwin CROSS_SIZE=16
+      - BLINDING=0 COMPLETE=1 CROSS_BUILD=1 CROSS_TARGET=x86_64-apple-darwin CROSS_SIZE=16
+      - BLINDING=1 COMPLETE=1 CROSS_BUILD=1 CROSS_TARGET=x86_64-apple-darwin CROSS_SIZE=16
+      - BLINDING=0 COMPLETE=0 CROSS_BUILD=1 CROSS_TARGET=x86_64-apple-darwin CROSS_SIZE=32
+      - BLINDING=1 COMPLETE=0 CROSS_BUILD=1 CROSS_TARGET=x86_64-apple-darwin CROSS_SIZE=32
+      - BLINDING=0 COMPLETE=1 CROSS_BUILD=1 CROSS_TARGET=x86_64-apple-darwin CROSS_SIZE=32
+      - BLINDING=1 COMPLETE=1 CROSS_BUILD=1 CROSS_TARGET=x86_64-apple-darwin CROSS_SIZE=32
+      - BLINDING=0 COMPLETE=0 CROSS_BUILD=1 CROSS_TARGET=x86_64-apple-darwin CROSS_SIZE=64
+      - BLINDING=1 COMPLETE=0 CROSS_BUILD=1 CROSS_TARGET=x86_64-apple-darwin CROSS_SIZE=64
+      - BLINDING=0 COMPLETE=1 CROSS_BUILD=1 CROSS_TARGET=x86_64-apple-darwin CROSS_SIZE=64
+      - BLINDING=1 COMPLETE=1 CROSS_BUILD=1 CROSS_TARGET=x86_64-apple-darwin CROSS_SIZE=64
+      # x86_64h-apple-darwin
+      - BLINDING=0 COMPLETE=0 CROSS_BUILD=1 CROSS_TARGET=x86_64h-apple-darwin CROSS_SIZE=16
+      - BLINDING=1 COMPLETE=0 CROSS_BUILD=1 CROSS_TARGET=x86_64h-apple-darwin CROSS_SIZE=16
+      - BLINDING=0 COMPLETE=1 CROSS_BUILD=1 CROSS_TARGET=x86_64h-apple-darwin CROSS_SIZE=16
+      - BLINDING=1 COMPLETE=1 CROSS_BUILD=1 CROSS_TARGET=x86_64h-apple-darwin CROSS_SIZE=16
+      - BLINDING=0 COMPLETE=0 CROSS_BUILD=1 CROSS_TARGET=x86_64h-apple-darwin CROSS_SIZE=32
+      - BLINDING=1 COMPLETE=0 CROSS_BUILD=1 CROSS_TARGET=x86_64h-apple-darwin CROSS_SIZE=32
+      - BLINDING=0 COMPLETE=1 CROSS_BUILD=1 CROSS_TARGET=x86_64h-apple-darwin CROSS_SIZE=32
+      - BLINDING=1 COMPLETE=1 CROSS_BUILD=1 CROSS_TARGET=x86_64h-apple-darwin CROSS_SIZE=32
+      - BLINDING=0 COMPLETE=0 CROSS_BUILD=1 CROSS_TARGET=x86_64h-apple-darwin CROSS_SIZE=64
+      - BLINDING=1 COMPLETE=0 CROSS_BUILD=1 CROSS_TARGET=x86_64h-apple-darwin CROSS_SIZE=64
+      - BLINDING=0 COMPLETE=1 CROSS_BUILD=1 CROSS_TARGET=x86_64h-apple-darwin CROSS_SIZE=64
+      - BLINDING=1 COMPLETE=1 CROSS_BUILD=1 CROSS_TARGET=x86_64h-apple-darwin CROSS_SIZE=64
+      # i686-w64-mingw32
+      - BLINDING=0 COMPLETE=0 CROSS_BUILD=1 CROSS_TARGET=i686-w64-mingw32 CROSS_SIZE=16
+      - BLINDING=1 COMPLETE=0 CROSS_BUILD=1 CROSS_TARGET=i686-w64-mingw32 CROSS_SIZE=16
+      - BLINDING=0 COMPLETE=1 CROSS_BUILD=1 CROSS_TARGET=i686-w64-mingw32 CROSS_SIZE=16
+      - BLINDING=1 COMPLETE=1 CROSS_BUILD=1 CROSS_TARGET=i686-w64-mingw32 CROSS_SIZE=16
+      - BLINDING=0 COMPLETE=0 CROSS_BUILD=1 CROSS_TARGET=i686-w64-mingw32 CROSS_SIZE=32
+      - BLINDING=1 COMPLETE=0 CROSS_BUILD=1 CROSS_TARGET=i686-w64-mingw32 CROSS_SIZE=32
+      - BLINDING=0 COMPLETE=1 CROSS_BUILD=1 CROSS_TARGET=i686-w64-mingw32 CROSS_SIZE=32
+      - BLINDING=1 COMPLETE=1 CROSS_BUILD=1 CROSS_TARGET=i686-w64-mingw32 CROSS_SIZE=32
+      - BLINDING=0 COMPLETE=0 CROSS_BUILD=1 CROSS_TARGET=i686-w64-mingw32 CROSS_SIZE=64
+      - BLINDING=1 COMPLETE=0 CROSS_BUILD=1 CROSS_TARGET=i686-w64-mingw32 CROSS_SIZE=64
+      - BLINDING=0 COMPLETE=1 CROSS_BUILD=1 CROSS_TARGET=i686-w64-mingw32 CROSS_SIZE=64
+      - BLINDING=1 COMPLETE=1 CROSS_BUILD=1 CROSS_TARGET=i686-w64-mingw32 CROSS_SIZE=64
+      # x86_64-w64-mingw32
+      - BLINDING=0 COMPLETE=0 CROSS_BUILD=1 CROSS_TARGET=x86_64-w64-mingw32 CROSS_SIZE=16
+      - BLINDING=1 COMPLETE=0 CROSS_BUILD=1 CROSS_TARGET=x86_64-w64-mingw32 CROSS_SIZE=16
+      - BLINDING=0 COMPLETE=1 CROSS_BUILD=1 CROSS_TARGET=x86_64-w64-mingw32 CROSS_SIZE=16
+      - BLINDING=1 COMPLETE=1 CROSS_BUILD=1 CROSS_TARGET=x86_64-w64-mingw32 CROSS_SIZE=16
+      - BLINDING=0 COMPLETE=0 CROSS_BUILD=1 CROSS_TARGET=x86_64-w64-mingw32 CROSS_SIZE=32
+      - BLINDING=1 COMPLETE=0 CROSS_BUILD=1 CROSS_TARGET=x86_64-w64-mingw32 CROSS_SIZE=32
+      - BLINDING=0 COMPLETE=1 CROSS_BUILD=1 CROSS_TARGET=x86_64-w64-mingw32 CROSS_SIZE=32
+      - BLINDING=1 COMPLETE=1 CROSS_BUILD=1 CROSS_TARGET=x86_64-w64-mingw32 CROSS_SIZE=32
+      - BLINDING=0 COMPLETE=0 CROSS_BUILD=1 CROSS_TARGET=x86_64-w64-mingw32 CROSS_SIZE=64
+      - BLINDING=1 COMPLETE=0 CROSS_BUILD=1 CROSS_TARGET=x86_64-w64-mingw32 CROSS_SIZE=64
+      - BLINDING=0 COMPLETE=1 CROSS_BUILD=1 CROSS_TARGET=x86_64-w64-mingw32 CROSS_SIZE=64
+      - BLINDING=1 COMPLETE=1 CROSS_BUILD=1 CROSS_TARGET=x86_64-w64-mingw32 CROSS_SIZE=64
 
 script:
+       # Coverity scan static analysis
+       - if [ "${COVERITY_SCAN_BRANCH}" == 1 ]; then make; fi
+       - if [ "${COVERITY_SCAN_BRANCH}" == 1 ]; then exit 0; fi
+       # Vanilla tests
        - if [ "$TRAVIS_EVENT_TYPE" = "pull_request" ]; then git fetch github refs/pull/${TRAVIS_PULL_REQUEST}/head && git checkout FETCH_HEAD; fi
-       - make && ./build/ec_self_tests vectors vectors && ./build/ec_self_tests vectors rand
-       - cd src/examples/ && make clean && make && cd - && make clean
-       - make 16 && ./build/ec_self_tests vectors vectors && ./build/ec_self_tests vectors rand
-       - cd src/examples/ && make clean && make 16 && cd - && make clean
-       - make 32 && ./build/ec_self_tests vectors vectors && ./build/ec_self_tests vectors rand
-       - cd src/examples/ && make clean && make 32 && cd - && make clean
-       - make 64 && ./build/ec_self_tests vectors vectors && ./build/ec_self_tests vectors rand
-       - cd src/examples/ && make clean && make 64 && cd - && make clean
-       - make debug && ./build/ec_self_tests vectors vectors && ./build/ec_self_tests vectors rand
-       - cd src/examples/ && make clean && make debug && cd - && make clean
-       - make debug16 && ./build/ec_self_tests vectors vectors && ./build/ec_self_tests vectors rand
-       - cd src/examples/ && make clean && make debug16 && cd - && make clean
-       - make debug32 && ./build/ec_self_tests vectors vectors && ./build/ec_self_tests vectors rand
-       - cd src/examples/ && make clean && make debug32 && cd - && make clean
-       - make debug64 && ./build/ec_self_tests vectors vectors && ./build/ec_self_tests vectors rand
-       - cd src/examples/ && make clean && make debug64 && cd - && make clean
+       - if [ "${CROSS_BUILD}" = 0 ] && [ "${COVERITY_SCAN_BRANCH}" != 1 ]; then make && ./build/ec_self_tests vectors && ./build/ec_self_tests rand; fi
+       - if [ "${CROSS_BUILD}" = 0 ] && [ "${COVERITY_SCAN_BRANCH}" != 1 ]; then cd src/examples/ && make clean && make && cd - && make clean; fi
+       - if [ "${CROSS_BUILD}" = 0 ] && [ "${COVERITY_SCAN_BRANCH}" != 1 ]; then make 16 && ./build/ec_self_tests vectors && ./build/ec_self_tests rand; fi
+       - if [ "${CROSS_BUILD}" = 0 ] && [ "${COVERITY_SCAN_BRANCH}" != 1 ]; then cd src/examples/ && make clean && make 16 && cd - && make clean; fi
+       - if [ "${CROSS_BUILD}" = 0 ] && [ "${COVERITY_SCAN_BRANCH}" != 1 ]; then make 32 && ./build/ec_self_tests vectors && ./build/ec_self_tests rand; fi
+       - if [ "${CROSS_BUILD}" = 0 ] && [ "${COVERITY_SCAN_BRANCH}" != 1 ]; then cd src/examples/ && make clean && make 32 && cd - && make clean; fi
+       - if [ "${CROSS_BUILD}" = 0 ] && [ "${COVERITY_SCAN_BRANCH}" != 1 ]; then make 64 && ./build/ec_self_tests vectors && ./build/ec_self_tests rand; fi
+       - if [ "${CROSS_BUILD}" = 0 ] && [ "${COVERITY_SCAN_BRANCH}" != 1 ]; then cd src/examples/ && make clean && make 64 && cd - && make clean; fi
+       - if [ "${CROSS_BUILD}" = 0 ] && [ "${COVERITY_SCAN_BRANCH}" != 1 ]; then make debug && ./build/ec_self_tests vectors && ./build/ec_self_tests rand; fi
+       - if [ "${CROSS_BUILD}" = 0 ] && [ "${COVERITY_SCAN_BRANCH}" != 1 ]; then cd src/examples/ && make clean && make debug && cd - && make clean; fi
+       - if [ "${CROSS_BUILD}" = 0 ] && [ "${COVERITY_SCAN_BRANCH}" != 1 ]; then make debug16 && ./build/ec_self_tests vectors && ./build/ec_self_tests rand; fi
+       - if [ "${CROSS_BUILD}" = 0 ] && [ "${COVERITY_SCAN_BRANCH}" != 1 ]; then cd src/examples/ && make clean && make debug16 && cd - && make clean; fi
+       - if [ "${CROSS_BUILD}" = 0 ] && [ "${COVERITY_SCAN_BRANCH}" != 1 ]; then make debug32 && ./build/ec_self_tests vectors && ./build/ec_self_tests rand; fi
+       - if [ "${CROSS_BUILD}" = 0 ] && [ "${COVERITY_SCAN_BRANCH}" != 1 ]; then cd src/examples/ && make clean && make debug32 && cd - && make clean; fi
+       - if [ "${CROSS_BUILD}" = 0 ] && [ "${COVERITY_SCAN_BRANCH}" != 1 ]; then make debug64 && ./build/ec_self_tests vectors && ./build/ec_self_tests rand; fi
+       - if [ "${CROSS_BUILD}" = 0 ] && [ "${COVERITY_SCAN_BRANCH}" != 1 ]; then cd src/examples/ && make clean && make debug64 && cd - && make clean; fi
        # Cross build jobs
-       - sh scripts/crossbuild.sh
+       - if [ "${CROSS_BUILD}" = 1 ] && [ "${COVERITY_SCAN_BRANCH}" != 1 ]; then docker pull multiarch/crossbuild; fi
+       - if [ "${CROSS_BUILD}" = 1 ] && [ "${COVERITY_SCAN_BRANCH}" != 1 ]; then sh scripts/crossbuild.sh -triplet "${CROSS_TARGET}" "${CROSS_SIZE}"; fi
        # Test generated cross binaries through qemu-static
-       - sh scripts/crossrun.sh -cpu 1 
+       - if [ "${CROSS_BUILD}" = 1 ] && [ "${COVERITY_SCAN_BRANCH}" != 1 ]; then sh scripts/crossrun.sh -triplet "${CROSS_TARGET}" "${CROSS_SIZE}"; fi 
  
 notifications:
   email:
