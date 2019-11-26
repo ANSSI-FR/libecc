@@ -168,6 +168,9 @@ void prj_pt_to_aff(aff_pt_t out, prj_pt_src_t in)
 void ec_shortw_aff_to_prj(prj_pt_t out, aff_pt_src_t in)
 {
 	aff_pt_check_initialized(in);
+	
+	/* The input affine point must be on the curve */
+	MUST_HAVE(is_on_curve(&(in->x), &(in->y), in->crv) == 1);
 
 	prj_pt_init(out, in->crv);
 
@@ -286,7 +289,7 @@ int prj_pt_import_from_buf(prj_pt_t pt,
 	/* Check that the point is indeed on the provided curve, uninitialize it
 	 * if this is not the case.
 	 */
-	if(!prj_pt_is_on_curve(pt)){
+	if(prj_pt_is_on_curve(pt) != 1){
 		prj_pt_uninit(pt);
 		return -1;
 	}
@@ -307,6 +310,9 @@ int prj_pt_export_to_buf(prj_pt_src_t pt, u8 *pt_buf, u32 pt_buf_len)
 
 	prj_pt_check_initialized(pt);
 	MUST_HAVE(pt_buf != NULL);
+
+	/* The point to be exported must be on the curve */
+        MUST_HAVE(prj_pt_is_on_curve(pt) == 1);
 
 	ctx = pt->crv->a.ctx;
 	coord_len = BYTECEIL(ctx->p_bitlen);
@@ -818,10 +824,10 @@ static void _prj_pt_mul(prj_pt_t out, nn_src_t m, prj_pt_src_t in)
 		/* Update rbit */
 		rbit = rbit_next;
 	}
-        /* Check that the output is on the curve */
-        MUST_HAVE(prj_pt_is_on_curve(&T[rbit]) == 1);
 	/* Output: T[r[0]] */
 	prj_pt_copy(out, &T[rbit]);
+        /* Check that the output is on the curve */
+        MUST_HAVE(prj_pt_is_on_curve(out) == 1);
 
 	prj_pt_uninit(&T[0]);
 	prj_pt_uninit(&T[1]);

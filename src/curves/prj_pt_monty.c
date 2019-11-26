@@ -529,10 +529,10 @@ static void _prj_pt_mul_ltr_monty(prj_pt_t out, nn_src_t m, prj_pt_src_t in)
 		/* Update rbit */
 		rbit = rbit_next;
 	}
-	/* Chack that the output is on the curve */
-	MUST_HAVE(prj_pt_is_on_curve(&T[rbit]) == 1);
 	/* Output: T[r[0]] */
 	prj_pt_copy(out, &T[rbit]);
+	/* Check that the output is on the curve */
+	MUST_HAVE(prj_pt_is_on_curve(out) == 1);
 
 	prj_pt_uninit(&T[0]);
 	prj_pt_uninit(&T[1]);
