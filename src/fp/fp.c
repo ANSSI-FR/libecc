@@ -146,6 +146,7 @@ int fp_is_initialized(fp_src_t in)
  */
 void fp_init(fp_t in, fp_ctx_src_t fpctx)
 {
+	MUST_HAVE(in != NULL);
 	fp_ctx_check_initialized(fpctx);
 	nn_init(&in->fp_val, fpctx->p.wlen * WORD_BYTES);
 	in->ctx = fpctx;
