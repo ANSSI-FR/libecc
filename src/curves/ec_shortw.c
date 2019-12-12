@@ -32,6 +32,8 @@ void ec_shortw_crv_check_initialized(ec_shortw_crv_src_t crv)
  */
 void ec_shortw_crv_init(ec_shortw_crv_t crv, fp_src_t a, fp_src_t b)
 {
+	MUST_HAVE(crv != NULL);
+
 	fp_check_initialized(a);
 	fp_check_initialized(b);
 	MUST_HAVE(a->ctx == b->ctx);

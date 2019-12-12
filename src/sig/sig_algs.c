@@ -88,7 +88,7 @@ int ec_get_sig_len(const ec_params *params, ec_sig_alg_type sig_type,
 	int ret = -1;
 	u8 i;
 
-	MUST_HAVE(params != NULL);
+	MUST_HAVE((params != NULL) && (siglen != NULL));
 
 	ret = get_hash_sizes(hash_type, &digest_size, &block_size);
 	if (ret) {
@@ -281,6 +281,7 @@ int ec_verify_init(struct ec_verify_context *ctx, const ec_pub_key *pub_key,
 	u8 i;
 	int ret;
 
+	MUST_HAVE(ctx != NULL);
 	pub_key_check_initialized(pub_key);
 	if (pub_key->key_type != sig_type) {
 		ret = -1;
@@ -405,8 +406,12 @@ int ec_structured_sig_import_from_buf(u8 *sig, u32 siglen,
 {
         u32 metadata_len = (3 * sizeof(u8));
 
+	MUST_HAVE((out_buf != NULL) && (sig_type != NULL) && (hash_type != NULL) && (curve_name != NULL));
         /* We only deal with signatures of length < 256 */
         MUST_HAVE(siglen <= EC_MAX_SIGLEN);
+	if(siglen > 0){
+		MUST_HAVE(sig != NULL);
+	}
 
         /* We first import the metadata consisting of:
          *      - One byte = the EC algorithm type
@@ -445,8 +450,12 @@ int ec_structured_sig_export_to_buf(const u8 *sig, u32 siglen,
         u8 curve_name_len;
         ec_curve_type curve_type;
 
+	MUST_HAVE((out_buf != NULL) && (curve_name != NULL));
         /* We only deal with signatures of length < 256 */
         MUST_HAVE(siglen <= EC_MAX_SIGLEN);
+	if(siglen > 0){
+		MUST_HAVE(sig != NULL);
+	}
 
         /* We first export the metadata consisting of:
          *      - One byte = the EC algorithm type

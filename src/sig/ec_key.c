@@ -52,6 +52,8 @@ void ec_priv_key_import_from_buf(ec_priv_key *priv_key,
 				 const u8 *priv_key_buf, u8 priv_key_buf_len,
 				 ec_sig_alg_type ec_key_alg)
 {
+	MUST_HAVE(priv_key != NULL);
+
 	nn_init_from_buf(&(priv_key->x), priv_key_buf, priv_key_buf_len);
 
 	/* Set key type and pointer to EC params */
@@ -64,6 +66,7 @@ void ec_priv_key_import_from_buf(ec_priv_key *priv_key,
 int ec_priv_key_export_to_buf(const ec_priv_key *priv_key, u8 *priv_key_buf,
 			      u8 priv_key_buf_len)
 {
+	priv_key_check_initialized(priv_key);
 	nn_export_to_buf(priv_key_buf, priv_key_buf_len, &(priv_key->x));
 
 	return 0;
@@ -104,6 +107,8 @@ int ec_pub_key_import_from_buf(ec_pub_key *pub_key, const ec_params *params,
 			       ec_sig_alg_type ec_key_alg)
 {
 	int ret;
+
+	MUST_HAVE((pub_key != NULL) && (params != NULL));
 
 	/* Import the projective point */
 	ret = prj_pt_import_from_buf(&(pub_key->y),
@@ -170,6 +175,8 @@ int ec_key_pair_import_from_priv_key_buf(ec_key_pair *kp,
 					 ec_sig_alg_type ec_key_alg)
 {
 	int ret;
+
+	MUST_HAVE(kp != NULL);
 
 	/* Import private key */
 	ec_priv_key_import_from_buf(&(kp->priv_key), params, priv_key,

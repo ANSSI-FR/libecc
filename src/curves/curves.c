@@ -30,6 +30,8 @@ const ec_str_params *ec_get_curve_params_by_name(const u8 *ec_name,
 	const u8 *name;
 	unsigned int i;
 
+	MUST_HAVE(ec_name != NULL);
+
 	/* No need to bother w/ obvious crap */
 	if ((ec_name_len <= 2) || (ec_name_len > MAX_CURVE_NAME_LEN)) {
 		goto err;

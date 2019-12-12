@@ -26,6 +26,8 @@ void import_params(ec_params *out_params, const ec_str_params *in_str_params)
 	nn tmp_order_bitlen, tmp_cofactor;
 	fp tmp_a, tmp_b, tmp_gx, tmp_gy, tmp_gz;
 
+	MUST_HAVE((out_params != NULL) && (in_str_params != NULL));
+
 	local_memset(out_params, 0, sizeof(ec_params));
 
 	/*

@@ -34,6 +34,8 @@ void ecrdsa_init_pub_key(ec_pub_key *out_pub, ec_priv_key *in_priv)
         nn scalar_b;
         int ret;
 
+	MUST_HAVE(out_pub != NULL);
+
 	priv_key_check_initialized_and_type(in_priv, ECRDSA);
         /* We use blinding for the scalar multiplication */
         ret = nn_get_random_mod(&scalar_b, &(in_priv->params->ec_gen_order));

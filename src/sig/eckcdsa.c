@@ -35,6 +35,8 @@ void eckcdsa_init_pub_key(ec_pub_key *out_pub, ec_priv_key *in_priv)
 	nn scalar_b;
 	int ret;
 
+	MUST_HAVE(out_pub != NULL);
+
 	priv_key_check_initialized_and_type(in_priv, ECKCDSA);
 
         /* We use blinding for the scalar multiplication */
@@ -106,6 +108,8 @@ u8 eckcdsa_siglen(u16 p_bit_len, u16 q_bit_len, u8 hsize, u8 blocksize)
 static void buf_lshift(u8 *buf, u8 buflen, u8 shift)
 {
 	u8 i;
+
+	MUST_HAVE(buf != NULL);
 
 	if (shift > buflen) {
 		shift = buflen;
