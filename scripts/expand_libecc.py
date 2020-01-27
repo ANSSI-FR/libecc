@@ -193,8 +193,14 @@ class Point(object):
     # Affine coordinates (x, y), infinity point is (None, None)
     def __init__(self, curve, x, y):
         self.curve = curve
-        self.x = x
-        self.y = y
+        if x != None:
+            self.x = (x % curve.p)
+        else:
+            self.x = None
+        if y != None:
+            self.y = (y % curve.p)
+        else:
+            self.y = None
         # Check that the point is indeed on the curve
         if (x != None):
             if (pow(y, 2, curve.p) != ((pow(x, 3, curve.p) + (curve.a * x) + curve.b ) % curve.p)):
@@ -217,20 +223,17 @@ class Point(object):
             return Q
         # Infinity point or Doubling
         if (x1 == x2):
-            if (y1 == -y2):
+            if (((y1 + y2) % curve.p) == 0):
                 # Return infinity point
-                resx = None
-                resy = None
+                return Point(self.curve, None, None)
             else:
                 # Doubling
                 L = ((3*pow(x1, 2, curve.p) + curve.a) * modinv(2*y1, curve.p)) % curve.p
         # Addition
         else:
             L = ((y2 - y1) * modinv((x2 - x1) % curve.p, curve.p)) % curve.p
-             
-        if (self.x != None):
-            resx = (pow(L, 2, curve.p) - x1 - x2) % curve.p
-            resy = ((L * (x1 - resx)) - y1) % curve.p
+        resx = (pow(L, 2, curve.p) - x1 - x2) % curve.p
+        resy = ((L * (x1 - resx)) - y1) % curve.p
         # Return the point
         return Point(self.curve, resx, resy)
     # Negation
