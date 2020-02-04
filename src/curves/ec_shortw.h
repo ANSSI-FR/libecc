@@ -31,6 +31,7 @@ typedef struct {
 	fp b_monty;
 	fp b3_monty;
 #endif
+	nn order;
 	word_t magic;
 } ec_shortw_crv;
 
@@ -38,6 +39,6 @@ typedef ec_shortw_crv *ec_shortw_crv_t;
 typedef const ec_shortw_crv *ec_shortw_crv_src_t;
 
 void ec_shortw_crv_check_initialized(ec_shortw_crv_src_t crv);
-void ec_shortw_crv_init(ec_shortw_crv_t crv, fp_src_t a, fp_src_t b);
+void ec_shortw_crv_init(ec_shortw_crv_t crv, fp_src_t a, fp_src_t b, nn_src_t order);
 
 #endif /* __EC_SHORTW_H__ */

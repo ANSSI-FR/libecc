@@ -82,30 +82,6 @@ void import_params(ec_params *out_params, const ec_str_params *in_str_params)
 			 PARAM_BUF_PTR(in_str_params->b),
 			 PARAM_BUF_LEN(in_str_params->b));
 
-	/* Now, we can create curve context from a and b. */
-	ec_shortw_crv_init(&(out_params->ec_curve), &tmp_a, &tmp_b);
-
-	/* Now we can store the number of points on the curve */
-	nn_init_from_buf(&tmp_npoints,
-			 PARAM_BUF_PTR(in_str_params->npoints),
-			 PARAM_BUF_LEN(in_str_params->npoints));
-	nn_init(&(out_params->ec_curve_points), tmp_npoints.wlen * WORD_BYTES);
-	nn_copy(&(out_params->ec_curve_points), &tmp_npoints);
-
-	/* Let's now import G from its affine coordinates (gx,gy) */
-	fp_init_from_buf(&tmp_gx, &(out_params->ec_fp),
-			 PARAM_BUF_PTR(in_str_params->gx),
-			 PARAM_BUF_LEN(in_str_params->gx));
-	fp_init_from_buf(&tmp_gy, &(out_params->ec_fp),
-			 PARAM_BUF_PTR(in_str_params->gy),
-			 PARAM_BUF_LEN(in_str_params->gy));
-	fp_init_from_buf(&tmp_gz, &(out_params->ec_fp),
-			 PARAM_BUF_PTR(in_str_params->gz),
-			 PARAM_BUF_LEN(in_str_params->gz));
-	prj_pt_init_from_coords(&(out_params->ec_gen),
-				&(out_params->ec_curve),
-				&tmp_gx, &tmp_gy, &tmp_gz);
-
 	/*
 	 * Now we can store the number of points in the group generated
 	 * by g and the associated cofactor (i.e. npoints / order).
@@ -127,6 +103,30 @@ void import_params(ec_params *out_params, const ec_str_params *in_str_params)
 	nn_init(&(out_params->ec_gen_cofactor),
 		tmp_cofactor.wlen * WORD_BYTES);
 	nn_copy(&(out_params->ec_gen_cofactor), &tmp_cofactor);
+
+	/* Now, we can create curve context from a and b. */
+	ec_shortw_crv_init(&(out_params->ec_curve), &tmp_a, &tmp_b, &tmp_order);
+
+	/* Now we can store the number of points on the curve */
+	nn_init_from_buf(&tmp_npoints,
+			 PARAM_BUF_PTR(in_str_params->npoints),
+			 PARAM_BUF_LEN(in_str_params->npoints));
+	nn_init(&(out_params->ec_curve_points), tmp_npoints.wlen * WORD_BYTES);
+	nn_copy(&(out_params->ec_curve_points), &tmp_npoints);
+
+	/* Let's now import G from its affine coordinates (gx,gy) */
+	fp_init_from_buf(&tmp_gx, &(out_params->ec_fp),
+			 PARAM_BUF_PTR(in_str_params->gx),
+			 PARAM_BUF_LEN(in_str_params->gx));
+	fp_init_from_buf(&tmp_gy, &(out_params->ec_fp),
+			 PARAM_BUF_PTR(in_str_params->gy),
+			 PARAM_BUF_LEN(in_str_params->gy));
+	fp_init_from_buf(&tmp_gz, &(out_params->ec_fp),
+			 PARAM_BUF_PTR(in_str_params->gz),
+			 PARAM_BUF_LEN(in_str_params->gz));
+	prj_pt_init_from_coords(&(out_params->ec_gen),
+				&(out_params->ec_curve),
+				&tmp_gx, &tmp_gy, &tmp_gz);
 
 	/* Import a local copy of curve OID */
 	local_memset(out_params->curve_oid, 0, MAX_CURVE_OID_LEN);

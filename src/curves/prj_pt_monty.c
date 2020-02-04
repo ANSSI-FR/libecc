@@ -425,6 +425,22 @@ void prj_pt_dbl_monty(prj_pt_t out, prj_pt_src_t in)
 #endif
 }
 
+
+
+/****** Scalar multiplication algorithms *****/
+
+/* If nothing is specified regarding the scalar multiplication algorithm, we use
+ * the Montgomery Ladder
+ */
+#if !defined(USE_DOUBLE_ADD_ALWAYS) && !defined(USE_MONTY_LADDER)
+#define USE_MONTY_LADDER
+#endif
+
+#if defined(USE_DOUBLE_ADD_ALWAYS) && defined(USE_MONTY_LADDER)
+#error "You can either choose USE_DOUBLE_ADD_ALWAYS or USE_MONTY_LADDER, not both!"
+#endif
+
+#ifdef USE_DOUBLE_ADD_ALWAYS
 /* Double and Add Always masked using Itoh et al. anti-ADPA
  * (Address-bit DPA) countermeasure.
  * See "A Practical Countermeasure against Address-Bit Differential Power Analysis"
@@ -434,7 +450,7 @@ void prj_pt_dbl_monty(prj_pt_t out, prj_pt_src_t in)
  * used as it has a very small impact on performance and is inherently more
  * robust againt DPA.
  */
-static void _prj_pt_mul_ltr_monty(prj_pt_t out, nn_src_t m, prj_pt_src_t in)
+static void _prj_pt_mul_ltr_monty_dbl_add_always(prj_pt_t out, nn_src_t m, prj_pt_src_t in)
 {
 	/* We use Itoh et al. notations here for T and the random r */
 	prj_pt T[3];
@@ -444,68 +460,67 @@ static void _prj_pt_mul_ltr_monty(prj_pt_t out, nn_src_t m, prj_pt_src_t in)
 	nn r;
 	/* Random for projective coordinates masking */
         fp l;
-
-	/* 
-	 * Two implementations are provided here: using complete formulas
-	 * or incomplete formulas.
-	 * WARNING: in the case of incomplete formulas, the MSB of the scalar m
-	 * is searched, which can be leaked through a side channel (such as timing).
-	 * If you are in a context where side channel attacks matter, do not use incomplete
-	 * formulas!
-	 * 
-	 * When using complete formulas, double and add always is performed in constant
-	 * time wrt the size of the scalar.
+	/* The new scalar we will use with MSB fixed to 1 (noted m' above).
+	 * This helps dealing with constant time.
 	 */
-
-#ifdef NO_USE_COMPLETE_FORMULAS
-	MUST_HAVE(!nn_iszero(m));
-	MUST_HAVE(!prj_pt_iszero(in));
-#endif
+	nn m_msb_fixed;
+	nn order_square;
 
 	/* Check that the input is on the curve */
 	MUST_HAVE(prj_pt_is_on_curve(in) == 1);
+	/* Compute m' from m depending on the rule described above */
+	/* First compute q**2 */
+	nn_sqr(&order_square, &(in->crv->order));
+	/* Then compute m' depending on m size */
+	if(nn_cmp(m, &(in->crv->order)) < 0){
+		/* Case where m < q */
+		nn_add(&m_msb_fixed, m, &(in->crv->order));
+		bitcnt_t msb_bit_len = nn_bitlen(&m_msb_fixed);
+		bitcnt_t order_bitlen = nn_bitlen(&(in->crv->order));
+		nn_cnd_add((msb_bit_len == order_bitlen), &m_msb_fixed, &m_msb_fixed, &(in->crv->order));
+	}
+	else if(nn_cmp(m, &order_square) < 0){
+		/* Case where m >= q and m < (q**2) */
+		nn_add(&m_msb_fixed, m, &order_square);
+		bitcnt_t msb_bit_len = nn_bitlen(&m_msb_fixed);
+		bitcnt_t order_square_bitlen = nn_bitlen(&order_square);
+		nn_cnd_add((msb_bit_len == order_square_bitlen), &m_msb_fixed, &m_msb_fixed, &order_square);
 
-	/* Get a random r with the same size of m */
-	MUST_HAVE(!nn_get_random_len(&r, m->wlen * WORD_BYTES));
+	}
+	else{
+		/* Case where m >= (q**2) */
+		nn_copy(&m_msb_fixed, m);
+	}
+	mlen = nn_bitlen(&m_msb_fixed);
+	if(mlen == 0){
+		/* Should not happen thanks to our MSB fixing trick, but in case ...
+		 * Return the infinite point.
+		 */
+		prj_pt_zero(out);
+		return;
+	}
+	mlen--;
+
+	/* Get a random r with the same size of m_msb_fixed */
+	MUST_HAVE(!nn_get_random_len(&r, m_msb_fixed.wlen * WORD_BYTES));
         /* Get a random value l in Fp */
 	MUST_HAVE(!fp_get_random(&l, in->X.ctx));
+	rbit = nn_getbit(&r, mlen);
 
 	/* Initialize points */
 	prj_pt_init(&T[0], in->crv);
 	prj_pt_init(&T[1], in->crv);
-        /* Blind the point with projective coordinates (X, Y, Z) => (l*X, l*Y, l*Z)
+        /* 
+	 * T[2] = R(P)
+	 * Blind the point with projective coordinates (X, Y, Z) => (l*X, l*Y, l*Z)
          */
 	prj_pt_init(&T[2], in->crv);
-        fp_mul(&(T[2].X), &(in->X), &l);
-        fp_mul(&(T[2].Y), &(in->Y), &l);
-        fp_mul(&(T[2].Z), &(in->Z), &l);
+        fp_mul_monty(&(T[2].X), &(in->X), &l);
+        fp_mul_monty(&(T[2].Y), &(in->Y), &l);
+        fp_mul_monty(&(T[2].Z), &(in->Z), &l);
 
-
-#ifdef NO_USE_COMPLETE_FORMULAS
-	mlen = nn_bitlen(m) - 1;
-#else
-	mlen = (m->wlen * WORD_BITS) - 1;
-#endif
-	rbit = nn_getbit(&r, mlen);
-
-	/* Initialize initial value of T[r[n-1]] either to
-	 * input point or to infinity point depending on whether
-	 * we use complete formulas or not, and whether the first
-	 * bit is 0 or 1.
-	 */
-#ifdef NO_USE_COMPLETE_FORMULAS
+	/*  T[r[n-1]] = T[2] */
 	prj_pt_copy(&T[rbit], &T[2]);
-#else
-	mbit = nn_getbit(m, mlen);
-	prj_pt_zero(&T[1-rbit]);
-	prj_pt_copy(&T[rbit], &T[2]);
-	/* NOTE: we avoid/limit leaking the first bit with using
-	 * the nn_cnd_swap primitive.
-	 */
-	nn_cnd_swap(!mbit, &(T[rbit].X.fp_val), &(T[1-rbit].X.fp_val));
-	nn_cnd_swap(!mbit, &(T[rbit].Y.fp_val), &(T[1-rbit].Y.fp_val));
-	nn_cnd_swap(!mbit, &(T[rbit].Z.fp_val), &(T[1-rbit].Z.fp_val));
-#endif
 
 	/* Main loop of Double and Add Always */
 	while (mlen > 0) {
@@ -514,7 +529,7 @@ static void _prj_pt_mul_ltr_monty(prj_pt_t out, nn_src_t m, prj_pt_src_t in)
 		/* rbit is r[i+1], and rbit_next is r[i] */
 		rbit_next = nn_getbit(&r, mlen);
 		/* mbit is m[i] */
-		mbit = nn_getbit(m, mlen);
+		mbit = nn_getbit(&m_msb_fixed, mlen);
 		/* Double: T[r[i+1]] = ECDBL(T[r[i+1]]) */
 		prj_pt_dbl_monty(&T[rbit], &T[rbit]);
 		/* Add:  T[1-r[i+1]] = ECADD(T[r[i+1]],T[2]) */
@@ -540,6 +555,171 @@ static void _prj_pt_mul_ltr_monty(prj_pt_t out, nn_src_t m, prj_pt_src_t in)
 	nn_uninit(&r);
 	fp_uninit(&l);
 }
+#endif
+
+#ifdef USE_MONTY_LADDER
+/* Montgomery Ladder masked using Itoh et al. anti-ADPA
+ * (Address-bit DPA) countermeasure.
+ * See "A Practical Countermeasure against Address-Bit Differential Power Analysis"
+ * by Itoh, Izu and Takenaka for more information.
+ *
+ * NOTE: this masked variant of the Montgomery Ladder algorithm is always
+ * used as it has a very small impact on performance and is inherently more
+ * robust againt DPA.
+ *
+ * NOTE: the Montgomery Ladder algorithm inherently depends on the MSB of the
+ * scalar. In order to avoid leaking this MSB and fall into HNP (Hidden Number
+ * Problem) issues, we use the trick described in https://eprint.iacr.org/2011/232.pdf
+ * to have the MSB always set. However, since the scalar m might be less or bigger than
+ * the order q of the curve, we distinguish three situations:
+ *     - The scalar m is < q (the order), in this case we compute:
+ *         -
+ *        | m' = m + (2 * q) if [log(k + q)] == [log(q)],
+ *        | m' = m + q otherwise.
+ *         -
+ *     - The scalar m is >= q and < q**2, in this case we compute:
+ *         -
+ *        | m' = m + (2 * (q**2)) if [log(k + (q**2))] == [log(q**2)],
+ *        | m' = m + (q**2) otherwise.
+ *         -
+ *     - The scalar m is >= (q**2), in this case m == m'
+ *
+ *   => We only deal with 0 <= m < (q**2) using the countermeasure. When m >= (q**2),
+ *      we stick with m' = m, accepting MSB issues (not much can be done in this case
+ *      anyways). In the two first case, Montgomery Ladder is performed in constant
+ *      time wrt the size of the scalar m.
+ */
+static void _prj_pt_mul_ltr_monty_ladder(prj_pt_t out, nn_src_t m, prj_pt_src_t in)
+{
+	/* We use Itoh et al. notations here for T and the random r */
+	prj_pt T[3];
+	bitcnt_t mlen;
+	int mbit, rbit;
+	/* Random for masking the Montgomery Ladder algorithm */
+	nn r;
+	/* Random for projective coordinates masking */
+        fp l;
+	/* The new scalar we will use with MSB fixed to 1 (noted m' above).
+	 * This helps dealing with constant time.
+	 */
+	nn m_msb_fixed;
+	nn order_square;
+
+	/* Check that the input is on the curve */
+	MUST_HAVE(prj_pt_is_on_curve(in) == 1);
+
+	/* Compute m' from m depending on the rule described above */
+	/* First compute q**2 */
+	nn_sqr(&order_square, &(in->crv->order));
+	/* Then compute m' depending on m size */
+	if(nn_cmp(m, &(in->crv->order)) < 0){
+		/* Case where m < q */
+		nn_add(&m_msb_fixed, m, &(in->crv->order));
+		bitcnt_t msb_bit_len = nn_bitlen(&m_msb_fixed);
+		bitcnt_t order_bitlen = nn_bitlen(&(in->crv->order));
+		nn_cnd_add((msb_bit_len == order_bitlen), &m_msb_fixed, &m_msb_fixed, &(in->crv->order));
+	}
+	else if(nn_cmp(m, &order_square) < 0){
+		/* Case where m >= q and m < (q**2) */
+		nn_add(&m_msb_fixed, m, &order_square);
+		bitcnt_t msb_bit_len = nn_bitlen(&m_msb_fixed);
+		bitcnt_t order_square_bitlen = nn_bitlen(&order_square);
+		nn_cnd_add((msb_bit_len == order_square_bitlen), &m_msb_fixed, &m_msb_fixed, &order_square);
+
+	}
+	else{
+		/* Case where m >= (q**2) */
+		nn_copy(&m_msb_fixed, m);
+	}
+	mlen = nn_bitlen(&m_msb_fixed);
+	if(mlen == 0){
+		/* Should not happen thanks to our MSB fixing trick, but in case ...
+		 * Return the infinite point.
+		 */
+		prj_pt_zero(out);
+		return;
+	}
+	mlen--;
+
+	/* Get a random r with the same size of m_msb_fixed */
+	MUST_HAVE(!nn_get_random_len(&r, m_msb_fixed.wlen * WORD_BYTES));
+        /* Get a random value l in Fp */
+	MUST_HAVE(!fp_get_random(&l, in->X.ctx));
+	rbit = nn_getbit(&r, mlen);
+
+	/* Initialize points */
+	prj_pt_init(&T[0], in->crv);
+	prj_pt_init(&T[1], in->crv);
+	prj_pt_init(&T[2], in->crv);
+
+	/* Initialize T[r[n-1]] to input point */
+	prj_pt_copy(&T[rbit], in);
+        /* Blind the point with projective coordinates (X, Y, Z) => (l*X, l*Y, l*Z)
+         */
+        fp_mul_monty(&(T[rbit].X), &(T[rbit].X), &l);
+        fp_mul_monty(&(T[rbit].Y), &(T[rbit].Y), &l);
+        fp_mul_monty(&(T[rbit].Z), &(T[rbit].Z), &l);
+	/* Initialize T[1-r[n-1]] with ECDBL(T[r[n-1]])) */
+	prj_pt_dbl_monty(&T[1-rbit], &T[rbit]);
+
+	/* Main loop of the Montgomery Ladder */
+	while (mlen > 0) {
+		int rbit_next;
+		--mlen;
+		/* rbit is r[i+1], and rbit_next is r[i] */
+		rbit_next = nn_getbit(&r, mlen);
+		/* mbit is m[i] */
+		mbit = nn_getbit(&m_msb_fixed, mlen);
+		/* Double: T[2] = ECDBL(T[d[i] ^ r[i+1]]) */
+		prj_pt_dbl_monty(&T[2], &T[mbit ^ rbit]);
+		/* Add: T[1] = ECADD(T[0],T[1]) */
+		prj_pt_add_monty(&T[1], &T[0], &T[1]);
+		/* T[0] = T[2-(d[i] ^ r[i])] */
+		/* NOTE: we use the low level nn_copy function here to avoid
+		 * any possible leakage on operands with prj_pt_copy
+		 */
+		nn_copy(&(T[0].X.fp_val), &(T[2-(mbit ^ rbit_next)].X.fp_val));
+		nn_copy(&(T[0].Y.fp_val), &(T[2-(mbit ^ rbit_next)].Y.fp_val));
+		nn_copy(&(T[0].Z.fp_val), &(T[2-(mbit ^ rbit_next)].Z.fp_val));
+		/* T[1] = T[1+(d[i] ^ r[i])] */
+		/* NOTE: we use the low level nn_copy function here to avoid
+		 * any possible leakage on operands with prj_pt_copy
+		 */
+		nn_copy(&(T[1].X.fp_val), &(T[1+(mbit ^ rbit_next)].X.fp_val));
+		nn_copy(&(T[1].Y.fp_val), &(T[1+(mbit ^ rbit_next)].Y.fp_val));
+		nn_copy(&(T[1].Z.fp_val), &(T[1+(mbit ^ rbit_next)].Z.fp_val));
+		/* Update rbit */
+		rbit = rbit_next;
+	}
+	/* Output: T[r[0]] */
+	prj_pt_copy(out, &T[rbit]);
+	/* Check that the output is on the curve */
+	MUST_HAVE(prj_pt_is_on_curve(out) == 1);
+
+	prj_pt_uninit(&T[0]);
+	prj_pt_uninit(&T[1]);
+	prj_pt_uninit(&T[2]);
+	nn_uninit(&r);
+	fp_uninit(&l);
+	nn_uninit(&m_msb_fixed);
+}
+#endif
+
+/* Main projective scalar multiplication function.
+ * Depending on the preprocessing options, we use either the
+ * Double and Add Always algorithm, or the Montgomery Ladder one.
+ */
+static void _prj_pt_mul_ltr_monty(prj_pt_t out, nn_src_t m, prj_pt_src_t in){
+#if defined(USE_DOUBLE_ADD_ALWAYS)
+	_prj_pt_mul_ltr_monty_dbl_add_always(out, m, in);
+#elif defined(USE_MONTY_LADDER)
+	_prj_pt_mul_ltr_monty_ladder(out, m, in);
+#else
+#error "Error: neither Double and Add Always nor Montgomery Ladder has been selected!"
+#endif
+	return;
+}
+
 
 /* Aliased version */
 void prj_pt_mul_ltr_monty(prj_pt_t out, nn_src_t m, prj_pt_src_t in)

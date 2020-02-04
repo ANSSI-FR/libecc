@@ -30,13 +30,15 @@ void ec_shortw_crv_check_initialized(ec_shortw_crv_src_t crv)
  * Initialize pointed short Weierstrass curve structure using given a and b
  * Fp elements representing curve equation (y^2 = x^3 + ax + b) parameters.
  */
-void ec_shortw_crv_init(ec_shortw_crv_t crv, fp_src_t a, fp_src_t b)
+void ec_shortw_crv_init(ec_shortw_crv_t crv, fp_src_t a, fp_src_t b, nn_src_t order)
 {
 	MUST_HAVE(crv != NULL);
 
 	fp_check_initialized(a);
 	fp_check_initialized(b);
 	MUST_HAVE(a->ctx == b->ctx);
+
+	nn_check_initialized(order);
 
 	fp_init(&(crv->a), a->ctx);
 	fp_init(&(crv->b), b->ctx);
@@ -45,6 +47,8 @@ void ec_shortw_crv_init(ec_shortw_crv_t crv, fp_src_t a, fp_src_t b)
 	fp_copy(&(crv->a), a);
 	fp_copy(&(crv->b), b);
 	fp_redcify(&(crv->a_monty), a);
+
+	nn_copy(&(crv->order), order);
 
 #ifndef NO_USE_COMPLETE_FORMULAS
 	fp_init(&(crv->b3), b->ctx);
