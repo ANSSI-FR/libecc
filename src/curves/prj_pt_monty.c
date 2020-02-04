@@ -441,14 +441,36 @@ void prj_pt_dbl_monty(prj_pt_t out, prj_pt_src_t in)
 #endif
 
 #ifdef USE_DOUBLE_ADD_ALWAYS
-/* Double and Add Always masked using Itoh et al. anti-ADPA
+/* Double-and-Add-Always masked using Itoh et al. anti-ADPA
  * (Address-bit DPA) countermeasure.
  * See "A Practical Countermeasure against Address-Bit Differential Power Analysis"
  * by Itoh, Izu and Takenaka for more information.
  *
- * NOTE: this masked variant of the Double and Add Always algorithm is always
+ * NOTE: this masked variant of the Double-and-Add-Always algorithm is always
  * used as it has a very small impact on performance and is inherently more
  * robust againt DPA.
+ *
+ * NOTE: the Double-and-Add-Always algorithm inherently depends on the MSB of the
+ * scalar. In order to avoid leaking this MSB and fall into HNP (Hidden Number
+ * Problem) issues, we use the trick described in https://eprint.iacr.org/2011/232.pdf
+ * to have the MSB always set. However, since the scalar m might be less or bigger than
+ * the order q of the curve, we distinguish three situations:
+ *     - The scalar m is < q (the order), in this case we compute:
+ *         -
+ *        | m' = m + (2 * q) if [log(k + q)] == [log(q)],
+ *        | m' = m + q otherwise.
+ *         -
+ *     - The scalar m is >= q and < q**2, in this case we compute:
+ *         -
+ *        | m' = m + (2 * (q**2)) if [log(k + (q**2))] == [log(q**2)],
+ *        | m' = m + (q**2) otherwise.
+ *         -
+ *     - The scalar m is >= (q**2), in this case m == m'
+ *
+ *   => We only deal with 0 <= m < (q**2) using the countermeasure. When m >= (q**2),
+ *      we stick with m' = m, accepting MSB issues (not much can be done in this case
+ *      anyways). In the two first case, Montgomery Ladder is performed in constant
+ *      time wrt the size of the scalar m.
  */
 static void _prj_pt_mul_ltr_monty_dbl_add_always(prj_pt_t out, nn_src_t m, prj_pt_src_t in)
 {
