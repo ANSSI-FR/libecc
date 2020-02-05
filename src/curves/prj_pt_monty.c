@@ -576,6 +576,8 @@ static void _prj_pt_mul_ltr_monty_dbl_add_always(prj_pt_t out, nn_src_t m, prj_p
 	prj_pt_uninit(&T[2]);
 	nn_uninit(&r);
 	fp_uninit(&l);
+	nn_uninit(&m_msb_fixed);
+	nn_uninit(&order_square);
 }
 #endif
 
@@ -724,6 +726,7 @@ static void _prj_pt_mul_ltr_monty_ladder(prj_pt_t out, nn_src_t m, prj_pt_src_t 
 	nn_uninit(&r);
 	fp_uninit(&l);
 	nn_uninit(&m_msb_fixed);
+	nn_uninit(&order_square);
 }
 #endif
 
