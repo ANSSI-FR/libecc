@@ -811,6 +811,7 @@ static void _prj_pt_mul_ltr_dbl_add_always(prj_pt_t out, nn_src_t m, prj_pt_src_
 		/* Should not happen thanks to our MSB fixing trick, but in case ...
 		 * Return the infinite point.
 		 */
+		prj_pt_init(out, in->crv);
 		prj_pt_zero(out);
 		return;
 	}
@@ -953,6 +954,7 @@ static void _prj_pt_mul_ltr_ladder(prj_pt_t out, nn_src_t m, prj_pt_src_t in)
 		/* Should not happen thanks to our MSB fixing trick, but in case ...
 		 * Return the infinite point.
 		 */
+		prj_pt_init(out, in->crv);
 		prj_pt_zero(out);
 		return;
 	}

@@ -518,6 +518,7 @@ static void _prj_pt_mul_ltr_monty_dbl_add_always(prj_pt_t out, nn_src_t m, prj_p
 		/* Should not happen thanks to our MSB fixing trick, but in case ...
 		 * Return the infinite point.
 		 */
+		prj_pt_init(out, in->crv);
 		prj_pt_zero(out);
 		return;
 	}
@@ -660,6 +661,7 @@ static void _prj_pt_mul_ltr_monty_ladder(prj_pt_t out, nn_src_t m, prj_pt_src_t 
 		/* Should not happen thanks to our MSB fixing trick, but in case ...
 		 * Return the infinite point.
 		 */
+		prj_pt_init(out, in->crv);
 		prj_pt_zero(out);
 		return;
 	}
