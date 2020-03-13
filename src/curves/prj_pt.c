@@ -762,7 +762,7 @@ void prj_pt_dbl(prj_pt_t out, prj_pt_src_t in)
  *
  *   => We only deal with 0 <= m < (q**2) using the countermeasure. When m >= (q**2),
  *      we stick with m' = m, accepting MSB issues (not much can be done in this case
- *      anyways). In the two first case, Montgomery Ladder is performed in constant
+ *      anyways). In the two first cases, Double-and-Add-Always is performed in constant
  *      time wrt the size of the scalar m.
  */
 static void _prj_pt_mul_ltr_dbl_add_always(prj_pt_t out, nn_src_t m, prj_pt_src_t in)
@@ -904,7 +904,7 @@ static void _prj_pt_mul_ltr_dbl_add_always(prj_pt_t out, nn_src_t m, prj_pt_src_
  *
  *   => We only deal with 0 <= m < (q**2) using the countermeasure. When m >= (q**2),
  *      we stick with m' = m, accepting MSB issues (not much can be done in this case
- *      anyways). In the two first case, Montgomery Ladder is performed in constant
+ *      anyways). In the two first cases, Montgomery Ladder is performed in constant
  *      time wrt the size of the scalar m.
  */
 static void _prj_pt_mul_ltr_ladder(prj_pt_t out, nn_src_t m, prj_pt_src_t in)
