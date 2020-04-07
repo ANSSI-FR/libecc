@@ -117,6 +117,7 @@ static void _nn_mul_redc1(nn_t out, nn_src_t in1, nn_src_t in2, nn_src_t p,
 
 	nn_check_initialized(in1);
 	nn_check_initialized(in2);
+	nn_check_initialized(p);
 
 	/*
 	 * These comparisons are input hypothesis and does not "break"
