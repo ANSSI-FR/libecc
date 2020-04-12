@@ -22,10 +22,11 @@
 #include "../words/words.h"
 #include "../utils/utils.h"
 #include "sha2.h"
+#include "sha512_core.h"
 
-#define SHA512_STATE_SIZE   8
-#define SHA512_BLOCK_SIZE   128
-#define SHA512_DIGEST_SIZE  64
+#define SHA512_STATE_SIZE   SHA512_CORE_STATE_SIZE
+#define SHA512_BLOCK_SIZE   SHA512_CORE_BLOCK_SIZE
+#define SHA512_DIGEST_SIZE  SHA512_CORE_DIGEST_SIZE
 
 /* Compute max hash digest and block sizes */
 #ifndef MAX_DIGEST_SIZE
@@ -44,14 +45,7 @@
 #define MAX_BLOCK_SIZE SHA512_BLOCK_SIZE
 #endif
 
-typedef struct {
-	/* Number of bytes processed on 128 bits */
-	u64 sha512_total[2];
-	/* Internal state */
-	u64 sha512_state[SHA512_STATE_SIZE];
-	/* Internal buffer to handle updates in a block */
-	u8 sha512_buffer[SHA512_BLOCK_SIZE];
-} sha512_context;
+typedef sha512_core_context sha512_context;
 
 void sha512_init(sha512_context *ctx);
 void sha512_update(sha512_context *ctx, const u8 *input, u32 ilen);

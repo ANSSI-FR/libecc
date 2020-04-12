@@ -59,17 +59,23 @@ typedef enum {
 #ifdef WITH_HASH_SHA512
 	SHA512 = 4,
 #endif
+#ifdef WITH_HASH_SHA512_224
+	SHA512_224 = 5,
+#endif
+#ifdef WITH_HASH_SHA512_256
+	SHA512_256 = 6,
+#endif
 #ifdef WITH_HASH_SHA3_224
-	SHA3_224 = 5,
+	SHA3_224 = 7,
 #endif
 #ifdef WITH_HASH_SHA3_256
-	SHA3_256 = 6,
+	SHA3_256 = 8,
 #endif
 #ifdef WITH_HASH_SHA3_384
-	SHA3_384 = 7,
+	SHA3_384 = 9,
 #endif
 #ifdef WITH_HASH_SHA3_512
-	SHA3_512 = 8,
+	SHA3_512 = 10,
 #endif
 } hash_alg_type;
 
