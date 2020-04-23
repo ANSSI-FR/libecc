@@ -307,6 +307,10 @@ int _eckcdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	 *    set h to I2BS(beta', BS2I(|H|, h) mod 2^beta')
 	 */
 	shift = (hsize > r_len) ? (hsize - r_len) : 0;
+	if(hsize > sizeof(hzm)){
+		ret = -1;
+		goto err;
+	}
 	buf_lshift(hzm, hsize, shift);
 	dbg_buf_print("h = H(z||m) post-mask", hzm, r_len);
 
@@ -363,6 +367,10 @@ int _eckcdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	 *    set r to I2BS(beta', BS2I(|H|, r) mod 2^beta')
 	 */
 	dbg_buf_print("r  pre-mask", r, hsize);
+	if(hsize > sizeof(r)){
+		ret = -1;
+		goto err;
+	}
 	buf_lshift(r, hsize, shift);
 	dbg_buf_print("r post-mask", r, r_len);
 
@@ -671,6 +679,10 @@ int _eckcdsa_verify_finalize(struct ec_verify_context *ctx)
 	 *    set h to I2BS(beta', BS2I(|H|, h) mod 2^beta')
 	 */
 	shift = (hsize > r_len) ? (hsize - r_len) : 0;
+	if(hsize > sizeof(hzm)){
+		ret = -1;
+		goto err;
+	}
 	buf_lshift(hzm, hsize, shift);
 	dbg_buf_print("h = H(z||m) post-mask", hzm, r_len);
 
@@ -740,6 +752,7 @@ int _eckcdsa_verify_finalize(struct ec_verify_context *ctx)
 	PTR_NULLIFY(r);
 	PTR_NULLIFY(s);
 
+err:
 	return ret;
 }
 
