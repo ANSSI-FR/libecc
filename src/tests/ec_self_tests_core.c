@@ -50,7 +50,7 @@ static int ec_gen_import_export_kp(ec_key_pair *kp, const ec_params *params,
 					   priv_key_buf_len);
 	if (ret) {
 		ext_printf("Error exporting private key\n");
-	goto err;
+		goto err;
 	}
 
 	/* Import public and private key */
@@ -211,6 +211,7 @@ static int ec_sig_known_vector_tests_one(const ec_test_case *c)
 	ret = ec_test_verify(sig, siglen, &(kp.pub_key), c);
 	if (ret) {
 		failed_test = TEST_VERIF_ERROR;
+		goto err;
 	}
 
 	ret = 0;
