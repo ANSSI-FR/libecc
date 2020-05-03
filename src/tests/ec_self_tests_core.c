@@ -224,7 +224,7 @@ static int ec_sig_known_vector_tests_one(const ec_test_case *c)
 	return ret;
 }
 
-int perform_known_test_vectors_test(void)
+int perform_known_test_vectors_test(const char *sig, const char *hash, const char *curve)
 {
 	const ec_test_case *cur_test;
 	unsigned int i;
@@ -233,10 +233,40 @@ int perform_known_test_vectors_test(void)
 	ext_printf("======= Known test vectors test =================\n");
 	for (i = 0; i < EC_FIXED_VECTOR_NUM_TESTS; i++) {
 		cur_test = ec_fixed_vector_tests[i];
+		if(cur_test == NULL){
+			continue;
+		}
 		/* If this is a dummy test case, skip it! */
 		if(cur_test->sig_type == UNKNOWN_SIG_ALG){
 			continue;
 		}
+		/* Filter out */
+		if(sig != NULL){
+			const ec_sig_mapping *sig_map = get_sig_by_type(cur_test->sig_type);
+			if(sig_map == NULL){
+				continue;
+			}
+			if(!are_str_equal(sig_map->name, sig)){
+				continue;
+			}
+		}
+		if(hash != NULL){
+			const hash_mapping *hash_map = get_hash_by_type(cur_test->hash_type);
+			if(hash_map == NULL){
+				continue;
+			}
+			if(!are_str_equal(hash_map->name, hash)){
+				continue;
+			}
+		}
+		if(curve != NULL){
+			if(cur_test->ec_str_p == NULL){
+				continue;
+			}
+			if(!are_str_equal((const char*)cur_test->ec_str_p->name->buf, curve)){
+				continue;
+			}
+		}	
 
 		ret = ec_sig_known_vector_tests_one(cur_test);
 		ext_printf("[%s] %30s selftests: known test vectors "
@@ -292,7 +322,7 @@ static int rand_sig_verif_test_one(const ec_sig_mapping *sig,
 	return ret;
 }
 
-int perform_random_sig_verif_test(void)
+int perform_random_sig_verif_test(const char *sig, const char *hash, const char *curve)
 {
 	unsigned int i, j, k;
 	int ret;
@@ -305,6 +335,21 @@ int perform_random_sig_verif_test(void)
 	for (i = 0; ec_sig_maps[i].type != UNKNOWN_SIG_ALG; i++) {
 		for (j = 0; hash_maps[j].type != UNKNOWN_HASH_ALG; j++) {
 			for (k = 0; k < EC_CURVES_NUM; k++) {
+				if(sig != NULL){
+					if(!are_str_equal(ec_sig_maps[i].name, sig)){
+						continue;
+					}
+				}
+				if(hash != NULL){
+					if(!are_str_equal(hash_maps[j].name, hash)){
+						continue;
+					}
+				}
+				if(curve != NULL){
+					if(!are_str_equal((const char*)ec_maps[k].params->name->buf, curve)){
+						continue;
+					}
+				}
 				ret = rand_sig_verif_test_one(&ec_sig_maps[i],
 							      &hash_maps[j],
 							      &ec_maps[k]);
@@ -490,7 +535,7 @@ static int perf_test_one(const ec_sig_mapping *sig, const hash_mapping *hash,
 	return ret;
 }
 
-int perform_performance_test(void)
+int perform_performance_test(const char *sig, const char *hash, const char *curve)
 {
 	unsigned int i, j, k;
 	int ret;
@@ -500,6 +545,21 @@ int perform_performance_test(void)
 	for (i = 0; ec_sig_maps[i].type != UNKNOWN_SIG_ALG; i++) {
 		for (j = 0; hash_maps[j].type != UNKNOWN_HASH_ALG; j++) {
 			for (k = 0; k < EC_CURVES_NUM; k++) {
+				if(sig != NULL){
+					if(!are_str_equal(ec_sig_maps[i].name, sig)){
+						continue;
+					}
+				}
+				if(hash != NULL){
+					if(!are_str_equal(hash_maps[j].name, hash)){
+						continue;
+					}
+				}
+				if(curve != NULL){
+					if(!are_str_equal((const char*)ec_maps[k].params->name->buf, curve)){
+						continue;
+					}
+				}
 				ret = perf_test_one(&ec_sig_maps[i],
 						    &hash_maps[j],
 						    &ec_maps[k]);

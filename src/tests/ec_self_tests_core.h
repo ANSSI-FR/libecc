@@ -3823,8 +3823,8 @@ static u32 encode_error_value(const ec_test_case *c, test_err_kind failed_test)
 		((u32)etype));
 }
 
-int perform_known_test_vectors_test(void);
-int perform_random_sig_verif_test(void);
-int perform_performance_test(void);
+int perform_known_test_vectors_test(const char *sig, const char *hash, const char *curve);
+int perform_random_sig_verif_test(const char *sig, const char *hash, const char *curve);
+int perform_performance_test(const char *sig, const char *hash, const char *curve);
 
 #endif /* __EC_SELF_TESTS_CORE_H__ */

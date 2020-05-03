@@ -15,6 +15,7 @@
  */
 #include "../external_deps/print.h"
 #include "../utils/utils.h"
+#include "../libsig.h"
 
 /*
  * Use extern declarations to avoid including
@@ -22,9 +23,9 @@
  * test vectors definitions. We only need the
  * three functions below.
  */
-extern int perform_known_test_vectors_test(void);
-extern int perform_random_sig_verif_test(void);
-extern int perform_performance_test(void);
+extern int perform_known_test_vectors_test(const char *sig, const char *hash, const char *curve);
+extern int perform_random_sig_verif_test(const char *sig, const char *hash, const char *curve);
+extern int perform_performance_test(const char *sig, const char *hash, const char *curve);
 
 /* Tests kinds */
 #define KNOWN_TEST_VECTORS	(1)
@@ -55,23 +56,23 @@ static const test_type test_types[] = {
 	 },
 };
 
-static int perform_tests(unsigned int tests)
+static int perform_tests(unsigned int tests, const char *sig, const char *hash, const char *curve)
 {
 	/* KNOWN_TEST_VECTORS tests */
 	if (tests & KNOWN_TEST_VECTORS) {
-		if (perform_known_test_vectors_test()) {
+		if (perform_known_test_vectors_test(sig, hash, curve)) {
 			goto err;
 		}
 	}
 	/* RANDOM_SIG_VERIF tests */
 	if (tests & RANDOM_SIG_VERIF) {
-		if (perform_random_sig_verif_test()) {
+		if (perform_random_sig_verif_test(sig, hash, curve)) {
 			goto err;
 		}
 	}
 	/* PERFORMANCE tests */
 	if (tests & PERFORMANCE) {
-		if (perform_performance_test()) {
+		if (perform_performance_test(sig, hash, curve)) {
 			goto err;
 		}
 	}
@@ -82,29 +83,92 @@ static int perform_tests(unsigned int tests)
 	return -1;
 }
 
+static void print_curves(void)
+{
+       u8 i;
+
+       /* Print all the available curves */
+       for (i = 0; i < EC_CURVES_NUM; i++) {
+               ext_printf("%s ", (const char *)(ec_maps[i].params->name->buf));
+       }
+
+       return;
+}
+
+static void print_hash_algs(void)
+{
+       int i;
+
+       /* Print all the available hash functions */
+       for (i = 0; hash_maps[i].type != UNKNOWN_HASH_ALG; i++) {
+               ext_printf("%s ", hash_maps[i].name);
+       }
+
+       return;
+}
+
+static void print_sig_algs(void)
+{
+        int i;
+
+        /* Print all the available signature schemes */
+        for (i = 0; ec_sig_maps[i].type != UNKNOWN_SIG_ALG; i++) {
+                ext_printf("%s ", ec_sig_maps[i].name);
+        }
+
+        return;
+}
+
 static void print_help(const char *bad_arg)
 {
 	int j;
-	ext_printf("Argument %s is unknown. Possible args are:\n", bad_arg);
+	if(bad_arg != NULL){
+		ext_printf("Argument %s is unknown. Possible args are:\n", bad_arg);
+	}
 	for (j = 0; j < (int)(sizeof(test_types) / sizeof(test_type)); j++) {
 		ext_printf("\t%20s:\t%s\n", test_types[j].type_name,
 			   test_types[j].type_help);
 	}
+	ext_printf("-------------------\n");
+	ext_printf("NOTE: you can filter signatures with 'sign=', hash algorithms with 'hash=', curves with 'curve='\n");
+	ext_printf("\tExample: sign=ECDSA hash=SHA256 hash=SHA512 curve=FRP256V1\n");
+	ext_printf("\tPossible signatures: ");
+	print_sig_algs();
+	ext_printf("\n\tPossible hash algorithms: ");
+	print_hash_algs();
+	ext_printf("\n\tPossible curves: ");
+	print_curves();
+	ext_printf("\n");
 }
+
+#define MAX_FILTERS 100
 
 int main(int argc, char *argv[])
 {
+	int ret;
 	unsigned int tests_to_do;
+	const char *sign_filters[MAX_FILTERS]  = { NULL };
+	const char *hash_filters[MAX_FILTERS]  = { NULL };
+	const char *curve_filters[MAX_FILTERS] = { NULL };
+	int sign_filters_num = 0, hash_filters_num = 0, curve_filters_num = 0;
+	int i, j, k;
 
 	/* By default, perform all tests */
 	tests_to_do = KNOWN_TEST_VECTORS | RANDOM_SIG_VERIF | PERFORMANCE;
 
+	/* Sanity check */
+	if(MAX_FILTERS < 1){
+		ext_printf("Error: MAX_FILTERS too small\n");
+		return -1;
+	}
+
 	/* If we have one or more arguments, only perform specific test */
 	if (argc > 1) {
-		int i, j;
+		unsigned char found = 0, found_filter = 0;
+		unsigned int found_ops = 0;
 		/* Check of the args */
 		for (i = 1; i < argc; i++) {
-			char found = 0;
+			found = found_filter = 0;
 			for (j = 0;
 			     j < (int)(sizeof(test_types) / sizeof(test_type));
 			     j++) {
@@ -112,14 +176,47 @@ int main(int argc, char *argv[])
 				    (argv[i], test_types[j].type_name,
 				     local_strlen(test_types[j].type_name) +
 				     1)) {
+					found_ops++;
 					found = 1;
 					break;
 				}
+				if(are_equal(argv[i], "sign=", sizeof("sign=")-1)){
+					if(sign_filters_num >= MAX_FILTERS){
+						ext_printf("Maximum number of sign filters %d exceeded!\n", sign_filters_num);
+						return -1;
+					}
+					sign_filters[sign_filters_num++] = argv[i]+sizeof("sign=")-1;
+					found_filter = 1;
+					break;
+				}
+				if(are_equal(argv[i], "hash=", sizeof("hash=")-1)){
+					if(hash_filters_num >= MAX_FILTERS){
+						ext_printf("Maximum number of hash filters %d exceeded!\n", hash_filters_num);
+						return -1;
+					}
+					hash_filters[hash_filters_num++] = argv[i]+sizeof("hash=")-1;
+					found_filter = 1;
+					break;
+				}
+				if(are_equal(argv[i], "curve=", sizeof("curve=")-1)){
+					if(curve_filters_num >= MAX_FILTERS){
+						ext_printf("Maximum number of curve filters %d exceeded!\n", curve_filters_num);
+						return -1;
+					}
+					curve_filters[curve_filters_num++] = argv[i]+sizeof("curve=")-1;
+					found_filter = 1;
+					break;
+				}
 			}
-			if (found == 0) {
+			if ((found == 0) && (found_filter == 0)) {
 				print_help(argv[i]);
 				return -1;
 			}
+		}
+		if (found_ops == 0) {
+			ext_printf("Error: no operation asked ...\n");
+			print_help(NULL);
+			return -1;
 		}
 		tests_to_do = 0;
 		for (i = 1; i < argc; i++) {
@@ -135,6 +232,28 @@ int main(int argc, char *argv[])
 			}
 		}
 	}
+	/* If we do not have filters, we put NULL to tell that we do not filter */
+	if(sign_filters_num == 0){
+		sign_filters_num = 1;
+		sign_filters[0] = NULL;
+	}
+	if(hash_filters_num == 0){
+		hash_filters_num = 1;
+		hash_filters[0] = NULL;
+	}
+	if(curve_filters_num == 0){
+		curve_filters_num = 1;
+		curve_filters[0] = NULL;
+	}
 
-	return perform_tests(tests_to_do);
+	for(i = 0; i < sign_filters_num; i++){
+		for(j = 0; j < hash_filters_num; j++){
+			for(k = 0; k < curve_filters_num; k++){
+				if((ret = perform_tests(tests_to_do, sign_filters[i], hash_filters[j], curve_filters[k]))){
+					ext_printf("Test for %s/%s/%s failed!\n", sign_filters[i], hash_filters[j], curve_filters[k]);
+					return ret;
+				}
+			}
+		}
+	}
 }
