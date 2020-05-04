@@ -214,20 +214,24 @@ int main(int argc, char *argv[])
 			}
 		}
 		if (found_ops == 0) {
-			ext_printf("Error: no operation asked ...\n");
-			print_help(NULL);
-			return -1;
+			if(found_filter == 0){
+				ext_printf("Error: no operation asked ...\n");
+				print_help(NULL);
+				return -1;
+			}
 		}
-		tests_to_do = 0;
-		for (i = 1; i < argc; i++) {
-			for (j = 0;
-			     j < (int)(sizeof(test_types) / sizeof(test_type));
-			     j++) {
-				if (are_equal
-				    (argv[i], test_types[j].type_name,
-				     local_strlen(test_types[j].type_name) +
-				     1)) {
-					tests_to_do |= test_types[j].type_mask;
+		else{
+			tests_to_do = 0;
+			for (i = 1; i < argc; i++) {
+				for (j = 0;
+				     j < (int)(sizeof(test_types) / sizeof(test_type));
+				     j++) {
+					if (are_equal
+					    (argv[i], test_types[j].type_name,
+					     local_strlen(test_types[j].type_name) +
+					     1)) {
+						tests_to_do |= test_types[j].type_mask;
+					}
 				}
 			}
 		}
@@ -245,7 +249,6 @@ int main(int argc, char *argv[])
 		curve_filters_num = 1;
 		curve_filters[0] = NULL;
 	}
-
 	for(i = 0; i < sign_filters_num; i++){
 		for(j = 0; j < hash_filters_num; j++){
 			for(k = 0; k < curve_filters_num; k++){
