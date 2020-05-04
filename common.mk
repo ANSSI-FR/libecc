@@ -32,7 +32,8 @@ FORTIFY_FLAGS=-D_FORTIFY_SOURCE=2
 #   -Wno-covered-switch-default
 #   -Wno-used-but-marked-unused
 #
-ifeq ($(CC),clang)
+CLANG :=  $(shell $(CC) -v 2>&1 | grep clang)
+ifneq ($(CLANG),)
 WARNING_CFLAGS = -Weverything -Werror \
 		 -Wno-reserved-id-macro -Wno-padded \
 		 -Wno-packed -Wno-covered-switch-default \
