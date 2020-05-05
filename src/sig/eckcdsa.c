@@ -210,7 +210,17 @@ int _eckcdsa_sign_init(struct ec_sign_context *ctx)
 
 	dbg_pub_key_print("Y", pub_key);
 
+        /* Since we call a callback, sanity check our mapping */
+        if(hash_mapping_callbacks_sanity_check(ctx->h)){
+		ret = -1;
+		goto err;
+        }
 	ctx->h->hfunc_init(&(ctx->sign_data.eckcdsa.h_ctx));
+        /* Since we call a callback, sanity check our mapping */
+        if(hash_mapping_callbacks_sanity_check(ctx->h)){
+		ret = -1;
+		goto err;
+        }
 	ctx->h->hfunc_update(&(ctx->sign_data.eckcdsa.h_ctx), tmp_buf, z_len);
 	local_memset(tmp_buf, 0, sizeof(tmp_buf));
 
@@ -240,6 +250,10 @@ int _eckcdsa_sign_update(struct ec_sign_context *ctx,
 	ECKCDSA_SIGN_CHECK_INITIALIZED(&(ctx->sign_data.eckcdsa));
 
 	/* 1. Compute h = H(z||m) */
+        /* Since we call a callback, sanity check our mapping */
+        if(hash_mapping_callbacks_sanity_check(ctx->h)){
+		return -1;
+        }
 	ctx->h->hfunc_update(&(ctx->sign_data.eckcdsa.h_ctx), chunk, chunklen);
 
 	return 0;
@@ -298,6 +312,11 @@ int _eckcdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	dbg_ec_point_print("G", G);
 
 	/* 1. Compute h = H(z||m) */
+        /* Since we call a callback, sanity check our mapping */
+        if(hash_mapping_callbacks_sanity_check(ctx->h)){
+		ret = -1;
+                goto err;
+        }
 	ctx->h->hfunc_finalize(&(ctx->sign_data.eckcdsa.h_ctx), hzm);
 	dbg_buf_print("h = H(z||m)  pre-mask", hzm, hsize);
 
@@ -355,8 +374,23 @@ int _eckcdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	local_memset(tmp_buf, 0, sizeof(tmp_buf));
 	fp_export_to_buf(tmp_buf, p_len, &(W.x));
 	aff_pt_uninit(&W);
+        /* Since we call a callback, sanity check our mapping */
+        if(hash_mapping_callbacks_sanity_check(ctx->h)){
+		ret = -1;
+                goto err;
+        }
 	ctx->h->hfunc_init(&r_ctx);
+        /* Since we call a callback, sanity check our mapping */
+        if(hash_mapping_callbacks_sanity_check(ctx->h)){
+		ret = -1;
+                goto err;
+        }
 	ctx->h->hfunc_update(&r_ctx, tmp_buf, p_len);
+        /* Since we call a callback, sanity check our mapping */
+        if(hash_mapping_callbacks_sanity_check(ctx->h)){
+		ret = -1;
+                goto err;
+        }
 	ctx->h->hfunc_finalize(&r_ctx, r);
 	local_memset(tmp_buf, 0, p_len);
 	local_memset(&r_ctx, 0, sizeof(hash_context));
@@ -569,7 +603,17 @@ int _eckcdsa_verify_init(struct ec_verify_context *ctx,
 
 	dbg_pub_key_print("Y", pub_key);
 
+        /* Since we call a callback, sanity check our mapping */
+        if(hash_mapping_callbacks_sanity_check(ctx->h)){
+		ret = -1;
+                goto err;
+        }
 	ctx->h->hfunc_init(&(ctx->verify_data.eckcdsa.h_ctx));
+        /* Since we call a callback, sanity check our mapping */
+        if(hash_mapping_callbacks_sanity_check(ctx->h)){
+		ret = -1;
+                goto err;
+        }
 	ctx->h->hfunc_update(&(ctx->verify_data.eckcdsa.h_ctx), tmp_buf,
 			     z_len);
 	local_memset(tmp_buf, 0, sizeof(tmp_buf));
@@ -622,6 +666,10 @@ int _eckcdsa_verify_update(struct ec_verify_context *ctx,
 	ECKCDSA_VERIFY_CHECK_INITIALIZED(&(ctx->verify_data.eckcdsa));
 
 	/* 3. Compute h = H(z||m) */
+        /* Since we call a callback, sanity check our mapping */
+        if(hash_mapping_callbacks_sanity_check(ctx->h)){
+		return -1;                
+        }
 	ctx->h->hfunc_update(&(ctx->verify_data.eckcdsa.h_ctx),
 			     chunk, chunklen);
 
@@ -670,6 +718,11 @@ int _eckcdsa_verify_finalize(struct ec_verify_context *ctx)
 	s = &(ctx->verify_data.eckcdsa.s);
 
 	/* 3. Compute h = H(z||m) */
+        /* Since we call a callback, sanity check our mapping */
+        if(hash_mapping_callbacks_sanity_check(ctx->h)){
+                ret = -1;
+                goto err;
+        }
 	ctx->h->hfunc_finalize(&(ctx->verify_data.eckcdsa.h_ctx), hzm);
 	dbg_buf_print("h = H(z||m)  pre-mask", hzm, hsize);
 
@@ -712,8 +765,23 @@ int _eckcdsa_verify_finalize(struct ec_verify_context *ctx)
 	/* 7. Compute r' = h(W'x) */
 	local_memset(tmp_buf, 0, sizeof(tmp_buf));
 	fp_export_to_buf(tmp_buf, p_len, &(Wprime_aff.x));
+        /* Since we call a callback, sanity check our mapping */
+        if(hash_mapping_callbacks_sanity_check(ctx->h)){
+                ret = -1;
+                goto err;
+        }
 	ctx->h->hfunc_init(&r_prime_ctx);
+        /* Since we call a callback, sanity check our mapping */
+        if(hash_mapping_callbacks_sanity_check(ctx->h)){
+                ret = -1;
+                goto err;
+        }
 	ctx->h->hfunc_update(&r_prime_ctx, tmp_buf, p_len);
+        /* Since we call a callback, sanity check our mapping */
+        if(hash_mapping_callbacks_sanity_check(ctx->h)){
+                ret = -1;
+                goto err;
+        }
 	ctx->h->hfunc_finalize(&r_prime_ctx, r_prime);
 	local_memset(tmp_buf, 0, p_len);
 	local_memset(&r_prime_ctx, 0, sizeof(hash_context));

@@ -258,5 +258,6 @@ static const hash_mapping hash_maps[] = {
 const hash_mapping *get_hash_by_name(const char *hash_name);
 const hash_mapping *get_hash_by_type(hash_alg_type hash_type);
 int get_hash_sizes(hash_alg_type hash_type, u8 *digest_size, u8 *block_size);
+int hash_mapping_callbacks_sanity_check(const hash_mapping *h);
 
 #endif /* __HASH_ALGS_H__ */

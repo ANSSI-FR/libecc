@@ -132,6 +132,10 @@ int _ecdsa_sign_init(struct ec_sign_context *ctx)
 	 * Initialize hash context stored in our private part of context
 	 * and record data init has been done
 	 */
+	/* Since we call a callback, sanity check our mapping */
+	if(hash_mapping_callbacks_sanity_check(ctx->h)){
+		return -1;
+	}
 	ctx->h->hfunc_init(&(ctx->sign_data.ecdsa.h_ctx));
 	ctx->sign_data.ecdsa.magic = ECDSA_SIGN_MAGIC;
 
@@ -151,6 +155,10 @@ int _ecdsa_sign_update(struct ec_sign_context *ctx,
 	ECDSA_SIGN_CHECK_INITIALIZED(&(ctx->sign_data.ecdsa));
 
 	/* 1. Compute h = H(m) */
+	/* Since we call a callback, sanity check our mapping */
+	if(hash_mapping_callbacks_sanity_check(ctx->h)){
+		return -1;
+	}
 	ctx->h->hfunc_update(&(ctx->sign_data.ecdsa.h_ctx), chunk, chunklen);
 
 	return 0;
@@ -206,6 +214,11 @@ int _ecdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 
 	/* 1. Compute h = H(m) */
 	local_memset(hash, 0, hsize);
+	/* Since we call a callback, sanity check our mapping */
+	if(hash_mapping_callbacks_sanity_check(ctx->h)){
+		ret = -1;
+		goto err;
+	}
 	ctx->h->hfunc_finalize(&(ctx->sign_data.ecdsa.h_ctx), hash);
 	dbg_buf_print("h", hash, hsize);
 
@@ -239,6 +252,10 @@ int _ecdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 
  restart:
 	/* 4. get a random value k in ]0,q[ */
+	/* Sanity check on the handler */
+	if(ctx->rand != nn_get_random_mod){
+		ext_printf("LA\n");
+	}
 	ret = ctx->rand(&k, q);
 	if (ret) {
 		nn_uninit(&tmp2);
@@ -459,6 +476,11 @@ int _ecdsa_verify_init(struct ec_verify_context *ctx, const u8 *sig, u8 siglen)
 	}
 
 	/* Initialize the remaining of verify context. */
+	/* Since we call a callback, sanity check our mapping */
+	if(hash_mapping_callbacks_sanity_check(ctx->h)){
+		ret = -1;
+		goto err;
+	}
 	ctx->h->hfunc_init(&(ctx->verify_data.ecdsa.h_ctx));
 	ctx->verify_data.ecdsa.magic = ECDSA_VERIFY_MAGIC;
 
@@ -487,8 +509,11 @@ int _ecdsa_verify_update(struct ec_verify_context *ctx,
 	ECDSA_VERIFY_CHECK_INITIALIZED(&(ctx->verify_data.ecdsa));
 
 	/* 2. Compute h = H(m) */
+	/* Since we call a callback, sanity check our mapping */
+	if(hash_mapping_callbacks_sanity_check(ctx->h)){
+		return -1;
+	}
 	ctx->h->hfunc_update(&(ctx->verify_data.ecdsa.h_ctx), chunk, chunklen);
-
 	return 0;
 }
 
@@ -523,6 +548,11 @@ int _ecdsa_verify_finalize(struct ec_verify_context *ctx)
 	s = &(ctx->verify_data.ecdsa.s);
 
 	/* 2. Compute h = H(m) */
+	/* Since we call a callback, sanity check our mapping */
+	if(hash_mapping_callbacks_sanity_check(ctx->h)){
+		ret = -1;
+		goto err;
+	}
 	ctx->h->hfunc_finalize(&(ctx->verify_data.ecdsa.h_ctx), hash);
 	dbg_buf_print("h = H(m)", hash, hsize);
 

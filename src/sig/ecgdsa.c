@@ -132,6 +132,10 @@ int _ecgdsa_sign_init(struct ec_sign_context *ctx)
 	 * Initialize hash context stored in our private part of context
 	 * and record data init has been done
 	 */
+        /* Since we call a callback, sanity check our mapping */
+        if(hash_mapping_callbacks_sanity_check(ctx->h)){
+		return -1;
+        }
 	ctx->h->hfunc_init(&(ctx->sign_data.ecgdsa.h_ctx));
 	ctx->sign_data.ecgdsa.magic = ECGDSA_SIGN_MAGIC;
 
@@ -151,6 +155,10 @@ int _ecgdsa_sign_update(struct ec_sign_context *ctx,
 	ECGDSA_SIGN_CHECK_INITIALIZED(&(ctx->sign_data.ecgdsa));
 
 	/* 1. Compute h = H(m) */
+        /* Since we call a callback, sanity check our mapping */
+        if(hash_mapping_callbacks_sanity_check(ctx->h)){
+		return -1;
+        }
 	ctx->h->hfunc_update(&(ctx->sign_data.ecgdsa.h_ctx), chunk, chunklen);
 
 	return 0;
@@ -215,6 +223,11 @@ int _ecgdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 
 	/* 1. Compute h = H(m) */
 	local_memset(e_buf, 0, hsize);
+        /* Since we call a callback, sanity check our mapping */
+        if(hash_mapping_callbacks_sanity_check(ctx->h)){
+                ret = -1;
+                goto err;
+        }
 	ctx->h->hfunc_finalize(&(ctx->sign_data.ecgdsa.h_ctx), e_buf);
 	dbg_buf_print("H(m)", e_buf, hsize);
 
@@ -443,6 +456,11 @@ int _ecgdsa_verify_init(struct ec_verify_context *ctx,
 	}
 
 	/* Initialize the remaining of verify context */
+        /* Since we call a callback, sanity check our mapping */
+        if(hash_mapping_callbacks_sanity_check(ctx->h)){
+                ret = -1;
+                goto err;
+        }
 	ctx->h->hfunc_init(&(ctx->verify_data.ecgdsa.h_ctx));
 	ctx->verify_data.ecgdsa.magic = ECGDSA_VERIFY_MAGIC;
 
@@ -472,6 +490,10 @@ int _ecgdsa_verify_update(struct ec_verify_context *ctx,
 	ECGDSA_VERIFY_CHECK_INITIALIZED(&(ctx->verify_data.ecgdsa));
 
 	/* 2. Compute h = H(m) */
+        /* Since we call a callback, sanity check our mapping */
+        if(hash_mapping_callbacks_sanity_check(ctx->h)){
+		return -1;
+        }
 	ctx->h->hfunc_update(&(ctx->verify_data.ecgdsa.h_ctx), chunk,
 			     chunklen);
 
@@ -506,6 +528,11 @@ int _ecgdsa_verify_finalize(struct ec_verify_context *ctx)
 	hsize = ctx->h->digest_size;
 
 	/* 2. Compute h = H(m) */
+        /* Since we call a callback, sanity check our mapping */
+        if(hash_mapping_callbacks_sanity_check(ctx->h)){
+                ret = -1;
+                goto err;
+        }
 	ctx->h->hfunc_finalize(&(ctx->verify_data.ecgdsa.h_ctx), e_buf);
 	dbg_buf_print("H(m)", e_buf, hsize);
 
@@ -561,6 +588,7 @@ int _ecgdsa_verify_finalize(struct ec_verify_context *ctx)
 	PTR_NULLIFY(q);
 	VAR_ZEROIFY(hsize);
 
+err:
 	return ret;
 }
 

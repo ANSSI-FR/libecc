@@ -215,7 +215,17 @@ int _ecfsdsa_sign_init(struct ec_sign_context *ctx)
 	 * context and processing r. Message m will be handled during following
 	 * update() calls.
 	 */
+        /* Since we call a callback, sanity check our mapping */
+        if(hash_mapping_callbacks_sanity_check(ctx->h)){
+                ret = -1;
+                goto err;
+        }
 	ctx->h->hfunc_init(&(ctx->sign_data.ecfsdsa.h_ctx));
+        /* Since we call a callback, sanity check our mapping */
+        if(hash_mapping_callbacks_sanity_check(ctx->h)){
+                ret = -1;
+                goto err;
+        }
 	ctx->h->hfunc_update(&(ctx->sign_data.ecfsdsa.h_ctx), r, r_len);
 	ctx->sign_data.ecfsdsa.magic = ECFSDSA_SIGN_MAGIC;
 
@@ -248,6 +258,10 @@ int _ecfsdsa_sign_update(struct ec_sign_context *ctx,
 	ECFSDSA_SIGN_CHECK_INITIALIZED(&(ctx->sign_data.ecfsdsa));
 
 	/*  5. Compute h = H(r||m) */
+        /* Since we call a callback, sanity check our mapping */
+        if(hash_mapping_callbacks_sanity_check(ctx->h)){
+		return -1;
+        }
 	ctx->h->hfunc_update(&(ctx->sign_data.ecfsdsa.h_ctx), chunk, chunklen);
 
 	return 0;
@@ -303,7 +317,17 @@ int _ecfsdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
         dbg_nn_print("b", &b);
 #endif /* USE_SIG_BLINDING */
 
+        /* Since we call a callback, sanity check our mapping */
+        if(hash_mapping_callbacks_sanity_check(ctx->h)){
+                ret = -1;
+                goto err;
+        }
 	/*  5. Compute h = H(r||m) */
+        /* Since we call a callback, sanity check our mapping */
+        if(hash_mapping_callbacks_sanity_check(ctx->h)){
+                ret = -1;
+                goto err;
+        }
 	ctx->h->hfunc_finalize(&(ctx->sign_data.ecfsdsa.h_ctx), e_buf);
 	dbg_buf_print("h(R||m)", e_buf, hsize);
 
@@ -477,7 +501,17 @@ int _ecfsdsa_verify_init(struct ec_verify_context *ctx,
 
 	/* Initialize the verify context */
 	local_memcpy(&(ctx->verify_data.ecfsdsa.r), r, r_len);
+        /* Since we call a callback, sanity check our mapping */
+        if(hash_mapping_callbacks_sanity_check(ctx->h)){
+                ret = -1;
+                goto err;
+        }
 	ctx->h->hfunc_init(&(ctx->verify_data.ecfsdsa.h_ctx));
+        /* Since we call a callback, sanity check our mapping */
+        if(hash_mapping_callbacks_sanity_check(ctx->h)){
+                ret = -1;
+                goto err;
+        }
 	ctx->h->hfunc_update(&(ctx->verify_data.ecfsdsa.h_ctx), r, r_len);
 	ctx->verify_data.ecfsdsa.magic = ECFSDSA_VERIFY_MAGIC;
 
@@ -519,7 +553,10 @@ int _ecfsdsa_verify_update(struct ec_verify_context *ctx,
 	ECFSDSA_VERIFY_CHECK_INITIALIZED(&(ctx->verify_data.ecfsdsa));
 
 	/* 3. Compute h = H(r||m) */
-
+        /* Since we call a callback, sanity check our mapping */
+        if(hash_mapping_callbacks_sanity_check(ctx->h)){
+		return -1;
+        }
 	ctx->h->hfunc_update(&(ctx->verify_data.ecfsdsa.h_ctx), chunk,
 			     chunklen);
 
@@ -560,6 +597,11 @@ int _ecfsdsa_verify_finalize(struct ec_verify_context *ctx)
 	r_len = (u8)ECFSDSA_R_LEN(p_bit_len);
 
 	/* 3. Compute h = H(r||m) */
+        /* Since we call a callback, sanity check our mapping */
+        if(hash_mapping_callbacks_sanity_check(ctx->h)){
+                ret = -1;
+                goto err;
+        }
 	ctx->h->hfunc_finalize(&(ctx->verify_data.ecfsdsa.h_ctx), e_buf);
 
 	/*
@@ -617,6 +659,7 @@ int _ecfsdsa_verify_finalize(struct ec_verify_context *ctx)
 	VAR_ZEROIFY(r_len);
 	VAR_ZEROIFY(hsize);
 
+err:
 	return ret;
 }
 

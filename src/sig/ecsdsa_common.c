@@ -196,11 +196,26 @@ int __ecsdsa_sign_init(struct ec_sign_context *ctx,
 	 *    - In the normal version (ECSDSA), r = h(Wx || Wy || m).
 	 *    - In the optimized version (ECOSDSA), r = h(Wx || m).
 	 */
+        /* Since we call a callback, sanity check our mapping */
+        if(hash_mapping_callbacks_sanity_check(ctx->h)){
+                ret = -1;
+                goto err;
+        }
 	ctx->h->hfunc_init(&(ctx->sign_data.ecsdsa.h_ctx));
 	fp_export_to_buf(Wx, p_len, &(W_aff.x));
+        /* Since we call a callback, sanity check our mapping */
+        if(hash_mapping_callbacks_sanity_check(ctx->h)){
+                ret = -1;
+                goto err;
+        }
 	ctx->h->hfunc_update(&(ctx->sign_data.ecsdsa.h_ctx), Wx, p_len);
 	if (!optimized) {
 		fp_export_to_buf(Wy, p_len, &(W_aff.y));
+	        /* Since we call a callback, sanity check our mapping */
+        	if(hash_mapping_callbacks_sanity_check(ctx->h)){
+                	ret = -1;
+	                goto err;
+        	}
 		ctx->h->hfunc_update(&(ctx->sign_data.ecsdsa.h_ctx), Wy,
 				     p_len);
 	}
@@ -238,6 +253,10 @@ int __ecsdsa_sign_update(struct ec_sign_context *ctx,
 	ECSDSA_SIGN_CHECK_INITIALIZED(&(ctx->sign_data.ecsdsa));
 
 	/* 3. Compute r = H(Wx [|| Wy] || m) */
+        /* Since we call a callback, sanity check our mapping */
+        if(hash_mapping_callbacks_sanity_check(ctx->h)){
+		return -1;
+        }
 	ctx->h->hfunc_update(&(ctx->sign_data.ecsdsa.h_ctx), chunk, chunklen);
 
 	return 0;
@@ -291,6 +310,11 @@ int __ecsdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 
 	/* 3. Compute r = H(Wx [|| Wy] || m) */
 	local_memset(r, 0, hsize);
+        /* Since we call a callback, sanity check our mapping */
+        if(hash_mapping_callbacks_sanity_check(ctx->h)){
+                ret = -1;
+                goto err;
+        }
 	ctx->h->hfunc_finalize(&(ctx->sign_data.ecsdsa.h_ctx), r);
 	dbg_buf_print("r", r, r_len);
 
@@ -485,11 +509,26 @@ int __ecsdsa_verify_init(struct ec_verify_context *ctx,
 	 *    - In the normal version (ECSDSA), r = h(W'x || W'y || m).
 	 *    - In the optimized version (ECOSDSA), r = h(W'x || m).
 	 */
+        /* Since we call a callback, sanity check our mapping */
+        if(hash_mapping_callbacks_sanity_check(ctx->h)){
+                ret = -1;
+                goto err;
+        }
 	ctx->h->hfunc_init(&(ctx->verify_data.ecsdsa.h_ctx));
 	fp_export_to_buf(Wprimex, p_len, &(Wprime_aff.x));
+        /* Since we call a callback, sanity check our mapping */
+        if(hash_mapping_callbacks_sanity_check(ctx->h)){
+                ret = -1;
+                goto err;
+        }
 	ctx->h->hfunc_update(&(ctx->verify_data.ecsdsa.h_ctx), Wprimex, p_len);
 	if (!optimized) {
 		fp_export_to_buf(Wprimey, p_len, &(Wprime_aff.y));
+        	/* Since we call a callback, sanity check our mapping */
+	        if(hash_mapping_callbacks_sanity_check(ctx->h)){
+                	ret = -1;
+        	        goto err;
+	        }
 		ctx->h->hfunc_update(&(ctx->verify_data.ecsdsa.h_ctx),
 				     Wprimey, p_len);
 	}
@@ -533,6 +572,10 @@ int __ecsdsa_verify_update(struct ec_verify_context *ctx,
 	ECSDSA_VERIFY_CHECK_INITIALIZED(&(ctx->verify_data.ecsdsa));
 
 	/* 5. Compute r' = H(W'x [|| W'y] || m) */
+        /* Since we call a callback, sanity check our mapping */
+        if(hash_mapping_callbacks_sanity_check(ctx->h)){
+		return -1;
+        }
 	ctx->h->hfunc_update(&(ctx->verify_data.ecsdsa.h_ctx), chunk,
 			     chunklen);
 
@@ -556,6 +599,11 @@ int __ecsdsa_verify_finalize(struct ec_verify_context *ctx)
 	r_len = ECSDSA_R_LEN(ctx->h->digest_size);
 
 	/* 5. Compute r' = H(W'x [|| W'y] || m) */
+        /* Since we call a callback, sanity check our mapping */
+        if(hash_mapping_callbacks_sanity_check(ctx->h)){
+                ret = -1;
+                goto err;
+        }
 	ctx->h->hfunc_finalize(&(ctx->verify_data.ecsdsa.h_ctx), r_prime);
 
 	/* 6. Accept the signature if and only if r and r' are the same */
@@ -572,6 +620,7 @@ int __ecsdsa_verify_finalize(struct ec_verify_context *ctx)
 	/* Clean what remains on the stack */
 	VAR_ZEROIFY(r_len);
 
+err:
 	return ret;
 }
 
