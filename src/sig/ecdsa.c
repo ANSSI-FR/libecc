@@ -254,7 +254,7 @@ int _ecdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	/* 4. get a random value k in ]0,q[ */
 	/* Sanity check on the handler */
 	if(ctx->rand != nn_get_random_mod){
-		ext_printf("LA\n");
+		/* FIXME */
 	}
 	ret = ctx->rand(&k, q);
 	if (ret) {
