@@ -84,6 +84,7 @@ u8 are_equal(const void *a, const void *b, u32 len);
 void local_memcpy(void *dst, const void *src, u32 n);
 void local_memset(void *v, u8 c, u32 n);
 u8 are_str_equal(const char *s1, const char *s2);
+u8 are_str_equal_nlen(const char *s1, const char *s2, u32 maxlen);
 u32 local_strlen(const char *s);
 u32 local_strnlen(const char *s, u32 maxlen);
 char *local_strncpy(char *dst, const char *src, u32 n);

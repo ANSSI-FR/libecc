@@ -95,7 +95,31 @@ int ec_sig_mapping_callbacks_sanity_check(const ec_sig_mapping *sig)
 	for (i = 0, sm = &ec_sig_maps[i];
 	     sm->type != UNKNOWN_SIG_ALG; sm = &ec_sig_maps[++i]) {
 		if(sm->type == sig->type){
-			if(!are_equal(sm, sig, sizeof(ec_sig_mapping))){
+			if(!are_str_equal_nlen(sm->name, sig->name, MAX_SIG_ALG_NAME_LEN)){
+				goto err;
+			}
+			else if(sm->siglen != sig->siglen){
+				goto err;
+			}
+			else if(sm->init_pub_key != sig->init_pub_key){
+				goto err;
+			}
+			else if(sm->sign_init != sig->sign_init){
+				goto err;
+			}
+			else if(sm->sign_update != sig->sign_update){
+				goto err;
+			}
+			else if(sm->sign_finalize != sig->sign_finalize){
+				goto err;
+			}
+			else if(sm->verify_init != sig->verify_init){
+				goto err;
+			}
+			else if(sm->verify_update != sig->verify_update){
+				goto err;
+			}
+			else if(sm->verify_finalize != sig->verify_finalize){
 				goto err;
 			}
 			else{

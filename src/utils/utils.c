@@ -73,6 +73,23 @@ u8 are_str_equal(const char *s1, const char *s2)
 	return *ls1 == *ls2;
 }
 
+/* This function returns 1 if strings are equal and 0 otherise, with maximum length */
+u8 are_str_equal_nlen(const char *s1, const char *s2, u32 maxlen)
+{
+	const char *ls1 = s1, *ls2 = s2;
+	u32 i = 0;
+
+	while (*ls1 && (*ls1 == *ls2) && (i < maxlen)) {
+		ls1++;
+		ls2++;
+		i++;
+	}
+
+	return *ls1 == *ls2;
+}
+
+
+
 /* This function is a simple (non-optimized) reimplementation of strlen() */
 u32 local_strlen(const char *s)
 {
