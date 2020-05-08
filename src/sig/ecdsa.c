@@ -252,10 +252,17 @@ int _ecdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 
  restart:
 	/* 4. get a random value k in ]0,q[ */
-	/* Sanity check on the handler */
+#ifdef NO_KNOWN_VECTORS
+	/* NOTE: when we do not need self tests for known vectors,
+	 * we can be strict about random function handler!
+	 * This allows us to avoid the corruption of such a pointer.
+	 */
+	/* Sanity check on the handler before calling it */
 	if(ctx->rand != nn_get_random_mod){
-		/* FIXME */
+		ret = -1;
+		goto err;
 	}
+#endif
 	ret = ctx->rand(&k, q);
 	if (ret) {
 		nn_uninit(&tmp2);

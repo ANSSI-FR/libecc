@@ -268,11 +268,28 @@ static int _ec_sign_init(struct ec_sign_context *ctx,
 		goto err;
 	}
 
+#ifdef NO_KNOWN_VECTORS
+        /* NOTE: when we do not need self tests for known vectors,
+         * we can be strict about random function handler!
+	 * We only use our internal method to provide random integers
+	 * (which avoids honest mistakes ...).
+	 *
+         * This also allows us to avoid the corruption of such a pointer in
+	 * our signature contexts.
+         */
+	if(rand){
+		if(rand != nn_get_random_mod){
+			ret = -1;
+			goto err;
+		}
+	}
+	rand = nn_get_random_mod;
+#else
 	/* Use given random function if provided or fallback to ours */
 	if (!rand) {
 		rand = nn_get_random_mod;
 	}
-
+#endif
 	/* Sanity checks on our mappings */
 	HASH_MAPPING_SANITY_CHECK(hm);
 	SIG_MAPPING_SANITY_CHECK(sm);

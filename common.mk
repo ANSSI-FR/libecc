@@ -180,3 +180,9 @@ endif
 ifeq ($(LADDER), 0)
 CFLAGS += -DUSE_DOUBLE_ADD_ALWAYS
 endif
+
+# Are we sure we will not execute known
+# vectors self tests?
+ifeq ($(NOKNOWNTESTS), 1)
+CFLAGS += -DNO_KNOWN_VECTORS
+endif
