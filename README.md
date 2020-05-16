@@ -909,8 +909,7 @@ Compiling the library with blinding is as simple as using the ``BLINDIG=1`` envi
 	$ BLINDING=1 make
 </pre>
 
-NOTE: if you are **unsure** about your current security context, use the ``BLINDING=1`` by
-default!
+**NOTE**: if you are **unsure** about your current security context, use the ``BLINDING=1`` by default!
 
 
 ### Overview of SCA (Side Channel Attacks) countermeasures
