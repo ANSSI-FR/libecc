@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.com/rb-anssi/libecc.svg?branch=master)](https://travis-ci.com/rb-anssi/libecc)
+
 # libecc project
 
 ## Copyright and license
@@ -802,7 +804,7 @@ other compilers (`-c` flag to generate object files, `-o` flag to define output 
 * The compiler has "exotic" targets such as the Zilog Z80 MCU.
 
 We suppose that the user has also provided the **external dependecies** for print, random and time 
-functions (otherwise explicit errors will be thrown).
+functions (otherwise explicit errors will be thrown by #error directives).
 
 We will show how overloading the Makefile flags can be of use in this case. Say that we want
 to compile libecc in order to embed it in a Game Boy ROM. The Game Boy console uses a proprietary 
@@ -825,14 +827,15 @@ This first attempt will trigger an error:
 
 As we have explained, when the platform is not recognized one has to specify the word size. We will
 do it by overloading `WORDSIZE=16`: the Z80 is an 8-bit CPU, so it seems reasonable to fit the word
-size to 16-bit (8-bit half words). The second attempt will go further but will fail at some point:
+size to 16-bit (8-bit half words). The second attempt will go further but will fail at some point when
+trying to compile the final binaries:
 <pre>
 	$ CC=sdcc AR=sdar RANLIB=sdranlib CFLAGS="-mgbz80 --std-sdcc99 -DWORDSIZE=16" LDFLAGS=" " make
 	...
 	at 1: error 119: don't know what to do with file 'src/tests/ec_self_tests_core.o'. file extension unsupported
 </pre>
 
-However, one can notice that the static libraries have been compiled, which is a
+However, one can notice that the static libraries and some object files have been compiled, which is a
 first step! Compiling a full binary is a bit technical due to the fact that SDCC does not know how
 to deal with '.o' object files and '.a' archives. However, we can find our way out of this by renaming
 the 'libsign.a' to 'libsign.lib', and adding missing objects in the library. Compiling the `ec_self_tests`
@@ -909,11 +912,12 @@ Compiling the library with blinding is as simple as using the ``BLINDIG=1`` envi
 NOTE: if you are **unsure** about your current security context, use the ``BLINDING=1`` by
 default!
 
+
 ### Overview of SCA (Side Channel Attacks) countermeasures
 
 All in all, libecc has now the following approaches to limit SCA:
     
-* SPA (Simple Power Analysis) is thwarted using Double and Add Always, plus complete formulas
+* SPA (Simple Power Analysis) is thwarted using Montgomery Ladder (or Double and Add Always optionnaly using the ``ADALWAYS=1`` switch), plus complete formulas
 (see [here](https://joostrenes.nl/publications/complete.pdf)) to avoid leaking point at infinity (by avoiding exceptions). Constant time
 operations are (tentatively) used to limit leakage of different operations,
 even though this task is very complex to achieve (especially in pure C). See
@@ -922,17 +926,30 @@ the discussion above.
 coordinates) and of the scalar (with adding a random multiple of the
 curve order with maximum entropy). Because of its major impact on
 performance, blinding must be specifically turned on by the used using the
-BLINDING=1 switch, see the discussion above.
+``BLINDING=1`` switch, see the discussion above.
 * ADPA (Address-bit DPA) is limited using Itoh et al. Double and Add Always
 masked variant. See the article "A Practical Countermeasure against
 Address-Bit Differential Power Analysis" by Itoh, Izu and Takenaka for more information.
-
 
 All these countermeasures must, of course, be validated on the specific target
 where the library runs with leakage assessments. Because of the very nature of
 C code and CPU microarchitectural details, it is very complex without such a leakage
 assessment (that again depends on the target) to be sure that SCA protection
 is indeed efficient.
+
+### libecc againsy FIA (Fault Injection Attacks)
+
+Efforts made to render libecc robust against FIA are a **work in progress**, and
+will require **substantial additions**. As for SCA robustness, many elements
+might depend on the low-level compilation process and are difficult to handle
+at high-level in pure C.
+
+For now, we check if points are on the curve when entering and leaving the
+scalar mutliplication algorithm. Efforts are also made to sanity check
+the signature and verification contexts whenever possible.
+Currently, no specific effort has been made to render conditional operations robust
+(e.g. using double if and limiting compilation optimization).
+
 
 ## Software architecture
 The source code is composed of eight main parts that consist of the 
