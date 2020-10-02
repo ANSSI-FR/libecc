@@ -537,6 +537,9 @@ int _ecdsa_verify_finalize(struct ec_verify_context *ctx)
 	u8 hsize;
 	int ret;
 
+	local_memset(&uG, 0, sizeof(prj_pt));
+	local_memset(&vY, 0, sizeof(prj_pt));
+
 	/*
 	 * First, verify context has been initialized and public
 	 * part too. This guarantees the context is an ECDSA
