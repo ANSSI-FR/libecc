@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.com/rb-anssi/libecc.svg?branch=master)](https://travis-ci.com/rb-anssi/libecc)
+[![Build Status](https://travis-ci.com/rb-anssi/libecc.svg?branch=master)](https://travis-ci.com/ANSSI-FR/libecc)
 
 # libecc project
 
