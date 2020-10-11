@@ -37,6 +37,10 @@ void ecfsdsa_init_pub_key(ec_pub_key *out_pub, ec_priv_key *in_priv)
 	MUST_HAVE(out_pub != NULL);
 
 	priv_key_check_initialized_and_type(in_priv, ECFSDSA);
+
+        /* Zero init public key to be generated */
+        local_memset(out_pub, 0, sizeof(ec_pub_key));
+
         /* We use blinding for the scalar multiplication */
         ret = nn_get_random_mod(&scalar_b, &(in_priv->params->ec_gen_order));
         if (ret) {
@@ -132,6 +136,9 @@ int _ecfsdsa_sign_init(struct ec_sign_context *ctx)
 
 	/* First, verify context has been initialized */
 	SIG_SIGN_CHECK_INITIALIZED(ctx);
+
+        /* Zero init points */
+        local_memset(&kG, 0, sizeof(prj_pt));
 
 	/* Additional sanity checks on input params from context */
 	key_pair_check_initialized_and_type(ctx->key_pair, ECFSDSA);
@@ -595,6 +602,10 @@ int _ecfsdsa_verify_finalize(struct ec_verify_context *ctx)
 	 */
 	SIG_VERIFY_CHECK_INITIALIZED(ctx);
 	ECFSDSA_VERIFY_CHECK_INITIALIZED(&(ctx->verify_data.ecfsdsa));
+
+        /* Zero init points */
+        local_memset(&sG, 0, sizeof(prj_pt));
+        local_memset(&eY, 0, sizeof(prj_pt));
 
 	/* Make things more readable */
 	G = &(ctx->pub_key->params->ec_gen);

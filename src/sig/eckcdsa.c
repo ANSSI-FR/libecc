@@ -39,6 +39,9 @@ void eckcdsa_init_pub_key(ec_pub_key *out_pub, ec_priv_key *in_priv)
 
 	priv_key_check_initialized_and_type(in_priv, ECKCDSA);
 
+        /* Zero init public key to be generated */
+        local_memset(out_pub, 0, sizeof(ec_pub_key));
+
         /* We use blinding for the scalar multiplication */
         ret = nn_get_random_mod(&scalar_b, &(in_priv->params->ec_gen_order));
         if (ret) {
@@ -289,6 +292,9 @@ int _eckcdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	 */
 	SIG_SIGN_CHECK_INITIALIZED(ctx);
 	ECKCDSA_SIGN_CHECK_INITIALIZED(&(ctx->sign_data.eckcdsa));
+
+        /* Zero init points */
+        local_memset(&kG, 0, sizeof(prj_pt));
 
 	/* Make things more readable */
 	priv_key = &(ctx->key_pair->priv_key);
@@ -714,6 +720,10 @@ int _eckcdsa_verify_finalize(struct ec_verify_context *ctx)
 	 */
 	SIG_VERIFY_CHECK_INITIALIZED(ctx);
 	ECKCDSA_VERIFY_CHECK_INITIALIZED(&(ctx->verify_data.eckcdsa));
+
+        /* Zero init points */
+        local_memset(&sY, 0, sizeof(prj_pt));
+        local_memset(&eG, 0, sizeof(prj_pt));
 
 	/* Make things more readable */
 	pub_key = ctx->pub_key;

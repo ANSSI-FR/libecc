@@ -46,6 +46,10 @@ void ecdsa_init_pub_key(ec_pub_key *out_pub, ec_priv_key *in_priv)
 
 	/* Y = xG */
 	G = &(in_priv->params->ec_gen);
+
+	/* Zero init public key to be generated */
+	local_memset(out_pub, 0, sizeof(ec_pub_key));
+
         /* Use blinding with scalar_b when computing point scalar multiplication */
         if(prj_pt_mul_monty_blind(&(out_pub->y), &(in_priv->x), G, &scalar_b, &(in_priv->params->ec_gen_order))){
 		goto err;
@@ -190,6 +194,9 @@ int _ecdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	 */
 	SIG_SIGN_CHECK_INITIALIZED(ctx);
 	ECDSA_SIGN_CHECK_INITIALIZED(&(ctx->sign_data.ecdsa));
+
+	/* Zero init out poiny */
+	local_memset(&kG, 0, sizeof(prj_pt));
 
 	/* Make things more readable */
 	priv_key = &(ctx->key_pair->priv_key);
@@ -544,6 +551,10 @@ int _ecdsa_verify_finalize(struct ec_verify_context *ctx)
 	 */
 	SIG_VERIFY_CHECK_INITIALIZED(ctx);
 	ECDSA_VERIFY_CHECK_INITIALIZED(&(ctx->verify_data.ecdsa));
+
+	/* Zero init points */
+	local_memset(&uG, 0, sizeof(prj_pt));
+	local_memset(&vY, 0, sizeof(prj_pt));
 
 	/* Make things more readable */
 	G = &(ctx->pub_key->params->ec_gen);

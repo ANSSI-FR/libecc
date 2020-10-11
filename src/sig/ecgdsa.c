@@ -44,6 +44,9 @@ void ecgdsa_init_pub_key(ec_pub_key *out_pub, ec_priv_key *in_priv)
                 goto err;
         }
 
+        /* Zero init public key to be generated */
+        local_memset(out_pub, 0, sizeof(ec_pub_key));
+
 	/* Y = (x^-1)G */
 	G = &(in_priv->params->ec_gen);
 	nn_modinv(&xinv, &(in_priv->x), &(in_priv->params->ec_gen_order));
@@ -191,6 +194,9 @@ int _ecgdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	 */
 	SIG_SIGN_CHECK_INITIALIZED(ctx);
 	ECGDSA_SIGN_CHECK_INITIALIZED(&(ctx->sign_data.ecgdsa));
+
+        /* Zero init points */
+        local_memset(&kG, 0, sizeof(prj_pt));
 
 	/* Make things more readable */
 	priv_key = &(ctx->key_pair->priv_key);
@@ -529,6 +535,10 @@ int _ecgdsa_verify_finalize(struct ec_verify_context *ctx)
 	 */
 	SIG_VERIFY_CHECK_INITIALIZED(ctx);
 	ECGDSA_VERIFY_CHECK_INITIALIZED(&(ctx->verify_data.ecgdsa));
+
+        /* Zero init points */
+        local_memset(&uG, 0, sizeof(prj_pt));
+        local_memset(&vY, 0, sizeof(prj_pt));
 
 	/* Make things more readable */
 	G = &(ctx->pub_key->params->ec_gen);
