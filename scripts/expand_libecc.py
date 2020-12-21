@@ -1292,7 +1292,10 @@ def file_remove_pattern(fname, pat):
             if not re.search(pat, line):
                 out.write(line)
         out.close()
-        os.rename(out_fname, fname)
+    
+    if os.path.exists(fname):
+        os.remove(fname)
+    os.rename(out_fname, fname)
 
 def remove_file(fname):
     # Remove file
