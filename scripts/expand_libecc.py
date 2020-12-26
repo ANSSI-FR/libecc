@@ -1294,7 +1294,7 @@ def file_remove_pattern(fname, pat):
         out.close()
     
     if os.path.exists(fname):
-        os.remove(fname)
+        remove_file(fname)
     os.rename(out_fname, fname)
 
 def remove_file(fname):
