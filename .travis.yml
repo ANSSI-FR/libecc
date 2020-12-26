@@ -24,6 +24,7 @@ addons:
             - wine-stable
             - wine32
             - wine64
+            - python3
 
     coverity_scan:
         project:
@@ -43,6 +44,8 @@ services:
 # All our jobs
 env:
     matrix:
+      # Python libecc expand script test
+      - TEST_PYTHON_EXPAND_SCRIPT=1
       # Vanilla tests (on native plaform)
       - BLINDING=0 COMPLETE=0 CROSS_BUILD=0 LADDER=1 
       - BLINDING=1 COMPLETE=0 CROSS_BUILD=0 LADDER=1
@@ -245,6 +248,13 @@ script:
        # Coverity scan static analysis
        - if [ "${COVERITY_SCAN_BRANCH}" == 1 ]; then make; fi
        - if [ "${COVERITY_SCAN_BRANCH}" == 1 ]; then exit 0; fi
+       # Test our Python libecc expanding script
+       # Python2
+       - if [ "${TEST_PYTHON_EXPAND_SCRIPT}" == 1 ] && [ "${COVERITY_SCAN_BRANCH}" != 1 ]; then echo "y" | python2 scripts/expand_libecc.py --remove-all && PYTHON=python2 sh scripts/gen_curves_tests.sh && make clean && make && ./build/ec_self_tests vectors && ./build/ec_self_tests rand; fi;
+       # Python3
+       - if [ "${TEST_PYTHON_EXPAND_SCRIPT}" == 1 ] && [ "${COVERITY_SCAN_BRANCH}" != 1 ]; then echo "y" | python3 scripts/expand_libecc.py --remove-all && PYTHON=python3 sh scripts/gen_curves_tests.sh && make clean && make && ./build/ec_self_tests vectors && ./build/ec_self_tests rand; fi;
+       # Clean
+       - if [ "${TEST_PYTHON_EXPAND_SCRIPT}" == 1 ] && [ "${COVERITY_SCAN_BRANCH}" != 1 ]; then echo "y" | python2 scripts/expand_libecc.py --remove-all && make clean; fi;
        # Vanilla tests
        - if [ "$TRAVIS_EVENT_TYPE" = "pull_request" ]; then git fetch origin refs/pull/${TRAVIS_PULL_REQUEST}/head && git checkout FETCH_HEAD; fi
        - if [ "${CROSS_BUILD}" = 0 ] && [ "${COVERITY_SCAN_BRANCH}" != 1 ]; then make && ./build/ec_self_tests vectors && ./build/ec_self_tests rand; fi
