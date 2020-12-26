@@ -16,12 +16,32 @@
 #!/bin/sh
 
 CURVES=`openssl ecparam -list_curves | grep prime | cut -d':' -f1 | tr '\n' ' '`
-PYTHON=python
+
+# Find a suitable python command if none has been provided
+if [ -z "$PYTHON" ]
+then
+        echo "Looking for suitable python and deps"
+        # Try to guess which python we want to use depending on the installed
+        # packages. We need Pyscard, Crypto, and IntelHex
+        for i in python python3 python2; do
+                if [ -x "`which $i`" ]; then
+                        echo "Found and using python=$i"
+                        PYTHON=$i
+                        break
+                fi
+        done
+else
+        echo "Using user provided python=$PYTHON"
+fi
+
+# Get the expand_libecc python script path
+BASEDIR=$(dirname "$0")
+EXPAND_LIBECC=$BASEDIR/expand_libecc.py
 
 for curve in $CURVES
 do
 	echo "Adding $curve"
 	openssl ecparam -param_enc explicit -outform DER -name $curve -out "$curve".der
-	$PYTHON expand_libecc.py --name="$curve" --ECfile="$curve".der --add-test-vectors=2
+	$PYTHON $EXPAND_LIBECC --name="$curve" --ECfile="$curve".der --add-test-vectors=2
 	rm "$curve".der
 done
