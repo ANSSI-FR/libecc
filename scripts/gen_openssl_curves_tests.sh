@@ -34,6 +34,11 @@ else
         echo "Using user provided python=$PYTHON"
 fi
 
+if [ -z "$PYTHON" ]; then
+        echo "Failed to find working python cmd!" >&2
+        exit
+fi
+
 # Get the expand_libecc python script path
 BASEDIR=$(dirname "$0")
 EXPAND_LIBECC=$BASEDIR/expand_libecc.py
