@@ -90,7 +90,8 @@ static int nn_modinv_odd(nn_t out, nn_src_t x, nn_src_t m)
 	nn_inc(&mp1d2, &mp1d2); /* no carry can occur here because of previous shift */
 
 	cnt = (a.wlen + b.wlen) * WORD_BITS;
-	while (cnt-- > 0) {
+	while (cnt > 0) {
+		cnt -= (bitcnt_t)1;
 		/*
 		 * Always maintain b odd. The logic of the iteration is as
 		 * follows.

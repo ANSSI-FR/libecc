@@ -65,6 +65,10 @@ static u8 Alice_to_Bob[3 * NN_MAX_BYTE_LEN] = { 0 };
  */
 static u8 Bob_to_Alice[3 * NN_MAX_BYTE_LEN] = { 0 };
 
+static const u8 Alice[] = "Alice";
+static const u8 Bob[] = "Bob";
+#define CHECK_SIZE LOCAL_MIN(sizeof(Alice), sizeof(Bob))
+
 int ECDH_helper(const u8 *curve_name, const u8 *role);
 int ECDH_helper(const u8 *curve_name, const u8 *role)
 {
@@ -92,7 +96,7 @@ int ECDH_helper(const u8 *curve_name, const u8 *role)
 
 	/****** Alice => Bob *********************************************************/
 	if (are_equal
-	    (role, "Alice", local_strnlen("Alice", sizeof("Alice")) + 1)) {
+	    (role, Alice, CHECK_SIZE)) {
 		our_public_buffer = Alice_to_Bob;
 		other_public_buffer = Bob_to_Alice;
 		d = &d_Alice;
@@ -101,7 +105,7 @@ int ECDH_helper(const u8 *curve_name, const u8 *role)
 	}
 	/****** Bob => Alice *********************************************************/
 	else if (are_equal
-		 (role, "Bob", local_strnlen("Bob", sizeof("Bob")) + 1)) {
+		 (role, Bob, CHECK_SIZE)) {
 		our_public_buffer = Bob_to_Alice;
 		other_public_buffer = Alice_to_Bob;
 		d = &d_Bob;
@@ -224,14 +228,14 @@ int main()
 					  sizeof(curve_name));
 		/* Perform ECDH between Alice and Bob! */
 		ext_printf("[+] ECDH on curve %s\n", curve_name);
-		ECDH_helper(curve_name, (const u8 *)"Alice");
-		ECDH_helper(curve_name, (const u8 *)"Bob");
+		ECDH_helper(curve_name, Alice);
+		ECDH_helper(curve_name, Bob);
 		/* We have to call our ECDH helper again for Alice
 		 * since she was waiting for Bob to send his public data.
 		 * This is our loose way of dealing with 'concurrency'
 		 * without threads ...
 		 */
-		ECDH_helper(curve_name, (const u8 *)"Alice");
+		ECDH_helper(curve_name, Alice);
 		ext_printf("==================================\n");
 	}
 	return 0;

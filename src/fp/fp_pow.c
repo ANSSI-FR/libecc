@@ -51,7 +51,8 @@ static void _fp_pow(fp_t out, fp_src_t base, nn_src_t exp)
 	tab_monty[0] = &r;
 	tab_monty[1] = &base_monty;
 
-	while (explen-- > 0) {
+	while (explen > 0) {
+		explen -= (bitcnt_t)1;
 		expbit = nn_getbit(exp, explen);
 		fp_sqr_redc1(&sqr_monty, &out_monty);
 		fp_tabselect(&mul_monty, expbit, tab_monty, TAB_ENTRIES);
