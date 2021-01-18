@@ -794,11 +794,11 @@ static int _nn_xgcd(nn_t g, nn_t u, nn_t v, nn_src_t a, nn_src_t b)
 	 *
 	 * Finally, after i steps:
 	 * |u1 v1| |g| = |a|
-	 * |u2 v2| |g| = |b|
+	 * |u2 v2| |0| = |b|
 	 *
 	 * Inverting the matrix:
 	 * |g| = (-1)^i | v2 -v1| |a|
-	 * |g|          |-u2  u1| |b|
+	 * |0|          |-u2  u1| |b|
 	 */
 
 	/*
