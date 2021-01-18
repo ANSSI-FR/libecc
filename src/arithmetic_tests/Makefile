@@ -1,5 +1,6 @@
 ROOT_DIR=../..
 BUILD_DIR=$(ROOT_DIR)/build
+WNOERROR=0
 include $(ROOT_DIR)/common.mk
 
 BIN_CFLAGS += -I$(ROOT_DIR)/src/ -Wno-shadow -Wno-conversion -Wno-cast-align -Wno-unused-macros

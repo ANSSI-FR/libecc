@@ -257,21 +257,21 @@ script:
        - if [ "${TEST_PYTHON_EXPAND_SCRIPT}" == 1 ] && [ "${COVERITY_SCAN_BRANCH}" != 1 ]; then echo "y" | python2 scripts/expand_libecc.py --remove-all && make clean; fi;
        # Vanilla tests
        - if [ "$TRAVIS_EVENT_TYPE" = "pull_request" ]; then git fetch origin refs/pull/${TRAVIS_PULL_REQUEST}/head && git checkout FETCH_HEAD; fi
-       - if [ "${CROSS_BUILD}" = 0 ] && [ "${COVERITY_SCAN_BRANCH}" != 1 ]; then make && ./build/ec_self_tests vectors && ./build/ec_self_tests rand && cd src/arithmetic_tests/ && WNOERROR=0 make; fi
+       - if [ "${CROSS_BUILD}" = 0 ] && [ "${COVERITY_SCAN_BRANCH}" != 1 ]; then make && ./build/ec_self_tests vectors && ./build/ec_self_tests rand && cd src/arithmetic_tests/ && make && cd -; fi
        - if [ "${CROSS_BUILD}" = 0 ] && [ "${COVERITY_SCAN_BRANCH}" != 1 ]; then cd src/examples/ && make clean && make && cd - && make clean; fi
-       - if [ "${CROSS_BUILD}" = 0 ] && [ "${COVERITY_SCAN_BRANCH}" != 1 ]; then make 16 && ./build/ec_self_tests vectors && ./build/ec_self_tests rand && cd src/arithmetic_tests/ && WNOERROR=0 make; fi
+       - if [ "${CROSS_BUILD}" = 0 ] && [ "${COVERITY_SCAN_BRANCH}" != 1 ]; then make 16 && ./build/ec_self_tests vectors && ./build/ec_self_tests rand && cd src/arithmetic_tests/ && make && cd -; fi
        - if [ "${CROSS_BUILD}" = 0 ] && [ "${COVERITY_SCAN_BRANCH}" != 1 ]; then cd src/examples/ && make clean && make 16 && cd - && make clean; fi
-       - if [ "${CROSS_BUILD}" = 0 ] && [ "${COVERITY_SCAN_BRANCH}" != 1 ]; then make 32 && ./build/ec_self_tests vectors && ./build/ec_self_tests rand && cd src/arithmetic_tests/ && WNOERROR=0 make; fi
+       - if [ "${CROSS_BUILD}" = 0 ] && [ "${COVERITY_SCAN_BRANCH}" != 1 ]; then make 32 && ./build/ec_self_tests vectors && ./build/ec_self_tests rand && cd src/arithmetic_tests/ && make && cd -; fi
        - if [ "${CROSS_BUILD}" = 0 ] && [ "${COVERITY_SCAN_BRANCH}" != 1 ]; then cd src/examples/ && make clean && make 32 && cd - && make clean; fi
        - if [ "${CROSS_BUILD}" = 0 ] && [ "${COVERITY_SCAN_BRANCH}" != 1 ]; then make 64 && ./build/ec_self_tests vectors && ./build/ec_self_tests rand; fi
-       - if [ "${CROSS_BUILD}" = 0 ] && [ "${COVERITY_SCAN_BRANCH}" != 1 ]; then cd src/examples/ && make clean && make 64 && cd - && make clean && cd src/arithmetic_tests/ && make; fi
-       - if [ "${CROSS_BUILD}" = 0 ] && [ "${COVERITY_SCAN_BRANCH}" != 1 ]; then make debug && ./build/ec_self_tests vectors && ./build/ec_self_tests rand && cd src/arithmetic_tests/ && WNOERROR=0 make; fi
+       - if [ "${CROSS_BUILD}" = 0 ] && [ "${COVERITY_SCAN_BRANCH}" != 1 ]; then cd src/examples/ && make clean && make 64 && cd - && make clean; fi
+       - if [ "${CROSS_BUILD}" = 0 ] && [ "${COVERITY_SCAN_BRANCH}" != 1 ]; then make debug && ./build/ec_self_tests vectors && ./build/ec_self_tests rand && cd src/arithmetic_tests/ && make && cd -; fi
        - if [ "${CROSS_BUILD}" = 0 ] && [ "${COVERITY_SCAN_BRANCH}" != 1 ]; then cd src/examples/ && make clean && make debug && cd - && make clean; fi
-       - if [ "${CROSS_BUILD}" = 0 ] && [ "${COVERITY_SCAN_BRANCH}" != 1 ]; then make debug16 && ./build/ec_self_tests vectors && ./build/ec_self_tests rand && cd src/arithmetic_tests/ && WNOERROR=0 make; fi
+       - if [ "${CROSS_BUILD}" = 0 ] && [ "${COVERITY_SCAN_BRANCH}" != 1 ]; then make debug16 && ./build/ec_self_tests vectors && ./build/ec_self_tests rand && cd src/arithmetic_tests/ && make && cd -; fi
        - if [ "${CROSS_BUILD}" = 0 ] && [ "${COVERITY_SCAN_BRANCH}" != 1 ]; then cd src/examples/ && make clean && make debug16 && cd - && make clean; fi
-       - if [ "${CROSS_BUILD}" = 0 ] && [ "${COVERITY_SCAN_BRANCH}" != 1 ]; then make debug32 && ./build/ec_self_tests vectors && ./build/ec_self_tests rand && cd src/arithmetic_tests/ && WNOERROR=0 make; fi
+       - if [ "${CROSS_BUILD}" = 0 ] && [ "${COVERITY_SCAN_BRANCH}" != 1 ]; then make debug32 && ./build/ec_self_tests vectors && ./build/ec_self_tests rand && cd src/arithmetic_tests/ && make && cd -; fi
        - if [ "${CROSS_BUILD}" = 0 ] && [ "${COVERITY_SCAN_BRANCH}" != 1 ]; then cd src/examples/ && make clean && make debug32 && cd - && make clean; fi
-       - if [ "${CROSS_BUILD}" = 0 ] && [ "${COVERITY_SCAN_BRANCH}" != 1 ]; then make debug64 && ./build/ec_self_tests vectors && ./build/ec_self_tests rand && cd src/arithmetic_tests/ && WNOERROR=0 make; fi
+       - if [ "${CROSS_BUILD}" = 0 ] && [ "${COVERITY_SCAN_BRANCH}" != 1 ]; then make debug64 && ./build/ec_self_tests vectors && ./build/ec_self_tests rand && cd src/arithmetic_tests/ && make && cd -; fi
        - if [ "${CROSS_BUILD}" = 0 ] && [ "${COVERITY_SCAN_BRANCH}" != 1 ]; then cd src/examples/ && make clean && make debug64 && cd - && make clean; fi
        # Cross build jobs
        - if [ "${CROSS_BUILD}" = 1 ] && [ "${COVERITY_SCAN_BRANCH}" != 1 ]; then docker pull multiarch/crossbuild; fi
