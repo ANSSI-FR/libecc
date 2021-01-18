@@ -42,6 +42,11 @@ else
 WARNING_CFLAGS = -W -Werror -Wextra -Wall -Wunreachable-code
 endif
 
+ifeq ($(WNOERROR), 0)
+# Sometimes "-Werror" might be too much, this can be overriden
+WARNING_CFLAGS := $(subst -Werror,,$(WARNING_CFLAGS))
+endif
+
 # If the user has overridden the CFLAGS or LDFLAGS, let's detect it
 # and adapt our compilation process
 ifdef CFLAGS
