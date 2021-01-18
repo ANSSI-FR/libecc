@@ -13,7 +13,7 @@ tests:	bin
 	# Get the word size and maximum nn bit length
 	$(eval WORDSZ := $(shell ./arithmetic_tests -info | cut -d ' ' -f1))
 	$(eval MAXBITS := $(shell ./arithmetic_tests -info | cut -d ' ' -f2))
-	python arithmetic_tests_generator.py stdout $(WORDSZ) $(MAXBITS) 1000 | ./arithmetic_tests
+	python2 arithmetic_tests_generator.py stdout $(WORDSZ) $(MAXBITS) 1000 | ./arithmetic_tests
 
 clean:
 	@rm -f arithmetic_tests
