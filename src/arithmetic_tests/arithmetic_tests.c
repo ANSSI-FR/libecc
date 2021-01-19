@@ -852,7 +852,7 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	ibuf = malloc(ibuflen);
+	ibuf = (char*)malloc(ibuflen);
 	if (!ibuf) {
 		return -1;
 	}
@@ -972,8 +972,8 @@ int main(int argc, char *argv[])
 				/* Compare mpinv */
 				if(fp_ctx_mpinv.val[0] != fp_ctx_param.mpinv){
 					printf("\nLine %lu: Fp context import failed\n", line);
-					printf("Imported mpinv from modulus="PRINTF_WORD_HEX_FMT, &fp_ctx_r_square);
-					printf("Computed mpiv  from file   ="PRINTF_WORD_HEX_FMT, fp_ctx_param.mpinv);
+					printf("Imported mpinv from modulus=" PRINTF_WORD_HEX_FMT, fp_ctx_mpinv.val[0]);
+					printf("Computed mpiv  from file   =" PRINTF_WORD_HEX_FMT, fp_ctx_param.mpinv);
 					return -1;
 				}
 				tmp = &fp_ctx_pshift;
@@ -984,7 +984,7 @@ int main(int argc, char *argv[])
 				/* Compare p_shift */
 				if((bitcnt_t)fp_ctx_pshift.val[0] != fp_ctx_param.p_shift){
 					printf("\nLine %lu: Fp context import failed\n", line);
-					printf("Imported mpinv from modulus=%d", &fp_ctx_pshift);
+					printf("Imported mpinv from modulus=%d", (bitcnt_t)fp_ctx_pshift.val[0]);
 					printf("Computed mpiv  from file   =%d", fp_ctx_param.p_shift);
 					return -1;
 				}
@@ -1008,8 +1008,8 @@ int main(int argc, char *argv[])
 				/* Compare p_reciprocal */
 				if(fp_ctx_prec.val[0] != fp_ctx_param.p_reciprocal){
 					printf("\nLine %lu: Fp context import failed\n", line);
-					printf("Imported mpinv from modulus="PRINTF_WORD_HEX_FMT, &fp_ctx_prec);
-					printf("Computed mpiv  from file   ="PRINTF_WORD_HEX_FMT, fp_ctx_param.p_reciprocal);
+					printf("Imported mpinv from modulus=" PRINTF_WORD_HEX_FMT, fp_ctx_prec.val[0]);
+					printf("Computed mpiv  from file   =" PRINTF_WORD_HEX_FMT, fp_ctx_param.p_reciprocal);
 					return -1;
 				}
 				params[i] = &fp_ctx_param;
