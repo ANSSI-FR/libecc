@@ -42,7 +42,7 @@ else
 WARNING_CFLAGS = -W -Werror -Wextra -Wall -Wunreachable-code
 endif
 
-ifeq ($(WNOERROR), 0)
+ifeq ($(WNOERROR), 1)
 # Sometimes "-Werror" might be too much, this can be overriden
 WARNING_CFLAGS := $(subst -Werror,,$(WARNING_CFLAGS))
 endif
