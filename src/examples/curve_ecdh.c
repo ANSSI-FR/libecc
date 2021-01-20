@@ -34,13 +34,13 @@
  *
  * NOTE: We don't seek for communication bandwidth
  *       optimization here, this is why we use arrays to
- *       exchange projective coordinates points (and not
- *       affine points and/or only the x coordinate since the
+ *       exchange affine coordinates points (and not
+ *       the compressed x coordinate since the
  *	 curve equation can be used).
  */
 
 /* Zero buffer to detect empty buffers */
-static u8 zero[3 * NN_MAX_BYTE_LEN] = { 0 };
+static u8 zero[2 * NN_MAX_BYTE_LEN] = { 0 };
 
 /*
  * The following global variables simulate our shared "data bus"
@@ -49,21 +49,21 @@ static u8 zero[3 * NN_MAX_BYTE_LEN] = { 0 };
 
 /* Global array holding Alice to Bob public value
  * Q_Alice = d_Alice x G.
- * This is a serialized projective EC point, holding
- * 3 coordinates, meaning that its maximum size is
- * 3 * NN_MAX_BYTE_LEN (i.e. this will work for
+ * This is a serialized affine EC point, holding
+ * 2 coordinates, meaning that its maximum size is
+ * 2 * NN_MAX_BYTE_LEN (i.e. this will work for
  * all our curves).
  */
-static u8 Alice_to_Bob[3 * NN_MAX_BYTE_LEN] = { 0 };
+static u8 Alice_to_Bob[2 * NN_MAX_BYTE_LEN] = { 0 };
 
 /* Global array holding Bob to Alice public value
  * Q_Bob = d_Bob x G.
- * This is a serialized projective EC point, holding
- * 3 coordinates, meaning that its maximum size is
- * 3 * NN_MAX_BYTE_LEN. (i.e. this will work for
+ * This is a serialized affine EC point, holding
+ * 2 coordinates, meaning that its maximum size is
+ * 2 * NN_MAX_BYTE_LEN. (i.e. this will work for
  * all our curves).
  */
-static u8 Bob_to_Alice[3 * NN_MAX_BYTE_LEN] = { 0 };
+static u8 Bob_to_Alice[2 * NN_MAX_BYTE_LEN] = { 0 };
 
 static const u8 Alice[] = "Alice";
 static const u8 Bob[] = "Bob";
@@ -75,8 +75,6 @@ int ECDH_helper(const u8 *curve_name, const u8 *role)
 	int ret;
 	/* The projective point we will use */
 	prj_pt Q;
-	/* The equivalent affine point */
-	aff_pt Q_aff;
 	/* The private scalar value for Alice and Bob, as well as their
 	 * respective shared secrets.
 	 * These are 'static' in order to keep them across multiple calls
@@ -162,11 +160,11 @@ int ECDH_helper(const u8 *curve_name, const u8 *role)
 
 	/* Now send the public value Q to the other party, get the other party
 	 * public value and compute the shared secret.
-	 * Our export size is exactly 3 coordinates in Fp, so this should be 3 times the size
-	 * of an element in Fp.
+	 * Our export size is exactly 2 coordinates in Fp (affine point representation),
+	 * so this should be 2 times the size of an element in Fp.
 	 */
-	prj_pt_export_to_buf(&Q, our_public_buffer,
-			     3 * BYTECEIL(curve_params.ec_fp.p_bitlen));
+	prj_pt_export_to_aff_buf(&Q, our_public_buffer,
+			     2 * BYTECEIL(curve_params.ec_fp.p_bitlen));
 
  generate_shared_secret:
 	/* Now (non blocking) wait for the other party to send us its public value */
@@ -182,26 +180,27 @@ int ECDH_helper(const u8 *curve_name, const u8 *role)
 		ret = 1;
 		goto out;
 	}
-	/* Import the shared value as a projective point */
-	prj_pt_import_from_buf(&Q, other_public_buffer,
-			       3 * BYTECEIL(curve_params.ec_fp.p_bitlen),
+	/* Import the shared value as a projective point from an affine point buffer
+	 */
+	prj_pt_import_from_aff_buf(&Q, other_public_buffer,
+			       2 * BYTECEIL(curve_params.ec_fp.p_bitlen),
 			       &(curve_params.ec_curve));
 	/* Compute the shared value = first coordinate of dQ */
 	prj_pt_mul_monty(&Q, d, &Q);
+	/* Move to the unique representation */
 	/* Compute the affine coordinates to get the unique (x, y) representation
 	 * (projective points are equivalent by a z scalar)
 	 */
-	prj_pt_to_aff(&Q_aff, &Q);
+	prj_pt_unique(&Q, &Q);
 	ext_printf("  ECDH shared secret computed by %s:\n", role);
 	/* The shared secret 'x' is the first coordinate of Q */
 	fp_init(x, &(curve_params.ec_fp));
-	fp_copy(x, &(Q_aff.x));
+	fp_copy(x, &(Q.X));
 	fp_print(x_str, x);
 	ret = 1;
 
 	/* Uninit local variables */
 	prj_pt_uninit(&Q);
-	aff_pt_uninit(&Q_aff);
 	fp_uninit(x);
 	nn_uninit(d);
 

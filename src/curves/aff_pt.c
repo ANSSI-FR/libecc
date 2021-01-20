@@ -116,6 +116,11 @@ int is_on_curve(fp_src_t x, fp_src_t y, ec_shortw_crv_src_t curve)
 	return ret;
 }
 
+int aff_pt_is_on_curve(aff_pt_src_t pt)
+{
+	return is_on_curve(&(pt->x), &(pt->y), pt->crv);
+}
+
 void ec_shortw_aff_copy(aff_pt_t out, aff_pt_src_t in)
 {
 	aff_pt_check_initialized(in);
@@ -151,3 +156,81 @@ int ec_shortw_aff_eq_or_opp(aff_pt_src_t in1, aff_pt_src_t in2)
 
 	return ret;
 }
+
+/*
+ * Import an affine point from a buffer with the following layout; the 2
+ * coordinates (elements of Fp) are each encoded on p_len bytes, where p_len
+ * is the size of p in bytes (e.g. 66 for a prime p of 521 bits). Each
+ * coordinate is encoded in big endian. Size of buffer must exactly match
+ * 2 * p_len.
+ */
+int aff_pt_import_from_buf(aff_pt_t pt,
+                           const u8 *pt_buf,
+                           u16 pt_buf_len, ec_shortw_crv_src_t crv)
+{
+        fp_ctx_src_t ctx;
+        u16 coord_len;
+
+        ec_shortw_crv_check_initialized(crv);
+        MUST_HAVE(pt_buf != NULL);
+
+        ctx = crv->a.ctx;
+        coord_len = BYTECEIL(ctx->p_bitlen);
+
+        if (pt_buf_len != (2 * coord_len)) {
+                return -1;
+        }
+
+        fp_init_from_buf(&(pt->x), ctx, pt_buf, coord_len);
+        fp_init_from_buf(&(pt->y), ctx, pt_buf + coord_len, coord_len);
+
+        /* Set the curve */
+        pt->crv = crv;
+
+        /* Mark the point as initialized */
+        pt->magic = AFF_PT_MAGIC;
+
+        /* Check that the point is indeed on the provided curve, uninitialize it
+         * if this is not the case.
+         */
+        if(aff_pt_is_on_curve(pt) != 1){
+                aff_pt_uninit(pt);
+                return -1;
+        }
+
+        return 0;
+}
+
+
+/* Export an affine point to a buffer with the following layout; the 2
+ * coordinates (elements of Fp) are each encoded on p_len bytes, where p_len
+ * is the size of p in bytes (e.g. 66 for a prime p of 521 bits). Each
+ * coordinate is encoded in big endian. Size of buffer must exactly match
+ * 2 * p_len.
+ */
+int aff_pt_export_to_buf(aff_pt_src_t pt, u8 *pt_buf, u32 pt_buf_len)
+{
+        fp_ctx_src_t ctx;
+        u16 coord_len;
+
+        aff_pt_check_initialized(pt);
+        MUST_HAVE(pt_buf != NULL);
+
+        /* The point to be exported must be on the curve */
+        MUST_HAVE(aff_pt_is_on_curve(pt) == 1);
+
+        ctx = pt->crv->a.ctx;
+        coord_len = BYTECEIL(ctx->p_bitlen);
+
+        if (pt_buf_len != (2 * coord_len)) {
+                return -1;
+        }
+
+        /* Export the three coordinates */
+        fp_export_to_buf(pt_buf, coord_len, &(pt->x));
+        fp_export_to_buf(pt_buf + coord_len, coord_len, &(pt->y));
+
+        return 0;
+}
+
+

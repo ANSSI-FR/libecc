@@ -221,7 +221,6 @@ static int generate_and_export_key_pair(const char *ec_name,
 	ec_key_pair kp;
 	FILE *file;
 	int ret;
-	aff_pt Q_aff;
 
 	MUST_HAVE(ec_name != NULL);
 	MUST_HAVE(fname_prefix != NULL);
@@ -240,12 +239,11 @@ static int generate_and_export_key_pair(const char *ec_name,
 	/* Generate the key pair */
 	ec_key_pair_gen(&kp, &params, sig_type);
 
-	/* Get the affine representation and go back to projective for the public key.
+	/* Get the unique affine equivalent representation of the projective point for the public key.
 	 * This avoids ambiguity when exporting the point, and is mostly here
 	 * for compatibility with external libraries.
 	 */
-	prj_pt_to_aff(&Q_aff, &(kp.pub_key.y));
-	ec_shortw_aff_to_prj(&(kp.pub_key.y), &Q_aff);
+	prj_pt_unique(&(kp.pub_key.y), &(kp.pub_key.y));
 
 	/*************************/
 
@@ -1034,7 +1032,6 @@ static int ec_scalar_mult(const char *ec_name,
 	nn d;
 	/* Point to import */
 	prj_pt Q;
-	aff_pt Q_aff;
 #ifdef USE_SIG_BLINDING
 	/* Scalar when we use blinding */
         nn scalar_b;
@@ -1125,24 +1122,20 @@ static int ec_scalar_mult(const char *ec_name,
 #else
         prj_pt_mul_monty(&Q, &d, &Q);
 #endif
-	/* Move to affine representation to get the unique representation of the point */
-	prj_pt_to_aff(&Q_aff, &Q);
-	/* Back to projective for our export */
-	ec_shortw_aff_to_prj(&Q, &Q_aff);
+	/* Get the unique representation of the point */
+	prj_pt_unique(&Q, &Q);
 
 	/* Export the projective point in the local buffer */
 	coord_len = 3 * BYTECEIL((Q.crv)->a.ctx->p_bitlen);
 	if(coord_len > sizeof(buf)){
 		nn_uninit(&d);
 		prj_pt_uninit(&Q);
-		aff_pt_uninit(&Q_aff);
 		printf("Error: error when exporting the point\n");
 		goto err;
 	}
 	if(prj_pt_export_to_buf(&Q, buf, coord_len)){
 		nn_uninit(&d);
 		prj_pt_uninit(&Q);
-		aff_pt_uninit(&Q_aff);
 		printf("Error: error when exporting the point\n");
 		goto err;
 	}
@@ -1151,7 +1144,6 @@ static int ec_scalar_mult(const char *ec_name,
 	if (out_file == NULL) {
 		nn_uninit(&d);
 		prj_pt_uninit(&Q);
-		aff_pt_uninit(&Q_aff);
 		printf("Error: file %s cannot be opened\n", outfile_name);
 		goto err;
 	}
@@ -1161,7 +1153,6 @@ static int ec_scalar_mult(const char *ec_name,
 		fclose(out_file);
 		nn_uninit(&d);
 		prj_pt_uninit(&Q);
-		aff_pt_uninit(&Q_aff);
 		printf("Error: error when writing to %s\n", outfile_name);
 		goto err;
 	}
@@ -1170,7 +1161,6 @@ static int ec_scalar_mult(const char *ec_name,
         /* Uninit local variables */
 	nn_uninit(&d);
         prj_pt_uninit(&Q);
-        aff_pt_uninit(&Q_aff);
 
 	return 0;
 

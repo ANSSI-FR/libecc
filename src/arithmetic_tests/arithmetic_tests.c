@@ -27,8 +27,8 @@
 #include <execinfo.h>
 
 #define BACKTRACE_SIZE 4096
-unsigned int backtrace_buffer_ptr = 0;
-char backtrace_buffer[BACKTRACE_SIZE];
+static unsigned int backtrace_buffer_ptr = 0;
+static char backtrace_buffer[BACKTRACE_SIZE];
 
 /* assert trapping and backtracing */
 static void assert_signal_handler(int sig)
@@ -51,11 +51,11 @@ static void assert_signal_handler(int sig)
 		memset(backtrace_buffer, 0, sizeof(backtrace_buffer)-1);\
 		backtrace_buffer_ptr = 0;\
 	}\
-} while(0);
+} while(0)
 #else
 
 #define ADD_TO_BACKTRACE(...) do {\
-} while(0);
+} while(0)
 
 #endif
 
@@ -133,7 +133,7 @@ struct dispatch_table {
 		}\
 		ptr += sizeof(struct dispatch_table);\
 	}\
-} while(0);
+} while(0)
 
 #define FIND_FUN_IN_DISPATCH_TABLE(op, function) FIND_IN_DISPATCH_TABLE(op, function, fun)
 
@@ -812,8 +812,8 @@ int main(int argc, char *argv[])
 	 */
 	nn_one(&fp_ctx_modulus);
 	fp_ctx_init_from_p(&fp_ctx_param, &fp_ctx_modulus);
-	GENERIC_TEST_FP_DECL_INIT_MAX(fp_params, &fp_ctx_param);
-	GENERIC_TEST_NN_DECL_INIT_MAX(nn_params, 0);
+	GENERIC_TEST_FP_DECL_INIT_MAX(fp_params, &fp_ctx_param)
+	GENERIC_TEST_NN_DECL_INIT_MAX(nn_params, 0)
 	u64 u_params[MAX_PARAMS];
 	void *params[MAX_PARAMS];
 	unsigned int ibuflen = BIT_LEN_WORDS(NN_MAX_BIT_LEN) * WORD_BYTES * 10;
