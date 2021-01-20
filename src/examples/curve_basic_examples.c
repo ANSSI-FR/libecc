@@ -151,11 +151,16 @@ int check_curve(const u8 *curve_name)
 	}
 	/*
 	 * Check that the resulting additive point C = A+B is indeed on the
-	 * curve. In order to check this, we have to go back to affine
-	 * representation
+	 * curve.
 	 */
 	prj_pt_to_aff(&T, &C);
-	if (!is_on_curve(&(T.x), &(T.y), &(curve_params.ec_curve))) {
+	if (!prj_pt_is_on_curve(&C)) {
+		ext_printf("Error: C = A+B is not on the %s curve!\n",
+			   curve_params.curve_name);
+		ret = -1;
+		goto out;
+	}
+	if (!aff_pt_is_on_curve(&T)) {
 		ext_printf("Error: C = A+B is not on the %s curve!\n",
 			   curve_params.curve_name);
 		ret = -1;
@@ -174,11 +179,16 @@ int check_curve(const u8 *curve_name)
 		goto out;
 	}
 	/* Check that the resulting point C = 2A is indeed on the curve.
-	 * In order to check this, we have to go back to affine representation
 	 *
 	 */
 	prj_pt_to_aff(&T, &C);
-	if (!is_on_curve(&(T.x), &(T.y), &(curve_params.ec_curve))) {
+	if (!prj_pt_is_on_curve(&C)) {
+		ext_printf("Error: C = A+B is not on the %s curve!\n",
+			   curve_params.curve_name);
+		ret = -1;
+		goto out;
+	}
+	if (!aff_pt_is_on_curve(&T)) {
 		ext_printf("Error: C = A+B is not on the %s curve!\n",
 			   curve_params.curve_name);
 		ret = -1;
@@ -263,7 +273,14 @@ int check_curve(const u8 *curve_name)
 		/* Compute kA with regular add/double formulas */
 		prj_pt_mul(&TMP, &nn_k, &A);
 		prj_pt_to_aff(&T, &TMP);
-		if (!is_on_curve(&(T.x), &(T.y), &(curve_params.ec_curve))) {
+		if (!prj_pt_is_on_curve(&TMP)) {
+			ext_printf("Error: kA is not on the %s curve!\n",
+				   curve_params.curve_name);
+			nn_print("k=", &nn_k);
+			ret = -1;
+			goto out;
+		}
+		if (!aff_pt_is_on_curve(&T)) {
 			ext_printf("Error: kA is not on the %s curve!\n",
 				   curve_params.curve_name);
 			nn_print("k=", &nn_k);
@@ -290,7 +307,14 @@ int check_curve(const u8 *curve_name)
 		/* Compute kA with Montgomery add/double formulas */
 		prj_pt_mul_monty(&TMP, &nn_k, &A);
 		prj_pt_to_aff(&T, &TMP);
-		if (!is_on_curve(&(T.x), &(T.y), &(curve_params.ec_curve))) {
+		if (!prj_pt_is_on_curve(&TMP)) {
+			ext_printf("Error: kA is not on the %s curve!\n",
+				   curve_params.curve_name);
+			nn_print("k=", &nn_k);
+			ret = -1;
+			goto out;
+		}
+		if (!aff_pt_is_on_curve(&T)) {
 			ext_printf("Error: kA is not on the %s curve!\n",
 				   curve_params.curve_name);
 			nn_print("k=", &nn_k);
