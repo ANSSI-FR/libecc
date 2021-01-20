@@ -191,3 +191,11 @@ endif
 ifeq ($(NOKNOWNTESTS), 1)
 CFLAGS += -DNO_KNOWN_VECTORS
 endif
+
+# Specific version for fuzzing with Cryptofuzz
+# Allow raw signature and verification APIs
+# which is DANGEROUS. Do not activate in production
+# mode!
+ifeq ($(CRYPTOFUZZ), 1)
+CFLAGS += -DUSE_CRYPTOFUZZ
+endif

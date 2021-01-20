@@ -26,6 +26,10 @@
 #include "ecfsdsa.h"
 #include "ecgdsa.h"
 #include "ecrdsa.h"
+/* Includes for fuzzing */
+#ifdef USE_CRYPTOFUZZ
+#include "fuzzing_ecdsa.h"
+#endif
 
 #if (EC_MAX_SIGLEN == 0)
 #error "It seems you disabled all signature schemes in lib_ecc_config.h"

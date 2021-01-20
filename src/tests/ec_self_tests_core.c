@@ -144,7 +144,40 @@ static int ec_import_export_test(const ec_test_case *c)
 			ext_printf("Error when verifying signature\n");
 			goto err;
 		}
+#ifdef USE_CRYPTOFUZZ
+		/* Specific case where we have access to raw signature API */
+		if(c->sig_type == ECDSA){
+        		struct ec_sign_context sig_ctx;
+		        struct ec_verify_context verif_ctx;
+			u8 digest[MAX_DIGEST_SIZE] = { 0 };
+			u8 digestlen;	
+		        /* Initialize our signature context */
+        		if(ec_sign_init(&sig_ctx, &kp, ECDSA, c->hash_type)){
+                		goto err;
+        		}
+			/* Perform the hash of the data ourselves */
+		        if(hash_mapping_callbacks_sanity_check(sig_ctx.h)){
+        	        	goto err;
+        		}
+			const u8 *input[2] = { (const u8*)msg , NULL};
+			u32 ilens[2] = { msglen , 0 };
+			sig_ctx.h->hfunc_scattered(input, ilens, digest);
+			digestlen = sig_ctx.h->digest_size;
+			/* Raw signing of data */
+	        	if(ecdsa_sign_raw(&sig_ctx, digest, digestlen, sig, siglen, NULL, 0)){
+        		        goto err;
+        		}
+			/* Now verify signature */
+		       	if(ec_verify_init(&verif_ctx,  &(kp.pub_key), sig, siglen, ECDSA, c->hash_type)){
+                		goto err;
+	        	}
+			if(ecdsa_verify_raw(&verif_ctx, digest, digestlen)){
+                		goto err;
+			}
+		} 
+#endif
 	}
+
 	ret = 0;
 
  err:
@@ -214,6 +247,63 @@ static int ec_sig_known_vector_tests_one(const ec_test_case *c)
 		goto err;
 	}
 
+#ifdef USE_CRYPTOFUZZ
+	/* Specific case where we have access to raw signature API */
+	if(c->sig_type == ECDSA){
+        	struct ec_sign_context sig_ctx;
+	        struct ec_verify_context verif_ctx;
+		u8 digest[MAX_DIGEST_SIZE] = { 0 };
+		u8 digestlen;	
+	        /* Initialize our signature context */
+        	if(ec_sign_init(&sig_ctx, &kp, ECDSA, c->hash_type)){
+			failed_test = TEST_SIG_ERROR;
+                	goto err;
+        	}
+		/* Perform the hash of the data ourselves */
+	        if(hash_mapping_callbacks_sanity_check(sig_ctx.h)){
+			failed_test = TEST_SIG_ERROR;
+        	        goto err;
+        	}
+		const u8 *input[2] = { (const u8*)(c->msg) , NULL};
+		u32 ilens[2] = { c->msglen , 0 };
+		sig_ctx.h->hfunc_scattered(input, ilens, digest);
+		digestlen = sig_ctx.h->digest_size;
+		/* Import the fixed nonce */
+		u8 nonce[BIT_LEN_WORDS(NN_MAX_BIT_LEN) * (WORDSIZE / 8)] = { 0 };
+		nn n_nonce;
+		bitcnt_t q_bit_len = kp.priv_key.params->ec_gen_order_bitlen;
+		if(c->nn_random(&n_nonce, &(kp.priv_key.params->ec_gen_order))){
+			failed_test = TEST_SIG_ERROR;
+			goto err;
+		}
+		nn_export_to_buf(nonce, BYTECEIL(q_bit_len), &n_nonce);
+		if(BYTECEIL(q_bit_len) > sizeof(nonce)){
+			failed_test = TEST_SIG_ERROR;
+			goto err;
+		}
+		u8 noncelen = (u8)(BYTECEIL(q_bit_len));
+		/* Raw signing of data */
+	        if(ecdsa_sign_raw(&sig_ctx, digest, digestlen, sig, siglen, nonce, noncelen)){
+			failed_test = TEST_SIG_ERROR;
+        	        goto err;
+        	}
+		/* Check computed signature against expected one */
+        	ret = are_equal(sig, c->exp_sig, siglen);
+		if (!ret) {
+			failed_test = TEST_SIG_COMP_ERROR;
+			goto err;
+		}
+		/* Now verify signature */
+	       	if(ec_verify_init(&verif_ctx,  &(kp.pub_key), sig, siglen, ECDSA, c->hash_type)){
+			failed_test = TEST_VERIF_ERROR;
+                	goto err;
+        	}
+		if(ecdsa_verify_raw(&verif_ctx, digest, digestlen)){
+			failed_test = TEST_VERIF_ERROR;
+                	goto err;
+		}
+	} 
+#endif
 	ret = 0;
 
  err:
@@ -272,6 +362,11 @@ int perform_known_test_vectors_test(const char *sig, const char *hash, const cha
 		ext_printf("[%s] %30s selftests: known test vectors "
 			   "sig/verif %s\n", ret ? "-" : "+",
 			   cur_test->name, ret ? "failed" : "ok");
+#ifdef USE_CRYPTOFUZZ
+		if(cur_test->sig_type == ECDSA){
+			ext_printf("\t(RAW ECDSA for CRYPTOFUZZ also checked!)\n");
+		}
+#endif
 		if (ret) {
 			goto err;
 		}
@@ -318,6 +413,11 @@ static int rand_sig_verif_test_one(const ec_sig_mapping *sig,
 	ext_printf("[%s] %34s randtests: random import/export "
 		   "with sig/verif %s\n", ret ? "-" : "+", t.name,
 		   ret ? "failed" : "ok");
+#ifdef USE_CRYPTOFUZZ
+	if(sig->type == ECDSA){
+		ext_printf("\t(RAW ECDSA for CRYPTOFUZZ also checked!)\n");
+	}
+#endif
 
 	return ret;
 }
