@@ -101,6 +101,7 @@ int pub_key_is_initialized_and_type(const ec_pub_key *A,
  * Note that no sanity check is performed  by the function to verify key
  * is valid for params. Also note that no deep copy of pointed params is
  * performed.
+ * The buffer contains projective point coordinates.
  */
 int ec_pub_key_import_from_buf(ec_pub_key *pub_key, const ec_params *params,
 			       const u8 *pub_key_buf, u8 pub_key_buf_len,
@@ -126,13 +127,54 @@ int ec_pub_key_import_from_buf(ec_pub_key *pub_key, const ec_params *params,
 	return 0;
 }
 
-/* Export a public key to a buffer */
+/*
+ * Import a public key from a buffer with known EC parameters and algorithm
+ * Note that no sanity check is performed  by the function to verify key
+ * is valid for params. Also note that no deep copy of pointed params is
+ * performed.
+ * The buffer contains affine point coordinates.
+ */
+int ec_pub_key_import_from_aff_buf(ec_pub_key *pub_key, const ec_params *params,
+			       const u8 *pub_key_buf, u8 pub_key_buf_len,
+			       ec_sig_alg_type ec_key_alg)
+{
+	int ret;
+
+	MUST_HAVE((pub_key != NULL) && (params != NULL));
+
+	/* Import the projective point */
+	ret = prj_pt_import_from_aff_buf(&(pub_key->y),
+				     pub_key_buf, pub_key_buf_len,
+				     (ec_shortw_crv_src_t)&(params->ec_curve));
+	if (ret < 0) {
+		return -1;
+	}
+
+	/* Set key type and pointer to EC params */
+	pub_key->key_type = ec_key_alg;
+	pub_key->params = (const ec_params *)params;
+	pub_key->magic = PUB_KEY_MAGIC;
+
+	return 0;
+}
+
+/* Export a public key to a projective point buffer */
 int ec_pub_key_export_to_buf(const ec_pub_key *pub_key, u8 *pub_key_buf,
 			     u8 pub_key_buf_len)
 {
 	pub_key_check_initialized(pub_key);
 
 	return prj_pt_export_to_buf(&(pub_key->y), pub_key_buf,
+				    pub_key_buf_len);
+}
+
+/* Export a public key to an affine point buffer */
+int ec_pub_key_export_to_aff_buf(const ec_pub_key *pub_key, u8 *pub_key_buf,
+			     u8 pub_key_buf_len)
+{
+	pub_key_check_initialized(pub_key);
+
+	return prj_pt_export_to_aff_buf(&(pub_key->y), pub_key_buf,
 				    pub_key_buf_len);
 }
 
