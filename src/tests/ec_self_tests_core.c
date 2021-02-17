@@ -277,7 +277,7 @@ static int ec_sig_known_vector_tests_one(const ec_test_case *c)
 			goto err;
 		}
 		nn_export_to_buf(nonce, BYTECEIL(q_bit_len), &n_nonce);
-		if(BYTECEIL(q_bit_len) > sizeof(nonce)){
+		if((unsigned int)BYTECEIL(q_bit_len) > sizeof(nonce)){
 			failed_test = TEST_SIG_ERROR;
 			goto err;
 		}
