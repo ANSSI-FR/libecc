@@ -131,6 +131,12 @@ endif
 ifdef EXTRA_LIB_CFLAGS
 LIB_CFLAGS += $(EXTRA_LIB_CFLAGS)
 endif
+ifdef EXTRA_LIB_DYN_LDFLAGS
+LIB_DYN_LDFLAGS += $(EXTRA_LIB_DYN_LDFLAGS)
+endif
+ifdef EXTRA_BIN_CFLAGS
+BIN_CFLAGS += $(EXTRA_BIN_CFLAGS)
+endif
 ifdef EXTRA_BIN_LDFLAGS
 BIN_LDFLAGS += $(EXTRA_BIN_LDFLAGS)
 endif
@@ -190,12 +196,4 @@ endif
 # vectors self tests?
 ifeq ($(NOKNOWNTESTS), 1)
 CFLAGS += -DNO_KNOWN_VECTORS
-endif
-
-# Specific version for fuzzing with Cryptofuzz
-# Allow raw signature and verification APIs
-# which is DANGEROUS. Do not activate in production
-# mode!
-ifeq ($(CRYPTOFUZZ), 1)
-CFLAGS += -DUSE_CRYPTOFUZZ
 endif

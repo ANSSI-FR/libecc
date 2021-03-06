@@ -46,18 +46,25 @@ check_triplet_wordsize(){
 	# See https://gcc.gnu.org/bugzilla/show_bug.cgi?id=64277
 	if [ "$triplet" = "x86_64-w64-mingw32" ] || [ "$triplet" = "aarch64-linux-gnu" ]; then
 		extra_lib_cflags="-O2"
-	else
+		extra_bin_cflags=""
+        # NOTE: on darwin based clang, some of our options are too recent for the installed
+        # llvm ... Hence we remove warnings as errors here
+	elif [ "$triplet" = "i386-apple-darwin" ] || [ "$triplet" = "x86_64-apple-darwin" ] || [ "$triplet" = "x86_64h-apple-darwin" ]; then
+		extra_lib_cflags="-Wno-error"
+		extra_bin_cflags="-Wno-error"
+        else
 		extra_lib_cflags=""
+		extra_bin_cflags=""
 	fi
 	############## Release compilation
 	echo "======== COMPILING RELEASE FOR $triplet / $wordsize" 2>&1 | tee -a $COMPILATION_LOG_FILE
 	# Library, self tests and utils
-	docker run -e COMPLETE="$COMPLETE" -e BLINDING="$BLINDING" --rm -e CROSS_TRIPLE=$triplet -v $ROOT_DIR:$ROOT_DIR -w $ROOT_DIR -e EXTRA_LIB_CFLAGS="$extra_lib_cflags" multiarch/crossbuild make "$wordsize" 2>&1 | tee -a $COMPILATION_LOG_FILE
+	docker run -e COMPLETE="$COMPLETE" -e BLINDING="$BLINDING" --rm -e CROSS_TRIPLE=$triplet -v $ROOT_DIR:$ROOT_DIR -w $ROOT_DIR -e EXTRA_LIB_CFLAGS="$extra_lib_cflags" -e EXTRA_BIN_CFLAGS="$extra_bin_cflags" multiarch/crossbuild make "$wordsize" 2>&1 | tee -a $COMPILATION_LOG_FILE
 	mkdir -p $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"
 	check_and_copy $ROOT_DIR/build/ec_self_tests $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"/ec_self_tests_"$triplet"_word"$wordsize" $ERROR_LOG_FILE
 	check_and_copy $ROOT_DIR/build/ec_utils $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"/ec_utils_"$triplet"_word"$wordsize" $ERROR_LOG_FILE
 	# Examples
-	docker run -e COMPLETE="$COMPLETE" -e BLINDING="$BLINDING" --rm -e CROSS_TRIPLE=$triplet -v $ROOT_DIR:$ROOT_DIR/ -w $ROOT_DIR/src/examples multiarch/crossbuild make "$wordsize" 2>&1 | tee -a $COMPILATION_LOG_FILE
+	docker run -e COMPLETE="$COMPLETE" -e BLINDING="$BLINDING" --rm -e CROSS_TRIPLE=$triplet -v $ROOT_DIR:$ROOT_DIR/ -w $ROOT_DIR/src/examples -e EXTRA_BIN_CFLAGS="$extra_bin_cflags" multiarch/crossbuild make "$wordsize" 2>&1 | tee -a $COMPILATION_LOG_FILE
 	check_and_copy $ROOT_DIR/src/examples/nn_pollard_rho $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"/nn_pollard_rho_"$triplet"_word"$wordsize" $ERROR_LOG_FILE
 	check_and_copy $ROOT_DIR/src/examples/fp_square_residue $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"/fp_square_residue_"$triplet"_word"$wordsize" $ERROR_LOG_FILE
 	check_and_copy $ROOT_DIR/src/examples/curve_basic_examples $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"/curve_basic_examples_"$triplet"_word"$wordsize" $ERROR_LOG_FILE
@@ -69,12 +76,12 @@ check_triplet_wordsize(){
 	echo "======== COMPILING DEBUG FOR $triplet / $wordsize" 2>&1 | tee -a $COMPILATION_LOG_FILE
 	############## Release compilation
 	# Library, self tests and utils
-	docker run -e COMPLETE="$COMPLETE" -e BLINDING="$BLINDING" --rm -e CROSS_TRIPLE=$triplet -v $ROOT_DIR:$ROOT_DIR -w $ROOT_DIR -e EXTRA_LIB_CFLAGS="$extra_lib_cflags" multiarch/crossbuild make debug"$wordsize" 2>&1 | tee -a $COMPILATION_LOG_FILE
+	docker run -e COMPLETE="$COMPLETE" -e BLINDING="$BLINDING" --rm -e CROSS_TRIPLE=$triplet -v $ROOT_DIR:$ROOT_DIR -w $ROOT_DIR -e EXTRA_LIB_CFLAGS="$extra_lib_cflags" -e EXTRA_BIN_CFLAGS="$extra_bin_cflags" multiarch/crossbuild make debug"$wordsize" 2>&1 | tee -a $COMPILATION_LOG_FILE
 	mkdir -p $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"
 	check_and_copy $ROOT_DIR/build/ec_self_tests $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"/ec_self_tests_"$triplet"_word"$wordsize"_debug $ERROR_LOG_FILE
 	check_and_copy $ROOT_DIR/build/ec_utils $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"/ec_utils_"$triplet"_word"$wordsize"_debug $ERROR_LOG_FILE
 	# Examples
-	docker run -e COMPLETE="$COMPLETE" -e BLINDING="$BLINDING" --rm -e CROSS_TRIPLE=$triplet -v $ROOT_DIR:$ROOT_DIR/ -w $ROOT_DIR/src/examples multiarch/crossbuild make debug"$wordsize" 2>&1 | tee -a $COMPILATION_LOG_FILE
+	docker run -e COMPLETE="$COMPLETE" -e BLINDING="$BLINDING" --rm -e CROSS_TRIPLE=$triplet -v $ROOT_DIR:$ROOT_DIR/ -w $ROOT_DIR/src/examples -e EXTRA_BIN_CFLAGS="$extra_bin_cflags" multiarch/crossbuild make debug"$wordsize" 2>&1 | tee -a $COMPILATION_LOG_FILE
 	check_and_copy $ROOT_DIR/src/examples/nn_pollard_rho $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"/nn_pollard_rho_"$triplet"_word"$wordsize"_debug $ERROR_LOG_FILE
 	check_and_copy $ROOT_DIR/src/examples/fp_square_residue $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"/fp_square_residue_"$triplet"_word"$wordsize"_debug $ERROR_LOG_FILE
 	check_and_copy $ROOT_DIR/src/examples/curve_basic_examples $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"/curve_basic_examples_"$triplet"_word"$wordsize"_debug $ERROR_LOG_FILE
@@ -88,12 +95,12 @@ check_triplet_wordsize(){
 		############## Release compilation with static binaries (for emulation)
 		echo "======== COMPILING STATIC RELEASE FOR $triplet / $wordsize" 2>&1 | tee -a $COMPILATION_LOG_FILE
 		# Library, self tests and utils
-		docker run -e COMPLETE="$COMPLETE" -e BLINDING="$BLINDING" --rm -e CROSS_TRIPLE=$triplet -v $ROOT_DIR:$ROOT_DIR -w $ROOT_DIR -e EXTRA_LIB_CFLAGS="$extra_lib_cflags" -e BIN_LDFLAGS="-static" multiarch/crossbuild make "$wordsize" 2>&1 | tee -a $COMPILATION_LOG_FILE
+		docker run -e COMPLETE="$COMPLETE" -e BLINDING="$BLINDING" --rm -e CROSS_TRIPLE=$triplet -v $ROOT_DIR:$ROOT_DIR -w $ROOT_DIR -e EXTRA_LIB_CFLAGS="$extra_lib_cflags" -e EXTRA_BIN_CFLAGS="$extra_bin_cflags" -e BIN_LDFLAGS="-static" multiarch/crossbuild make "$wordsize" 2>&1 | tee -a $COMPILATION_LOG_FILE
 		mkdir -p $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"
 		check_and_copy $ROOT_DIR/build/ec_self_tests $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"/ec_self_tests_"$triplet"_word"$wordsize"_static $ERROR_LOG_FILE
 		check_and_copy $ROOT_DIR/build/ec_utils $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"/ec_utils_"$triplet"_word"$wordsize"_static $ERROR_LOG_FILE
 		# Examples
-		docker run -e COMPLETE="$COMPLETE" -e BLINDING="$BLINDING" --rm -e CROSS_TRIPLE=$triplet -v $ROOT_DIR:$ROOT_DIR/ -w $ROOT_DIR/src/examples -e BIN_LDFLAGS="-static" multiarch/crossbuild make "$wordsize" 2>&1 | tee -a $COMPILATION_LOG_FILE
+		docker run -e COMPLETE="$COMPLETE" -e BLINDING="$BLINDING" --rm -e CROSS_TRIPLE=$triplet -v $ROOT_DIR:$ROOT_DIR/ -w $ROOT_DIR/src/examples -e EXTRA_BIN_CFLAGS="$extra_bin_cflags" -e BIN_LDFLAGS="-static" multiarch/crossbuild make "$wordsize" 2>&1 | tee -a $COMPILATION_LOG_FILE
 		check_and_copy $ROOT_DIR/src/examples/nn_pollard_rho $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"/nn_pollard_rho_"$triplet"_word"$wordsize"_static $ERROR_LOG_FILE
 		check_and_copy $ROOT_DIR/src/examples/fp_square_residue $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"/fp_square_residue_"$triplet"_word"$wordsize"_static $ERROR_LOG_FILE
 		check_and_copy $ROOT_DIR/src/examples/curve_basic_examples $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"/curve_basic_examples_"$triplet"_word"$wordsize"_static $ERROR_LOG_FILE
@@ -105,12 +112,12 @@ check_triplet_wordsize(){
 		echo "======== COMPILING STATIC DEBUG FOR $triplet / $wordsize" 2>&1 | tee -a $COMPILATION_LOG_FILE
 		############## Release compilation with static binaries (for emulation)
 		# Self tests and utils
-		docker run -e COMPLETE="$COMPLETE" -e BLINDING="$BLINDING" --rm -e CROSS_TRIPLE=$triplet -v $ROOT_DIR:$ROOT_DIR -w $ROOT_DIR -e BIN_LDFLAGS="-static" multiarch/crossbuild make debug"$wordsize" 2>&1 | tee -a $COMPILATION_LOG_FILE
+		docker run -e COMPLETE="$COMPLETE" -e BLINDING="$BLINDING" --rm -e CROSS_TRIPLE=$triplet -v $ROOT_DIR:$ROOT_DIR -w $ROOT_DIR -e EXTRA_LIB_CFLAGS="$extra_lib_cflags" -e EXTRA_BIN_CFLAGS="$extra_bin_cflags" -e BIN_LDFLAGS="-static" multiarch/crossbuild make debug"$wordsize" 2>&1 | tee -a $COMPILATION_LOG_FILE
 		mkdir -p $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"
 		check_and_copy $ROOT_DIR/build/ec_self_tests $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"/ec_self_tests_"$triplet"_word"$wordsize"_debug_static $ERROR_LOG_FILE
 		check_and_copy $ROOT_DIR/build/ec_utils $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"/ec_utils_"$triplet"_word"$wordsize"_debug_static $ERROR_LOG_FILE
 		# Examples
-		docker run -e COMPLETE="$COMPLETE" -e BLINDING="$BLINDING" --rm -e CROSS_TRIPLE=$triplet -v $ROOT_DIR:$ROOT_DIR/ -w $ROOT_DIR/src/examples -e BIN_LDFLAGS="-static" multiarch/crossbuild make debug"$wordsize" 2>&1 | tee -a $COMPILATION_LOG_FILE
+		docker run -e COMPLETE="$COMPLETE" -e BLINDING="$BLINDING" --rm -e CROSS_TRIPLE=$triplet -v $ROOT_DIR:$ROOT_DIR/ -w $ROOT_DIR/src/examples -e EXTRA_BIN_CFLAGS="$extra_bin_cflags" -e BIN_LDFLAGS="-static" multiarch/crossbuild make debug"$wordsize" 2>&1 | tee -a $COMPILATION_LOG_FILE
 		check_and_copy $ROOT_DIR/src/examples/nn_pollard_rho $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"/nn_pollard_rho_"$triplet"_word"$wordsize"_debug_static $ERROR_LOG_FILE
 		check_and_copy $ROOT_DIR/src/examples/fp_square_residue $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"/fp_square_residue_"$triplet"_word"$wordsize"_debug_static $ERROR_LOG_FILE
 		check_and_copy $ROOT_DIR/src/examples/curve_basic_examples $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"/curve_basic_examples_"$triplet"_word"$wordsize"_debug_static $ERROR_LOG_FILE

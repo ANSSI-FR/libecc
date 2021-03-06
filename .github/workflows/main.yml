@@ -1,0 +1,95 @@
+name: libecc
+
+# Run this workflow every time a new commit pushed to your repository
+on: push
+
+jobs:
+  vanilla_tests:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        cc: [gcc, clang]
+        blinding: [0, 1]
+        complete: [0, 1]
+        ladder: [0, 1]
+        test_python_expand_script: [0, 1]
+        cryptofuzz: [0, 1]
+        optflags: ["", "-O0", "-O1", "-O2"]
+    steps:
+      # Checkout repository
+      - name: checkout repository
+        uses: actions/checkout@v2      
+      # Run actions
+      # Vanilla tests
+      - name: vanilla tests
+        env:
+          CC: ${{ matrix.cc }}
+          BLINDING: ${{ matrix.blinding }}
+          COMPLETE: ${{ matrix.complete }}
+          LADDER: ${{ matrix.ladder }}
+          TEST_PYTHON_EXPAND_SCRIPT: ${{ matrix.test_python_expand_script }}
+          CRYPTOFUZZ: ${{ matrix.cryptofuzz }}
+          EXTRA_LIB_CFLAGS: ${{ matrix.optflags }}
+          EXTRA_BIN_CFLAGS: ${{ matrix.optflags }}
+        shell: bash
+        run: |
+          # Test our Python libecc expanding script
+          # Python2
+          if [ "${TEST_PYTHON_EXPAND_SCRIPT}" == 1 ]; then echo "y" | python2 scripts/expand_libecc.py --remove-all && PYTHON=python2 sh scripts/gen_curves_tests.sh && make clean && make && ./build/ec_self_tests vectors && ./build/ec_self_tests rand; fi;
+          # Python3
+          if [ "${TEST_PYTHON_EXPAND_SCRIPT}" == 1 ]; then echo "y" | python3 scripts/expand_libecc.py --remove-all && PYTHON=python3 sh scripts/gen_curves_tests.sh && make clean && make && ./build/ec_self_tests vectors && ./build/ec_self_tests rand; fi;
+          # Clean
+          if [ "${TEST_PYTHON_EXPAND_SCRIPT}" == 1 ]; then echo "y" | python2 scripts/expand_libecc.py --remove-all && make clean; fi;
+          # Vanilla tests
+          make && ./build/ec_self_tests vectors && ./build/ec_self_tests rand && cd src/arithmetic_tests/ && make clean && make && make clean && cd -;
+          cd src/examples/ && make clean && make && cd - && make clean;
+          make 16 && ./build/ec_self_tests vectors && ./build/ec_self_tests rand && cd src/arithmetic_tests/ && make clean && make 16 && make clean && cd -;
+          cd src/examples/ && make clean && make 16 && cd - && make clean;
+          make 32 && ./build/ec_self_tests vectors && ./build/ec_self_tests rand && cd src/arithmetic_tests/ && make clean && make 32 && make clean && cd -;
+          cd src/examples/ && make clean && make 32 && cd - && make clean;
+          make 64 && ./build/ec_self_tests vectors && ./build/ec_self_tests rand && cd src/arithmetic_tests/ && make clean && make 64 && make clean && cd -;
+          cd src/examples/ && make clean && make 64 && cd - && make clean;
+          make debug && ./build/ec_self_tests vectors && ./build/ec_self_tests rand && cd src/arithmetic_tests/ && make clean && make debug && make clean && cd -;
+          cd src/examples/ && make clean && make debug && cd - && make clean;
+          make debug16 && ./build/ec_self_tests vectors && ./build/ec_self_tests rand && cd src/arithmetic_tests/ && make clean && make debug16 && make clean && cd -;
+          cd src/examples/ && make clean && make debug16 && cd - && make clean;
+          make debug32 && ./build/ec_self_tests vectors && ./build/ec_self_tests rand && cd src/arithmetic_tests/ && make clean && make debug32 && make clean && cd -;
+          cd src/examples/ && make clean && make debug32 && cd - && make clean;
+          make debug64 && ./build/ec_self_tests vectors && ./build/ec_self_tests rand && cd src/arithmetic_tests/ && make clean && make debug64 && make clean && cd -;
+          cd src/examples/ && make clean && make debug64 && cd - && make clean;
+
+  cross_build_tests:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        blinding: [0, 1]
+        complete: [0, 1]
+        ladder: [0, 1]
+        cross_target: [arm-linux-gnueabi, arm-linux-gnueabihf, powerpc64le-linux-gnu, aarch64-linux-gnu, mipsel-linux-gnu, i386-apple-darwin, x86_64-apple-darwin, x86_64h-apple-darwin, i686-w64-mingw32, x86_64-w64-mingw32]
+        cross_size: [16, 32, 64]
+    steps:
+      # Checkout repository
+      - name: checkout repository
+        uses: actions/checkout@v2      
+      # Run actions
+      # Vanilla tests
+      - name: crossbuild tests
+        env:
+          BLINDING: ${{ matrix.blinding }}
+          COMPLETE: ${{ matrix.complete }}
+          LADDER: ${{ matrix.ladder }}
+          CROSS_TARGET: ${{ matrix.cross_target }}
+          CROSS_SIZE: ${{ matrix.cross_size }}
+        shell: bash
+        run: |
+          # Install stuff
+          sudo dpkg --add-architecture i386;
+          sudo apt-get update;
+          sudo apt-get -y install qemu-user-static wine-stable wine32 wine64;
+          # Cross build jobs
+          docker pull multiarch/crossbuild;
+          sh scripts/crossbuild.sh -triplet "${CROSS_TARGET}" "${CROSS_SIZE}";
+          # Check for errors
+          [ ! -z "$(ls -A scripts/crossbuild_out/error_log/)" ] && exit -1;
+          # Test generated cross binaries through qemu-static;
+          sh scripts/crossrun.sh -triplet "${CROSS_TARGET}" "${CROSS_SIZE}";

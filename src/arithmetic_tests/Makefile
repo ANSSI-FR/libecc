@@ -5,6 +5,8 @@ include $(ROOT_DIR)/common.mk
 
 BIN_CFLAGS += -I$(ROOT_DIR)/src/ -Wno-shadow -Wno-conversion -Wno-cast-align -Wno-unused-macros
 
+NUM_TESTS ?= 1000
+
 all: bin tests
 
 bin:
@@ -14,7 +16,7 @@ tests:	bin
 	# Get the word size and maximum nn bit length
 	$(eval WORDSZ := $(shell ./arithmetic_tests -info | cut -d ' ' -f1))
 	$(eval MAXBITS := $(shell ./arithmetic_tests -info | cut -d ' ' -f2))
-	python2 arithmetic_tests_generator.py stdout $(WORDSZ) $(MAXBITS) 1000 | ./arithmetic_tests
+	python2 arithmetic_tests_generator.py stdout $(WORDSZ) $(MAXBITS) $(NUM_TESTS) | ./arithmetic_tests
 
 clean:
 	@rm -f arithmetic_tests
