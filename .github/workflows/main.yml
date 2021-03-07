@@ -57,6 +57,7 @@ jobs:
           cd src/examples/ && make clean && make debug32 && cd - && make clean;
           make debug64 && ./build/ec_self_tests vectors && ./build/ec_self_tests rand && cd src/arithmetic_tests/ && make clean && make debug64 && make clean && cd -;
           cd src/examples/ && make clean && make debug64 && cd - && make clean;
+        continue-on-error: true
 
   cross_build_tests:
     runs-on: ubuntu-latest
@@ -94,3 +95,4 @@ jobs:
           [ ! -z "$(ls -A scripts/crossbuild_out/error_log/)" ] && exit -1;
           # Test generated cross binaries through qemu-static;
           sh scripts/crossrun.sh -triplet "${CROSS_TARGET}" "${CROSS_SIZE}";
+        continue-on-error: true
