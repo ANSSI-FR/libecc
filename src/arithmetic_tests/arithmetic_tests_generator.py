@@ -480,10 +480,12 @@ test_funcs["NN_MOD"] = test_NN_MOD
 
 def test_NN_DIVREM(op):
     """ Generate tests for NN_DIVREM """
-    # random value for input numbers
+    # random value for input numbers with second one non zero
     nn_c = get_random_bigint(wlen, MAX_INPUT_PARAM_WLEN)
-    nn_d = get_random_bigint(wlen, MAX_INPUT_PARAM_WLEN)
-
+    nn_d = 0
+    while nn_d == 0:
+        nn_d = get_random_bigint(wlen, MAX_INPUT_PARAM_WLEN)   
+        
     nn_exp_q = (nn_c // nn_d)
     nn_exp_r = nn_c % nn_d
 
@@ -532,8 +534,10 @@ test_funcs["NN_GCD"] = test_NN_GCD
 
 def test_NN_MODINV(op):
     """ Generate tests for NN_MODINV """
-    # random value for input numbers
-    nn_x = get_random_bigint(wlen, MAX_INPUT_PARAM_WLEN)
+    # random value for input numbers, first one non zero
+    nn_x = 0
+    while nn_x == 0:
+        nn_x = get_random_bigint(wlen, MAX_INPUT_PARAM_WLEN)
     nn_m = get_random_bigint(wlen, MAX_INPUT_PARAM_WLEN)
 
     try:

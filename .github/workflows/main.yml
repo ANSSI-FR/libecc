@@ -72,7 +72,7 @@ jobs:
       - name: checkout repository
         uses: actions/checkout@v2      
       # Run actions
-      # Vanilla tests
+      # Cross build and cross run tests
       - name: crossbuild tests
         env:
           BLINDING: ${{ matrix.blinding }}
@@ -80,6 +80,7 @@ jobs:
           LADDER: ${{ matrix.ladder }}
           CROSS_TARGET: ${{ matrix.cross_target }}
           CROSS_SIZE: ${{ matrix.cross_size }}
+          CRYPTOFUZZ: 1
         shell: bash
         run: |
           # Install stuff

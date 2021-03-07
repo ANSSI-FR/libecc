@@ -34,7 +34,11 @@ static void _fp_pow(fp_t out, fp_src_t base, nn_src_t exp)
 	nn_check_initialized(exp);
 	fp_init(out, base->ctx);
 
-	MUST_HAVE(!nn_iszero(exp));
+	/* Exponentiating to zero provides 1 */
+	if(nn_iszero(exp)){
+		fp_one(out);
+		return;
+	}
 
 	fp_init(&base_monty, out->ctx);
 	fp_init(&mul_monty, out->ctx);
