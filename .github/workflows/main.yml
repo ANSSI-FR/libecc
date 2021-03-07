@@ -7,6 +7,7 @@ jobs:
   vanilla_tests:
     runs-on: ubuntu-latest
     strategy:
+      max-parallel: 10
       matrix:
         cc: [gcc, clang]
         blinding: [0, 1]
@@ -62,6 +63,7 @@ jobs:
   cross_build_tests:
     runs-on: ubuntu-latest
     strategy:
+      max-parallel: 10
       matrix:
         blinding: [0, 1]
         complete: [0, 1]
