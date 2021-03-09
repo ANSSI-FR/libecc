@@ -98,7 +98,7 @@ void fp_ctx_init_from_p(fp_ctx_t ctx, nn_src_t p_in)
 	 * In order for our reciprocal division routines to work, it is
 	 * expected that the bit length (including leading zeroes) of
 	 * input prime p is >= 2 * wlen where wlen is the number of bits
-	 * of a word size. Thus, in order
+	 * of a word size.
 	 */
 	if (p.wlen < 2) {
 		nn_set_wlen(&p, 2);
@@ -211,7 +211,10 @@ void fp_one(fp_t out)
 {
 	fp_check_initialized(out);
 
-	nn_set_word_value(&(out->fp_val), 1);
+	/* One is indeed 1 except if p = 1 where it is 0 */
+	word_t val = nn_isone(&(out->ctx->p)) ? 0 : 1;
+	nn_set_word_value(&(out->fp_val), val);
+
 	/* Set the wlen to the length of p */
 	nn_set_wlen(&(out->fp_val), out->ctx->p.wlen);
 }
