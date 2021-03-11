@@ -122,7 +122,7 @@ void nn_cnd_add(int cnd, nn_t out, nn_src_t in1, nn_src_t in2)
 		 * the time taken by further operations on it will vary.
 		 */
 		out->val[out->wlen] = carry;
-		out->wlen += carry;
+		out->wlen += (u8)carry;
 	}
 }
 
@@ -191,7 +191,7 @@ static void nn_add_word(nn_t out, nn_src_t in1, word_t w)
 		 * the time taken by further operations on it will vary.
 		 */
 		out->val[out->wlen] = carry;
-		out->wlen += carry;
+		out->wlen += (u8)carry;
 	}
 }
 
