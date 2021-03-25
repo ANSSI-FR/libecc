@@ -1,0 +1,44 @@
+name: libecc
+
+# Run this workflow every time a new commit pushed to your repository
+on: push
+
+jobs:
+  cross_build_tests:
+    runs-on: ubuntu-latest
+    strategy:
+      #max-parallel: 10
+      matrix:
+        blinding: [0, 1]
+        complete: [0, 1]
+        ladder: [0, 1]
+        cross_target: [arm-linux-gnueabi, arm-linux-gnueabihf, aarch64-linux-gnu]
+        cross_size: [16, 32, 64]
+    steps:
+      # Checkout repository
+      - name: checkout repository
+        uses: actions/checkout@v2      
+      # Run actions
+      # Cross build and cross run tests
+      - name: crossbuild tests
+        env:
+          BLINDING: ${{ matrix.blinding }}
+          COMPLETE: ${{ matrix.complete }}
+          LADDER: ${{ matrix.ladder }}
+          CROSS_TARGET: ${{ matrix.cross_target }}
+          CROSS_SIZE: ${{ matrix.cross_size }}
+          CRYPTOFUZZ: 1
+        shell: bash
+        run: |
+          # Install stuff
+          sudo dpkg --add-architecture i386;
+          sudo apt-get update;
+          sudo apt-get -y install qemu-user-static wine-stable wine32 wine64;
+          # Cross build jobs
+          docker pull multiarch/crossbuild;
+          sh scripts/crossbuild.sh -triplet "${CROSS_TARGET}" "${CROSS_SIZE}";
+          # Check for errors
+          [ ! -z "$(ls -A scripts/crossbuild_out/error_log/)" ] && exit -1;
+          # Test generated cross binaries through qemu-static;
+          sh scripts/crossrun.sh -triplet "${CROSS_TARGET}" "${CROSS_SIZE}";
+        continue-on-error: true

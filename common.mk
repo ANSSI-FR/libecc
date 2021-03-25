@@ -205,3 +205,7 @@ endif
 ifeq ($(CRYPTOFUZZ), 1)
 CFLAGS += -DUSE_CRYPTOFUZZ
 endif
+
+ifeq ($(ASSERT_PRINT), 1)
+CFLAGS += -DUSE_ASSERT_PRINT
+endif
