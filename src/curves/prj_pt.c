@@ -134,14 +134,7 @@ void prj_pt_copy(prj_pt_t out, prj_pt_src_t in)
 {
 	prj_pt_check_initialized(in);
 
-	/* If output is already initialized, check curve */
-	if((out != NULL) && (out->magic == PRJ_PT_MAGIC)
-                  && (out->crv != NULL)){
-		MUST_HAVE(out->crv == in->crv);
-	}
-	else{
-		prj_pt_init(out, in->crv);
-	}
+	prj_pt_init(out, in->crv);
 
 	fp_copy(&(out->X), &(in->X));
 	fp_copy(&(out->Y), &(in->Y));
