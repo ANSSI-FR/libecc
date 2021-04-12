@@ -70,10 +70,10 @@
 #define KNOWN_FACT(x) assert(x)
 #else
 
-#if defined(WITH_STDLIB) && defined(USE_ASSERT_PRINT)
+#if defined(USE_ASSERT_PRINT)
 #include "../external_deps/print.h"
 /* Print some information and exit if we are asked to */
-#define MUST_HAVE(x) do { if (!(x)) { ext_printf("MUST_HAVE error: %s at %d\n", __FILE__,__LINE__);} } while (0)
+#define MUST_HAVE(x) do { if (!(x)) { ext_printf("MUST_HAVE error: %s at %d\n", __FILE__,__LINE__); while(1){}; } } while (0)
 #else
 #define MUST_HAVE(x) do { if (!(x)) { while (1); } } while (0)
 #endif
