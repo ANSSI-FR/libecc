@@ -50,7 +50,7 @@
  */
 
 /****** AFL and other general purpose fuzzers case *******************/
-#if defined(__AFL_COMPILER) || defined(FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION)
+#if (defined(__AFL_COMPILER) || defined(FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION)) && !defined(USE_CRYPTOFUZZ)
 /* When we use AFL (American Fuzzy Lop) style fuzzing, we do not 
  * want asserts resulting in SIGABRT interpreted as a 'crash', 
  * or while(1) interpreted as a 'hang'. Hence we force an exit(-1) 
