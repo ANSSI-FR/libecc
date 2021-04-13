@@ -181,17 +181,22 @@ static int nn_modinv_odd(nn_t out, nn_src_t x, nn_src_t m)
  *
  * Return 0 if x has no reciprocal modulo m, out is zeroed.
  * Return 1 if x has reciprocal modulo m.
+ *
+ * The function supports aliasing.
  */
-int nn_modinv(nn_t out, nn_src_t x, nn_src_t m)
+int nn_modinv(nn_t _out, nn_src_t x, nn_src_t m)
 {
 	int sign, ret;
 	nn u, v;
+	/* Out to support aliasing */
+	nn out;
 
 	nn_check_initialized(x);
 	nn_check_initialized(m);
+
 	
 	/* Initialize out */
-	nn_init(out, 0);
+	nn_init(&out, 0);
 
 	if (nn_isodd(m)) {
 	        if(nn_cmp(x, m) >= 0){
@@ -201,34 +206,41 @@ int nn_modinv(nn_t out, nn_src_t x, nn_src_t m)
 			nn x_mod_m;
 			nn_init(&x_mod_m, 0);
         	        nn_mod(&x_mod_m, x, m);
-			ret = nn_modinv_odd(out, &x_mod_m, m);
+			ret = nn_modinv_odd(&out, &x_mod_m, m);
 			nn_uninit(&x_mod_m);
+			nn_copy(_out, &out);
 			return ret;
         	}
 		else{
-			return nn_modinv_odd(out, x, m);
+			ret = nn_modinv_odd(&out, x, m);
+			nn_copy(_out, &out);
+			nn_uninit(&out);
+			return ret;
 		}
 	}
 	/* Now m is even */
 	if (!nn_isodd(x)) {
-		nn_zero(out);
+		nn_zero(_out);
+		nn_uninit(&out);
 		return 0;
 	}
 
 	nn_init(&u, 0);
 	nn_init(&v, 0);
 
-	sign = nn_xgcd(out, &u, &v, x, m);
-	if (!nn_isone(out)) {
+	sign = nn_xgcd(&out, &u, &v, x, m);
+	if (!nn_isone(&out)) {
 		ret = 0;
-		nn_zero(out);
+		nn_zero(&out);
 	} else {
 		ret = 1;
-		nn_mod(out, &u, m);
+		nn_mod(&out, &u, m);
 		if (sign == -1) {
-			nn_sub(out, m, out);
+			nn_sub(&out, m, &out);
 		}
 	}
+	nn_copy(_out, &out);
+	nn_uninit(&out);
 	nn_uninit(&u);
 	nn_uninit(&v);
 
@@ -255,23 +267,28 @@ static inline void nn_sub_mod_2exp(nn_t A, nn_src_t B)
  * Invert x modulo 2^exp using Hensel lifting.
  * Returns 0 if x is even, and 1 if x is odd.
  * Done in *constant time*.
+ *
+ * The function supports aliasing.
  */
-int nn_modinv_2exp(nn_t out, nn_src_t x, bitcnt_t exp)
+int nn_modinv_2exp(nn_t _out, nn_src_t x, bitcnt_t exp)
 {
 	bitcnt_t cnt;
 	u8 exp_wlen = (u8)BIT_LEN_WORDS(exp);
 	bitcnt_t exp_cnt = exp % WORD_BITS;
 	word_t mask = (exp_cnt == 0) ? WORD_MASK : (word_t)((WORD(1) << exp_cnt) - WORD(1));
 	nn tmp_sqr, tmp_mul;
+	/* for aliasing */
+	nn out;
 
 	nn_check_initialized(x);
 
-	nn_init(out, 0);
+	nn_init(&out, 0);
 	nn_init(&tmp_sqr, 0);
 	nn_init(&tmp_mul, 0);
 
 	if (!nn_isodd(x)) {
-		nn_zero(out);
+		nn_zero(_out);
+		nn_uninit(&out);
 		return 0;
 	}
 
@@ -279,16 +296,16 @@ int nn_modinv_2exp(nn_t out, nn_src_t x, bitcnt_t exp)
 	 * Inverse modulo 2.
 	 */
 	cnt = 1;
-	nn_one(out);
+	nn_one(&out);
 
 	/*
 	 * Inverse modulo 2^(2^i) <= 2^WORD_BITS.
 	 * Assumes WORD_BITS is a power of two.
 	 */
 	for (; cnt < WORD_MIN(WORD_BITS, exp); cnt <<= 1) {
-		nn_sqr_low(&tmp_sqr, out, out->wlen);
-		nn_mul_low(&tmp_mul, &tmp_sqr, x, out->wlen);
-		nn_lshift_fixedlen(out, out, 1);
+		nn_sqr_low(&tmp_sqr, &out, out.wlen);
+		nn_mul_low(&tmp_mul, &tmp_sqr, x, out.wlen);
+		nn_lshift_fixedlen(&out, &out, 1);
 		/*
 		 * Allowing "negative" results for a subtraction modulo
 		 * a power of two would allow to use directly:
@@ -304,38 +321,40 @@ int nn_modinv_2exp(nn_t out, nn_src_t x, bitcnt_t exp)
 		 * borrow. The result modulo 2^(2^i) is correct whether the
 		 * borrow occurs or not.
 		 */
-		nn_sub_mod_2exp(out, &tmp_mul);
+		nn_sub_mod_2exp(&out, &tmp_mul);
 	}
 
 	/*
 	 * Inverse modulo 2^WORD_BITS < 2^(2^i) < 2^exp.
 	 */
 	for (; cnt < ((exp + 1) >> 1); cnt <<= 1) {
-		nn_set_wlen(out, (2 * out->wlen));
-		nn_sqr_low(&tmp_sqr, out, out->wlen);
-		nn_mul_low(&tmp_mul, &tmp_sqr, x, out->wlen);
-		nn_lshift_fixedlen(out, out, 1);
-		nn_sub_mod_2exp(out, &tmp_mul);
+		nn_set_wlen(&out, (2 * out.wlen));
+		nn_sqr_low(&tmp_sqr, &out, out.wlen);
+		nn_mul_low(&tmp_mul, &tmp_sqr, x, out.wlen);
+		nn_lshift_fixedlen(&out, &out, 1);
+		nn_sub_mod_2exp(&out, &tmp_mul);
 	}
 
 	/*
 	 * Inverse modulo 2^(2^i + j) >= 2^exp.
 	 */
 	if (exp > WORD_BITS) {
-		nn_set_wlen(out, exp_wlen);
-		nn_sqr_low(&tmp_sqr, out, out->wlen);
-		nn_mul_low(&tmp_mul, &tmp_sqr, x, out->wlen);
-		nn_lshift_fixedlen(out, out, 1);
-		nn_sub_mod_2exp(out, &tmp_mul);
+		nn_set_wlen(&out, exp_wlen);
+		nn_sqr_low(&tmp_sqr, &out, out.wlen);
+		nn_mul_low(&tmp_mul, &tmp_sqr, x, out.wlen);
+		nn_lshift_fixedlen(&out, &out, 1);
+		nn_sub_mod_2exp(&out, &tmp_mul);
 	}
 
 	/*
 	 * Inverse modulo 2^exp.
 	 */
 	{
-		out->val[exp_wlen - 1] &= mask;
+		out.val[exp_wlen - 1] &= mask;
 	}
 
+	nn_copy(_out, &out);
+	nn_uninit(&out);
 	nn_uninit(&tmp_sqr);
 	nn_uninit(&tmp_mul);
 	return 1;
