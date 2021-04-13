@@ -48,6 +48,8 @@
  * tools to work on the code. The macro can be used in order to make
  * those conditions explicit.
  */
+
+/****** AFL and other general purpose fuzzers case *******************/
 #if defined(__AFL_COMPILER) || defined(FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION)
 /* When we use AFL (American Fuzzy Lop) style fuzzing, we do not 
  * want asserts resulting in SIGABRT interpreted as a 'crash', 
@@ -62,14 +64,43 @@
 #define SHOULD_HAVE(x)
 #define KNOWN_FACT(x)
 
-#else
+/****** CRYPTOFUZZ specific case ***********************************/
+#elif defined(USE_CRYPTOFUZZ) /* CRYPTOFUZZ mode */
+/*
+ * In CRYPTOFUZZ mode, we use the setjmp/longjmp paradigm in MUST_HAVE
+ * to avoid libfuzzer spurious bug detection.
+ */
+#ifndef WITH_STDLIB
+#error "CRYPTOFUZZ Fuzzing needs the STDLIB!"
+#endif
+#ifndef _POSIX_SOURCE
+#define _POSIX_SOURCE /* sig versions of set/longjmp need POSIX */
+#endif
+#include <setjmp.h>
+extern sigjmp_buf cryptofuzz_jmpbuf;
+extern unsigned char cryptofuzz_longjmp_triggered;
+#define MUST_HAVE(x) do { if (!(x)) { cryptofuzz_longjmp_triggered = 1;  siglongjmp(cryptofuzz_jmpbuf, 1); } } while (0)
+#define SHOULD_HAVE(x)
+#define KNOWN_FACT(x)
+
+/****** Regular DEBUG and production modes cases  ****************/
+#else /* DEBUG and production modes */
 #if defined(DEBUG)
+/*
+ * In DEBUG mode, we enforce a regular assert in MUST_HAVE, SHOULD_HAVE and
+ * KNOWN_FACT.
+ */
 #include <assert.h>
 #define MUST_HAVE(x) assert(x)
 #define SHOULD_HAVE(x) assert(x)
 #define KNOWN_FACT(x) assert(x)
 #else
-
+/* 
+ * In regular production mode, SHOULD_HAVE and KNOWN_FACT are void for
+ * performance reasons. MUST_HAVE is either a while(1) endless loop,
+ * or an ext_printf with a while(1) for tracing the origin of the error
+ * when necessary (if USE_ASSERT_PRINT is specified by the user).
+ */
 #if defined(USE_ASSERT_PRINT)
 #include "../external_deps/print.h"
 /* Print some information and exit if we are asked to */
@@ -80,7 +111,7 @@
 #define SHOULD_HAVE(x)
 #define KNOWN_FACT(x)
 #endif
-#endif /* AFL_FUZZ or FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION */
+#endif
 
 #define LOCAL_MAX(x, y) (((x) > (y)) ? (x) : (y))
 #define LOCAL_MIN(x, y) (((x) < (y)) ? (x) : (y))
