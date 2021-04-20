@@ -129,7 +129,11 @@ int ecdsa_sign_raw(struct ec_sign_context *ctx, const u8 *input, u8 inputlen, u8
 	nn_mod(&e, &tmp2, q);
 	dbg_nn_print("e", &e);
 
+/*
+     NOTE: the restart label is removed in CRYPTOFUZZ mode as
+     we trigger MUST_HAVE instead of restarting in this mode.
  restart:
+*/
 	/* 4. get a random value k in ]0,q[ */
 	/* NOTE: copy our input nonce if not NULL */
 	if(nonce != NULL){
