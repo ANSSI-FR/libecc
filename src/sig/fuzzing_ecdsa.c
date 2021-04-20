@@ -197,9 +197,10 @@ int ecdsa_sign_raw(struct ec_sign_context *ctx, const u8 *input, u8 inputlen, u8
 	dbg_nn_print("r", &r);
 
 	/* 7. If r is 0, restart the process at step 4. */
-	if (nn_iszero(&r)) {
-		goto restart;
-	}
+	/* NOTE: for the CRYPTOFUZZ mode, we do not restart
+	 * the procedure but throw an assert exception instead.
+	 */
+	MUST_HAVE(!nn_iszero(&r));
 
 	/* Export r */
 	nn_export_to_buf(sig, q_len, &r);
@@ -217,9 +218,10 @@ int ecdsa_sign_raw(struct ec_sign_context *ctx, const u8 *input, u8 inputlen, u8
 	dbg_nn_print("x*r mod q", &tmp);
 
 	/* 8. If e == rx, restart the process at step 4. */
-	if (!nn_cmp(&e, &tmp)) {
-		goto restart;
-	}
+	/* NOTE: for the CRYPTOFUZZ mode, we do not restart
+	 * the procedure but throw an assert exception instead.
+	 */
+	MUST_HAVE(nn_cmp(&e, &tmp));
 
 	/* 9. Compute s = k^-1 * (xr + e) mod q */
 
