@@ -251,9 +251,10 @@ int ecdsa_sign_raw(struct ec_sign_context *ctx, const u8 *input, u8 inputlen, u8
 	dbg_nn_print("s", &s);
 
 	/* 10. If s is 0, restart the process at step 4. */
-	if (nn_iszero(&s)) {
-		goto restart;
-	}
+	/* NOTE: for the CRYPTOFUZZ mode, we do not restart
+	 * the procedure but throw an assert exception instead.
+	 */
+	MUST_HAVE(!nn_iszero(&s));
 
 	/* 11. return (r,s) */
 	nn_export_to_buf(sig + q_len, q_len, &s);
