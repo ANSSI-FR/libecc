@@ -51,7 +51,9 @@ void eckcdsa_init_pub_key(ec_pub_key *out_pub, ec_priv_key *in_priv)
 	G = &(in_priv->params->ec_gen);
 	nn_modinv(&xinv, &(in_priv->x), &(in_priv->params->ec_gen_order));
 	/* Use blinding with scalar_b when computing point scalar multiplication */
-	prj_pt_mul_monty_blind(&(out_pub->y), &xinv, G, &scalar_b, &(in_priv->params->ec_gen_order));
+	if(prj_pt_mul_monty_blind(&(out_pub->y), &xinv, G, &scalar_b, &(in_priv->params->ec_gen_order))){
+		goto err;
+	}
 	nn_uninit(&xinv);
 	nn_uninit(&scalar_b);
 

@@ -29,6 +29,8 @@
 /* Includes for fuzzing */
 #ifdef USE_CRYPTOFUZZ
 #include "fuzzing_ecdsa.h"
+#include "fuzzing_ecgdsa.h"
+#include "fuzzing_ecrdsa.h"
 #endif
 
 #if (EC_MAX_SIGLEN == 0)

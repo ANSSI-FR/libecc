@@ -13,12 +13,33 @@
  *  This software is licensed under a dual BSD and GPL v2 license.
  *  See LICENSE file at the root folder of the project.
  */
+
+
+#include "../libsig.h"
+
+/* Some mockup code to be able to compile in CRYPTOFUZZ mode although
+ * setjmp/longjmp are used.
+ */
+#if defined(USE_CRYPTOFUZZ) /* CRYPTOFUZZ mode */
+
+sigjmp_buf cryptofuzz_jmpbuf;
+unsigned char cryptofuzz_longjmp_triggered = 0;
+#define cryptofuzz_save() do {                                                                  \
+        if(sigsetjmp(cryptofuzz_jmpbuf, 1) && (cryptofuzz_longjmp_triggered == 0)){             \
+                exit(-1);                                                                       \
+        }                                                                                       \
+        if(cryptofuzz_longjmp_triggered == 1){                                                  \
+                ext_printf("ASSERT error caught through cryptofuzz_jmpbuf\n");                  \
+                exit(-1);                                                                       \
+        }                                                                                       \
+} while(0);                                                                                     
+#endif
+
 #ifdef WITH_STDLIB
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
 #endif
-#include "../libsig.h"
 
 #define HDR_MAGIC        0x34215609
 
@@ -1214,6 +1235,13 @@ static void print_help(const char *prog_name)
 
 int main(int argc, char *argv[])
 {
+	/* Some mockup code to be able to compile in CRYPTOFUZZ mode although
+	 * setjmp/longjmp are used.
+	 */
+#if defined(USE_CRYPTOFUZZ) /* CRYPTOFUZZ mode */
+	/* Save our context */
+	cryptofuzz_save()
+#endif
 
 	if (argc < 2) {
 		print_help(argv[0]);

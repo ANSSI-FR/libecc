@@ -13,9 +13,30 @@
  *  This software is licensed under a dual BSD and GPL v2 license.
  *  See LICENSE file at the root folder of the project.
  */
+
 #include "../external_deps/print.h"
 #include "../utils/utils.h"
 #include "../libsig.h"
+
+/* Some mockup code to be able to compile in CRYPTOFUZZ mode although
+ * setjmp/longjmp are used.
+ */
+#if defined(USE_CRYPTOFUZZ) /* CRYPTOFUZZ mode */
+sigjmp_buf cryptofuzz_jmpbuf;
+unsigned char cryptofuzz_longjmp_triggered;
+#define cryptofuzz_save() do {                                                                  \
+        if(sigsetjmp(cryptofuzz_jmpbuf, 1) && (cryptofuzz_longjmp_triggered == 0)){             \
+                exit(-1);                                                                       \
+        }                                                                                       \
+        if(cryptofuzz_longjmp_triggered == 1){                                                  \
+                ext_printf("ASSERT error caught through cryptofuzz_jmpbuf\n");                  \
+                exit(-1);                                                                       \
+        }                                                                                       \
+} while(0);                                                                                     
+#include <string.h>
+#include <stdlib.h>
+#include <stdio.h>
+#endif
 
 /*
  * Use extern declarations to avoid including
@@ -153,6 +174,14 @@ int main(int argc, char *argv[])
 	int sign_filters_num = 0, hash_filters_num = 0, curve_filters_num = 0;
 	int i, j, k;
 
+        /* Some mockup code to be able to compile in CRYPTOFUZZ mode although
+         * setjmp/longjmp are used.
+         */
+#if defined(USE_CRYPTOFUZZ) /* CRYPTOFUZZ mode */
+        /* Save our context */
+        cryptofuzz_save()
+#endif
+
 	/* By default, perform all tests */
 	tests_to_do = KNOWN_TEST_VECTORS | RANDOM_SIG_VERIF | PERFORMANCE;
 
@@ -259,4 +288,5 @@ int main(int argc, char *argv[])
 			}
 		}
 	}
+	return 0;
 }
