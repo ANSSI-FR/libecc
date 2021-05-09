@@ -54,7 +54,7 @@ int ecgdsa_sign_raw(struct ec_sign_context *ctx, const u8 *input, u8 inputlen, u
         prj_pt_src_t G;
         u8 hsize, r_len, s_len, p_len;
         u16 p_len_;
-        bitcnt_t q_bit_len, p_bit_len;
+        bitcnt_t q_bit_len, p_bit_len, rshift;
         prj_pt kG;
         aff_pt W;
         int ret;
@@ -109,6 +109,22 @@ int ecgdsa_sign_raw(struct ec_sign_context *ctx, const u8 *input, u8 inputlen, u
         local_memcpy(e_buf, input, hsize);
 	dbg_buf_print("H(m)", e_buf, hsize);
 
+        /*
+         * If |h| > bitlen(q), set h to bitlen(q)
+         * leftmost bits of h.
+         *
+         */
+        rshift = 0;
+        if ((hsize * 8) > q_bit_len) {
+                rshift = (hsize * 8) - q_bit_len;
+        }
+        nn_init_from_buf(&tmp, e_buf, hsize);
+        local_memset(e_buf, 0, hsize);
+        if (rshift) {
+                nn_rshift_fixedlen(&tmp, &tmp, rshift);
+        }
+        dbg_nn_print("H(m) truncated as nn", &tmp);
+
 	/*
 	 * 2. Convert h to an integer and then compute e = -h mod q,
 	 *    i.e. compute e = - OS2I(h) mod q
@@ -116,8 +132,6 @@ int ecgdsa_sign_raw(struct ec_sign_context *ctx, const u8 *input, u8 inputlen, u
 	 * Because we only support positive integers, we compute
 	 * e = q - (h mod q) (except when h is 0).
 	 */
-	nn_init_from_buf(&tmp, e_buf, hsize);
-	local_memset(e_buf, 0, hsize);
 	nn_mod(&tmp2, &tmp, q);
 	if (nn_iszero(&tmp2)) {
 		nn_zero(&e);
@@ -287,6 +301,7 @@ int ecgdsa_verify_raw(struct ec_verify_context *ctx, const u8 *input, u8 inputle
         u8 e_buf[BIT_LEN_WORDS(NN_MAX_BIT_LEN) * (WORDSIZE / 8)];
 	nn_src_t q;
 	u8 hsize;
+        bitcnt_t q_bit_len, rshift;
 	int ret;
 
 	/*
@@ -307,6 +322,7 @@ int ecgdsa_verify_raw(struct ec_verify_context *ctx, const u8 *input, u8 inputle
 	q = &(ctx->pub_key->params->ec_gen_order);
 	r = &(ctx->verify_data.ecgdsa.r);
 	s = &(ctx->verify_data.ecgdsa.s);
+        q_bit_len = ctx->pub_key->params->ec_gen_order_bitlen;
 	hsize = inputlen;
 
 	/* 2. Compute h = H(m) */
@@ -319,9 +335,23 @@ int ecgdsa_verify_raw(struct ec_verify_context *ctx, const u8 *input, u8 inputle
         local_memcpy(e_buf, input, hsize);
 	dbg_buf_print("H(m)", e_buf, hsize);
 
+        /*
+         * If |h| > bitlen(q), set h to bitlen(q)
+         * leftmost bits of h.
+         *
+         */
+        rshift = 0;
+        if ((hsize * 8) > q_bit_len) {
+                rshift = (hsize * 8) - q_bit_len;
+        }
+        nn_init_from_buf(&tmp, e_buf, hsize);
+        local_memset(e_buf, 0, hsize);
+        if (rshift) {
+                nn_rshift_fixedlen(&tmp, &tmp, rshift);
+        }
+        dbg_nn_print("H(m) truncated as nn", &tmp);
+
 	/* 3. Compute e by converting h to an integer and reducing it mod q */
-	nn_init_from_buf(&tmp, e_buf, hsize);
-	local_memset(e_buf, 0, hsize);
 	nn_mod(&e, &tmp, q);
 
 	/* 4. Compute u = (r^-1)e mod q */

@@ -19,6 +19,7 @@
 #include "../lib_ecc_config.h"
 #include "../lib_ecc_types.h"
 #include "../words/words.h"
+#include "known/ec_params_brainpoolp192r1.h"
 #include "known/ec_params_brainpoolp224r1.h"
 #include "known/ec_params_brainpoolp256r1.h"
 #include "known/ec_params_brainpoolp384r1.h"
@@ -76,6 +77,9 @@ static const ec_mapping ec_maps[] = {
 #ifdef WITH_CURVE_SECP521R1
 	{.type = SECP521R1,.params = &secp521r1_str_params},
 #endif /* WITH_CURVE_SECP521R1 */
+#ifdef WITH_CURVE_BRAINPOOLP192R1
+	{.type = BRAINPOOLP192R1,.params = &brainpoolp192r1_str_params},
+#endif /* WITH_CURVE_BRAINPOOLP192R1 */
 #ifdef WITH_CURVE_BRAINPOOLP224R1
 	{.type = BRAINPOOLP224R1,.params = &brainpoolp224r1_str_params},
 #endif /* WITH_CURVE_BRAINPOOLP224R1 */

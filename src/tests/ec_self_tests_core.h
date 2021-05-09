@@ -3241,8 +3241,58 @@ static const ec_test_case ecfsdsa_frp256v1_test_case = {
 /*******************************************************************
  ************** ECGDSA tests **************************************
  *******************************************************************/
-
 #ifdef WITH_SIG_ECGDSA
+#ifdef WITH_HASH_SHA256
+#ifdef WITH_CURVE_BRAINPOOLP192R1
+#define ECGDSA_SHA256_BRAINPOOLP192R1_SELF_TEST
+
+/* ECGDSA brainpoolp192r1 test vectors */
+
+static int ecgdsa_nn_random_iso14888_3_brainpoolp192r1_test_vector(nn_t out,
+								   nn_src_t q)
+{
+	const u8 k_buf[] = {
+		0x5A, 0x96, 0x62, 0x60, 0x96, 0x28, 0x8C, 0xC4,
+		0x69, 0xF1, 0x70, 0x4E, 0xC0, 0x5F, 0x44, 0xD1, 
+		0xEC, 0x18, 0xBD, 0x32, 0xCE, 0xB0, 0x2D, 0x5B, 
+	};
+
+	nn_init_from_buf(out, k_buf, sizeof(k_buf));
+
+	return (nn_cmp(out, q) >= 0);
+}
+
+static const u8 ecgdsa_brainpoolp192r1_test_vectors_priv_key[] = {
+	0x40, 0xF9, 0x5B, 0x49, 0xA3, 0xB1, 0xBF, 0x55,
+	0x31, 0x1A, 0x56, 0xDF, 0xD3, 0xB5, 0x06, 0x1E,
+	0xE1, 0xDF, 0x64, 0x39, 0x84, 0xD4, 0x1E, 0x35, 
+};
+
+static const u8 ecgdsa_brainpoolp192r1_test_vectors_expected_sig[] = {
+	0xA0, 0x0B, 0x0A, 0xA2, 0x5D, 0xB6, 0xAB, 0x5C,
+	0x21, 0xB8, 0x63, 0x00, 0xD9, 0xBC, 0x99, 0xF5, 
+	0x6E, 0x9D, 0xD1, 0xB7, 0xF1, 0xDC, 0x47, 0x74,
+	0x63, 0x46, 0x35, 0xEF, 0x81, 0x32, 0x47, 0xD7,
+	0x20, 0x24, 0x5C, 0x94, 0x09, 0xFB, 0x20, 0xA2,
+	0x67, 0xC5, 0x60, 0xC8, 0x8E, 0xB2, 0xB0, 0x7B, 
+};
+
+static const ec_test_case ecgdsa_brainpoolp192r1_test_case = {
+	.name = "ECGDSA-SHA256/brainpoolp192r1",
+	.ec_str_p = &brainpoolp192r1_str_params,
+	.priv_key = ecgdsa_brainpoolp192r1_test_vectors_priv_key,
+	.priv_key_len = sizeof(ecgdsa_brainpoolp192r1_test_vectors_priv_key),
+	.nn_random = ecgdsa_nn_random_iso14888_3_brainpoolp192r1_test_vector,
+	.hash_type = SHA256,
+	.msg = "brainpoolP192r1",
+	.msglen = 15,
+	.sig_type = ECGDSA,
+	.exp_sig = ecgdsa_brainpoolp192r1_test_vectors_expected_sig,
+	.exp_siglen = sizeof(ecgdsa_brainpoolp192r1_test_vectors_expected_sig)
+};
+#endif /* WITH_CURVE_BRAINPOOLP192R1 */
+#endif /* WITH_HASH_SHA256 */
+
 #ifdef WITH_HASH_SHA224
 #ifdef WITH_CURVE_BRAINPOOLP224R1
 #define ECGDSA_SHA224_BRAINPOOLP224R1_SELF_TEST
@@ -3763,6 +3813,9 @@ static const ec_test_case *ec_fixed_vector_tests[] = {
 	&ecfsdsa_frp256v1_test_case,
 #endif
 	/* ECGDSA */
+#ifdef ECGDSA_SHA256_BRAINPOOLP192R1_SELF_TEST
+	&ecgdsa_brainpoolp192r1_test_case,
+#endif
 #ifdef ECGDSA_SHA224_BRAINPOOLP224R1_SELF_TEST
 	&ecgdsa_brainpoolp224r1_test_case,
 #endif

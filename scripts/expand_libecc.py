@@ -828,7 +828,8 @@ def ecrdsa_verify(hashfunc, keypair, message, sig):
 
 # *| IUF - ECGDSA signature
 # *|
-# *|  UF 1. Compute h = H(m)
+# *|  UF 1. Compute h = H(m). If |h| > bitlen(q), set h to bitlen(q)
+# *|         leftmost (most significant) bits of h
 # *|   F 2. Convert e = - OS2I(h) mod q
 # *|   F 3. Get a random value k in ]0,q[
 # *|   F 4. Compute W = (W_x,W_y) = kG
@@ -846,6 +847,9 @@ def ecgdsa_sign(hashfunc, keypair, message, k=None):
     gy = privkey.curve.gy
     G = Point(privkey.curve, gx, gy)
     (h, _, _) = hashfunc(message)
+    q_limit_len = getbitlen(q)
+    # Truncate hash value 
+    h = truncate(h, q_limit_len, "LEFT")
     e = (-stringtoint(h)) % q
     OK = False
     while OK == False:
@@ -866,7 +870,8 @@ def ecgdsa_sign(hashfunc, keypair, message, k=None):
 # *| IUF - ECGDSA verification
 # *|
 # *| I   1. Reject the signature if r or s is 0.
-# *|  UF 2. Compute h = H(m)
+# *|  UF 2. Compute h = H(m). If |h| > bitlen(q), set h to bitlen(q)
+# *|         leftmost (most significant) bits of h
 # *|   F 3. Compute e = OS2I(h) mod q
 # *|   F 4. Compute u = ((r^-1)e mod q)
 # *|   F 5. Compute v = ((r^-1)s mod q)
@@ -891,6 +896,9 @@ def ecgdsa_verify(hashfunc, keypair, message, sig):
     if s == 0 or s > q:
         raise Exception("ECGDSA verify: s not in ]0,q[")
     (h, _, _) = hashfunc(message)
+    q_limit_len = getbitlen(q)
+    # Truncate hash value 
+    h = truncate(h, q_limit_len, "LEFT")
     e = stringtoint(h) % q
     r_inv = modinv(r, q)
     u = (r_inv * e) % q
