@@ -77,6 +77,15 @@
 #define _POSIX_SOURCE /* sig versions of set/longjmp need POSIX */
 #endif
 #include <setjmp.h>
+#if defined(WIN32) || defined(__MINGW32__) || defined(__MINGW64__)
+/* NOTE: in WIN32 environments, there is no sigsetjmp:
+ * emulate it with plain setjmp
+ */
+#define sigjmp_buf jmp_buf
+#define sigsetjmp(x,y) setjmp(x)
+#define siglongjmp longjmp
+#define sigjmp_buf jmp_buf
+#endif
 extern sigjmp_buf cryptofuzz_jmpbuf;
 extern unsigned char cryptofuzz_longjmp_triggered;
 #define MUST_HAVE(x) do { if (!(x)) { cryptofuzz_longjmp_triggered = 1;  siglongjmp(cryptofuzz_jmpbuf, 1); } } while (0)
