@@ -263,6 +263,7 @@ int _ecgdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	 */
 	nn_mod(&tmp2, &tmp, q);
 	if (nn_iszero(&tmp2)) {
+		nn_init(&e, 0);
 		nn_zero(&e);
 	} else {
 		nn_sub(&e, q, &tmp2);

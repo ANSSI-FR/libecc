@@ -134,6 +134,7 @@ int ecgdsa_sign_raw(struct ec_sign_context *ctx, const u8 *input, u8 inputlen, u
 	 */
 	nn_mod(&tmp2, &tmp, q);
 	if (nn_iszero(&tmp2)) {
+		nn_init(&e, 0);
 		nn_zero(&e);
 	} else {
 		nn_sub(&e, q, &tmp2);
