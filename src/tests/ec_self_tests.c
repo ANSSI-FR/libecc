@@ -166,14 +166,6 @@ static void print_help(const char *bad_arg)
 
 int main(int argc, char *argv[])
 {
-	int ret;
-	unsigned int tests_to_do;
-	const char *sign_filters[MAX_FILTERS]  = { NULL };
-	const char *hash_filters[MAX_FILTERS]  = { NULL };
-	const char *curve_filters[MAX_FILTERS] = { NULL };
-	int sign_filters_num = 0, hash_filters_num = 0, curve_filters_num = 0;
-	int i, j, k;
-
         /* Some mockup code to be able to compile in CRYPTOFUZZ mode although
          * setjmp/longjmp are used.
          */
@@ -181,6 +173,14 @@ int main(int argc, char *argv[])
         /* Save our context */
         cryptofuzz_save()
 #endif
+
+	int ret;
+	unsigned int tests_to_do;
+	const char *sign_filters[MAX_FILTERS]  = { NULL };
+	const char *hash_filters[MAX_FILTERS]  = { NULL };
+	const char *curve_filters[MAX_FILTERS] = { NULL };
+	int sign_filters_num = 0, hash_filters_num = 0, curve_filters_num = 0;
+	int i, j, k;
 
 	/* By default, perform all tests */
 	tests_to_do = KNOWN_TEST_VECTORS | RANDOM_SIG_VERIF | PERFORMANCE;
