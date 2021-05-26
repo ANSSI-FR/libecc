@@ -287,7 +287,7 @@ int ecrdsa_verify_raw(struct ec_verify_context *ctx, const u8 *input, u8 inputle
 	q = &(ctx->pub_key->params->ec_gen_order);
 	r = &(ctx->verify_data.ecrdsa.r);
 	s = &(ctx->verify_data.ecrdsa.s);
-	hsize = ctx->h->digest_size;
+	hsize = inputlen;
 
 	/* 2. Compute h = H(m) */
         /* NOTE: here we have raw ECRDSA, this is the raw input */
