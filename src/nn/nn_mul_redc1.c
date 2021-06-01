@@ -97,7 +97,7 @@ word_t nn_compute_redc1_coefs(nn_t r, nn_t r_square, nn_src_t p_in)
 }
 
 /*
- * Perform Montgomery multiplication, that is usual multplication
+ * Perform Montgomery multiplication, that is usual multiplication
  * followed by reduction modulo p.
  *
  * Inputs are supposed to be < p (i.e. taken modulo p).
