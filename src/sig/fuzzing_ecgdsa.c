@@ -148,7 +148,7 @@ int ecgdsa_sign_raw(struct ec_sign_context *ctx, const u8 *input, u8 inputlen, u
 	/* 3. Get a random value k in ]0,q[ */
         /* NOTE: copy our input nonce if not NULL */
         if(nonce != NULL){
-                if((noncelen * 8) > q_bit_len){
+                if(noncelen > (u8)(BYTECEIL(q_bit_len))){
                         ret = -1;
                 }
                 else{
@@ -279,8 +279,12 @@ int ecgdsa_sign_raw(struct ec_sign_context *ctx, const u8 *input, u8 inputlen, u
 	PTR_NULLIFY(G);
 
 #ifdef USE_SIG_BLINDING
-        nn_zero(&b);
-        nn_zero(&binv);
+        if(nn_is_initialized(&b)){
+                nn_zero(&b);
+        }
+        if(nn_is_initialized(&binv)){
+                nn_zero(&binv);
+        }
 #endif /* USE_SIG_BLINDING */
 
 	return ret;

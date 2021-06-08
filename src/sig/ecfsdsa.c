@@ -416,8 +416,12 @@ int _ecfsdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	VAR_ZEROIFY(s_len);
 
 #ifdef USE_SIG_BLINDING
-        nn_zero(&b);
-        nn_zero(&binv);
+        if(nn_is_initialized(&b)){
+                nn_zero(&b);
+        }
+        if(nn_is_initialized(&binv)){
+                nn_zero(&binv);
+        }
 #endif /* USE_SIG_BLINDING */
 
 	return ret;
