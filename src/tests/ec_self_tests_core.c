@@ -153,10 +153,12 @@ static int ec_import_export_test(const ec_test_case *c)
 			u8 digestlen;	
 		        /* Initialize our signature context */
         		if(ec_sign_init(&sig_ctx, &kp, c->sig_type, c->hash_type)){
+				ret = -1;
                 		goto err;
         		}
 			/* Perform the hash of the data ourselves */
 		        if(hash_mapping_callbacks_sanity_check(sig_ctx.h)){
+				ret = -1;
         	        	goto err;
         		}
 			const u8 *input[2] = { (const u8*)msg , NULL};
@@ -166,42 +168,51 @@ static int ec_import_export_test(const ec_test_case *c)
 			/* Raw signing of data */
 			if(c->sig_type == ECDSA){
 			        if(ecdsa_sign_raw(&sig_ctx, digest, digestlen, sig, siglen, NULL, 0)){
+					ret = -1;
         			       	goto err;
         			}
 			}
 			else if(c->sig_type ==  ECGDSA){
 		        	if(ecgdsa_sign_raw(&sig_ctx, digest, digestlen, sig, siglen, NULL, 0)){
+					ret = -1;
        			        	goto err;
        				}
 			}
 			else if(c->sig_type ==  ECRDSA){
 		        	if(ecrdsa_sign_raw(&sig_ctx, digest, digestlen, sig, siglen, NULL, 0)){
+					ret = -1;
        			        	goto err;
        				}
 			}
 			else{
+				ret = -1;
 				goto err;
 			}
 			/* Now verify signature */
-		       	if(ec_verify_init(&verif_ctx,  &(kp.pub_key), sig, siglen, ECDSA, c->hash_type)){
+		       	if(ec_verify_init(&verif_ctx,  &(kp.pub_key), sig, siglen, c->sig_type, c->hash_type)){
+				ret = -1;
                 		goto err;
 	        	}
 			if(c->sig_type == ECDSA){
 				if(ecdsa_verify_raw(&verif_ctx, digest, digestlen)){
+					ret = -1;
         		        	goto err;
         			}
 			}
 			else if(c->sig_type ==  ECGDSA){
 				if(ecgdsa_verify_raw(&verif_ctx, digest, digestlen)){
+					ret = -1;
        			        	goto err;
        				}
 			}
 			else if(c->sig_type ==  ECRDSA){
 				if(ecrdsa_verify_raw(&verif_ctx, digest, digestlen)){
+					ret = -1;
        			        	goto err;
        				}
 			}
 			else{
+				ret = -1;
 				goto err;
 			}
 		} 
@@ -279,18 +290,20 @@ static int ec_sig_known_vector_tests_one(const ec_test_case *c)
 
 #ifdef USE_CRYPTOFUZZ
 	/* Specific case where we have access to raw signature API */
-	if(c->sig_type == ECDSA){
+	if((c->sig_type == ECDSA) || (c->sig_type == ECGDSA) || (c->sig_type == ECRDSA)){
         	struct ec_sign_context sig_ctx;
 	        struct ec_verify_context verif_ctx;
 		u8 digest[MAX_DIGEST_SIZE] = { 0 };
 		u8 digestlen;	
 	        /* Initialize our signature context */
-        	if(ec_sign_init(&sig_ctx, &kp, ECDSA, c->hash_type)){
+        	if(ec_sign_init(&sig_ctx, &kp, c->sig_type, c->hash_type)){
+			ret = -1;
 			failed_test = TEST_SIG_ERROR;
                 	goto err;
         	}
 		/* Perform the hash of the data ourselves */
 	        if(hash_mapping_callbacks_sanity_check(sig_ctx.h)){
+			ret = -1;
 			failed_test = TEST_SIG_ERROR;
         	        goto err;
         	}
@@ -303,11 +316,13 @@ static int ec_sig_known_vector_tests_one(const ec_test_case *c)
 		nn n_nonce;
 		bitcnt_t q_bit_len = kp.priv_key.params->ec_gen_order_bitlen;
 		if(c->nn_random(&n_nonce, &(kp.priv_key.params->ec_gen_order))){
+			ret = -1;
 			failed_test = TEST_SIG_ERROR;
 			goto err;
 		}
 		nn_export_to_buf(nonce, BYTECEIL(q_bit_len), &n_nonce);
 		if((unsigned int)BYTECEIL(q_bit_len) > sizeof(nonce)){
+			ret = -1;
 			failed_test = TEST_SIG_ERROR;
 			goto err;
 		}
@@ -315,24 +330,28 @@ static int ec_sig_known_vector_tests_one(const ec_test_case *c)
 		/* Raw signing of data */
 		if(c->sig_type == ECDSA){
 		        if(ecdsa_sign_raw(&sig_ctx, digest, digestlen, sig, siglen, nonce, noncelen)){
+				ret = -1;
 				failed_test = TEST_SIG_ERROR;
 		       	        goto err;
         		}
 		}
 		else if(c->sig_type == ECGDSA){
 			if(ecgdsa_sign_raw(&sig_ctx, digest, digestlen, sig, siglen, nonce, noncelen)){
+				ret = -1;
 				failed_test = TEST_SIG_ERROR;
 		                goto err;
         		}
 		}
 		else if(c->sig_type == ECRDSA){
 			if(ecrdsa_sign_raw(&sig_ctx, digest, digestlen, sig, siglen, nonce, noncelen)){
+				ret = -1;
 				failed_test = TEST_SIG_ERROR;
 		                goto err;
         		}
 		}
 		else{
 			failed_test = TEST_SIG_ERROR;
+			ret = -1;
 	                goto err;
 		}
 
@@ -340,32 +359,38 @@ static int ec_sig_known_vector_tests_one(const ec_test_case *c)
         	ret = are_equal(sig, c->exp_sig, siglen);
 		if (!ret) {
 			failed_test = TEST_SIG_COMP_ERROR;
+			ret = -1;
 			goto err;
 		}
 		/* Now verify signature */
-	       	if(ec_verify_init(&verif_ctx,  &(kp.pub_key), sig, siglen, ECDSA, c->hash_type)){
+	       	if(ec_verify_init(&verif_ctx,  &(kp.pub_key), sig, siglen, c->sig_type, c->hash_type)){
+			ret = -1;
 			failed_test = TEST_VERIF_ERROR;
                 	goto err;
         	}
 		if(c->sig_type == ECDSA){
 			if(ecdsa_verify_raw(&verif_ctx, digest, digestlen)){
+				ret = -1;
 				failed_test = TEST_VERIF_ERROR;
 		               	goto err;
 			}
 		}
 		else if(c->sig_type == ECGDSA){
 			if(ecgdsa_verify_raw(&verif_ctx, digest, digestlen)){
+				ret = -1;
 				failed_test = TEST_VERIF_ERROR;
 		               	goto err;
 			}
 		}
 		else if(c->sig_type == ECRDSA){
 			if(ecrdsa_verify_raw(&verif_ctx, digest, digestlen)){
+				ret = -1;
 				failed_test = TEST_VERIF_ERROR;
 		               	goto err;
 			}
 		}
 		else{
+			ret = -1;
 			failed_test = TEST_VERIF_ERROR;
 	               	goto err;
 		}
@@ -424,7 +449,6 @@ int perform_known_test_vectors_test(const char *sig, const char *hash, const cha
 				continue;
 			}
 		}	
-
 		ret = ec_sig_known_vector_tests_one(cur_test);
 		ext_printf("[%s] %30s selftests: known test vectors "
 			   "sig/verif %s\n", ret ? "-" : "+",

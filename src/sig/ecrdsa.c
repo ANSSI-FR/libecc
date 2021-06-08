@@ -342,8 +342,12 @@ int _ecrdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	PTR_NULLIFY(x);
 
 #ifdef USE_SIG_BLINDING
-        nn_zero(&b);
-        nn_zero(&binv);
+        if(nn_is_initialized(&b)){
+                nn_zero(&b);
+        }
+        if(nn_is_initialized(&binv)){
+                nn_zero(&binv);
+        }
 #endif /* USE_SIG_BLINDING */
 
 	return ret;
