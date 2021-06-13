@@ -133,7 +133,7 @@ def mod_sqrt(a, p):
     s = p - 1
     e = 0
     while s % 2 == 0:
-        s /= 2
+        s = s // 2
         e += 1
     n = 2
     while legendre_symbol(n, p) != -1:
