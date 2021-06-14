@@ -280,10 +280,10 @@ int ecgdsa_sign_raw(struct ec_sign_context *ctx, const u8 *input, u8 inputlen, u
 
 #ifdef USE_SIG_BLINDING
         if(nn_is_initialized(&b)){
-                nn_zero(&b);
+                nn_uninit(&b);
         }
         if(nn_is_initialized(&binv)){
-                nn_zero(&binv);
+                nn_uninit(&binv);
         }
 #endif /* USE_SIG_BLINDING */
 

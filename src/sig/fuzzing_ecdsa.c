@@ -286,7 +286,7 @@ int ecdsa_sign_raw(struct ec_sign_context *ctx, const u8 *input, u8 inputlen, u8
 
 #ifdef USE_SIG_BLINDING
 	if(nn_is_initialized(&b)){
-	        nn_zero(&b);
+	        nn_uninit(&b);
 	}
 #endif /* USE_SIG_BLINDING */
 
