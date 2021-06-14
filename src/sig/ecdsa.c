@@ -406,7 +406,7 @@ int _ecdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 
 #ifdef USE_SIG_BLINDING
         if(nn_is_initialized(&b)){
-                nn_zero(&b);
+                nn_uninit(&b);
         }
 #endif /* USE_SIG_BLINDING */
 

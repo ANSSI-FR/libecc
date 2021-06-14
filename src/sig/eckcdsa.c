@@ -499,10 +499,10 @@ int _eckcdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 
 #ifdef USE_SIG_BLINDING
         if(nn_is_initialized(&b)){
-                nn_zero(&b);
+                nn_uninit(&b);
         }
         if(nn_is_initialized(&binv)){
-                nn_zero(&binv);
+                nn_uninit(&binv);
         }
 #endif /* USE_SIG_BLINDING */
 
