@@ -278,6 +278,7 @@ static int ec_sig_known_vector_tests_one(const ec_test_case *c)
 
 	ret = are_equal(sig, c->exp_sig, siglen);
 	if (!ret) {
+		ret = -1;
 		failed_test = TEST_SIG_COMP_ERROR;
 		goto err;
 	}
