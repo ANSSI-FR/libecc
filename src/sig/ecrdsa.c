@@ -27,40 +27,39 @@
 #endif
 #include "../utils/dbg_sig.h"
 
-void ecrdsa_init_pub_key(ec_pub_key *out_pub, ec_priv_key *in_priv)
+int ecrdsa_init_pub_key(ec_pub_key *out_pub, const ec_priv_key *in_priv)
 {
 	prj_pt_src_t G;
-        /* Blinding mask for scalar multiplication */
-        nn scalar_b;
-        int ret;
 
 	MUST_HAVE(out_pub != NULL);
-
-	priv_key_check_initialized_and_type(in_priv, ECRDSA);
 
         /* Zero init public key to be generated */
         local_memset(out_pub, 0, sizeof(ec_pub_key));
 
-        /* We use blinding for the scalar multiplication */
-        ret = nn_get_random_mod(&scalar_b, &(in_priv->params->ec_gen_order));
-        if (ret) {
+	priv_key_check_initialized_and_type(in_priv, ECRDSA);
+
+	/* Sanity check */
+        if(nn_cmp(&(in_priv->x), &(in_priv->params->ec_gen_order)) >= 0){
+                /* This should not happen and means that our
+                 * private key is not compliant!
+                 */
                 goto err;
         }
 
 	/* Y = xG */
 	G = &(in_priv->params->ec_gen);
-        /* Use blinding with scalar_b when computing point scalar multiplication */
-        if(prj_pt_mul_monty_blind(&(out_pub->y), &(in_priv->x), G, &scalar_b, &(in_priv->params->ec_gen_order))){
+        /* Use blinding when computing point scalar multiplication */
+        if(prj_pt_mul_monty_blind(&(out_pub->y), &(in_priv->x), G)){
 		goto err;
 	}
-	nn_uninit(&scalar_b);
 
 	out_pub->key_type = ECRDSA;
 	out_pub->params = in_priv->params;
 	out_pub->magic = PUB_KEY_MAGIC;
 
+	return 0;
 err:
-	return;
+	return -1;
 }
 
 u8 ecrdsa_siglen(u16 p_bit_len, u16 q_bit_len, u8 hsize, u8 blocksize)
@@ -157,8 +156,6 @@ int _ecrdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 #ifdef USE_SIG_BLINDING
         /* b is the blinding mask */
         nn b, binv;
-        /* scalar_b is the scalar multiplication blinder */
-        nn scalar_b;
 #endif /* USE_SIG_BLINDING */
 	u8 h_buf[MAX_DIGEST_SIZE];
 	prj_pt_src_t G;
@@ -189,6 +186,15 @@ int _ecrdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	r_len = (u8)ECRDSA_R_LEN(q_bit_len);
 	s_len = (u8)ECRDSA_S_LEN(q_bit_len);
 	hsize = ctx->h->digest_size;
+
+	/* Sanity check */
+        if(nn_cmp(x, q) >= 0){
+                /* This should not happen and means that our
+                 * private key is not compliant!
+                 */
+                ret = -1;
+                goto err;
+        }
 
 	if (NN_MAX_BIT_LEN < p_bit_len) {
 		ret = -1;
@@ -234,22 +240,15 @@ int _ecrdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
                 goto err;
         }
         dbg_nn_print("b", &b);
-        /* We use blinding for the scalar multiplication */
-        ret = nn_get_random_mod(&scalar_b, q);
-        if (ret) {
-                goto err;
-        }
-        dbg_nn_print("scalar_b", &scalar_b);
 #endif /* USE_SIG_BLINDING */
 
 	/* 3. Compute W = kG = (Wx, Wy) */
 #ifdef USE_SIG_BLINDING
         /* We use blinding for the scalar multiplication */
-        if(prj_pt_mul_monty_blind(&kG, &k, G, &scalar_b, q)){
+        if(prj_pt_mul_monty_blind(&kG, &k, G)){
 		ret = -1;
 		goto err;
 	}
-	nn_uninit(&scalar_b);
 #else
         prj_pt_mul_monty(&kG, &k, G);
 #endif /* USE_SIG_BLINDING */

@@ -47,8 +47,6 @@ int ecrdsa_sign_raw(struct ec_sign_context *ctx, const u8 *input, u8 inputlen, u
 #ifdef USE_SIG_BLINDING
         /* b is the blinding mask */
         nn b, binv;
-        /* scalar_b is the scalar multiplication blinder */
-        nn scalar_b;
 #endif /* USE_SIG_BLINDING */
         /* NOTE: hash here is not really a hash ... */
         u8 h_buf[BIT_LEN_WORDS(NN_MAX_BIT_LEN) * (WORDSIZE / 8)];
@@ -130,22 +128,15 @@ int ecrdsa_sign_raw(struct ec_sign_context *ctx, const u8 *input, u8 inputlen, u
                 goto err;
         }
         dbg_nn_print("b", &b);
-        /* We use blinding for the scalar multiplication */
-        ret = nn_get_random_mod(&scalar_b, q);
-        if (ret) {
-                goto err;
-        }
-        dbg_nn_print("scalar_b", &scalar_b);
 #endif /* USE_SIG_BLINDING */
 
 	/* 3. Compute W = kG = (Wx, Wy) */
 #ifdef USE_SIG_BLINDING
         /* We use blinding for the scalar multiplication */
-        if(prj_pt_mul_monty_blind(&kG, &k, G, &scalar_b, q)){
+        if(prj_pt_mul_monty_blind(&kG, &k, G)){
 		ret = -1;
 		goto err;
 	}
-	nn_uninit(&scalar_b);
 #else
         prj_pt_mul_monty(&kG, &k, G);
 #endif /* USE_SIG_BLINDING */
@@ -244,10 +235,10 @@ int ecrdsa_sign_raw(struct ec_sign_context *ctx, const u8 *input, u8 inputlen, u
 
 #ifdef USE_SIG_BLINDING
         if(nn_is_initialized(&b)){
-                nn_zero(&b);
+                nn_uninit(&b);
         }
         if(nn_is_initialized(&binv)){
-                nn_zero(&binv);
+                nn_uninit(&binv);
         }
 #endif /* USE_SIG_BLINDING */
 

@@ -796,19 +796,40 @@ void prj_pt_mul_monty(prj_pt_t out, nn_src_t m, prj_pt_src_t in)
 	prj_pt_mul_ltr_monty(out, m, in);
 }
 
-int prj_pt_mul_monty_blind(prj_pt_t out, nn_src_t m, prj_pt_src_t in, nn_t b, nn_src_t q)
+int prj_pt_mul_monty_blind(prj_pt_t out, nn_src_t m, prj_pt_src_t in)
 {
 	/* Blind the scalar m with (b*q) */
-	nn_mul(b, b, q);
-	nn_add(b, b, m);
+        /* First compute the order x cofactor */
+        nn b;
+	nn_src_t q;
+        int ret;
+
+	q = &(in->crv->order);
+
+        ret = nn_get_random_mod(&b, q);
+        if (ret) {
+                goto err;
+        }
+
+        nn_mul(&b, &b, q);
+        nn_add(&b, &b, m);
+
 	/* NOTE: point blinding is performed in the lower
 	 * functions
 	 */
 
         /* Perform the scalar multiplication */
-	prj_pt_mul_ltr_monty(out, b, in);
+	prj_pt_mul_ltr_monty(out, &b, in);
 
-	/* Zero the mask to avoid information leak */
-	nn_zero(b);
-	return 0;
+        /* Zero the mask to avoid information leak */
+        nn_zero(&b);
+        nn_uninit(&b);
+
+        return 0;
+err:
+        /* Zero the mask to avoid information leak */
+        nn_zero(&b);
+        nn_uninit(&b);
+
+        return -1;
 }

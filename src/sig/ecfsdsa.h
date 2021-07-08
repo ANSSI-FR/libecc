@@ -54,7 +54,7 @@ typedef struct {
 
 struct ec_sign_context;
 
-void ecfsdsa_init_pub_key(ec_pub_key *out_pub, ec_priv_key *in_priv);
+int ecfsdsa_init_pub_key(ec_pub_key *out_pub, const ec_priv_key *in_priv);
 
 u8 ecfsdsa_siglen(u16 p_bit_len, u16 q_bit_len, u8 hsize, u8 blocksize);
 

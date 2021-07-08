@@ -1053,10 +1053,6 @@ static int ec_scalar_mult(const char *ec_name,
 	nn d;
 	/* Point to import */
 	prj_pt Q;
-#ifdef USE_SIG_BLINDING
-	/* Scalar when we use blinding */
-        nn scalar_b;
-#endif
 
 	MUST_HAVE(ec_name != NULL);
 	MUST_HAVE(scalar_file != NULL);
@@ -1133,13 +1129,7 @@ static int ec_scalar_mult(const char *ec_name,
         /* NB: we use a blind scalar multiplication here since we do not want our
          * private d to leak ...
          */
-        nn_init(&scalar_b, 0);
-        if (nn_get_random_mod(&scalar_b, &(curve_params.ec_gen_order))) {
-                goto err;
-        }
-        prj_pt_mul_monty_blind(&Q, &d, &Q, &scalar_b, &(curve_params.ec_gen_order));
-        /* Clear blinding scalar */
-        nn_uninit(&scalar_b);
+        prj_pt_mul_monty_blind(&Q, &d, &Q);
 #else
         prj_pt_mul_monty(&Q, &d, &Q);
 #endif

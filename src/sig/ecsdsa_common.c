@@ -28,41 +28,32 @@
 #endif
 #include "../utils/dbg_sig.h"
 
-void __ecsdsa_init_pub_key(ec_pub_key *out_pub, ec_priv_key *in_priv,
+int __ecsdsa_init_pub_key(ec_pub_key *out_pub, const ec_priv_key *in_priv,
 			   ec_sig_alg_type key_type)
 {
 	prj_pt_src_t G;
-        /* Blinding mask for scalar multiplication */
-        nn scalar_b;
-        int ret;
 
 	MUST_HAVE(out_pub != NULL);
-
-	priv_key_check_initialized_and_type(in_priv, key_type);
 
         /* Zero init public key to be generated */
         local_memset(out_pub, 0, sizeof(ec_pub_key));
 
-        /* We use blinding for the scalar multiplication */
-        ret = nn_get_random_mod(&scalar_b, &(in_priv->params->ec_gen_order));
-        if (ret) {
-                goto err;
-        }
+	priv_key_check_initialized_and_type(in_priv, key_type);
 
 	/* Y = xG */
 	G = &(in_priv->params->ec_gen);
-        /* Use blinding with scalar_b when computing point scalar multiplication */
-        if(prj_pt_mul_monty_blind(&(out_pub->y), &(in_priv->x), G, &scalar_b, &(in_priv->params->ec_gen_order))){
+        /* Use blinding when computing point scalar multiplication */
+        if(prj_pt_mul_monty_blind(&(out_pub->y), &(in_priv->x), G)){
 		goto err;
 	}
-        nn_uninit(&scalar_b);
 
 	out_pub->key_type = key_type;
 	out_pub->params = in_priv->params;
 	out_pub->magic = PUB_KEY_MAGIC;
 
+	return 0;
 err:
-	return;
+	return -1;
 }
 
 u8 __ecsdsa_siglen(u16 p_bit_len, u16 q_bit_len, u8 hsize, u8 blocksize)
@@ -134,10 +125,6 @@ int __ecsdsa_sign_init(struct ec_sign_context *ctx,
 	prj_pt kG;
 	aff_pt W_aff;
 	nn_src_t q;
-#ifdef USE_SIG_BLINDING
-	/* scalar_b is the scalar multiplication blinder */
-	nn scalar_b;
-#endif
 	int ret;
 	nn k;
 
@@ -189,17 +176,10 @@ int __ecsdsa_sign_init(struct ec_sign_context *ctx,
 
 	/* 2. Compute W = kG = (Wx, Wy). */
 #ifdef USE_SIG_BLINDING
-        /* We use blinding for the scalar multiplication */
-        ret = nn_get_random_mod(&scalar_b, q);
-        if (ret) {
-		ret = -1;
-                goto err;
-        }
-        if(prj_pt_mul_monty_blind(&kG, &k, G, &scalar_b, q)){
+        if(prj_pt_mul_monty_blind(&kG, &k, G)){
 		ret = -1;
 		goto err;
 	}
-	nn_uninit(&scalar_b);
 #else
         prj_pt_mul_monty(&kG, &k, G);
 #endif

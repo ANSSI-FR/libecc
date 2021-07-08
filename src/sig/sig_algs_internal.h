@@ -63,7 +63,7 @@ typedef struct {
 
 	u8 (*siglen) (u16 p_bit_len, u16 q_bit_len, u8 hsize, u8 blocksize);
 
-	void (*init_pub_key) (ec_pub_key *pub_key, ec_priv_key *priv_key);
+	int (*init_pub_key) (ec_pub_key *pub_key, const ec_priv_key *priv_key);
 
 	int (*sign_init) (struct ec_sign_context * ctx);
 	int (*sign_update) (struct ec_sign_context * ctx,
