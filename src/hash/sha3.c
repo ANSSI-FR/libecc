@@ -28,18 +28,14 @@ void _sha3_init(sha3_context *ctx, u8 digest_size)
 	MUST_HAVE(ctx != NULL);
 
         /* Zeroize the internal state */
-        local_memset(ctx->sha3_state, 0, KECCAK_SLICES * KECCAK_SLICES * sizeof(u64));
+        local_memset(ctx->sha3_state, 0, sizeof(ctx->sha3_state));
 
         ctx->sha3_idx = 0;
         ctx->sha3_digest_size = digest_size;
         ctx->sha3_block_size = (KECCAK_SLICES * KECCAK_SLICES * sizeof(u64)) - (2 * digest_size);
 
 	/* Detect endianness */
-	if (arch_is_big_endian()) {
-		ctx->sha3_endian = SHA3_BIG;
-	} else {
-		ctx->sha3_endian = SHA3_LITTLE;
-	}
+	ctx->sha3_endian = arch_is_big_endian() ? SHA3_BIG : SHA3_LITTLE;
 
         return;
 }
@@ -55,18 +51,9 @@ void _sha3_update(sha3_context *ctx, const u8 *input, u32 ilen)
         state = (u8*)(ctx->sha3_state);
 
         for(i = 0; i < ilen; i++){
-                u64 idx;
                 /* Compute the index depending on the endianness */
-                if(ctx->sha3_endian == SHA3_LITTLE){
-                        /* Little endian case */
-                        idx = ctx->sha3_idx;
-                        ctx->sha3_idx++;
-                }
-                else{
-                        /* Big endian case */
-                        idx = SWAP64_Idx(ctx->sha3_idx);
-                        ctx->sha3_idx++;
-                }
+                u64 idx = (ctx->sha3_endian == SHA3_LITTLE) ? ctx->sha3_idx : SWAP64_Idx(ctx->sha3_idx);
+                ctx->sha3_idx++;
                 /* Update the state, and adapt endianness order */
                 state[idx] ^= input[i];
                 if(ctx->sha3_idx == ctx->sha3_block_size){
@@ -85,6 +72,7 @@ void _sha3_finalize(sha3_context *ctx, u8 *output)
         u8 *state;
 
 	MUST_HAVE((ctx != NULL) && (output != NULL));
+	MUST_HAVE(ctx->sha3_digest_size <= sizeof(ctx->sha3_state));
 
         state = (u8*)(ctx->sha3_state);
 
@@ -102,12 +90,7 @@ void _sha3_finalize(sha3_context *ctx, u8 *output)
         }
         KECCAKF(ctx->sha3_state);
         for(i = 0; i < ctx->sha3_digest_size; i++){
-                if(ctx->sha3_endian == SHA3_LITTLE){
-                        output[i] = state[i];
-                }
-                else{
-                        output[i] = state[SWAP64_Idx(i)];
-                }
+                output[i] = (ctx->sha3_endian == SHA3_LITTLE) ? state[i] : state[SWAP64_Idx(i)];
         }
 
         return;
