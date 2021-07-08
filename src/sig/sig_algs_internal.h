@@ -26,6 +26,7 @@
 #include "ecfsdsa.h"
 #include "ecgdsa.h"
 #include "ecrdsa.h"
+#include "eddsa.h"
 /* Includes for fuzzing */
 #ifdef USE_CRYPTOFUZZ
 #include "fuzzing_ecdsa.h"
@@ -113,6 +114,10 @@ typedef union {
 #ifdef WITH_SIG_ECRDSA		/* ECRDSA  */
 	ecrdsa_sign_data ecrdsa;
 #endif
+#if defined(WITH_SIG_EDDSA25519) || defined(WITH_SIG_EDDSA448) 	/* EDDSA25519, EDDSA448  */
+	eddsa_sign_data eddsa;
+#endif
+
 } sig_sign_data;
 
 /*
@@ -157,6 +162,9 @@ typedef union {
 #endif
 #ifdef WITH_SIG_ECRDSA		/* ECRDSA */
 	ecrdsa_verify_data ecrdsa;
+#endif
+#if defined(WITH_SIG_EDDSA25519) || defined(WITH_SIG_EDDSA448) 	/* EDDSA25519, EDDSA448  */
+	eddsa_verify_data eddsa;
 #endif
 } sig_verify_data;
 
@@ -315,6 +323,78 @@ static const ec_sig_mapping ec_sig_maps[] = {
 #define MAX_SIG_ALG_NAME_LEN 7
 #endif /* MAX_SIG_ALG_NAME_LEN */
 #endif /* WITH_SIG_ECRDSA */
+#ifdef WITH_SIG_EDDSA25519
+	{.type = EDDSA25519,
+	 .name = "EDDSA25519",
+	 .siglen = eddsa_siglen,
+	 .gen_priv_key = eddsa_gen_priv_key,
+	 .init_pub_key = eddsa_init_pub_key,
+	 .sign_init = _eddsa_sign_init,
+	 .sign_update = _eddsa_sign_update,
+	 .sign_finalize = _eddsa_sign_finalize,
+	 .verify_init = _eddsa_verify_init,
+	 .verify_update = _eddsa_verify_update,
+	 .verify_finalize = _eddsa_verify_finalize,
+	 },
+	{.type = EDDSA25519CTX,
+	 .name = "EDDSA25519CTX",
+	 .siglen = eddsa_siglen,
+	 .gen_priv_key = eddsa_gen_priv_key,
+	 .init_pub_key = eddsa_init_pub_key,
+	 .sign_init = _eddsa_sign_init,
+	 .sign_update = _eddsa_sign_update,
+	 .sign_finalize = _eddsa_sign_finalize,
+	 .verify_init = _eddsa_verify_init,
+	 .verify_update = _eddsa_verify_update,
+	 .verify_finalize = _eddsa_verify_finalize,
+	 },
+	{.type = EDDSA25519PH,
+	 .name = "EDDSA25519PH",
+	 .siglen = eddsa_siglen,
+	 .gen_priv_key = eddsa_gen_priv_key,
+	 .init_pub_key = eddsa_init_pub_key,
+	 .sign_init = _eddsa_sign_init,
+	 .sign_update = _eddsa_sign_update,
+	 .sign_finalize = _eddsa_sign_finalize,
+	 .verify_init = _eddsa_verify_init,
+	 .verify_update = _eddsa_verify_update,
+	 .verify_finalize = _eddsa_verify_finalize,
+	 },
+#if (MAX_SIG_ALG_NAME_LEN < 14)
+#undef MAX_SIG_ALG_NAME_LEN
+#define MAX_SIG_ALG_NAME_LEN 14
+#endif /* MAX_SIG_ALG_NAME_LEN */
+#endif /* WITH_SIG_EDDSA25519 */
+#ifdef WITH_SIG_EDDSA448
+	{.type = EDDSA448,
+	 .name = "EDDSA448",
+	 .siglen = eddsa_siglen,
+	 .gen_priv_key = eddsa_gen_priv_key,
+	 .init_pub_key = eddsa_init_pub_key,
+	 .sign_init = _eddsa_sign_init,
+	 .sign_update = _eddsa_sign_update,
+	 .sign_finalize = _eddsa_sign_finalize,
+	 .verify_init = _eddsa_verify_init,
+	 .verify_update = _eddsa_verify_update,
+	 .verify_finalize = _eddsa_verify_finalize,
+	 },
+	{.type = EDDSA448PH,
+	 .name = "EDDSA448PH",
+	 .siglen = eddsa_siglen,
+	 .gen_priv_key = eddsa_gen_priv_key,
+	 .init_pub_key = eddsa_init_pub_key,
+	 .sign_init = _eddsa_sign_init,
+	 .sign_update = _eddsa_sign_update,
+	 .sign_finalize = _eddsa_sign_finalize,
+	 .verify_init = _eddsa_verify_init,
+	 .verify_update = _eddsa_verify_update,
+	 .verify_finalize = _eddsa_verify_finalize,
+	 },
+#if (MAX_SIG_ALG_NAME_LEN < 11)
+#undef MAX_SIG_ALG_NAME_LEN
+#define MAX_SIG_ALG_NAME_LEN 11
+#endif /* MAX_SIG_ALG_NAME_LEN */
+#endif /* WITH_SIG_EDDSA448 */
 	{.type = UNKNOWN_SIG_ALG,	/* Needs to be kept last */
 	 .name = "UNKNOWN",
 	 .siglen = 0,

@@ -45,19 +45,23 @@ typedef struct {
 	const ec_params *params;
 
 	/*
-	 * Private key, an integer in ]0,q[, where q is
+	 * Private key (usually an integer in ]0,q[, where q is
 	 * the order of G, the generator of the group
-	 * on the curve.
+	 * on the curve, or a derivative of this).
+	 *
+	 * For the specific case of EdDSA, this value will instead hold the
+	 * digest derivation of the secret value sk that is twice the size of
+	 * the digest size.
 	 */
 	nn x;
 
 	word_t magic;
 } ec_priv_key;
 
-#define EC_PRIV_KEY_MAX_SIZE	(BYTECEIL(CURVES_MAX_Q_BIT_LEN))
+#define EC_PRIV_KEY_MAX_SIZE	(LOCAL_MAX(MAX_DIGEST_SIZE, LOCAL_MAX(BYTECEIL(CURVES_MAX_Q_BIT_LEN), BYTECEIL(CURVES_MAX_P_BIT_LEN))))
 
 #define EC_PRIV_KEY_EXPORT_SIZE(priv_key)			\
-	((u8)(BYTECEIL((priv_key)->params->ec_gen_order_bitlen)))
+	((u8)(LOCAL_MAX(MAX_DIGEST_SIZE, LOCAL_MAX(BYTECEIL((priv_key)->params->ec_gen_order_bitlen), BYTECEIL((priv_key)->params->ec_fp.p_bitlen)))))
 
 #define EC_STRUCTURED_PRIV_KEY_MAX_EXPORT_SIZE	(EC_PRIV_KEY_MAX_SIZE + 3)
 #if (EC_STRUCTURED_PRIV_KEY_MAX_EXPORT_SIZE > 255)
@@ -113,7 +117,7 @@ typedef struct {
 #define EC_PUB_KEY_EXPORT_SIZE(pub_key)                                 \
 	(3 * BYTECEIL((pub_key)->params->ec_curve.a.ctx->p_bitlen))
 
-#define EC_STRUCTURED_PUB_KEY_MAX_EXPORT_SIZE	(EC_PUB_KEY_MAX_SIZE + 3)
+#define EC_STRUCTURED_PUB_KEY_MAX_EXPORT_SIZE	(EC_PUB_KEY_MAX_SIZE + 4)
 #if (EC_STRUCTURED_PUB_KEY_MAX_EXPORT_SIZE > 255)
 #error "All structured pub keys size are expected to fit on an u8."
 #endif
@@ -178,8 +182,7 @@ int ec_structured_key_pair_import_from_priv_key_buf(ec_key_pair *kp,
 						    const ec_params *params,
 						    const u8 *priv_key_buf,
 						    u8 priv_key_buf_len,
-						    ec_sig_alg_type
-						    ec_key_alg);
+						    ec_sig_alg_type ec_key_alg);
 int ec_structured_key_pair_import_from_buf(ec_key_pair *kp,
 					   const ec_params *params,
 					   const u8 *priv_key_buf,

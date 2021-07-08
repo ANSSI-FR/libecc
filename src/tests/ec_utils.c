@@ -14,7 +14,6 @@
  *  See LICENSE file at the root folder of the project.
  */
 
-
 #include "../libsig.h"
 
 /* Some mockup code to be able to compile in CRYPTOFUZZ mode although
@@ -32,8 +31,9 @@ unsigned char cryptofuzz_longjmp_triggered = 0;
                 ext_printf("ASSERT error caught through cryptofuzz_jmpbuf\n");                  \
                 exit(-1);                                                                       \
         }                                                                                       \
-} while(0);                                                                                     
+} while(0);
 #endif
+
 
 #ifdef WITH_STDLIB
 #include <string.h>
@@ -229,6 +229,7 @@ static int string_to_params(const char *ec_name, const char *ec_sig_name,
 
 static int generate_and_export_key_pair(const char *ec_name,
 					const char *ec_sig_name,
+					const char *ec_hash_name,
 					const char *fname_prefix)
 {
 	const ec_str_params *ec_str_p;
@@ -238,6 +239,7 @@ static int generate_and_export_key_pair(const char *ec_name,
 	const u16 kname_len = sizeof(kname);
 	u16 prefix_len;
 	ec_sig_alg_type sig_type;
+	hash_alg_type hash_type;
 	ec_params params;
 	ec_key_pair kp;
 	FILE *file;
@@ -252,6 +254,18 @@ static int generate_and_export_key_pair(const char *ec_name,
 			       NULL, NULL);
 	if (ret) {
 		goto err;
+	}
+
+	if(ec_hash_name != NULL){
+		/* Get parameters from pretty names */
+		ret = string_to_params(NULL, NULL, NULL, NULL,
+				       ec_hash_name, &hash_type);
+		if (ret) {
+			goto err;
+		}
+	}
+	else{
+		hash_type = UNKNOWN_HASH_ALG;
 	}
 
 	/* Import the parameters */
@@ -1245,7 +1259,7 @@ int main(int argc, char *argv[])
 		 * arg2 = algorithm type ("ECDSA", "ECKCDSA", ...)
 		 * arg3 = file name prefix
 		 */
-		if (argc != 5) {
+		if (((argc != 5) && (argc != 6)) || ((argc == 5) && are_str_equal(argv[3], "EDDSA"))){
 			printf("Bad args number for %s %s:\n", argv[0],
 			       argv[1]);
 			printf("\targ1 = curve name: ");
@@ -1257,10 +1271,26 @@ int main(int argc, char *argv[])
 			printf("\n");
 
 			printf("\targ3 = file name prefix\n");
+			printf("\n");
+						
+			printf("\t<arg4 = optional hash name (for EDDSA): ");
+			print_sig_algs();
+			printf(">");
+
+			if((argc == 5) && are_str_equal(argv[3], "EDDSA")){
+				printf("Error: EDDSA needs a hash algorithm for key generation, please provide one ...\n");
+			}			
 			return -1;
 		}
-		if(generate_and_export_key_pair(argv[2], argv[3], argv[4])){
-			return -1;
+		if(argc == 5){
+			if(generate_and_export_key_pair(argv[2], argv[3], argv[4], NULL)){
+				return -1;
+			}
+		}
+		if(argc == 6){
+			if(generate_and_export_key_pair(argv[2], argv[3], argv[4], argv[5])){
+				return -1;
+			}
 		}
 	}
 	else if (are_str_equal(argv[1], "sign")) {

@@ -42,6 +42,15 @@ typedef enum {
 #ifdef WITH_SIG_ECRDSA
 	ECRDSA = 7,
 #endif
+#ifdef WITH_SIG_EDDSA25519
+	EDDSA25519    = 8,
+	EDDSA25519CTX = 9,
+	EDDSA25519PH  = 10,
+#endif
+#ifdef WITH_SIG_EDDSA448
+	EDDSA448   = 11,
+	EDDSA448PH = 12,
+#endif
 } ec_sig_alg_type;
 
 /* Hash algorithm types */
