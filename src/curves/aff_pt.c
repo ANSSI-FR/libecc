@@ -24,7 +24,7 @@ void aff_pt_check_initialized(aff_pt_src_t in)
 		  && (in->crv != NULL));
 }
 
-/* Verify that a prj point has already been initialized.
+/* Verify that an affine point has already been initialized.
  * Return 0 or 1.
  */
 int aff_pt_is_initialized(aff_pt_src_t in)
