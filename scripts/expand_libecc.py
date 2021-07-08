@@ -1349,7 +1349,7 @@ def export_curve_string(curvename, stringname, stringvalue):
 def export_curve_struct(curvename, paramname, paramnamestr):
     return "\t."+paramname+" = &"+curvename+"_"+paramnamestr+"_str_param, \n"
 
-def curve_params(name, prime, pbitlen, a, b, gx, gy, order, cofactor, oid):
+def curve_params(name, prime, pbitlen, a, b, gx, gy, order, cofactor, oid, alpha_montgomery, gamma_montgomery, alpha_edwards):
     """
     Take as input some elliptic curve parameters and generate the 
     C parameters in a string
@@ -1436,6 +1436,10 @@ def curve_params(name, prime, pbitlen, a, b, gx, gy, order, cofactor, oid):
 
     ec_params_string += export_curve_int(name, "cofactor", cofactor, getbytelen(cofactor))
 
+    ec_params_string += export_curve_int(name, "alpha_montgomery", alpha_montgomery, getbytelen(alpha_montgomery))
+    ec_params_string += export_curve_int(name, "gamma_montgomery", gamma_montgomery, getbytelen(gamma_montgomery))
+    ec_params_string += export_curve_int(name, "alpha_edwards", alpha_edwards, getbytelen(alpha_edwards))
+
     ec_params_string += export_curve_string(name, "name", name.upper()); 
 
     if oid == None:
@@ -1460,6 +1464,9 @@ def curve_params(name, prime, pbitlen, a, b, gx, gy, order, cofactor, oid):
     export_curve_struct(name, "gen_order", "gen_order") +\
     export_curve_struct(name, "gen_order_bitlen", "gen_order_bitlen") +\
     export_curve_struct(name, "cofactor", "cofactor") +\
+    export_curve_struct(name, "alpha_montgomery", "alpha_montgomery") +\
+    export_curve_struct(name, "gamma_montgomery", "gamma_montgomery") +\
+    export_curve_struct(name, "alpha_edwards", "alpha_edwards") +\
     export_curve_struct(name, "oid", "oid") +\
     export_curve_struct(name, "name", "name")
     ec_params_string += "};\n\n"
@@ -1582,8 +1589,9 @@ def parse_cmd_line(args):
     Get elliptic curve parameters from command line
     """
     name = oid = prime = a = b = gx = gy = g = order = cofactor = ECfile = remove = remove_all = add_test_vectors = None
+    alpha_montgomery = gamma_montgomery = alpha_edwards = None
     try:
-        opts, args = getopt.getopt(sys.argv[1:], ":h", ["help", "remove", "remove-all", "name=", "prime=", "a=", "b=", "generator=", "gx=", "gy=", "order=", "cofactor=", "ECfile=", "oid=", "add-test-vectors="])
+        opts, args = getopt.getopt(sys.argv[1:], ":h", ["help", "remove", "remove-all", "name=", "prime=", "a=", "b=", "generator=", "gx=", "gy=", "order=", "cofactor=", "alpha_montgomery=","gamma_montgomery=", "alpha_edwards=", "ECfile=", "oid=", "add-test-vectors="])
     except getopt.GetoptError as err:
         # print help information and exit:
         print(err) # will print something like "option -a not recognized"
@@ -1617,6 +1625,12 @@ def parse_cmd_line(args):
             order = get_int(arg.replace(' ', ''))
         elif o in ("--cofactor"):
             cofactor = get_int(arg.replace(' ', ''))
+        elif o in ("--alpha_montgomery"):
+            alpha_montgomery = get_int(arg.replace(' ', ''))
+        elif o in ("--gamma_montgomery"):
+            gamma_montgomery = get_int(arg.replace(' ', ''))
+        elif o in ("--alpha_edwards"):
+            alpha_edwards = get_int(arg.replace(' ', ''))
         elif o in ("--remove"):
             remove = True
         elif o in ("--remove-all"):
@@ -1756,10 +1770,19 @@ def parse_cmd_line(args):
     if pow(gy, 2, prime) != ((pow(gx, 3, prime) + (a*gx) + b) % prime):
         print("Error: the given parameters (prime, a, b, gx, gy) do not verify the elliptic curve equation!")
         return False
-    
+
+    # Check Montgomery and Edwards transfer coefficients
+    if ((alpha_montgomery != None) and (gamma_montgomery == None)) or ((alpha_montgomery == None) and (gamma_montgomery != None)):
+        print("Error: alpha_montgomery and gamma_montgomery must be both defined if used!")
+        return False
+    if (alpha_edwards != None):
+        if (alpha_montgomery == None) or (gamma_montgomery == None):
+            print("Error: alpha_edwards needs alpha_montgomery and gamma_montgomery to be both defined if used!")
+            return False
+
     # Now that we have our parameters, call the function to get bitlen
     pbitlen = getbitlen(prime)
-    ec_params = curve_params(name, prime, pbitlen, a, b, gx, gy, order, cofactor, oid)
+    ec_params = curve_params(name, prime, pbitlen, a, b, gx, gy, order, cofactor, oid, alpha_montgomery, gamma_montgomery, alpha_edwards)
     # Check if there is a name collision somewhere
     if os.path.exists(ec_params_path + "ec_params_"+name+".h") == True :
         print("Error: file %s already exists!" % (ec_params_path + "ec_params_"+name+".h"))
