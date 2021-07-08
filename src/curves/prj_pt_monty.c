@@ -486,27 +486,29 @@ static void _prj_pt_mul_ltr_monty_dbl_add_always(prj_pt_t out, nn_src_t m, prj_p
 	 * This helps dealing with constant time.
 	 */
 	nn m_msb_fixed;
-	nn order_square;
+	nn_src_t curve_order;
+	nn curve_order_square;
 
 	/* Check that the input is on the curve */
 	MUST_HAVE(prj_pt_is_on_curve(in) == 1);
 	/* Compute m' from m depending on the rule described above */
+	curve_order = &(in->crv->order);
 	/* First compute q**2 */
-	nn_sqr(&order_square, &(in->crv->order));
+	nn_sqr(&curve_order_square, curve_order);
 	/* Then compute m' depending on m size */
-	if(nn_cmp(m, &(in->crv->order)) < 0){
+	if(nn_cmp(m, curve_order) < 0){
 		/* Case where m < q */
-		nn_add(&m_msb_fixed, m, &(in->crv->order));
+		nn_add(&m_msb_fixed, m, curve_order);
 		bitcnt_t msb_bit_len = nn_bitlen(&m_msb_fixed);
-		bitcnt_t order_bitlen = nn_bitlen(&(in->crv->order));
-		nn_cnd_add((msb_bit_len == order_bitlen), &m_msb_fixed, &m_msb_fixed, &(in->crv->order));
+		bitcnt_t order_bitlen = nn_bitlen(curve_order);
+		nn_cnd_add((msb_bit_len == order_bitlen), &m_msb_fixed, &m_msb_fixed, curve_order);
 	}
-	else if(nn_cmp(m, &order_square) < 0){
+	else if(nn_cmp(m, &curve_order_square) < 0){
 		/* Case where m >= q and m < (q**2) */
-		nn_add(&m_msb_fixed, m, &order_square);
+		nn_add(&m_msb_fixed, m, &curve_order_square);
 		bitcnt_t msb_bit_len = nn_bitlen(&m_msb_fixed);
-		bitcnt_t order_square_bitlen = nn_bitlen(&order_square);
-		nn_cnd_add((msb_bit_len == order_square_bitlen), &m_msb_fixed, &m_msb_fixed, &order_square);
+		bitcnt_t curve_order_square_bitlen = nn_bitlen(&curve_order_square);
+		nn_cnd_add((msb_bit_len == curve_order_square_bitlen), &m_msb_fixed, &m_msb_fixed, &curve_order_square);
 
 	}
 	else{
@@ -586,7 +588,7 @@ static void _prj_pt_mul_ltr_monty_dbl_add_always(prj_pt_t out, nn_src_t m, prj_p
 	nn_uninit(&r);
 	fp_uninit(&l);
 	nn_uninit(&m_msb_fixed);
-	nn_uninit(&order_square);
+	nn_uninit(&curve_order_square);
 }
 #endif
 
@@ -636,28 +638,30 @@ static void _prj_pt_mul_ltr_monty_ladder(prj_pt_t out, nn_src_t m, prj_pt_src_t 
 	 * This helps dealing with constant time.
 	 */
 	nn m_msb_fixed;
-	nn order_square;
+	nn_src_t curve_order;
+	nn curve_order_square;
 
 	/* Check that the input is on the curve */
 	MUST_HAVE(prj_pt_is_on_curve(in) == 1);
 
 	/* Compute m' from m depending on the rule described above */
+	curve_order = &(in->crv->order);
 	/* First compute q**2 */
-	nn_sqr(&order_square, &(in->crv->order));
+	nn_sqr(&curve_order_square, curve_order);
 	/* Then compute m' depending on m size */
-	if(nn_cmp(m, &(in->crv->order)) < 0){
+	if(nn_cmp(m, curve_order) < 0){
 		/* Case where m < q */
-		nn_add(&m_msb_fixed, m, &(in->crv->order));
+		nn_add(&m_msb_fixed, m, curve_order);
 		bitcnt_t msb_bit_len = nn_bitlen(&m_msb_fixed);
-		bitcnt_t order_bitlen = nn_bitlen(&(in->crv->order));
-		nn_cnd_add((msb_bit_len == order_bitlen), &m_msb_fixed, &m_msb_fixed, &(in->crv->order));
+		bitcnt_t order_bitlen = nn_bitlen(curve_order);
+		nn_cnd_add((msb_bit_len == order_bitlen), &m_msb_fixed, &m_msb_fixed, curve_order);
 	}
-	else if(nn_cmp(m, &order_square) < 0){
+	else if(nn_cmp(m, &curve_order_square) < 0){
 		/* Case where m >= q and m < (q**2) */
-		nn_add(&m_msb_fixed, m, &order_square);
+		nn_add(&m_msb_fixed, m, &curve_order_square);
 		bitcnt_t msb_bit_len = nn_bitlen(&m_msb_fixed);
-		bitcnt_t order_square_bitlen = nn_bitlen(&order_square);
-		nn_cnd_add((msb_bit_len == order_square_bitlen), &m_msb_fixed, &m_msb_fixed, &order_square);
+		bitcnt_t curve_order_square_bitlen = nn_bitlen(&curve_order_square);
+		nn_cnd_add((msb_bit_len == curve_order_square_bitlen), &m_msb_fixed, &m_msb_fixed, &curve_order_square);
 
 	}
 	else{
@@ -751,7 +755,7 @@ static void _prj_pt_mul_ltr_monty_ladder(prj_pt_t out, nn_src_t m, prj_pt_src_t 
 	nn_uninit(&r);
 	fp_uninit(&l);
 	nn_uninit(&m_msb_fixed);
-	nn_uninit(&order_square);
+	nn_uninit(&curve_order_square);
 }
 #endif
 

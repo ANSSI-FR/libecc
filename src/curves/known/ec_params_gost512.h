@@ -130,7 +130,8 @@ static const u8 GOST_512bits_curve_b[] = {
 
 TO_EC_STR_PARAM(GOST_512bits_curve_b);
 
-static const u8 GOST_512bits_curve_npoints[] = {
+#define CURVE_GOST512_CURVE_ORDER_BITLEN 511
+static const u8 GOST_512bits_curve_order[] = {
 	0x45, 0x31, 0xac, 0xd1, 0xfe, 0x00, 0x23, 0xc7,
 	0x55, 0x0d, 0x26, 0x7b, 0x6b, 0x2f, 0xee, 0x80,
 	0x92, 0x2b, 0x14, 0xb2, 0xff, 0xb9, 0x0f, 0x04,
@@ -141,7 +142,7 @@ static const u8 GOST_512bits_curve_npoints[] = {
 	0xd6, 0x44, 0xaa, 0xf1, 0x87, 0xe6, 0xe6, 0xdf
 };
 
-TO_EC_STR_PARAM(GOST_512bits_curve_npoints);
+TO_EC_STR_PARAM(GOST_512bits_curve_order);
 
 static const u8 GOST_512bits_curve_gx[] = {
 	0x24, 0xD1, 0x9C, 0xC6, 0x45, 0x72, 0xEE, 0x30,
@@ -182,7 +183,7 @@ static const u8 GOST_512bits_curve_gz[] = {
 
 TO_EC_STR_PARAM(GOST_512bits_curve_gz);
 
-static const u8 GOST_512bits_curve_order[] = {
+static const u8 GOST_512bits_curve_gen_order[] = {
 	0x45, 0x31, 0xac, 0xd1, 0xfe, 0x00, 0x23, 0xc7,
 	0x55, 0x0d, 0x26, 0x7b, 0x6b, 0x2f, 0xee, 0x80,
 	0x92, 0x2b, 0x14, 0xb2, 0xff, 0xb9, 0x0f, 0x04,
@@ -193,12 +194,12 @@ static const u8 GOST_512bits_curve_order[] = {
 	0xd6, 0x44, 0xaa, 0xf1, 0x87, 0xe6, 0xe6, 0xdf
 };
 
-TO_EC_STR_PARAM(GOST_512bits_curve_order);
+TO_EC_STR_PARAM(GOST_512bits_curve_gen_order);
 
 #define CURVE_GOST512_Q_BITLEN 511
-static const u8 GOST_512bits_curve_order_bitlen[] = { 0x01, 0xff };
+static const u8 GOST_512bits_curve_gen_order_bitlen[] = { 0x01, 0xff };
 
-TO_EC_STR_PARAM(GOST_512bits_curve_order_bitlen);
+TO_EC_STR_PARAM(GOST_512bits_curve_gen_order_bitlen);
 
 static const u8 GOST_512bits_curve_cofactor[] = { 0x01 };
 
@@ -223,12 +224,12 @@ static const ec_str_params GOST_512bits_curve_str_params = {
 	.p_reciprocal = &GOST_512bits_curve_p_reciprocal_str_param,
 	.a = &GOST_512bits_curve_a_str_param,
 	.b = &GOST_512bits_curve_b_str_param,
-	.npoints = &GOST_512bits_curve_npoints_str_param,
+	.curve_order = &GOST_512bits_curve_order_str_param,
 	.gx = &GOST_512bits_curve_gx_str_param,
 	.gy = &GOST_512bits_curve_gy_str_param,
 	.gz = &GOST_512bits_curve_gz_str_param,
-	.order = &GOST_512bits_curve_order_str_param,
-	.order_bitlen = &GOST_512bits_curve_order_bitlen_str_param,
+	.gen_order = &GOST_512bits_curve_gen_order_str_param,
+	.gen_order_bitlen = &GOST_512bits_curve_gen_order_bitlen_str_param,
 	.cofactor = &GOST_512bits_curve_cofactor_str_param,
 	.oid = &GOST_512bits_curve_oid_str_param,
 	.name = &GOST_512bits_curve_name_str_param,
@@ -250,6 +251,13 @@ static const ec_str_params GOST_512bits_curve_str_params = {
 #if (CURVES_MAX_Q_BIT_LEN < CURVE_GOST512_Q_BITLEN)
 #undef CURVES_MAX_Q_BIT_LEN
 #define CURVES_MAX_Q_BIT_LEN CURVE_GOST512_Q_BITLEN
+#endif
+#ifndef CURVES_MAX_CURVE_ORDER_BIT_LEN
+#define CURVES_MAX_CURVE_ORDER_BIT_LEN    0
+#endif
+#if (CURVES_MAX_CURVE_ORDER_BIT_LEN < CURVE_GOST512_CURVE_ORDER_BITLEN)
+#undef CURVES_MAX_CURVE_ORDER_BIT_LEN
+#define CURVES_MAX_CURVE_ORDER_BIT_LEN CURVE_GOST512_CURVE_ORDER_BITLEN
 #endif
 
 #endif /* __EC_PARAMS_GOST512_H__ */

@@ -168,7 +168,8 @@ static const u8 secp521r1_b[] = {
 
 TO_EC_STR_PARAM(secp521r1_b);
 
-static const u8 secp521r1_npoints[] = {
+#define CURVE_SECP521R1_CURVE_ORDER_BITLEN 521
+static const u8 secp521r1_curve_order[] = {
 	0x01, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
 	0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
 	0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
@@ -180,7 +181,7 @@ static const u8 secp521r1_npoints[] = {
 	0x64, 0x09
 };
 
-TO_EC_STR_PARAM(secp521r1_npoints);
+TO_EC_STR_PARAM(secp521r1_curve_order);
 
 static const u8 secp521r1_gx[] = {
 	0x00, 0xC6, 0x85, 0x8E, 0x06, 0xB7, 0x04, 0x04,
@@ -224,7 +225,7 @@ static const u8 secp521r1_gz[] = {
 
 TO_EC_STR_PARAM(secp521r1_gz);
 
-static const u8 secp521r1_order[] = {
+static const u8 secp521r1_gen_order[] = {
 	0x01, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
 	0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
 	0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
@@ -236,12 +237,12 @@ static const u8 secp521r1_order[] = {
 	0x64, 0x09
 };
 
-TO_EC_STR_PARAM(secp521r1_order);
+TO_EC_STR_PARAM(secp521r1_gen_order);
 
 #define CURVE_SECP521R1_Q_BITLEN 521
-static const u8 secp521r1_order_bitlen[] = { 0x02, 0x09 };
+static const u8 secp521r1_gen_order_bitlen[] = { 0x02, 0x09 };
 
-TO_EC_STR_PARAM(secp521r1_order_bitlen);
+TO_EC_STR_PARAM(secp521r1_gen_order_bitlen);
 
 static const u8 secp521r1_cofactor[] = { 0x01 };
 
@@ -264,12 +265,12 @@ static const ec_str_params secp521r1_str_params = {
 	.p_reciprocal = &secp521r1_p_reciprocal_str_param,
 	.a = &secp521r1_a_str_param,
 	.b = &secp521r1_b_str_param,
-	.npoints = &secp521r1_npoints_str_param,
+	.curve_order = &secp521r1_curve_order_str_param,
 	.gx = &secp521r1_gx_str_param,
 	.gy = &secp521r1_gy_str_param,
 	.gz = &secp521r1_gz_str_param,
-	.order = &secp521r1_order_str_param,
-	.order_bitlen = &secp521r1_order_bitlen_str_param,
+	.gen_order = &secp521r1_gen_order_str_param,
+	.gen_order_bitlen = &secp521r1_gen_order_bitlen_str_param,
 	.cofactor = &secp521r1_cofactor_str_param,
 	.oid = &secp521r1_oid_str_param,
 	.name = &secp521r1_name_str_param,
@@ -291,6 +292,13 @@ static const ec_str_params secp521r1_str_params = {
 #if (CURVES_MAX_Q_BIT_LEN < CURVE_SECP521R1_Q_BITLEN)
 #undef CURVES_MAX_Q_BIT_LEN
 #define CURVES_MAX_Q_BIT_LEN CURVE_SECP521R1_Q_BITLEN
+#endif
+#ifndef CURVES_MAX_CURVE_ORDER_BIT_LEN
+#define CURVES_MAX_CURVE_ORDER_BIT_LEN    0
+#endif
+#if (CURVES_MAX_CURVE_ORDER_BIT_LEN < CURVE_SECP521R1_CURVE_ORDER_BITLEN)
+#undef CURVES_MAX_CURVE_ORDER_BIT_LEN
+#define CURVES_MAX_CURVE_ORDER_BIT_LEN CURVE_SECP521R1_CURVE_ORDER_BITLEN
 #endif
 
 #endif /* __EC_PARAMS_SECP521R1_H__ */

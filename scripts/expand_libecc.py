@@ -1419,15 +1419,20 @@ def curve_params(name, prime, pbitlen, a, b, gx, gy, order, cofactor, oid):
     
     ec_params_string += export_curve_int(name, "a", a, bytesize)
     ec_params_string += export_curve_int(name, "b", b, bytesize)
-    ec_params_string += export_curve_int(name, "npoints", npoints, getbytelen(npoints))
+
+    curve_order_bitlen = getbitlen(npoints)
+    ec_params_string += "#define CURVE_"+name.upper()+"_CURVE_ORDER_BITLEN "+str(curve_order_bitlen)+"\n"
+    ec_params_string += export_curve_int(name, "curve_order", npoints, getbytelen(npoints))
+
     ec_params_string += export_curve_int(name, "gx", gx, bytesize)
     ec_params_string += export_curve_int(name, "gy", gy, bytesize)
     ec_params_string += export_curve_int(name, "gz", 0x01, bytesize)
 
     qbitlen = getbitlen(order)
-    ec_params_string += export_curve_int(name, "order", order, getbytelen(order))
+
+    ec_params_string += export_curve_int(name, "gen_order", order, getbytelen(order))
     ec_params_string += "#define CURVE_"+name.upper()+"_Q_BITLEN "+str(qbitlen)+"\n"
-    ec_params_string += export_curve_int(name, "order_bitlen", qbitlen, getbytelen(qbitlen))
+    ec_params_string += export_curve_int(name, "gen_order_bitlen", qbitlen, getbytelen(qbitlen))
 
     ec_params_string += export_curve_int(name, "cofactor", cofactor, getbytelen(cofactor))
 
@@ -1448,12 +1453,12 @@ def curve_params(name, prime, pbitlen, a, b, gx, gy, order, cofactor, oid):
     export_curve_struct(name, "p_reciprocal", "p_reciprocal") +\
     export_curve_struct(name, "a", "a") +\
     export_curve_struct(name, "b", "b") +\
-    export_curve_struct(name, "npoints", "npoints") +\
+    export_curve_struct(name, "curve_order", "curve_order") +\
     export_curve_struct(name, "gx", "gx") +\
     export_curve_struct(name, "gy", "gy") +\
     export_curve_struct(name, "gz", "gz") +\
-    export_curve_struct(name, "order", "order") +\
-    export_curve_struct(name, "order_bitlen", "order_bitlen") +\
+    export_curve_struct(name, "gen_order", "gen_order") +\
+    export_curve_struct(name, "gen_order_bitlen", "gen_order_bitlen") +\
     export_curve_struct(name, "cofactor", "cofactor") +\
     export_curve_struct(name, "oid", "oid") +\
     export_curve_struct(name, "name", "name")
@@ -1475,6 +1480,13 @@ def curve_params(name, prime, pbitlen, a, b, gx, gy, order, cofactor, oid):
     "#if (CURVES_MAX_Q_BIT_LEN < CURVE_"+name.upper()+"_Q_BITLEN)\n"+\
     "#undef CURVES_MAX_Q_BIT_LEN\n"+\
     "#define CURVES_MAX_Q_BIT_LEN CURVE_"+name.upper()+"_Q_BITLEN\n"+\
+    "#endif\n"+\
+    "#ifndef CURVES_MAX_CURVE_ORDER_BIT_LEN\n"+\
+    "#define CURVES_MAX_CURVE_ORDER_BIT_LEN    0\n"+\
+    "#endif\n"+\
+    "#if (CURVES_MAX_CURVE_ORDER_BIT_LEN < CURVE_"+name.upper()+"_CURVE_ORDER_BITLEN)\n"+\
+    "#undef CURVES_MAX_CURVE_ORDER_BIT_LEN\n"+\
+    "#define CURVES_MAX_CURVE_ORDER_BIT_LEN CURVE_"+name.upper()+"_CURVE_ORDER_BITLEN\n"+\
     "#endif\n\n"
 
     ec_params_string += "/*\n"+\

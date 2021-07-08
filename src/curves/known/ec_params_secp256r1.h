@@ -93,14 +93,15 @@ static const u8 secp256r1_b[] = {
 
 TO_EC_STR_PARAM(secp256r1_b);
 
-static const u8 secp256r1_npoints[] = {
+#define CURVE_SECP256R1_CURVE_ORDER_BITLEN 256
+static const u8 secp256r1_curve_order[] = {
 	0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00,
 	0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
 	0xBC, 0xE6, 0xFA, 0xAD, 0xA7, 0x17, 0x9E, 0x84,
 	0xF3, 0xB9, 0xCA, 0xC2, 0xFC, 0x63, 0x25, 0x51
 };
 
-TO_EC_STR_PARAM(secp256r1_npoints);
+TO_EC_STR_PARAM(secp256r1_curve_order);
 
 static const u8 secp256r1_gx[] = {
 	0x6B, 0x17, 0xD1, 0xF2, 0xE1, 0x2C, 0x42, 0x47,
@@ -129,19 +130,19 @@ static const u8 secp256r1_gz[] = {
 
 TO_EC_STR_PARAM(secp256r1_gz);
 
-static const u8 secp256r1_order[] = {
+static const u8 secp256r1_gen_order[] = {
 	0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00,
 	0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
 	0xBC, 0xE6, 0xFA, 0xAD, 0xA7, 0x17, 0x9E, 0x84,
 	0xF3, 0xB9, 0xCA, 0xC2, 0xFC, 0x63, 0x25, 0x51
 };
 
-TO_EC_STR_PARAM(secp256r1_order);
+TO_EC_STR_PARAM(secp256r1_gen_order);
 
 #define CURVE_SECP256R1_Q_BITLEN 256
-static const u8 secp256r1_order_bitlen[] = { 0x01, 0x00 };
+static const u8 secp256r1_gen_order_bitlen[] = { 0x01, 0x00 };
 
-TO_EC_STR_PARAM(secp256r1_order_bitlen);
+TO_EC_STR_PARAM(secp256r1_gen_order_bitlen);
 
 static const u8 secp256r1_cofactor[] = { 0x01 };
 
@@ -164,12 +165,12 @@ static const ec_str_params secp256r1_str_params = {
 	.p_reciprocal = &secp256r1_p_reciprocal_str_param,
 	.a = &secp256r1_a_str_param,
 	.b = &secp256r1_b_str_param,
-	.npoints = &secp256r1_npoints_str_param,
+	.curve_order = &secp256r1_curve_order_str_param,
 	.gx = &secp256r1_gx_str_param,
 	.gy = &secp256r1_gy_str_param,
 	.gz = &secp256r1_gz_str_param,
-	.order = &secp256r1_order_str_param,
-	.order_bitlen = &secp256r1_order_bitlen_str_param,
+	.gen_order = &secp256r1_gen_order_str_param,
+	.gen_order_bitlen = &secp256r1_gen_order_bitlen_str_param,
 	.cofactor = &secp256r1_cofactor_str_param,
 	.oid = &secp256r1_oid_str_param,
 	.name = &secp256r1_name_str_param,
@@ -191,6 +192,13 @@ static const ec_str_params secp256r1_str_params = {
 #if (CURVES_MAX_Q_BIT_LEN < CURVE_SECP256R1_Q_BITLEN)
 #undef CURVES_MAX_Q_BIT_LEN
 #define CURVES_MAX_Q_BIT_LEN CURVE_SECP256R1_Q_BITLEN
+#endif
+#ifndef CURVES_MAX_CURVE_ORDER_BIT_LEN
+#define CURVES_MAX_CURVE_ORDER_BIT_LEN    0
+#endif
+#if (CURVES_MAX_CURVE_ORDER_BIT_LEN < CURVE_SECP256R1_CURVE_ORDER_BITLEN)
+#undef CURVES_MAX_CURVE_ORDER_BIT_LEN
+#define CURVES_MAX_CURVE_ORDER_BIT_LEN CURVE_SECP256R1_CURVE_ORDER_BITLEN
 #endif
 
 #endif /* __EC_PARAMS_SECP256R1_H__ */

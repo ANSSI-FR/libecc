@@ -183,13 +183,14 @@ static const u8 brainpoolp192r1_b[] = {
 
 TO_EC_STR_PARAM(brainpoolp192r1_b);
 
-static const u8 brainpoolp192r1_npoints[] = {
+#define CURVE_BRAINPOOLP192R1_CURVE_ORDER_BITLEN 192
+static const u8 brainpoolp192r1_curve_order[] = {
 	0xc3, 0x02, 0xf4, 0x1d, 0x93, 0x2a, 0x36, 0xcd, 
 	0xa7, 0xa3, 0x46, 0x2f, 0x9e, 0x9e, 0x91, 0x6b, 
 	0x5b, 0xe8, 0xf1, 0x02, 0x9a, 0xc4, 0xac, 0xc1, 
 };
 
-TO_EC_STR_PARAM(brainpoolp192r1_npoints);
+TO_EC_STR_PARAM(brainpoolp192r1_curve_order);
 
 static const u8 brainpoolp192r1_gx[] = {
 	0xc0, 0xa0, 0x64, 0x7e, 0xaa, 0xb6, 0xa4, 0x87, 
@@ -215,20 +216,20 @@ static const u8 brainpoolp192r1_gz[] = {
 
 TO_EC_STR_PARAM(brainpoolp192r1_gz);
 
-static const u8 brainpoolp192r1_order[] = {
+static const u8 brainpoolp192r1_gen_order[] = {
 	0xc3, 0x02, 0xf4, 0x1d, 0x93, 0x2a, 0x36, 0xcd, 
 	0xa7, 0xa3, 0x46, 0x2f, 0x9e, 0x9e, 0x91, 0x6b, 
 	0x5b, 0xe8, 0xf1, 0x02, 0x9a, 0xc4, 0xac, 0xc1, 
 };
 
-TO_EC_STR_PARAM(brainpoolp192r1_order);
+TO_EC_STR_PARAM(brainpoolp192r1_gen_order);
 
 #define CURVE_BRAINPOOLP192R1_Q_BITLEN 192
-static const u8 brainpoolp192r1_order_bitlen[] = {
+static const u8 brainpoolp192r1_gen_order_bitlen[] = {
 	0xc0, 
 };
 
-TO_EC_STR_PARAM(brainpoolp192r1_order_bitlen);
+TO_EC_STR_PARAM(brainpoolp192r1_gen_order_bitlen);
 
 static const u8 brainpoolp192r1_cofactor[] = {
 	0x01, 
@@ -253,12 +254,12 @@ static const ec_str_params brainpoolp192r1_str_params = {
 	.p_reciprocal = &brainpoolp192r1_p_reciprocal_str_param, 
 	.a = &brainpoolp192r1_a_str_param, 
 	.b = &brainpoolp192r1_b_str_param, 
-	.npoints = &brainpoolp192r1_npoints_str_param, 
+	.curve_order = &brainpoolp192r1_curve_order_str_param, 
 	.gx = &brainpoolp192r1_gx_str_param, 
 	.gy = &brainpoolp192r1_gy_str_param, 
 	.gz = &brainpoolp192r1_gz_str_param, 
-	.order = &brainpoolp192r1_order_str_param, 
-	.order_bitlen = &brainpoolp192r1_order_bitlen_str_param, 
+	.gen_order = &brainpoolp192r1_gen_order_str_param, 
+	.gen_order_bitlen = &brainpoolp192r1_gen_order_bitlen_str_param, 
 	.cofactor = &brainpoolp192r1_cofactor_str_param, 
 	.oid = &brainpoolp192r1_oid_str_param, 
 	.name = &brainpoolp192r1_name_str_param, 

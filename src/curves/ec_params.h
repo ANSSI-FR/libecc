@@ -55,9 +55,6 @@ typedef struct {
 	/* Curve */
 	ec_shortw_crv ec_curve;
 
-	/* Number of points on curve */
-	nn ec_curve_points;
-
 	/*
 	 * Generator G defining our group, in projective
 	 * coordinates.

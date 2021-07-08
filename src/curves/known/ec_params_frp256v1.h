@@ -99,14 +99,15 @@ static const u8 frp256v1_b[] = {
 
 TO_EC_STR_PARAM(frp256v1_b);
 
-static const u8 frp256v1_npoints[] = {
+#define CURVE_FRP256V1_CURVE_ORDER_BITLEN 256
+static const u8 frp256v1_curve_order[] = {
 	0xf1, 0xfd, 0x17, 0x8c, 0x0b, 0x3a, 0xd5, 0x8f,
 	0x10, 0x12, 0x6d, 0xe8, 0xce, 0x42, 0x43, 0x5b,
 	0x53, 0xdc, 0x67, 0xe1, 0x40, 0xd2, 0xbf, 0x94,
 	0x1f, 0xfd, 0xd4, 0x59, 0xc6, 0xd6, 0x55, 0xe1
 };
 
-TO_EC_STR_PARAM(frp256v1_npoints);
+TO_EC_STR_PARAM(frp256v1_curve_order);
 
 static const u8 frp256v1_gx[] = {
 	0xb6, 0xb3, 0xd4, 0xc3, 0x56, 0xc1, 0x39, 0xeb,
@@ -135,19 +136,19 @@ static const u8 frp256v1_gz[] = {
 
 TO_EC_STR_PARAM(frp256v1_gz);
 
-static const u8 frp256v1_order[] = {
+static const u8 frp256v1_gen_order[] = {
 	0xf1, 0xfd, 0x17, 0x8c, 0x0b, 0x3a, 0xd5, 0x8f,
 	0x10, 0x12, 0x6d, 0xe8, 0xce, 0x42, 0x43, 0x5b,
 	0x53, 0xdc, 0x67, 0xe1, 0x40, 0xd2, 0xbf, 0x94,
 	0x1f, 0xfd, 0xd4, 0x59, 0xc6, 0xd6, 0x55, 0xe1
 };
 
-TO_EC_STR_PARAM(frp256v1_order);
+TO_EC_STR_PARAM(frp256v1_gen_order);
 
 #define CURVE_FRP256V1_Q_BITLEN 256
-static const u8 frp256v1_order_bitlen[] = { 0x01, 0x00 };
+static const u8 frp256v1_gen_order_bitlen[] = { 0x01, 0x00 };
 
-TO_EC_STR_PARAM(frp256v1_order_bitlen);
+TO_EC_STR_PARAM(frp256v1_gen_order_bitlen);
 
 static const u8 frp256v1_cofactor[] = { 0x01 };
 
@@ -170,12 +171,12 @@ static const ec_str_params frp256v1_str_params = {
 	.p_reciprocal = &frp256v1_p_reciprocal_str_param,
 	.a = &frp256v1_a_str_param,
 	.b = &frp256v1_b_str_param,
-	.npoints = &frp256v1_npoints_str_param,
+	.curve_order = &frp256v1_curve_order_str_param,
 	.gx = &frp256v1_gx_str_param,
 	.gy = &frp256v1_gy_str_param,
 	.gz = &frp256v1_gz_str_param,
-	.order = &frp256v1_order_str_param,
-	.order_bitlen = &frp256v1_order_bitlen_str_param,
+	.gen_order = &frp256v1_gen_order_str_param,
+	.gen_order_bitlen = &frp256v1_gen_order_bitlen_str_param,
 	.cofactor = &frp256v1_cofactor_str_param,
 	.oid = &frp256v1_oid_str_param,
 	.name = &frp256v1_name_str_param,
@@ -197,6 +198,13 @@ static const ec_str_params frp256v1_str_params = {
 #if (CURVES_MAX_Q_BIT_LEN < CURVE_FRP256V1_Q_BITLEN)
 #undef CURVES_MAX_Q_BIT_LEN
 #define CURVES_MAX_Q_BIT_LEN CURVE_FRP256V1_Q_BITLEN
+#endif
+#ifndef CURVES_MAX_CURVE_ORDER_BIT_LEN
+#define CURVES_MAX_CURVE_ORDER_BIT_LEN	0
+#endif
+#if (CURVES_MAX_CURVE_ORDER_BIT_LEN < CURVE_FRP256V1_CURVE_ORDER_BITLEN)
+#undef CURVES_MAX_CURVE_ORDER_BIT_LEN
+#define CURVES_MAX_CURVE_ORDER_BIT_LEN CURVE_FRP256V1_CURVE_ORDER_BITLEN
 #endif
 
 #endif /* __EC_PARAMS_FRP256V1_H__ */

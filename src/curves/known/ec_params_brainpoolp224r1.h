@@ -161,14 +161,14 @@ static const u8 brainpoolp224r1_b[] = {
 
 TO_EC_STR_PARAM(brainpoolp224r1_b);
 
-static const u8 brainpoolp224r1_npoints[] = {
+static const u8 brainpoolp224r1_curve_order[] = {
 	0xD7, 0xC1, 0x34, 0xAA, 0x26, 0x43, 0x66, 0x86,
 	0x2A, 0x18, 0x30, 0x25, 0x75, 0xD0, 0xFB, 0x98,
 	0xD1, 0x16, 0xBC, 0x4B, 0x6D, 0xDE, 0xBC, 0xA3,
 	0xA5, 0xA7, 0x93, 0x9F
 };
 
-TO_EC_STR_PARAM(brainpoolp224r1_npoints);
+TO_EC_STR_PARAM(brainpoolp224r1_curve_order);
 
 static const u8 brainpoolp224r1_gx[] = {
 	0x0D, 0x90, 0x29, 0xAD, 0x2C, 0x7E, 0x5C, 0xF4,
@@ -197,19 +197,20 @@ static const u8 brainpoolp224r1_gz[] = {
 
 TO_EC_STR_PARAM(brainpoolp224r1_gz);
 
-static const u8 brainpoolp224r1_order[] = {
+#define CURVE_BRAINPOOLP224R1_CURVE_ORDER_BITLEN 224
+static const u8 brainpoolp224r1_gen_order[] = {
 	0xD7, 0xC1, 0x34, 0xAA, 0x26, 0x43, 0x66, 0x86,
 	0x2A, 0x18, 0x30, 0x25, 0x75, 0xD0, 0xFB, 0x98,
 	0xD1, 0x16, 0xBC, 0x4B, 0x6D, 0xDE, 0xBC, 0xA3,
 	0xA5, 0xA7, 0x93, 0x9F
 };
 
-TO_EC_STR_PARAM(brainpoolp224r1_order);
+TO_EC_STR_PARAM(brainpoolp224r1_gen_order);
 
 #define CURVE_BRAINPOOLP224R1_Q_BITLEN 224
-static const u8 brainpoolp224r1_order_bitlen[] = { 0xE0 };
+static const u8 brainpoolp224r1_gen_order_bitlen[] = { 0xE0 };
 
-TO_EC_STR_PARAM(brainpoolp224r1_order_bitlen);
+TO_EC_STR_PARAM(brainpoolp224r1_gen_order_bitlen);
 
 static const u8 brainpoolp224r1_cofactor[] = { 0x01 };
 
@@ -232,12 +233,12 @@ static const ec_str_params brainpoolp224r1_str_params = {
 	.p_reciprocal = &brainpoolp224r1_p_reciprocal_str_param,
 	.a = &brainpoolp224r1_a_str_param,
 	.b = &brainpoolp224r1_b_str_param,
-	.npoints = &brainpoolp224r1_npoints_str_param,
+	.curve_order = &brainpoolp224r1_curve_order_str_param,
 	.gx = &brainpoolp224r1_gx_str_param,
 	.gy = &brainpoolp224r1_gy_str_param,
 	.gz = &brainpoolp224r1_gz_str_param,
-	.order = &brainpoolp224r1_order_str_param,
-	.order_bitlen = &brainpoolp224r1_order_bitlen_str_param,
+	.gen_order = &brainpoolp224r1_gen_order_str_param,
+	.gen_order_bitlen = &brainpoolp224r1_gen_order_bitlen_str_param,
 	.cofactor = &brainpoolp224r1_cofactor_str_param,
 	.oid = &brainpoolp224r1_oid_str_param,
 	.name = &brainpoolp224r1_name_str_param,
@@ -259,6 +260,13 @@ static const ec_str_params brainpoolp224r1_str_params = {
 #if (CURVES_MAX_Q_BIT_LEN < CURVE_BRAINPOOLP224R1_Q_BITLEN)
 #undef CURVES_MAX_Q_BIT_LEN
 #define CURVES_MAX_Q_BIT_LEN CURVE_BRAINPOOLP224R1_Q_BITLEN
+#endif
+#ifndef CURVES_MAX_CURVE_ORDER_BIT_LEN
+#define CURVES_MAX_CURVE_ORDER_BIT_LEN    0
+#endif
+#if (CURVES_MAX_CURVE_ORDER_BIT_LEN < CURVE_BRAINPOOLP224R1_CURVE_ORDER_BITLEN)
+#undef CURVES_MAX_CURVE_ORDER_BIT_LEN
+#define CURVES_MAX_CURVE_ORDER_BIT_LEN CURVE_BRAINPOOLP224R1_CURVE_ORDER_BITLEN
 #endif
 
 #endif /* __EC_PARAMS_BRAINPOOLP224R1_H__ */

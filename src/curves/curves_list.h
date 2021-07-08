@@ -50,6 +50,13 @@
 #error "Max q bit length is 0; did you disable all curves in lib_ecc_config.h?"
 #endif
 #if (CURVES_MAX_Q_BIT_LEN > 65535)
+#error "Generator order length (in bytes) MUST fit on an u16!"
+#endif
+
+#ifndef CURVES_MAX_CURVE_ORDER_BIT_LEN
+#error "Max curve order bit length is 0; did you disable all curves in lib_ecc_config.h?"
+#endif
+#if (CURVES_MAX_CURVE_ORDER_BIT_LEN > 65535)
 #error "Curve order length (in bytes) MUST fit on an u16!"
 #endif
 
