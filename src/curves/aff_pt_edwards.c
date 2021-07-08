@@ -218,6 +218,133 @@ int aff_pt_edwards_export_to_buf(aff_pt_edwards_src_t pt, u8 *pt_buf, u32 pt_buf
 err:
 	return ret;
 }
+
+/*
+ * Mapping curves from twisted Edwards to Montgomery.
+ *
+ *  E{a, d} is mapped to M{A, B} using the formula:
+ *    A = 2(a+d)/(a-d)
+ *    B = 4/((a-d) * alpha^2)
+ */
+void curve_edwards_to_montgomery(ec_edwards_crv_src_t edwards_crv, ec_montgomery_crv_t montgomery_crv, fp_src_t alpha_edwards)
+{
+	fp tmp1, tmp2, A, B;
+
+	ec_edwards_crv_check_initialized(edwards_crv);
+	MUST_HAVE(fp_is_initialized(alpha_edwards) && (edwards_crv->a.ctx == alpha_edwards->ctx));
+
+	fp_init(&tmp1, edwards_crv->a.ctx);
+	fp_init(&tmp2, edwards_crv->a.ctx);
+	fp_init(&A, edwards_crv->a.ctx);
+	fp_init(&B, edwards_crv->a.ctx);
+
+
+	/* Compute Z = (alpha ^ 2) et T = 2 / ((a-d) * Z)
+	 * and then:
+	 *   A = 2(a+d)/(a-d) = Z * (a + d) * T
+	 *   B = 4/((a-d) * alpha^2) = 2 * T
+	 */
+	fp_sqr(&tmp1, alpha_edwards);
+	fp_sub(&tmp2, &(edwards_crv->a), &(edwards_crv->d));
+	fp_mul(&tmp2, &tmp2, &tmp1);
+	fp_inv(&tmp2, &tmp2);
+	fp_set_word_value(&B, WORD(2));
+	fp_mul(&tmp2, &tmp2, &B);
+
+	fp_add(&A, &(edwards_crv->a), &(edwards_crv->d));
+	fp_mul(&A, &A, &tmp1);
+	fp_mul(&A, &A, &tmp2);
+	fp_mul(&B, &B, &tmp2);
+
+	/* Initialize our Montgomery curve */
+	ec_montgomery_crv_init(montgomery_crv, &A, &B, &(edwards_crv->order));
+
+	fp_uninit(&tmp1);
+	fp_uninit(&tmp2);
+	fp_uninit(&A);
+	fp_uninit(&B);
+	return;
+}
+
+int curve_edwards_montgomery_check(ec_edwards_crv_src_t edwards_crv, ec_montgomery_crv_src_t montgomery_crv, fp_src_t alpha_edwards)
+{
+	int ret = 0;
+
+        ec_montgomery_crv montgomery_crv_check;
+
+        curve_edwards_to_montgomery(edwards_crv, &montgomery_crv_check, alpha_edwards);
+
+        /* Check elements */
+        if(fp_cmp(&(montgomery_crv_check.A), &(montgomery_crv->A)) != 0){
+		ret = 0;
+                goto err;
+        }
+        if(fp_cmp(&(montgomery_crv_check.B), &(montgomery_crv->B)) != 0){
+		ret = 0;
+                goto err;
+        }
+        if(nn_cmp(&(montgomery_crv_check.order), &(montgomery_crv->order)) != 0){
+		ret = 0;
+                goto err;
+        }
+
+        ret = 1;
+err:
+	ec_montgomery_crv_uninit(&montgomery_crv_check);
+        return ret;
+}
+
+/*
+ * Mapping curves from Montgomery to twisted Edwards.
+ *
+ *  M{A, B} is mapped to E{a, d} using the formula:
+ *    a = (A+2)/(B * alpha^2)
+ *    d = (A-2)/(B * alpha^2)
+ *
+ *  Or the inverse (switch a and d roles).
+ */
+void curve_montgomery_to_edwards(ec_montgomery_crv_src_t montgomery_crv, ec_edwards_crv_t edwards_crv, fp_src_t alpha_edwards)
+{
+        fp tmp, tmp2, a, d;
+
+        ec_montgomery_crv_check_initialized(montgomery_crv);
+	MUST_HAVE(fp_is_initialized(alpha_edwards) && (montgomery_crv->A.ctx == alpha_edwards->ctx));
+
+        fp_init(&tmp, montgomery_crv->A.ctx);
+        fp_init(&tmp2, montgomery_crv->A.ctx);
+        fp_init(&a, montgomery_crv->A.ctx);
+        fp_init(&d, montgomery_crv->A.ctx);
+
+	fp_set_word_value(&tmp, WORD(2));
+	fp_mul(&tmp2, &(montgomery_crv->B), alpha_edwards);
+	fp_mul(&tmp2, &tmp2, alpha_edwards);
+	fp_inv(&tmp2, &tmp2);
+
+	/* a = (A+2)/(B * alpha^2) */
+	fp_add(&a, &(montgomery_crv->A), &tmp);
+	fp_mul(&a, &a, &tmp2);
+
+	/* d = (A-2)/(B * alpha^2) */
+	fp_sub(&d, &(montgomery_crv->A), &tmp);
+	fp_mul(&d, &d, &tmp2);
+
+        /* Initialize our Edwards curve */
+	/* Check if we have to inverse a and d */
+	fp_one(&tmp);
+	if(fp_cmp(&d, &tmp) == 0){
+	        ec_edwards_crv_init(edwards_crv, &d, &a, &(montgomery_crv->order));
+	}
+	else{
+	        ec_edwards_crv_init(edwards_crv, &a, &d, &(montgomery_crv->order));
+	}
+
+	fp_uninit(&tmp);
+	fp_uninit(&tmp2);
+	fp_uninit(&a);
+	fp_uninit(&d);
+	return;
+}
+
 /*
  * Mapping curve from Edwards to short Weierstrass and vice-versa.
  *
@@ -306,7 +433,7 @@ void aff_pt_edwards_to_montgomery(aff_pt_edwards_src_t in_edwards, ec_montgomery
 	/* Copy -1 as y to produce (0, 0) */
 	fp_copy(&tab_y[0], &tmp2);
 	fp_copy(&tab_y[1], &(in_edwards->y));
-	/**/
+
 	u8 idx = (fp_iszero(&(in_edwards->x)) && fp_cmp(&(in_edwards->y), &tmp2)) ? 0 : 1;
 	fp_tabselect(&x, idx, tab_x_t, 2);
 	fp_tabselect(&y, idx, tab_y_t, 2);
@@ -380,7 +507,7 @@ void aff_pt_montgomery_to_edwards(aff_pt_montgomery_src_t in_montgomery, ec_edwa
 	/* Copy 1 as v dummy value to produce (0, -1) */
 	fp_copy(&tab_v[0], &tmp);
 	fp_copy(&tab_v[1], &(in_montgomery->v));
-	/**/
+
 	u8 idx = (fp_iszero(&(in_montgomery->u)) && fp_iszero(&(in_montgomery->v))) ? 0 : 1;
 	fp_tabselect(&u, idx, tab_u_t, 2);
 	fp_tabselect(&v, idx, tab_v_t, 2);

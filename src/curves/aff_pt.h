@@ -124,4 +124,9 @@ void curve_shortw_to_montgomery(ec_shortw_crv_src_t shortw_crv, ec_montgomery_cr
 void aff_pt_montgomery_to_shortw(aff_pt_montgomery_src_t in_montgomery, ec_shortw_crv_src_t shortw_crv, aff_pt_t out_shortw);
 void aff_pt_shortw_to_montgomery(aff_pt_src_t in_shortw, ec_montgomery_crv_src_t montgomery_crv, aff_pt_montgomery_t out_montgomery);
 
+
+/*****/
+void aff_pt_edwards_to_montgomery(aff_pt_edwards_src_t in_edwards, ec_montgomery_crv_src_t montgomery_crv, aff_pt_montgomery_t out_montgomery, fp_src_t alpha);
+void aff_pt_montgomery_to_edwards(aff_pt_montgomery_src_t in_montgomery, ec_edwards_crv_src_t edwards_crv, aff_pt_edwards_t out_edwards, fp_src_t alpha);
+
  #endif /* __AFF_PT_H__ */
