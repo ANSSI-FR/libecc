@@ -501,7 +501,7 @@ int _ecfsdsa_verify_init(struct ec_verify_context *ctx,
 	fp_import_from_buf(&ry, r + p_len, p_len);
 
 	/* Let's now check that r represents a point on the curve */
-	if (!is_on_curve(&rx, &ry, &(ctx->pub_key->params->ec_curve))) {
+	if (!is_on_shortw_curve(&rx, &ry, &(ctx->pub_key->params->ec_curve))) {
 		ret = -1;
 		goto err;
 	}

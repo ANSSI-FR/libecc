@@ -188,7 +188,7 @@ void ec_shortw_aff_to_prj(prj_pt_t out, aff_pt_src_t in)
 	aff_pt_check_initialized(in);
 	
 	/* The input affine point must be on the curve */
-	MUST_HAVE(is_on_curve(&(in->x), &(in->y), in->crv) == 1);
+	MUST_HAVE(is_on_shortw_curve(&(in->x), &(in->y), in->crv) == 1);
 
 	prj_pt_init(out, in->crv);
 

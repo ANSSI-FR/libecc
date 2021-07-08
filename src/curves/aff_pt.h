@@ -36,7 +36,7 @@ void aff_pt_init_from_coords(aff_pt_t in,
 			     ec_shortw_crv_src_t curve,
 			     fp_src_t xcoord, fp_src_t ycoord);
 void aff_pt_uninit(aff_pt_t in);
-int is_on_curve(fp_src_t x, fp_src_t y, ec_shortw_crv_src_t curve);
+int is_on_shortw_curve(fp_src_t x, fp_src_t y, ec_shortw_crv_src_t curve);
 int aff_pt_is_on_curve(aff_pt_src_t pt);
 void ec_shortw_aff_copy(aff_pt_t out, aff_pt_src_t in);
 int ec_shortw_aff_cmp(aff_pt_src_t in1, aff_pt_src_t in2);

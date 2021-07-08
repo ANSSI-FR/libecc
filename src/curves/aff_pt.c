@@ -75,7 +75,7 @@ void aff_pt_uninit(aff_pt_t in)
  * Return 1 if the point of coordinates (x,y) is on the curve, i.e. if it
  * verifies curve equation y^2 = x^3 + ax + b. Returns 0 otherwise.
  */
-int is_on_curve(fp_src_t x, fp_src_t y, ec_shortw_crv_src_t curve)
+int is_on_shortw_curve(fp_src_t x, fp_src_t y, ec_shortw_crv_src_t curve)
 {
 	fp y2, ax, x3, x2, tmp, tmp2;
 	int ret;
@@ -118,7 +118,8 @@ int is_on_curve(fp_src_t x, fp_src_t y, ec_shortw_crv_src_t curve)
 
 int aff_pt_is_on_curve(aff_pt_src_t pt)
 {
-	return is_on_curve(&(pt->x), &(pt->y), pt->crv);
+	aff_pt_check_initialized(pt);
+	return is_on_shortw_curve(&(pt->x), &(pt->y), pt->crv);
 }
 
 void ec_shortw_aff_copy(aff_pt_t out, aff_pt_src_t in)
@@ -232,5 +233,3 @@ int aff_pt_export_to_buf(aff_pt_src_t pt, u8 *pt_buf, u32 pt_buf_len)
 
         return 0;
 }
-
-

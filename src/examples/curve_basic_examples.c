@@ -74,7 +74,7 @@ void get_random_point_on_curve(ec_params *curve_params, prj_pt *out_point)
 		 */
 		if (fp_square_root(&y, &fp_tmp2, &fp_tmp1) == 0) {
 			/* Check that we indeed satisfy the curve equation */
-			if (!is_on_curve(&x, &y, &(curve_params->ec_curve))) {
+			if (!is_on_shortw_curve(&x, &y, &(curve_params->ec_curve))) {
 				/* This should not happen ... */
 				ext_printf("Error: Tonelli-Shanks found a bad "
 					   "solution to curve equation ...\n");
