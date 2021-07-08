@@ -18,6 +18,7 @@
 
 #include "../fp/fp.h"
 #include "ec_shortw.h"
+#include "ec_montgomery.h"
 
 typedef struct {
 	fp x;
@@ -46,4 +47,40 @@ int aff_pt_import_from_buf(aff_pt_t pt,
                            u16 pt_buf_len, ec_shortw_crv_src_t crv);
 int aff_pt_export_to_buf(aff_pt_src_t pt, u8 *pt_buf, u32 pt_buf_len);
 
-#endif /* __EC_SHORTW_AFF_PT_H__ */
+/*** Montgomery curves related ***/
+typedef struct {
+	fp u;
+	fp v;
+	ec_montgomery_crv_src_t crv;
+	word_t magic;
+} aff_pt_montgomery;
+
+typedef aff_pt_montgomery *aff_pt_montgomery_t;
+typedef const aff_pt_montgomery_t aff_pt_montgomery_src_t;
+
+void aff_pt_montgomery_check_initialized(aff_pt_montgomery_src_t in);
+int aff_pt_montgomery_is_initialized(aff_pt_montgomery_src_t in);
+void aff_pt_montgomery_init(aff_pt_montgomery_t in, ec_montgomery_crv_src_t curve);
+void aff_pt_montgomery_init_from_coords(aff_pt_montgomery_t in,
+                             ec_montgomery_crv_src_t curve,
+                             fp_src_t ucoord, fp_src_t vcoord);
+void aff_pt_montgomery_uninit(aff_pt_montgomery_t in);
+int is_on_montgomery_curve(fp_src_t u, fp_src_t v, ec_montgomery_crv_src_t curve);
+int aff_pt_montgomery_is_on_curve(aff_pt_montgomery_src_t pt);
+void ec_montgomery_aff_copy(aff_pt_montgomery_t out, aff_pt_montgomery_src_t in);
+int ec_montgomery_aff_cmp(aff_pt_montgomery_src_t in1, aff_pt_montgomery_src_t in2);
+int aff_pt_montgomery_import_from_buf(aff_pt_montgomery_t pt,
+                           const u8 *pt_buf,
+                           u16 pt_buf_len, ec_montgomery_crv_src_t crv);
+int aff_pt_montgomery_export_to_buf(aff_pt_montgomery_src_t pt, u8 *pt_buf, u32 pt_buf_len);
+
+void curve_montgomery_to_shortw(ec_montgomery_crv_src_t montgomery_crv, ec_shortw_crv_t shortw_crv);
+
+int curve_montgomery_shortw_check(ec_montgomery_crv_src_t montgomery_crv, ec_shortw_crv_src_t shortw_crv);
+void curve_shortw_to_montgomery(ec_shortw_crv_src_t shortw_crv, ec_montgomery_crv_t montgomery_crv, fp_src_t alpha_montgomery, fp_src_t gamma_montgomery);
+
+
+void aff_pt_montgomery_to_shortw(aff_pt_montgomery_src_t in_montgomery, ec_shortw_crv_src_t shortw_crv, aff_pt_t out_shortw);
+void aff_pt_shortw_to_montgomery(aff_pt_src_t in_shortw, ec_montgomery_crv_src_t montgomery_crv, aff_pt_montgomery_t out_montgomery);
+
+ #endif /* __AFF_PT_H__ */
