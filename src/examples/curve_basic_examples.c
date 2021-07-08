@@ -19,11 +19,6 @@
 /* We include the time external dependency for performance measurement */
 #include "time.h"
 
-/* Declare our Tonelli-Shanks algorithm to find square roots
- * in Fp, implemented in another module.
- */
-int fp_square_root(fp_t sqrt1, fp_t sqrt2, fp_src_t n);
-
 /* The followin function picks a random Fp element x, where Fp is the
  * curve underlying prime field, and computes y in Fp such that:
  *   y^2 = x^3 + ax + b, where a and b are the input elliptic
@@ -72,7 +67,7 @@ void get_random_point_on_curve(ec_params *curve_params, prj_pt *out_point)
 		 * and (x, -y) both on the curve. If no square root exist,
 		 * go to next random Fp.
 		 */
-		if (fp_square_root(&y, &fp_tmp2, &fp_tmp1) == 0) {
+		if (fp_sqrt(&y, &fp_tmp2, &fp_tmp1) == 0) {
 			/* Check that we indeed satisfy the curve equation */
 			if (!is_on_shortw_curve(&x, &y, &(curve_params->ec_curve))) {
 				/* This should not happen ... */
