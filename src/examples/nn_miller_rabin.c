@@ -68,7 +68,7 @@ int miller_rabin(nn_src_t n, const unsigned int t)
 	/* one = 1 */
 	nn_one(&one);
 	/* two = 2 */
-	nn_set_word_value(&two, 2);
+	nn_set_word_value(&two, WORD(2));
 
 	/* If n = 0, this is not a prime */
 	if (nn_iszero(n)) {

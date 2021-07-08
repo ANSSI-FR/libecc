@@ -74,8 +74,8 @@ int pollar_rho(nn_t d, nn_src_t n, const word_t c)
 	nn_zero(d);
 	nn_one(&one);
 	/* 1. Set a←2, b←2. */
-	nn_set_word_value(&a, 2);
-	nn_set_word_value(&b, 2);
+	nn_set_word_value(&a, WORD(2));
+	nn_set_word_value(&b, WORD(2));
 	nn_set_word_value(&c_bignum, c);
 
 	/* For i = 1, 2, . . . do the following: */
