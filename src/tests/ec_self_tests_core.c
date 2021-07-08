@@ -538,12 +538,32 @@ static int rand_sig_verif_test_one(const ec_sig_mapping *sig,
 	t.sig_type = sig->type;
 	t.exp_sig = NULL;
 	t.exp_siglen = 0;
-#ifdef WITH_SIG_EDDSA25519
-	/* The case of EDDSA25519CTX needs a context (adata) */
+#if defined(WITH_SIG_EDDSA25519) || defined(WITH_SIG_SM2)
+	u8 rand_adata[255] = { 0 };
+	/* The case of EDDSA25519CTX and SM2 needs a non NULL context (ancillary data).
+	 * Create a random string of size <= 255 for this.
+	 */
+#if defined(WITH_SIG_EDDSA25519) && !defined(WITH_SIG_SM2)
 	if(sig->type == EDDSA25519CTX)
+#endif
+#if !defined(WITH_SIG_EDDSA25519) && defined(WITH_SIG_SM2)
+	if(sig->type == SM2)
+#endif
+#if defined(WITH_SIG_EDDSA25519) && defined(WITH_SIG_SM2)
+	if((sig->type == EDDSA25519CTX) || (sig->type == SM2))
+#endif
 	{
-		t.adata = (const u8*)"abcd";
-		t.adata_len = 4;
+		u8 rand_len = 0;
+		if(get_random((u8 *)&rand_len, sizeof(rand_len))){
+			ret = -1;
+			return ret;
+		}
+		if(get_random((u8 *)rand_adata, rand_len)){
+			ret = -1;
+			return ret;
+		}
+		t.adata = rand_adata;
+		t.adata_len = rand_len;
 	}
 	else
 #endif
@@ -795,12 +815,32 @@ static int perf_test_one(const ec_sig_mapping *sig, const hash_mapping *hash,
 	t.sig_type = sig->type;
 	t.exp_sig = NULL;
 	t.exp_siglen = 0;
-#ifdef WITH_SIG_EDDSA25519
-	/* The case of EDDSA25519CTX needs a context (adata) */
+#if defined(WITH_SIG_EDDSA25519) || defined(WITH_SIG_SM2)
+	u8 rand_adata[255] = { 0 };
+	/* The case of EDDSA25519CTX and SM2 needs a non NULL context (ancillary data).
+	 * Create a random string of size <= 255 for this.
+	 */
+#if defined(WITH_SIG_EDDSA25519) && !defined(WITH_SIG_SM2)
 	if(sig->type == EDDSA25519CTX)
+#endif
+#if !defined(WITH_SIG_EDDSA25519) && defined(WITH_SIG_SM2)
+	if(sig->type == SM2)
+#endif
+#if defined(WITH_SIG_EDDSA25519) && defined(WITH_SIG_SM2)
+	if((sig->type == EDDSA25519CTX) || (sig->type == SM2))
+#endif
 	{
-		t.adata = (const u8*)"abcd";
-		t.adata_len = 4;
+		u8 rand_len = 0;
+		if(get_random((u8 *)&rand_len, sizeof(rand_len))){
+			ret = -1;
+			return ret;
+		}
+		if(get_random((u8 *)rand_adata, rand_len)){
+			ret = -1;
+			return ret;
+		}
+		t.adata = rand_adata;
+		t.adata_len = rand_len;
 	}
 	else
 #endif
