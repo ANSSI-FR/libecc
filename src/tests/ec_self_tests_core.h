@@ -3638,6 +3638,44 @@ static const ec_test_case ecrdsa_GOST_512bits_curve_test_case = {
 #endif /* WITH_HASH_SHA512 */
 #endif /* WITH_SIG_ECRDSA */
 
+/*******************************************************************
+ ************** EdDSA tests ****************************************
+ *******************************************************************/
+#ifdef WITH_SIG_EDDSA25519
+#ifdef WITH_HASH_SHA512
+#ifdef WITH_CURVE_WEI25519
+#define EDDSA25519_SHA512_WEI25519_SELF_TEST
+
+#include "ed25519_test_vectors.h"
+
+#define EDDSA25519PH_SHA512_WEI25519_SELF_TEST
+
+#include "ed25519ph_test_vectors.h"
+
+#define EDDSA25519CTX_SHA512_WEI25519_SELF_TEST
+
+#include "ed25519ctx_test_vectors.h"
+
+#endif /* WITH_CURVE_WEI25519 */
+#endif /* WITH_HASH_SHA512 */
+#endif /* WITH_SIG_EDDSA */
+
+#ifdef WITH_SIG_EDDSA448
+#ifdef WITH_HASH_SHAKE256
+#ifdef WITH_CURVE_WEI448
+#define EDDSA448_SHAKE256_WEI448_SELF_TEST
+
+#include "ed448_test_vectors.h"
+
+#define EDDSA448PH_SHAKE256_WEI448_SELF_TEST
+
+#include "ed448ph_test_vectors.h"
+
+#endif /* WITH_CURVE_WEI448 */
+#endif /* WITH_HASH_SHAKE256 */
+#endif /* WITH_SIG_EDDSA */
+
+
 /* ADD curve test vectors header here */
 /* XXX: Do not remove the comment above, as it is
  * used by external tools as a placeholder to add or
@@ -3836,7 +3874,28 @@ static const ec_test_case *ec_fixed_vector_tests[] = {
 #ifdef ECRDSA_SHA512_GOST512_SELF_TEST
 	&ecrdsa_GOST_512bits_curve_test_case,
 #endif
-	/* Dummy empty test case to avoid empty array 
+	/* EdDSA Ed25519 */
+#ifdef EDDSA25519_SHA512_WEI25519_SELF_TEST
+	EDDSA25519_SHA512_WEI25519_ALL_TESTS()
+#endif
+	/* EdDSA Ed25519ph */
+#ifdef EDDSA25519PH_SHA512_WEI25519_SELF_TEST
+	EDDSA25519PH_SHA512_WEI25519_ALL_TESTS()
+#endif
+	/* EdDSA Ed25519ctx */
+#ifdef EDDSA25519CTX_SHA512_WEI25519_SELF_TEST
+	EDDSA25519CTX_SHA512_WEI25519_ALL_TESTS()
+#endif
+	/* EdDSA Ed448 */
+#ifdef EDDSA448_SHAKE256_WEI448_SELF_TEST
+	EDDSA448_SHAKE256_WEI448_ALL_TESTS()
+#endif
+	/* EdDSA Ed448PH */
+#ifdef EDDSA448PH_SHAKE256_WEI448_SELF_TEST
+	EDDSA448PH_SHAKE256_WEI448_ALL_TESTS()
+#endif
+
+	/* Dummy empty test case to avoid empty array
 	 * when no test case is defined */
 	&dummy_test_case,
 

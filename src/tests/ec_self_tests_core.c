@@ -215,7 +215,7 @@ static int ec_import_export_test(const ec_test_case *c)
 				ret = -1;
 				goto err;
 			}
-		} 
+		}
 #endif
 	}
 
@@ -262,13 +262,46 @@ static int ec_sig_known_vector_tests_one(const ec_test_case *c)
 
 	import_params(&params, c->ec_str_p);
 
-	ret = ec_key_pair_import_from_priv_key_buf(&kp, &params, c->priv_key,
-						   c->priv_key_len,
-						   c->sig_type);
-	if (ret) {
-		failed_test = TEST_KEY_IMPORT_ERROR;
-		goto err;
+#if defined(WITH_SIG_EDDSA25519) || defined(WITH_SIG_EDDSA448)
+	/* In the specific case of EdDSA, we perform a specific key derivation */
+#if defined(WITH_SIG_EDDSA25519) && defined(WITH_SIG_EDDSA448)
+	if((c->sig_type == EDDSA25519) || (c->sig_type == EDDSA25519CTX) || (c->sig_type == EDDSA25519PH) || \
+	  (c->sig_type == EDDSA448) || (c->sig_type == EDDSA448PH)){
+#endif
+#if defined(WITH_SIG_EDDSA25519) && !defined(WITH_SIG_EDDSA448)
+	if((c->sig_type == EDDSA25519) || (c->sig_type == EDDSA25519CTX) || (c->sig_type == EDDSA25519PH)){
+#endif
+#if !defined(WITH_SIG_EDDSA25519) && defined(WITH_SIG_EDDSA448)
+	if((c->sig_type == EDDSA448) || (c->sig_type == EDDSA448PH)){
+#endif
+		ec_priv_key_import_from_buf(&(kp.priv_key), &params, c->priv_key,
+					    c->priv_key_len, c->sig_type);
+		/* Private key derivation */
+		if(eddsa_derive_priv_key(&(kp.priv_key))){
+			ret = -1;
+			failed_test = TEST_KEY_IMPORT_ERROR;
+			goto err;
+		}
+		/* Public key computation from private key */
+		if(eddsa_init_pub_key(&(kp.pub_key), &(kp.priv_key))){
+			ret = -1;
+			failed_test = TEST_KEY_IMPORT_ERROR;
+			goto err;
+		}
 	}
+	else
+#endif /* !(defined(WITH_SIG_EDDSA25519) || defined(WITH_SIG_EDDSA448)) */
+	{
+		/* Regular import if not EdDSA */
+		ret = ec_key_pair_import_from_priv_key_buf(&kp, &params, c->priv_key,
+							   c->priv_key_len,
+							   c->sig_type);
+		if (ret) {
+			failed_test = TEST_KEY_IMPORT_ERROR;
+			goto err;
+		}
+	}
+
 	siglen = c->exp_siglen;
 	ret = ec_test_sign(sig, siglen, &kp, c);
 	if (ret) {
@@ -395,7 +428,7 @@ static int ec_sig_known_vector_tests_one(const ec_test_case *c)
 			failed_test = TEST_VERIF_ERROR;
 	               	goto err;
 		}
-	} 
+	}
 #endif
 	ret = 0;
 
@@ -449,7 +482,7 @@ int perform_known_test_vectors_test(const char *sig, const char *hash, const cha
 			if(!are_str_equal((const char*)cur_test->ec_str_p->name->buf, curve)){
 				continue;
 			}
-		}	
+		}
 		ret = ec_sig_known_vector_tests_one(cur_test);
 		ext_printf("[%s] %30s selftests: known test vectors "
 			   "sig/verif %s\n", ret ? "-" : "+",
@@ -567,6 +600,28 @@ int perform_random_sig_verif_test(const char *sig, const char *hash, const char 
 						continue;
 					}
 				}
+				/* If we have EDDSA25519 or EDDSA448, we only accept specific hash functions.
+				 * Skip the other tests.
+				 */
+#ifdef WITH_SIG_EDDSA25519
+				if((ec_sig_maps[i].type == EDDSA25519) && ((hash_maps[j].type != SHA512) || (ec_maps[k].type != WEI25519))){
+					continue;
+				}
+				if((ec_sig_maps[i].type == EDDSA25519CTX) && ((hash_maps[j].type != SHA512) || (ec_maps[k].type != WEI25519))){
+					continue;
+				}
+				if((ec_sig_maps[i].type == EDDSA25519PH) && ((hash_maps[j].type != SHA512) || (ec_maps[k].type != WEI25519))){
+					continue;
+				}
+#endif
+#ifdef WITH_SIG_EDDSA448
+				if((ec_sig_maps[i].type == EDDSA448) && ((hash_maps[j].type != SHAKE256) || (ec_maps[k].type != WEI448))){
+					continue;
+				}
+				if((ec_sig_maps[i].type == EDDSA448PH) && ((hash_maps[j].type != SHAKE256) || (ec_maps[k].type != WEI448))){
+					continue;
+				}
+#endif
 				ret = rand_sig_verif_test_one(&ec_sig_maps[i],
 							      &hash_maps[j],
 							      &ec_maps[k]);
@@ -790,6 +845,28 @@ int perform_performance_test(const char *sig, const char *hash, const char *curv
 						continue;
 					}
 				}
+				/* If we have EDDSA25519 or EDDSA448, we only accept specific hash functions.
+				 * Skip the other tests.
+				 */
+#ifdef WITH_SIG_EDDSA25519
+				if((ec_sig_maps[i].type == EDDSA25519) && ((hash_maps[j].type != SHA512) || (ec_maps[k].type != WEI25519))){
+					continue;
+				}
+				if((ec_sig_maps[i].type == EDDSA25519CTX) && ((hash_maps[j].type != SHA512) || (ec_maps[k].type != WEI25519))){
+					continue;
+				}
+				if((ec_sig_maps[i].type == EDDSA25519PH) && ((hash_maps[j].type != SHA512) || (ec_maps[k].type != WEI25519))){
+					continue;
+				}
+#endif
+#ifdef WITH_SIG_EDDSA448
+				if((ec_sig_maps[i].type == EDDSA448) && ((hash_maps[j].type != SHAKE256) || (ec_maps[k].type != WEI448))){
+					continue;
+				}
+				if((ec_sig_maps[i].type == EDDSA448PH) && ((hash_maps[j].type != SHAKE256) || (ec_maps[k].type != WEI448))){
+					continue;
+				}
+#endif
 				ret = perf_test_one(&ec_sig_maps[i],
 						    &hash_maps[j],
 						    &ec_maps[k]);
