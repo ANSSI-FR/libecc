@@ -33,6 +33,7 @@
 #include "known/ec_params_gost256.h"
 #include "known/ec_params_gost512.h"
 #include "known/ec_params_wei25519.h"
+#include "known/ec_params_wei448.h"
 
 /* ADD curves header here */
 /* XXX: Do not remove the comment above, as it is
@@ -109,6 +110,9 @@ static const ec_mapping ec_maps[] = {
 #ifdef WITH_CURVE_WEI25519
 	{.type = WEI25519,.params = &wei25519_str_params},
 #endif /* WITH_CURVE_WEI25519 */
+#ifdef WITH_CURVE_WEI448
+	{.type = WEI448,.params = &wei448_str_params},
+#endif /* WITH_CURVE_WEI448 */
 /* ADD curves mapping here */
 /* XXX: Do not remove the comment above, as it is
  * used by external tools as a placeholder to add or

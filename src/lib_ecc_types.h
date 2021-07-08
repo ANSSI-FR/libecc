@@ -127,6 +127,9 @@ typedef enum {
 #ifdef WITH_CURVE_WEI25519
 	WEI25519 = 14,
 #endif
+#ifdef WITH_CURVE_WEI448
+	WEI448 = 15,
+#endif
 /* ADD curves type here */
 /* XXX: Do not remove the comment above, as it is
  * used by external tools as a placeholder to add or

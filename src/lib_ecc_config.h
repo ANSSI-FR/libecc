@@ -49,6 +49,7 @@
 #define WITH_CURVE_GOST256
 #define WITH_CURVE_GOST512
 #define WITH_CURVE_WEI25519
+#define WITH_CURVE_WEI448
 /* ADD curves define here */
 /* XXX: Do not remove the comment above, as it is
  * used by external tools as a placeholder to add or
