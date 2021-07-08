@@ -25,13 +25,25 @@ cryptography (ECC). The API supports signature algorithms specified
 in the [ISO 14888-3:2018](https://www.iso.org/standard/76382.html)
 standard, with the following specific curves and hash functions:
 
-  * **Signatures**: ECDSA, ECKCDSA, ECGDSA, ECRDSA, EC{,O}SDSA, ECFSDSA, SM3.
+  * **Signatures**: ECDSA, ECKCDSA, ECGDSA, ECRDSA, EC{,O}SDSA, ECFSDSA, SM2.
   * **Curves**: SECP{192,224,256,384,521}R1, BRAINPOOLP{192,224,256,384,512}R1,
   FRP256V1, GOST{256,512}, SM2P256V1. The library can be easily expanded with
   user defined curves using a standalone helper script.
-  * **Hash functions**: SHA-2 and SHA-3 hash functions (224, 256, 384, 512), SM3.
+  * **Hash functions**: SHA-2 and SHA-3 hash functions (224, 256, 384, 512), SM3,
+SHAKE256 in its restricted version with 114 bytes output (mainly for Ed448).
 
 It also supports EdDSA (Ed25519 and Ed448) as defined in [RFC 8032](https://datatracker.ietf.org/doc/html/rfc8032).
+Since the core of the library supports short Weierstrass curves, and as
+EdDSA use instead Twisted Edwards curves with dedicated formulas, we use
+**isogenies** as described in the [lwig-curve-representations](https://datatracker.ietf.org/doc/html/draft-ietf-lwig-curve-representations)
+draft. Isogenies are transformations (homomorphisms that are almost isomorphisms) between
+curves models, allowing to implement operations on one model by operating with
+formulas on another model. Concretely, in our case we perfom computations on
+the Weierstrass WEI25519 that is isogenic to the Ed25519 (Twisted Edwards)
+and Curve25519 (Montgomery) curves. This of course induces overheads in computations,
+but has the great benefit of keeping the library core mathematical foundations simple
+and keep the defense-in-depth (regarding software security and side channels) focused on
+a rather limited part: see the discussions below on libecc efforts with regards to security.
 
 Advanced usages of this library also include the possible implementation
 of elliptic curve based Diffie--Hellman protocols as well as any algorithm
