@@ -17,6 +17,7 @@
 #define __DBG_SIG_H__
 #include "print_curves.h"
 #include "print_keys.h"
+#include "print_buf.h"
 
 /* Macro to allow inner values of tests vectors print */
 #ifdef VERBOSE_INNER_VALUES
@@ -25,6 +26,7 @@
 #endif
 
 #define dbg_buf_print(msg, ...) do {\
+	buf_print(EC_SIG_ALG " " msg,  __VA_ARGS__);\
 } while(0)
 #define dbg_nn_print(msg, ...) do {\
 	nn_print(EC_SIG_ALG " " msg, __VA_ARGS__);\

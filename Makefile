@@ -57,6 +57,7 @@ src/external_deps/%.o: src/external_deps/%.c
 UTILS_ARITH_SRC = src/utils/utils.c
 UTILS_ARITH_SRC += $(wildcard src/utils/*_nn.c)
 UTILS_ARITH_SRC += $(wildcard src/utils/*_fp.c)
+UTILS_ARITH_SRC += $(wildcard src/utils/*_buf.c)
 UTILS_ARITH_OBJECTS = $(patsubst %.c, %.o, $(UTILS_ARITH_SRC))
 UTILS_ARITH_DEPS = $(patsubst %.c, %.d, $(UTILS_ARITH_SRC))
 
