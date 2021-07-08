@@ -54,8 +54,13 @@ int gen_priv_key(ec_priv_key *priv_key)
 	     sm->type != UNKNOWN_SIG_ALG; sm = &ec_sig_maps[++i]) {
 		if (sm->type == priv_key->key_type) {
 			/* NOTE: since sm is initalized with a structure
-	 		 * coming from a const source, we can safely call the callback here.
+	 		 * coming from a const source, we can safely call the callback here, but
+			 * better safe than sorry.
 	 		 */
+			if(sm->gen_priv_key == NULL){
+				ret = -1;
+				goto err;
+			}
 			ret = sm->gen_priv_key(priv_key);
 			break;
 		}
@@ -86,8 +91,13 @@ int init_pubkey_from_privkey(ec_pub_key *pub_key, ec_priv_key *priv_key)
 	     sm->type != UNKNOWN_SIG_ALG; sm = &ec_sig_maps[++i]) {
 		if (sm->type == priv_key->key_type) {
 			/* NOTE: since sm is initalized with a structure
-	 		 * coming from a const source, we can safely call the callback here.
+	 		 * coming from a const source, we can safely call the callback here, but
+			 * better safe than sorry.
 	 		 */
+			if(sm->init_pub_key == NULL){
+				ret = -1;
+				goto err;
+			}
 			ret = sm->init_pub_key(pub_key, priv_key);
 			break;
 		}

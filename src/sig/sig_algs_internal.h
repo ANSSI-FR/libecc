@@ -26,6 +26,7 @@
 #include "ecfsdsa.h"
 #include "ecgdsa.h"
 #include "ecrdsa.h"
+#include "sm2.h"
 #include "eddsa.h"
 /* Includes for fuzzing */
 #ifdef USE_CRYPTOFUZZ
@@ -114,10 +115,12 @@ typedef union {
 #ifdef WITH_SIG_ECRDSA		/* ECRDSA  */
 	ecrdsa_sign_data ecrdsa;
 #endif
+#ifdef WITH_SIG_SM2             /* SM2  */
+        sm2_sign_data sm2;
+#endif
 #if defined(WITH_SIG_EDDSA25519) || defined(WITH_SIG_EDDSA448) 	/* EDDSA25519, EDDSA448  */
 	eddsa_sign_data eddsa;
 #endif
-
 } sig_sign_data;
 
 /*
@@ -162,6 +165,9 @@ typedef union {
 #endif
 #ifdef WITH_SIG_ECRDSA		/* ECRDSA */
 	ecrdsa_verify_data ecrdsa;
+#endif
+#ifdef WITH_SIG_SM2             /* SM2 */
+        sm2_verify_data sm2;
 #endif
 #if defined(WITH_SIG_EDDSA25519) || defined(WITH_SIG_EDDSA448) 	/* EDDSA25519, EDDSA448  */
 	eddsa_verify_data eddsa;
@@ -323,6 +329,24 @@ static const ec_sig_mapping ec_sig_maps[] = {
 #define MAX_SIG_ALG_NAME_LEN 7
 #endif /* MAX_SIG_ALG_NAME_LEN */
 #endif /* WITH_SIG_ECRDSA */
+#ifdef WITH_SIG_SM2
+        {.type = SM2,
+         .name = "SM2",
+         .siglen = sm2_siglen,
+	 .gen_priv_key = sm2_gen_priv_key,
+         .init_pub_key = sm2_init_pub_key,
+         .sign_init = _sm2_sign_init,
+         .sign_update = _sm2_sign_update,
+         .sign_finalize = _sm2_sign_finalize,
+         .verify_init = _sm2_verify_init,
+         .verify_update = _sm2_verify_update,
+         .verify_finalize = _sm2_verify_finalize,
+         },
+#if (MAX_SIG_ALG_NAME_LEN < 4)
+#undef MAX_SIG_ALG_NAME_LEN
+#define MAX_SIG_ALG_NAME_LEN 4
+#endif /* MAX_SIG_ALG_NAME_LEN */
+#endif /* WITH_SIG_SM2 */
 #ifdef WITH_SIG_EDDSA25519
 	{.type = EDDSA25519,
 	 .name = "EDDSA25519",

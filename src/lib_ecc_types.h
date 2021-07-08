@@ -42,14 +42,17 @@ typedef enum {
 #ifdef WITH_SIG_ECRDSA
 	ECRDSA = 7,
 #endif
+#ifdef WITH_SIG_SM2
+        SM2 = 8,
+#endif
 #ifdef WITH_SIG_EDDSA25519
-	EDDSA25519    = 8,
-	EDDSA25519CTX = 9,
-	EDDSA25519PH  = 10,
+	EDDSA25519    = 9,
+	EDDSA25519CTX = 10,
+	EDDSA25519PH  = 11,
 #endif
 #ifdef WITH_SIG_EDDSA448
-	EDDSA448   = 11,
-	EDDSA448PH = 12,
+	EDDSA448   = 12,
+	EDDSA448PH = 13,
 #endif
 } ec_sig_alg_type;
 
@@ -86,8 +89,11 @@ typedef enum {
 #ifdef WITH_HASH_SHA512_256
 	SHA512_256 = 10,
 #endif
+#ifdef WITH_HASH_SM3
+        SM3 = 11,
+#endif
 #ifdef WITH_HASH_SHAKE256
-	SHAKE256 = 11,
+	SHAKE256 = 12,
 #endif
 } hash_alg_type;
 
@@ -138,6 +144,12 @@ typedef enum {
 #endif
 #ifdef WITH_CURVE_WEI448
 	WEI448 = 15,
+#endif
+#ifdef WITH_CURVE_SM2P256TEST
+	SM2P256TEST = 16,
+#endif
+#ifdef WITH_CURVE_SM2P256V1
+	SM2P256V1 = 17,
 #endif
 /* ADD curves type here */
 /* XXX: Do not remove the comment above, as it is

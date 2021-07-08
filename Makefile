@@ -139,7 +139,7 @@ endif
 
 # Hash module
 
-HASH_SRC = $(wildcard src/hash/sha*.c) src/hash/hash_algs.c
+HASH_SRC = $(wildcard src/hash/sha*.c) src/hash/hash_algs.c src/hash/sm3.c
 HASH_OBJECTS = $(patsubst %.c, %.o, $(HASH_SRC))
 HASH_DEPS = $(patsubst %.c, %.d, $(HASH_SRC))
 
@@ -152,7 +152,7 @@ src/hash/%.o: src/hash/%.c $(CFG_DEPS)
 
 # Key/Signature/Verification module
 
-SIG_SRC = $(wildcard src/sig/*dsa.c) src/sig/ecsdsa_common.c src/sig/sig_algs.c
+SIG_SRC = $(wildcard src/sig/*dsa.c) src/sig/ecsdsa_common.c src/sig/sig_algs.c src/sig/sm2.c
 SIG_OBJECTS = $(patsubst %.c, %.o, $(SIG_SRC))
 SIG_DEPS = $(patsubst %.c, %.d, $(SIG_SRC))
 

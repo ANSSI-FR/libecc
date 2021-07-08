@@ -22,7 +22,7 @@
  * algorithms and signature/verification schemes).
  */
 
-/* It is possible to override the LIBECC configuration by defining 
+/* It is possible to override the LIBECC configuration by defining
  * the WITH_LIBECC_CONFIG_OVERRIDE preprocessing flag in the CFLAGS. When
  * this is done, it is expected that the user defines the curves,
  * hash algorithms and signature schemes in the compilation
@@ -48,6 +48,8 @@
 #define WITH_CURVE_BRAINPOOLP512R1
 #define WITH_CURVE_GOST256
 #define WITH_CURVE_GOST512
+#define WITH_CURVE_SM2P256TEST
+#define WITH_CURVE_SM2P256V1
 #define WITH_CURVE_WEI25519
 #define WITH_CURVE_WEI448
 /* ADD curves define here */
@@ -67,6 +69,7 @@
 #define WITH_HASH_SHA3_256
 #define WITH_HASH_SHA3_384
 #define WITH_HASH_SHA3_512
+#define WITH_HASH_SM3
 #define WITH_HASH_SHAKE256
 
 /* Supported sig/verif schemes */
@@ -77,6 +80,7 @@
 #define WITH_SIG_ECFSDSA
 #define WITH_SIG_ECGDSA
 #define WITH_SIG_ECRDSA
+#define WITH_SIG_SM2
 #define WITH_SIG_EDDSA25519
 #define WITH_SIG_EDDSA448
 
