@@ -29,6 +29,7 @@
 #include "sha3-256.h"
 #include "sha3-384.h"
 #include "sha3-512.h"
+#include "sm3.h"
 #include "shake256.h"
 #include "../utils/utils.h"
 
@@ -249,6 +250,20 @@ static const hash_mapping hash_maps[] = {
 #define MAX_HASH_ALG_NAME_LEN 9
 #endif /* MAX_HASH_ALG_NAME_LEN */
 #endif /* WITH_HASH_SHA3_512 */
+#ifdef WITH_HASH_SM3
+        {.type = SM3,   /* SM3 */
+         .name = "SM3",
+         .digest_size = SM3_DIGEST_SIZE,
+         .block_size = SM3_BLOCK_SIZE,
+         .hfunc_init = (_hfunc_init) sm3_init,
+         .hfunc_update = (_hfunc_update) sm3_update,
+         .hfunc_finalize = (_hfunc_finalize) sm3_final,
+         .hfunc_scattered = sm3_scattered},
+#if (MAX_HASH_ALG_NAME_LEN < 4)
+#undef MAX_HASH_ALG_NAME_LEN
+#define MAX_HASH_ALG_NAME_LEN 4
+#endif /* MAX_HASH_ALG_NAME_LEN */
+#endif /* WITH_HASH_SM3 */
 #ifdef WITH_HASH_SHAKE256
 	{.type = SHAKE256,	/* SHAKE256 */
 	 .name = "SHAKE256",
