@@ -229,7 +229,6 @@ static int string_to_params(const char *ec_name, const char *ec_sig_name,
 
 static int generate_and_export_key_pair(const char *ec_name,
 					const char *ec_sig_name,
-					const char *ec_hash_name,
 					const char *fname_prefix)
 {
 	const ec_str_params *ec_str_p;
@@ -239,7 +238,6 @@ static int generate_and_export_key_pair(const char *ec_name,
 	const u16 kname_len = sizeof(kname);
 	u16 prefix_len;
 	ec_sig_alg_type sig_type;
-	hash_alg_type hash_type;
 	ec_params params;
 	ec_key_pair kp;
 	FILE *file;
@@ -254,18 +252,6 @@ static int generate_and_export_key_pair(const char *ec_name,
 			       NULL, NULL);
 	if (ret) {
 		goto err;
-	}
-
-	if(ec_hash_name != NULL){
-		/* Get parameters from pretty names */
-		ret = string_to_params(NULL, NULL, NULL, NULL,
-				       ec_hash_name, &hash_type);
-		if (ret) {
-			goto err;
-		}
-	}
-	else{
-		hash_type = UNKNOWN_HASH_ALG;
 	}
 
 	/* Import the parameters */
@@ -548,6 +534,42 @@ static int generate_metadata_hdr(metadata_hdr * hdr, const char *hdr_type,
 	return -1;
 }
 
+/* Warn the user that the provided ancillary data won't be used
+ * if the algorithm does not need them.
+ */
+static void check_ancillary_data(const char *adata, ec_sig_alg_type sig_type, const char *sig_name)
+{
+	u8 check = 0;
+
+	if(adata == NULL){
+		return;
+	}
+
+	MUST_HAVE(sig_type != UNKNOWN_SIG_ALG);
+
+#if defined(WITH_SIG_EDDSA25519)
+	if(sig_type == EDDSA25519CTX){
+		check = 1;
+	}
+#endif
+#if defined(WITH_SIG_EDDSA448)
+	if(sig_type == EDDSA448){
+		check = 1;
+	}
+#endif
+#if defined(WITH_SIG_SM2)
+	if(sig_type == SM2){
+		check = 1;
+	}
+#endif
+	if(check == 0){
+		printf("Warning: you have provided optional ancillary data "\
+		       "with a signature algorithm %s that does not need it! "\
+		       "This data is ignored.\n", sig_name);
+	}
+	return;
+}
+
 /*
  * Sign data from file and append signature
  */
@@ -555,7 +577,7 @@ static int sign_bin_file(const char *ec_name, const char *ec_sig_name,
 			 const char *hash_algorithm, const char *in_fname,
 			 const char *in_key_fname,
 			 const char *out_fname, const char *hdr_type,
-			 const char *version)
+			 const char *version, const char *adata, u16 adata_len)
 {
 	u8 sig[EC_MAX_SIGLEN];
 	u8 buf[MAX_BUF_LEN];
@@ -586,6 +608,8 @@ static int sign_bin_file(const char *ec_name, const char *ec_sig_name,
 	     &hash_type)) {
 		goto err;
 	}
+	/* Check if ancillary data will be used */
+	check_ancillary_data(adata, sig_type, ec_sig_name);
 	/* Import the parameters */
 	import_params(&params, ec_str_p);
 
@@ -639,7 +663,7 @@ static int sign_bin_file(const char *ec_name, const char *ec_sig_name,
 	 * Initialize signature context and start signature computation
 	 * with generated metadata header.
 	 */
-	ret = ec_sign_init(&sig_ctx, &key_pair, sig_type, hash_type, NULL, 0);
+	ret = ec_sign_init(&sig_ctx, &key_pair, sig_type, hash_type, (const u8*)adata, adata_len);
 	if (ret) {
 		printf("Error: error when signing\n");
 		goto err;
@@ -782,7 +806,7 @@ static int dump_hdr_info(const metadata_hdr * hdr)
 static int verify_bin_file(const char *ec_name, const char *ec_sig_name,
 			   const char *hash_algorithm,
 			   const char *in_fname,
-			   const char *in_key_fname, const char *in_sig_fname)
+			   const char *in_key_fname, const char *in_sig_fname, const char *adata, u16 adata_len)
 {
 	u8 st_sig[EC_STRUCTURED_SIG_EXPORT_SIZE(EC_MAX_SIGLEN)];
 	u8 stored_curve_name[MAX_CURVE_NAME_LEN];
@@ -816,6 +840,8 @@ static int verify_bin_file(const char *ec_name, const char *ec_sig_name,
 			     hash_algorithm, &hash_type)) {
 		goto err;
 	}
+	/* Check if ancillary data will be used */
+	check_ancillary_data(adata, sig_type, ec_sig_name);
 	/* Import the parameters */
 	import_params(&params, ec_str_p);
 
@@ -920,7 +946,6 @@ static int verify_bin_file(const char *ec_name, const char *ec_sig_name,
 			fclose(in_file);
 			goto err;
 		}
-
 		/* Import the signature from the structured signature buffer */
 		ret = ec_structured_sig_import_from_buf(sig, siglen,
 							st_sig, st_siglen,
@@ -996,7 +1021,7 @@ static int verify_bin_file(const char *ec_name, const char *ec_sig_name,
 	 * ... and read file content chunk by chunk to compute signature
 	 */
 	ret = ec_verify_init(&verif_ctx, &pub_key, sig, siglen,
-			     sig_type, hash_type, NULL, 0);
+			     sig_type, hash_type, (const u8*)adata, adata_len);
 	if (ret) {
 		goto err;
 	}
@@ -1083,7 +1108,7 @@ static int ec_scalar_mult(const char *ec_name,
 	/* Import the parameters */
 	import_params(&curve_params, ec_str_p);
 
-	/* Import the scalar in the local buffer from the file */	
+	/* Import the scalar in the local buffer from the file */
 	/* Let's first get file size */
 	ret = get_file_size(scalar_file, &buf_len);
 	if (ret) {
@@ -1137,7 +1162,7 @@ static int ec_scalar_mult(const char *ec_name,
 	if(prj_pt_import_from_buf(&Q, buf, (u16)buf_len, &(curve_params.ec_curve))){
 		printf("Error: error when importing the projective point from %s\n", point_file);
 		goto err;
-	}	
+	}
 
 #ifdef USE_SIG_BLINDING
         /* NB: we use a blind scalar multiplication here since we do not want our
@@ -1259,7 +1284,7 @@ int main(int argc, char *argv[])
 		 * arg2 = algorithm type ("ECDSA", "ECKCDSA", ...)
 		 * arg3 = file name prefix
 		 */
-		if (((argc != 5) && (argc != 6)) || ((argc == 5) && are_str_equal(argv[3], "EDDSA"))){
+		if (argc != 5){
 			printf("Bad args number for %s %s:\n", argv[0],
 			       argv[1]);
 			printf("\targ1 = curve name: ");
@@ -1272,25 +1297,11 @@ int main(int argc, char *argv[])
 
 			printf("\targ3 = file name prefix\n");
 			printf("\n");
-						
-			printf("\t<arg4 = optional hash name (for EDDSA): ");
-			print_sig_algs();
-			printf(">");
 
-			if((argc == 5) && are_str_equal(argv[3], "EDDSA")){
-				printf("Error: EDDSA needs a hash algorithm for key generation, please provide one ...\n");
-			}			
 			return -1;
 		}
-		if(argc == 5){
-			if(generate_and_export_key_pair(argv[2], argv[3], argv[4], NULL)){
-				return -1;
-			}
-		}
-		if(argc == 6){
-			if(generate_and_export_key_pair(argv[2], argv[3], argv[4], argv[5])){
-				return -1;
-			}
+		if(generate_and_export_key_pair(argv[2], argv[3], argv[4])){
+			return -1;
 		}
 	}
 	else if (are_str_equal(argv[1], "sign")) {
@@ -1303,8 +1314,9 @@ int main(int argc, char *argv[])
 		 * arg4 = input file to sign
 		 * arg5 = input file containing the private key
 		 * arg6 = output file containing the signature
+		 * arg7 (optional) = ancillary data to be used
 		 */
-		if (argc != 8) {
+		if ((argc != 8) && (argc != 9)) {
 			printf("Bad args number for %s %s:\n", argv[0],
 			       argv[1]);
 			printf("\targ1 = curve name: ");
@@ -1322,10 +1334,17 @@ int main(int argc, char *argv[])
 			printf("\targ4 = input file to sign\n");
 			printf("\targ5 = input file containing the private key (in raw binary format)\n");
 			printf("\targ6 = output file containing the signature\n");
+			printf("\t<arg7 (optional) = ancillary data to be used>\n");
 			return -1;
 		}
+		const char *adata = NULL;
+		u16 adata_len = 0;
+		if(argc == 9){
+			adata = argv[8];
+			adata_len = (u16)local_strlen(adata);
+		}
 		if(sign_bin_file(argv[2], argv[3], argv[4], argv[5], argv[6],
-			      argv[7], NULL, NULL)){
+			      argv[7], NULL, NULL, adata, adata_len)){
 			return -1;
 		}
 	}
@@ -1338,8 +1357,9 @@ int main(int argc, char *argv[])
 		 * arg = input file to verify
 		 * arg5 = input file with the public key
 		 * arg6 = input file containing the signature
+		 * arg7 (optional) = ancillary data to be used
 		 */
-		if (argc != 8) {
+		if ((argc != 8) && (argc != 9)) {
 			printf("Bad args number for %s %s:\n", argv[0],
 			       argv[1]);
 			printf("\targ1 = curve name: ");
@@ -1356,10 +1376,16 @@ int main(int argc, char *argv[])
 
 			printf("\targ4 = input file to verify\n");
 			printf("\targ5 = input file containing the public key (in raw binary format)\n");
-			printf("\targ6 = input file containing the signature\n");
+			printf("\t<arg7 (optional) = ancillary data to be used>\n");
 			return -1;
 		}
-		if (verify_bin_file(argv[2], argv[3], argv[4], argv[5], argv[6], argv[7])) {
+		const char *adata = NULL;
+		u16 adata_len = 0;
+		if(argc == 9){
+			adata = argv[8];
+			adata_len = (u16)local_strlen(adata);
+		}
+		if (verify_bin_file(argv[2], argv[3], argv[4], argv[5], argv[6], argv[7], adata, adata_len)) {
 			printf("Signature check of %s failed\n", argv[5]);
 			return -1;
 		} else {
@@ -1378,8 +1404,9 @@ int main(int argc, char *argv[])
 		 * arg6 = output file containing the appended signature
 		 * arg7 = metadata header type
 		 * arg8 = version of the metadata header
+		 * arg9 (optional) = ancillary data to be used
 		 */
-		if (argc != 10) {
+		if ((argc != 10) && (argc != 11)) {
 			printf("Bad args number for %s %s:\n", argv[0],
 			       argv[1]);
 			printf("\targ1 = curve name: ");
@@ -1399,11 +1426,18 @@ int main(int argc, char *argv[])
 			printf("\targ6 = output file containing the appended signature\n");
 			printf("\targ7 = metadata header type (IMAGE_TYPE0, IMAGE_TYPE1, ...)\n");
 			printf("\targ8 = version of the metadata header\n");
+			printf("\t<arg9 (optional) = ancillary data to be used>\n");
 			return -1;
 		}
+		const char *adata = NULL;
+		u16 adata_len = 0;
+		if(argc == 11){
+			adata = argv[10];
+			adata_len = (u16)local_strlen(adata);
+		}
 		if(sign_bin_file(argv[2], argv[3], argv[4], argv[5], argv[6],
-			      argv[7], argv[8], argv[9])){
-			return -1;
+			      argv[7], argv[8], argv[9], adata, adata_len)){
+		 	return -1;
 		}
 	}
 	else if (are_str_equal(argv[1], "struct_verify")) {
@@ -1412,10 +1446,11 @@ int main(int argc, char *argv[])
 		 * arg1 = curve name ("frp256v1", ...)
 		 * arg2 = signature algorithm type ("ECDSA", "ECKCDSA", ...)
 		 * arg3 = hash algorithm type ("SHA256", "SHA512", ...)
-		 * arg3 = input file to verify
-		 * arg4 = input file with the public key
+		 * arg4 = input file to verify
+		 * arg5 = input file containing the public key (in raw binary format)
+		 * arg6 (optional) = ancillary data to be used
 		 */
-		if (argc != 7) {
+		if ((argc != 7) && (argc != 8)) {
 			printf("Bad args number for %s %s:\n", argv[0],
 			       argv[1]);
 			printf("\targ1 = curve name: ");
@@ -1432,9 +1467,16 @@ int main(int argc, char *argv[])
 
 			printf("\targ4 = input file to verify\n");
 			printf("\targ5 = input file containing the public key (in raw binary format)\n");
+			printf("\t<arg6 (optional) = ancillary data to be used>\n");
 			return -1;
 		}
-		if (verify_bin_file(argv[2], argv[3], argv[4], argv[5], argv[6], NULL)) {
+		const char *adata = NULL;
+		u16 adata_len = 0;
+		if(argc == 8){
+			adata = argv[7];
+			adata_len = (u16)local_strlen(adata);
+		}
+		if (verify_bin_file(argv[2], argv[3], argv[4], argv[5], argv[6], NULL, adata, adata_len)) {
 			printf("Signature check of %s failed\n", argv[5]);
 			return -1;
 		} else {
