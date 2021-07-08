@@ -127,6 +127,12 @@ struct ec_sign_context {
 	const ec_sig_mapping *sig;
 
 	sig_sign_data sign_data;
+
+	/* Optional ancillary data. This data is
+	 * optionnally used by the signature algorithm.
+	 */
+	const u8 *adata;
+	u16 adata_len;
 };
 
 #define SIG_SIGN_MAGIC ((word_t)(0x4ed73cfe4594dfd3ULL))
@@ -165,6 +171,12 @@ struct ec_verify_context {
 	const ec_sig_mapping *sig;
 
 	sig_verify_data verify_data;
+
+	/* Optional ancillary data. This data is
+	 * optionnally used by the signature algorithm.
+	 */
+	const u8 *adata;
+	u16 adata_len;
 };
 
 #define SIG_VERIFY_MAGIC ((word_t)(0x7e0d42d13e3159baULL))

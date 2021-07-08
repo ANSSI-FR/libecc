@@ -132,14 +132,14 @@ static int ec_import_export_test(const ec_test_case *c)
 		}
 
 		ret = _ec_sign(sig, siglen, &kp, msg, msglen,
-			       c->nn_random, c->sig_type, c->hash_type);
+			       c->nn_random, c->sig_type, c->hash_type, c->adata, c->adata_len);
 		if (ret) {
 			ext_printf("Error when signing\n");
 			goto err;
 		}
 
 		ret = ec_verify(sig, siglen, &(kp.pub_key), msg, msglen,
-				c->sig_type, c->hash_type);
+				c->sig_type, c->hash_type, c->adata, c->adata_len);
 		if (ret) {
 			ext_printf("Error when verifying signature\n");
 			goto err;
@@ -150,9 +150,9 @@ static int ec_import_export_test(const ec_test_case *c)
         		struct ec_sign_context sig_ctx;
 		        struct ec_verify_context verif_ctx;
 			u8 digest[MAX_DIGEST_SIZE] = { 0 };
-			u8 digestlen;	
+			u8 digestlen;
 		        /* Initialize our signature context */
-        		if(ec_sign_init(&sig_ctx, &kp, c->sig_type, c->hash_type)){
+        		if(ec_sign_init(&sig_ctx, &kp, c->sig_type, c->hash_type, c->adata, c->adata_len)){
 				ret = -1;
                 		goto err;
         		}
@@ -189,7 +189,7 @@ static int ec_import_export_test(const ec_test_case *c)
 				goto err;
 			}
 			/* Now verify signature */
-		       	if(ec_verify_init(&verif_ctx,  &(kp.pub_key), sig, siglen, c->sig_type, c->hash_type)){
+		       	if(ec_verify_init(&verif_ctx,  &(kp.pub_key), sig, siglen, c->sig_type, c->hash_type, c->adata, c->adata_len)){
 				ret = -1;
                 		goto err;
 	        	}
@@ -233,14 +233,14 @@ static int ec_test_sign(u8 *sig, u8 siglen, ec_key_pair *kp,
 			const ec_test_case *c)
 {
 	return _ec_sign(sig, siglen, kp, (const u8 *)(c->msg), c->msglen,
-			c->nn_random, c->sig_type, c->hash_type);
+				c->nn_random, c->sig_type, c->hash_type, c->adata, c->adata_len);
 }
 
 static int ec_test_verify(u8 *sig, u8 siglen, const ec_pub_key *pub_key,
 			  const ec_test_case *c)
 {
 	return ec_verify(sig, siglen, pub_key, (const u8 *)(c->msg), c->msglen,
-			 c->sig_type, c->hash_type);
+				 c->sig_type, c->hash_type, c->adata, c->adata_len);
 }
 
 /*
@@ -295,9 +295,9 @@ static int ec_sig_known_vector_tests_one(const ec_test_case *c)
         	struct ec_sign_context sig_ctx;
 	        struct ec_verify_context verif_ctx;
 		u8 digest[MAX_DIGEST_SIZE] = { 0 };
-		u8 digestlen;	
+		u8 digestlen;
 	        /* Initialize our signature context */
-        	if(ec_sign_init(&sig_ctx, &kp, c->sig_type, c->hash_type)){
+        	if(ec_sign_init(&sig_ctx, &kp, c->sig_type, c->hash_type, c->adata, c->adata_len)){
 			ret = -1;
 			failed_test = TEST_SIG_ERROR;
                 	goto err;
@@ -364,7 +364,7 @@ static int ec_sig_known_vector_tests_one(const ec_test_case *c)
 			goto err;
 		}
 		/* Now verify signature */
-	       	if(ec_verify_init(&verif_ctx,  &(kp.pub_key), sig, siglen, c->sig_type, c->hash_type)){
+	       	if(ec_verify_init(&verif_ctx,  &(kp.pub_key), sig, siglen, c->sig_type, c->hash_type, c->adata, c->adata_len)){
 			ret = -1;
 			failed_test = TEST_VERIF_ERROR;
                 	goto err;
@@ -505,6 +505,19 @@ static int rand_sig_verif_test_one(const ec_sig_mapping *sig,
 	t.sig_type = sig->type;
 	t.exp_sig = NULL;
 	t.exp_siglen = 0;
+#ifdef WITH_SIG_EDDSA25519
+	/* The case of EDDSA25519CTX needs a context (adata) */
+	if(sig->type == EDDSA25519CTX)
+	{
+		t.adata = (const u8*)"abcd";
+		t.adata_len = 4;
+	}
+	else
+#endif
+	{
+		t.adata = NULL;
+		t.adata_len = 0;
+	}
 
 	/* Execute the test */
 	ret = ec_import_export_test(&t);
@@ -644,7 +657,7 @@ static int ec_performance_test(const ec_test_case *c,
 				goto err;
 			}
 			ret = _ec_sign(sig, siglen, &kp, msg, msglen,
-			       c->nn_random, c->sig_type, c->hash_type);
+			       c->nn_random, c->sig_type, c->hash_type, c->adata, c->adata_len);
 			if (ret) {
 				ext_printf("Error when signing\n");
 				goto err;
@@ -667,7 +680,7 @@ static int ec_performance_test(const ec_test_case *c,
 				goto err;
 			}
 			ret = ec_verify(sig, siglen, &(kp.pub_key), msg, msglen,
-					c->sig_type, c->hash_type);
+					c->sig_type, c->hash_type, c->adata, c->adata_len);
 			if (ret) {
 				ext_printf("Error when verifying signature\n");
 				goto err;
@@ -727,6 +740,19 @@ static int perf_test_one(const ec_sig_mapping *sig, const hash_mapping *hash,
 	t.sig_type = sig->type;
 	t.exp_sig = NULL;
 	t.exp_siglen = 0;
+#ifdef WITH_SIG_EDDSA25519
+	/* The case of EDDSA25519CTX needs a context (adata) */
+	if(sig->type == EDDSA25519CTX)
+	{
+		t.adata = (const u8*)"abcd";
+		t.adata_len = 4;
+	}
+	else
+#endif
+	{
+		t.adata = NULL;
+		t.adata_len = 0;
+	}
 
 	/* Sign and verify some random data during some time */
 	ret = ec_performance_test(&t, &n_perf_sign, &n_perf_verif);

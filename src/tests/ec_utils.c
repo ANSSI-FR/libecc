@@ -625,7 +625,7 @@ static int sign_bin_file(const char *ec_name, const char *ec_sig_name,
 	 * Initialize signature context and start signature computation
 	 * with generated metadata header.
 	 */
-	ret = ec_sign_init(&sig_ctx, &key_pair, sig_type, hash_type);
+	ret = ec_sign_init(&sig_ctx, &key_pair, sig_type, hash_type, NULL, 0);
 	if (ret) {
 		printf("Error: error when signing\n");
 		goto err;
@@ -982,7 +982,7 @@ static int verify_bin_file(const char *ec_name, const char *ec_sig_name,
 	 * ... and read file content chunk by chunk to compute signature
 	 */
 	ret = ec_verify_init(&verif_ctx, &pub_key, sig, siglen,
-			     sig_type, hash_type);
+			     sig_type, hash_type, NULL, 0);
 	if (ret) {
 		goto err;
 	}

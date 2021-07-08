@@ -278,7 +278,7 @@ int ec_get_sig_len(const ec_params *params, ec_sig_alg_type sig_type,
 static int _ec_sign_init(struct ec_sign_context *ctx,
 			 const ec_key_pair *key_pair,
 			 int (*rand) (nn_t out, nn_src_t q),
-			 ec_sig_alg_type sig_type, hash_alg_type hash_type)
+			 ec_sig_alg_type sig_type, hash_alg_type hash_type, const u8 *adata, u16 adata_len)
 {
 	const ec_sig_mapping *sm;
 	const hash_mapping *hm;
@@ -350,6 +350,8 @@ static int _ec_sign_init(struct ec_sign_context *ctx,
 	ctx->rand = rand;
 	ctx->h = hm;
 	ctx->sig = sm;
+	ctx->adata = adata;
+	ctx->adata_len = adata_len;
 	ctx->ctx_magic = SIG_SIGN_MAGIC;
 
 	/* NOTE: since sm has been previously initalized with a structure
@@ -371,9 +373,9 @@ static int _ec_sign_init(struct ec_sign_context *ctx,
  * function
  */
 int ec_sign_init(struct ec_sign_context *ctx, const ec_key_pair *key_pair,
-		 ec_sig_alg_type sig_type, hash_alg_type hash_type)
+		 ec_sig_alg_type sig_type, hash_alg_type hash_type, const u8 *adata, u16 adata_len)
 {
-	return _ec_sign_init(ctx, key_pair, NULL, sig_type, hash_type);
+	return _ec_sign_init(ctx, key_pair, NULL, sig_type, hash_type, adata, adata_len);
 }
 
 /* Signature update function */
@@ -427,12 +429,12 @@ err:
 int _ec_sign(u8 *sig, u8 siglen, const ec_key_pair *key_pair,
 	     const u8 *m, u32 mlen,
 	     int (*rand) (nn_t out, nn_src_t q),
-	     ec_sig_alg_type sig_type, hash_alg_type hash_type)
+	     ec_sig_alg_type sig_type, hash_alg_type hash_type, const u8 *adata, u16 adata_len)
 {
 	struct ec_sign_context ctx;
 	int ret;
 
-	ret = _ec_sign_init(&ctx, key_pair, rand, sig_type, hash_type);
+	ret = _ec_sign_init(&ctx, key_pair, rand, sig_type, hash_type, adata, adata_len);
 	if (ret) {
 		goto err;
 	}
@@ -451,17 +453,17 @@ int _ec_sign(u8 *sig, u8 siglen, const ec_key_pair *key_pair,
 
 int ec_sign(u8 *sig, u8 siglen, const ec_key_pair *key_pair,
 	    const u8 *m, u32 mlen,
-	    ec_sig_alg_type sig_type, hash_alg_type hash_type)
+	    ec_sig_alg_type sig_type, hash_alg_type hash_type, const u8 *adata, u16 adata_len)
 {
 	return _ec_sign(sig, siglen, key_pair, m, mlen,
-			NULL, sig_type, hash_type);
+			NULL, sig_type, hash_type, adata, adata_len);
 }
 
 /* Generic signature verification */
 
 int ec_verify_init(struct ec_verify_context *ctx, const ec_pub_key *pub_key,
 		   const u8 *sig, u8 siglen,
-		   ec_sig_alg_type sig_type, hash_alg_type hash_type)
+		   ec_sig_alg_type sig_type, hash_alg_type hash_type, const u8 *adata, u16 adata_len)
 {
 	const ec_sig_mapping *sm;
 	const hash_mapping *hm;
@@ -509,6 +511,8 @@ int ec_verify_init(struct ec_verify_context *ctx, const ec_pub_key *pub_key,
 	ctx->pub_key = pub_key;
 	ctx->h = hm;
 	ctx->sig = sm;
+	ctx->adata = adata;
+	ctx->adata_len = adata_len;
 	ctx->ctx_magic = SIG_VERIFY_MAGIC;
 
 	/* NOTE: since sm has been previously initalized with a structure
@@ -575,12 +579,12 @@ err:
 
 int ec_verify(const u8 *sig, u8 siglen, const ec_pub_key *pub_key,
 	      const u8 *m, u32 mlen,
-	      ec_sig_alg_type sig_type, hash_alg_type hash_type)
+	      ec_sig_alg_type sig_type, hash_alg_type hash_type, const u8 *adata, u16 adata_len)
 {
 	int ret;
 	struct ec_verify_context ctx;
 
-	ret = ec_verify_init(&ctx, pub_key, sig, siglen, sig_type, hash_type);
+	ret = ec_verify_init(&ctx, pub_key, sig, siglen, sig_type, hash_type, adata, adata_len);
 	if (ret) {
 		goto err;
 	}

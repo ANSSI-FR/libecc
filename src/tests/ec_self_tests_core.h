@@ -44,6 +44,10 @@ typedef struct {
 	ec_sig_alg_type sig_type;
 	const u8 *exp_sig;
 	u8 exp_siglen;
+
+	/* Optional ancillary data */
+	const u8 *adata;
+	u16 adata_len;
 } ec_test_case;
 
 /*******************************************************************
