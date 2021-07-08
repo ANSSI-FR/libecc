@@ -237,6 +237,24 @@ static const u8 brainpoolp192r1_cofactor[] = {
 
 TO_EC_STR_PARAM(brainpoolp192r1_cofactor);
 
+static const u8 brainpoolp192r1_alpha_montgomery[] = {
+	0x00,
+};
+
+TO_EC_STR_PARAM_FIXED_SIZE(brainpoolp192r1_alpha_montgomery, 0);
+
+static const u8 brainpoolp192r1_gamma_montgomery[] = {
+	0x00,
+};
+
+TO_EC_STR_PARAM_FIXED_SIZE(brainpoolp192r1_gamma_montgomery, 0);
+
+static const u8 brainpoolp192r1_alpha_edwards[] = {
+	0x00,
+};
+
+TO_EC_STR_PARAM_FIXED_SIZE(brainpoolp192r1_alpha_edwards, 0);
+
 static const u8 brainpoolp192r1_name[] = "BRAINPOOLP192R1";
 TO_EC_STR_PARAM(brainpoolp192r1_name);
 
@@ -261,6 +279,9 @@ static const ec_str_params brainpoolp192r1_str_params = {
 	.gen_order = &brainpoolp192r1_gen_order_str_param, 
 	.gen_order_bitlen = &brainpoolp192r1_gen_order_bitlen_str_param, 
 	.cofactor = &brainpoolp192r1_cofactor_str_param, 
+	.alpha_montgomery = &brainpoolp192r1_alpha_montgomery_str_param,
+	.gamma_montgomery = &brainpoolp192r1_gamma_montgomery_str_param,
+	.alpha_edwards = &brainpoolp192r1_alpha_edwards_str_param,
 	.oid = &brainpoolp192r1_oid_str_param, 
 	.name = &brainpoolp192r1_name_str_param, 
 };
@@ -281,6 +302,13 @@ static const ec_str_params brainpoolp192r1_str_params = {
 #if (CURVES_MAX_Q_BIT_LEN < CURVE_BRAINPOOLP192R1_Q_BITLEN)
 #undef CURVES_MAX_Q_BIT_LEN
 #define CURVES_MAX_Q_BIT_LEN CURVE_BRAINPOOLP192R1_Q_BITLEN
+#endif
+#ifndef CURVES_MAX_CURVE_ORDER_BIT_LEN
+#define CURVES_MAX_CURVE_ORDER_BIT_LEN    0
+#endif
+#if (CURVES_MAX_CURVE_ORDER_BIT_LEN < CURVE_BRAINPOOLP192R1_CURVE_ORDER_BITLEN)
+#undef CURVES_MAX_CURVE_ORDER_BIT_LEN
+#define CURVES_MAX_CURVE_ORDER_BIT_LEN CURVE_BRAINPOOLP192R1_CURVE_ORDER_BITLEN
 #endif
 
 /*

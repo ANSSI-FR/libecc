@@ -154,6 +154,24 @@ static const u8 frp256v1_cofactor[] = { 0x01 };
 
 TO_EC_STR_PARAM(frp256v1_cofactor);
 
+static const u8 frp256v1_alpha_montgomery[] = {
+	0x00,
+};
+
+TO_EC_STR_PARAM_FIXED_SIZE(frp256v1_alpha_montgomery, 0);
+
+static const u8 frp256v1_gamma_montgomery[] = {
+	0x00,
+};
+
+TO_EC_STR_PARAM_FIXED_SIZE(frp256v1_gamma_montgomery, 0);
+
+static const u8 frp256v1_alpha_edwards[] = {
+	0x00,
+};
+
+TO_EC_STR_PARAM_FIXED_SIZE(frp256v1_alpha_edwards, 0);
+
 static const u8 frp256v1_oid[] = "1.2.250.1.223.101.256.1";
 TO_EC_STR_PARAM(frp256v1_oid);
 
@@ -178,6 +196,9 @@ static const ec_str_params frp256v1_str_params = {
 	.gen_order = &frp256v1_gen_order_str_param,
 	.gen_order_bitlen = &frp256v1_gen_order_bitlen_str_param,
 	.cofactor = &frp256v1_cofactor_str_param,
+	.alpha_montgomery = &frp256v1_alpha_montgomery_str_param,
+	.gamma_montgomery = &frp256v1_gamma_montgomery_str_param,
+	.alpha_edwards = &frp256v1_alpha_edwards_str_param,
 	.oid = &frp256v1_oid_str_param,
 	.name = &frp256v1_name_str_param,
 };

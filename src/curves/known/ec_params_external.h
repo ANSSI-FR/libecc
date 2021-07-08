@@ -85,6 +85,17 @@ typedef struct {
 	const ec_str_param *gen_order_bitlen;
 	const ec_str_param *cofactor;
 
+	/*
+	 * Optional transfert coefficients to Montgomery curve.
+	 */
+	const ec_str_param *alpha_montgomery;
+	const ec_str_param *gamma_montgomery;
+
+	/*
+	 * Optional transfert coefficient to Edwards curve.
+	 */
+	const ec_str_param *alpha_edwards;
+
 	/* OID and pretty name */
 	const ec_str_param *oid;
 	const ec_str_param *name;

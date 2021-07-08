@@ -154,6 +154,24 @@ static const u8 GOST_256bits_curve_cofactor[] = { 0x01 };
 
 TO_EC_STR_PARAM(GOST_256bits_curve_cofactor);
 
+static const u8 GOST_256bits_curve_alpha_montgomery[] = {
+	0x00,
+};
+
+TO_EC_STR_PARAM_FIXED_SIZE(GOST_256bits_curve_alpha_montgomery, 0);
+
+static const u8 GOST_256bits_curve_gamma_montgomery[] = {
+	0x00,
+};
+
+TO_EC_STR_PARAM_FIXED_SIZE(GOST_256bits_curve_gamma_montgomery, 0);
+
+static const u8 GOST_256bits_curve_alpha_edwards[] = {
+	0x00,
+};
+
+TO_EC_STR_PARAM_FIXED_SIZE(GOST_256bits_curve_alpha_edwards, 0);
+
 static const u8 GOST_256bits_curve_oid[] = "unknown";
 TO_EC_STR_PARAM(GOST_256bits_curve_oid);
 
@@ -178,6 +196,9 @@ static const ec_str_params GOST_256bits_curve_str_params = {
 	.gen_order = &GOST_256bits_curve_gen_order_str_param,
 	.gen_order_bitlen = &GOST_256bits_curve_gen_order_bitlen_str_param,
 	.cofactor = &GOST_256bits_curve_cofactor_str_param,
+	.alpha_montgomery = &GOST_256bits_curve_alpha_montgomery_str_param,
+	.gamma_montgomery = &GOST_256bits_curve_gamma_montgomery_str_param,
+	.alpha_edwards = &GOST_256bits_curve_alpha_edwards_str_param,
 	.oid = &GOST_256bits_curve_oid_str_param,
 	.name = &GOST_256bits_curve_name_str_param,
 };

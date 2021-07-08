@@ -172,6 +172,24 @@ static const u8 secp384r1_cofactor[] = { 0x01 };
 
 TO_EC_STR_PARAM(secp384r1_cofactor);
 
+static const u8 secp384r1_alpha_montgomery[] = {
+	0x00,
+};
+
+TO_EC_STR_PARAM_FIXED_SIZE(secp384r1_alpha_montgomery, 0);
+
+static const u8 secp384r1_gamma_montgomery[] = {
+	0x00,
+};
+
+TO_EC_STR_PARAM_FIXED_SIZE(secp384r1_gamma_montgomery, 0);
+
+static const u8 secp384r1_alpha_edwards[] = {
+	0x00,
+};
+
+TO_EC_STR_PARAM_FIXED_SIZE(secp384r1_alpha_edwards, 0);
+
 static const u8 secp384r1_oid[] = "1.3.132.0.34";
 TO_EC_STR_PARAM(secp384r1_oid);
 
@@ -196,6 +214,9 @@ static const ec_str_params secp384r1_str_params = {
 	.gen_order = &secp384r1_gen_order_str_param,
 	.gen_order_bitlen = &secp384r1_gen_order_bitlen_str_param,
 	.cofactor = &secp384r1_cofactor_str_param,
+        .alpha_montgomery = &secp384r1_alpha_montgomery_str_param,
+        .gamma_montgomery = &secp384r1_gamma_montgomery_str_param,
+        .alpha_edwards = &secp384r1_alpha_edwards_str_param,
 	.oid = &secp384r1_oid_str_param,
 	.name = &secp384r1_name_str_param,
 };

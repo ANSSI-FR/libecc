@@ -233,6 +233,24 @@ static const u8 secp192r1_cofactor[] = {
 
 TO_EC_STR_PARAM(secp192r1_cofactor);
 
+static const u8 secp192r1_alpha_montgomery[] = {
+	0x00,
+};
+
+TO_EC_STR_PARAM_FIXED_SIZE(secp192r1_alpha_montgomery, 0);
+
+static const u8 secp192r1_gamma_montgomery[] = {
+	0x00,
+};
+
+TO_EC_STR_PARAM_FIXED_SIZE(secp192r1_gamma_montgomery, 0);
+
+static const u8 secp192r1_alpha_edwards[] = {
+	0x00,
+};
+
+TO_EC_STR_PARAM_FIXED_SIZE(secp192r1_alpha_edwards, 0);
+
 static const u8 secp192r1_name[] = "SECP192R1";
 TO_EC_STR_PARAM(secp192r1_name);
 
@@ -257,6 +275,9 @@ static const ec_str_params secp192r1_str_params = {
 	.gen_order = &secp192r1_gen_order_str_param,
 	.gen_order_bitlen = &secp192r1_gen_order_bitlen_str_param,
 	.cofactor = &secp192r1_cofactor_str_param,
+        .alpha_montgomery = &secp192r1_alpha_montgomery_str_param,
+        .gamma_montgomery = &secp192r1_gamma_montgomery_str_param,
+        .alpha_edwards = &secp192r1_alpha_edwards_str_param,
 	.oid = &secp192r1_oid_str_param,
 	.name = &secp192r1_name_str_param,
 };

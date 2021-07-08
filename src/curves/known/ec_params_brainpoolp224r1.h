@@ -216,6 +216,24 @@ static const u8 brainpoolp224r1_cofactor[] = { 0x01 };
 
 TO_EC_STR_PARAM(brainpoolp224r1_cofactor);
 
+static const u8 brainpoolp224r1_alpha_montgomery[] = {
+	0x00,
+};
+
+TO_EC_STR_PARAM_FIXED_SIZE(brainpoolp224r1_alpha_montgomery, 0);
+
+static const u8 brainpoolp224r1_gamma_montgomery[] = {
+	0x00,
+};
+
+TO_EC_STR_PARAM_FIXED_SIZE(brainpoolp224r1_gamma_montgomery, 0);
+
+static const u8 brainpoolp224r1_alpha_edwards[] = {
+	0x00,
+};
+
+TO_EC_STR_PARAM_FIXED_SIZE(brainpoolp224r1_alpha_edwards, 0);
+
 static const u8 brainpoolp224r1_oid[] = "1.3.36.3.3.2.8.1.1.5";
 TO_EC_STR_PARAM(brainpoolp224r1_oid);
 
@@ -240,6 +258,9 @@ static const ec_str_params brainpoolp224r1_str_params = {
 	.gen_order = &brainpoolp224r1_gen_order_str_param,
 	.gen_order_bitlen = &brainpoolp224r1_gen_order_bitlen_str_param,
 	.cofactor = &brainpoolp224r1_cofactor_str_param,
+	.alpha_montgomery = &brainpoolp224r1_alpha_montgomery_str_param,
+	.gamma_montgomery = &brainpoolp224r1_gamma_montgomery_str_param,
+	.alpha_edwards = &brainpoolp224r1_alpha_edwards_str_param,
 	.oid = &brainpoolp224r1_oid_str_param,
 	.name = &brainpoolp224r1_name_str_param,
 };

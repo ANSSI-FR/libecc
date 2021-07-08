@@ -148,6 +148,24 @@ static const u8 secp256r1_cofactor[] = { 0x01 };
 
 TO_EC_STR_PARAM(secp256r1_cofactor);
 
+static const u8 secp256r1_alpha_montgomery[] = {
+	0x00,
+};
+
+TO_EC_STR_PARAM_FIXED_SIZE(secp256r1_alpha_montgomery, 0);
+
+static const u8 secp256r1_gamma_montgomery[] = {
+	0x00,
+};
+
+TO_EC_STR_PARAM_FIXED_SIZE(secp256r1_gamma_montgomery, 0);
+
+static const u8 secp256r1_alpha_edwards[] = {
+	0x00,
+};
+
+TO_EC_STR_PARAM_FIXED_SIZE(secp256r1_alpha_edwards, 0);
+
 static const u8 secp256r1_oid[] = "1.2.840.10045.3.1.7";
 TO_EC_STR_PARAM(secp256r1_oid);
 
@@ -172,6 +190,9 @@ static const ec_str_params secp256r1_str_params = {
 	.gen_order = &secp256r1_gen_order_str_param,
 	.gen_order_bitlen = &secp256r1_gen_order_bitlen_str_param,
 	.cofactor = &secp256r1_cofactor_str_param,
+        .alpha_montgomery = &secp256r1_alpha_montgomery_str_param,
+        .gamma_montgomery = &secp256r1_gamma_montgomery_str_param,
+        .alpha_edwards = &secp256r1_alpha_edwards_str_param,
 	.oid = &secp256r1_oid_str_param,
 	.name = &secp256r1_name_str_param,
 };

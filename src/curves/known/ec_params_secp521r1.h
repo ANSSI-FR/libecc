@@ -248,6 +248,24 @@ static const u8 secp521r1_cofactor[] = { 0x01 };
 
 TO_EC_STR_PARAM(secp521r1_cofactor);
 
+static const u8 secp521r1_alpha_montgomery[] = {
+	0x00,
+};
+
+TO_EC_STR_PARAM_FIXED_SIZE(secp521r1_alpha_montgomery, 0);
+
+static const u8 secp521r1_gamma_montgomery[] = {
+	0x00,
+};
+
+TO_EC_STR_PARAM_FIXED_SIZE(secp521r1_gamma_montgomery, 0);
+
+static const u8 secp521r1_alpha_edwards[] = {
+	0x00,
+};
+
+TO_EC_STR_PARAM_FIXED_SIZE(secp521r1_alpha_edwards, 0);
+
 static const u8 secp521r1_oid[] = "1.3.132.0.35";
 TO_EC_STR_PARAM(secp521r1_oid);
 
@@ -272,6 +290,9 @@ static const ec_str_params secp521r1_str_params = {
 	.gen_order = &secp521r1_gen_order_str_param,
 	.gen_order_bitlen = &secp521r1_gen_order_bitlen_str_param,
 	.cofactor = &secp521r1_cofactor_str_param,
+        .alpha_montgomery = &secp521r1_alpha_montgomery_str_param,
+        .gamma_montgomery = &secp521r1_gamma_montgomery_str_param,
+        .alpha_edwards = &secp521r1_alpha_edwards_str_param,
 	.oid = &secp521r1_oid_str_param,
 	.name = &secp521r1_name_str_param,
 };
