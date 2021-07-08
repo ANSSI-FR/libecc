@@ -926,7 +926,6 @@ int eddsa_import_pub_key(ec_pub_key *pub_key, const u8 *buf, u16 buflen, const e
 	fp_src_t gamma_montgomery;
 	fp_src_t alpha_edwards;
 	prj_pt_t pub_key_y;
-	nn_src_t gen_order;
 
 	ret = -1;
 
@@ -958,7 +957,6 @@ int eddsa_import_pub_key(ec_pub_key *pub_key, const u8 *buf, u16 buflen, const e
 	gamma_montgomery = &(shortw_curve_params->ec_gamma_montgomery);
 	alpha_edwards = &(shortw_curve_params->ec_alpha_edwards);
 	pub_key_y = &(pub_key->y);
-	gen_order = &(shortw_curve_params->ec_gen_order);
 
 	/* Get the isogenic Edwards curve */
 	curve_shortw_to_edwards(shortw_curve, &edwards_curve, alpha_montgomery, gamma_montgomery, alpha_edwards);
@@ -972,6 +970,8 @@ int eddsa_import_pub_key(ec_pub_key *pub_key, const u8 *buf, u16 buflen, const e
 	aff_pt_edwards_to_prj_pt_shortw(&_Tmp, shortw_curve, pub_key_y, alpha_edwards);
 #if defined(WITH_SIG_EDDSA448)
 	if((sig_type == EDDSA448) || (sig_type == EDDSA448PH)){
+		nn_src_t gen_order;
+		gen_order = &(shortw_curve_params->ec_gen_order);
 		/*
 		 * NOTE: because of the 4-isogeny between Ed448 and Edwards448, we actually
 		 * multiply by (s/4) since the base point of Edwards448 is four times the one
@@ -983,6 +983,7 @@ int eddsa_import_pub_key(ec_pub_key *pub_key, const u8 *buf, u16 buflen, const e
 		nn_modinv_word(&tmp, WORD(4), gen_order);
         	prj_pt_mul_monty(&(pub_key->y), &tmp, pub_key_y);
 		nn_uninit(&tmp);
+		PTR_NULLIFY(gen_order);
 	}
 #endif
 	/* Mark the public key as initialized */
@@ -997,7 +998,6 @@ err:
 	PTR_NULLIFY(gamma_montgomery);
 	PTR_NULLIFY(alpha_edwards);
 	PTR_NULLIFY(pub_key_y);
-	PTR_NULLIFY(gen_order);
 	if(aff_pt_edwards_is_initialized(&_Tmp)){
 		aff_pt_edwards_uninit(&_Tmp);
 	}
