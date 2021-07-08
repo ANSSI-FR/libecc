@@ -22,15 +22,16 @@ See [LICENSE](LICENSE) file at the root folder of the project.
 ## Description
 This software implements a library for elliptic curves based
 cryptography (ECC). The API supports signature algorithms specified
-in the [ISO 14888-3:2016](https://www.iso.org/standard/64267.html?browse=tc)
+in the [ISO 14888-3:2018](https://www.iso.org/standard/76382.html)
 standard, with the following specific curves and hash functions:
 
-  * **Signatures**: ECDSA, ECKCDSA, ECGDSA, ECRDSA, EC{,O}SDSA, ECFSDSA.
-  * **Curves**: SECP{224,256,384,521}R1, BRAINPOOLP{224,256,384,512}R1,
-  FRP256V1, GOST{256,512}. The library can be easily expanded with user
-  defined curves using a standalone helper script.
-  * **Hash functions**: SHA-2 and SHA-3 hash functions (224, 256, 384, 512).
+  * **Signatures**: ECDSA, ECKCDSA, ECGDSA, ECRDSA, EC{,O}SDSA, ECFSDSA, SM3.
+  * **Curves**: SECP{192,224,256,384,521}R1, BRAINPOOLP{192,224,256,384,512}R1,
+  FRP256V1, GOST{256,512}, SM2P256V1. The library can be easily expanded with
+  user defined curves using a standalone helper script.
+  * **Hash functions**: SHA-2 and SHA-3 hash functions (224, 256, 384, 512), SM3.
 
+It also supports EdDSA (Ed25519 and Ed448) as defined in [RFC 8032](https://datatracker.ietf.org/doc/html/rfc8032).
 
 Advanced usages of this library also include the possible implementation
 of elliptic curve based Diffie--Hellman protocols as well as any algorithm
