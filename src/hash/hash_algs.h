@@ -29,14 +29,15 @@
 #include "sha3-256.h"
 #include "sha3-384.h"
 #include "sha3-512.h"
+#include "shake256.h"
 #include "../utils/utils.h"
 
 #if (MAX_DIGEST_SIZE == 0)
-#error "It seems you disabled all hash algorithmsin lib_ecc_config.h"
+#error "It seems you disabled all hash algorithms in lib_ecc_config.h"
 #endif
 
 #if (MAX_BLOCK_SIZE == 0)
-#error "It seems you disabled all hash algorithmsin lib_ecc_config.h"
+#error "It seems you disabled all hash algorithms in lib_ecc_config.h"
 #endif
 
 typedef union {
@@ -69,6 +70,9 @@ typedef union {
 #endif
 #ifdef SHA3_512_BLOCK_SIZE
 	sha3_512_context sha3_512;
+#endif
+#ifdef SHAKE256_BLOCK_SIZE
+	shake256_context shake256;
 #endif
 } hash_context;
 
@@ -245,6 +249,20 @@ static const hash_mapping hash_maps[] = {
 #define MAX_HASH_ALG_NAME_LEN 9
 #endif /* MAX_HASH_ALG_NAME_LEN */
 #endif /* WITH_HASH_SHA3_512 */
+#ifdef WITH_HASH_SHAKE256
+	{.type = SHAKE256,	/* SHAKE256 */
+	 .name = "SHAKE256",
+	 .digest_size = SHAKE256_DIGEST_SIZE,
+	 .block_size = SHAKE256_BLOCK_SIZE,
+	 .hfunc_init = (_hfunc_init) shake256_init,
+	 .hfunc_update = (_hfunc_update) shake256_update,
+	 .hfunc_finalize = (_hfunc_finalize) shake256_final,
+	 .hfunc_scattered = shake256_scattered},
+#if (MAX_HASH_ALG_NAME_LEN < 9)
+#undef MAX_HASH_ALG_NAME_LEN
+#define MAX_HASH_ALG_NAME_LEN 9
+#endif /* MAX_HASH_ALG_NAME_LEN */
+#endif /* WITH_HASH_SHAKE256 */
 	{.type = UNKNOWN_HASH_ALG,	/* Needs to be kept last */
 	 .name = "UNKNOWN",
 	 .digest_size = 0,

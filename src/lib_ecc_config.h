@@ -65,6 +65,7 @@
 #define WITH_HASH_SHA3_256
 #define WITH_HASH_SHA3_384
 #define WITH_HASH_SHA3_512
+#define WITH_HASH_SHAKE256
 
 /* Supported sig/verif schemes */
 #define WITH_SIG_ECDSA

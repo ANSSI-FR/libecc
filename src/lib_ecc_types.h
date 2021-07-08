@@ -77,6 +77,9 @@ typedef enum {
 #ifdef WITH_HASH_SHA512_256
 	SHA512_256 = 10,
 #endif
+#ifdef WITH_HASH_SHAKE256
+	SHAKE256 = 11,
+#endif
 } hash_alg_type;
 
 /* All curves we support */
