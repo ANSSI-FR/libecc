@@ -359,3 +359,23 @@ int nn_modinv_2exp(nn_t _out, nn_src_t x, bitcnt_t exp)
 	nn_uninit(&tmp_mul);
 	return 1;
 }
+
+/*
+ * Invert word w modulo m.
+ *
+ * The function supports aliasing.
+ */
+int nn_modinv_word(nn_t out, word_t w, nn_src_t m)
+{
+	nn nn_tmp;
+	int ret;
+
+	nn_init(&nn_tmp, 0);
+	nn_set_word_value(&nn_tmp, w);
+
+	ret = nn_modinv(out, &nn_tmp, m);
+
+	nn_uninit(&nn_tmp);
+
+	return ret;
+}
