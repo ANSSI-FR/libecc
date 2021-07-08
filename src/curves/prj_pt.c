@@ -270,6 +270,29 @@ int prj_pt_eq_or_opp(prj_pt_src_t in1, prj_pt_src_t in2)
 	return ret;
 }
 
+/* Compute the opposite of a projective point. Supports aliasing. */
+void prj_pt_neg(prj_pt_t out, prj_pt_src_t in)
+{
+	fp Y_opposite;
+
+	prj_pt_check_initialized(in);
+
+	fp_init(&Y_opposite, (in->Y).ctx);
+	fp_neg(&Y_opposite, &(in->Y));
+
+	/* Handle aliasing */
+	if (out == in) {
+		prj_pt _in;
+		prj_pt_copy(&_in, in);
+		prj_pt_init_from_coords(out, _in.crv, &(_in.X), &Y_opposite, &(_in.Z));
+		prj_pt_uninit(&_in);
+	} else {
+		prj_pt_init_from_coords(out, in->crv, &(in->X), &Y_opposite, &(in->Z));
+	}
+
+	fp_uninit(&Y_opposite);
+}
+
 /*
  * Import a projective point from a buffer with the following layout; the 3
  * coordinates (elements of Fp) are each encoded on p_len bytes, where p_len

@@ -65,6 +65,8 @@ int prj_pt_cmp(prj_pt_src_t in1, prj_pt_src_t in2);
 
 int prj_pt_eq_or_opp(prj_pt_src_t in1, prj_pt_src_t in2);
 
+void prj_pt_neg(prj_pt_t out, prj_pt_src_t in);
+
 int prj_pt_import_from_buf(prj_pt_t pt,
 			   const u8 *pt_buf,
 			   u16 pt_buf_len, ec_shortw_crv_src_t crv);
