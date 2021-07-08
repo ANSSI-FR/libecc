@@ -34,6 +34,12 @@
 #define dbg_ec_point_print(msg, ...) do {\
 	ec_point_print(EC_SIG_ALG " " msg, __VA_ARGS__);\
 } while(0)
+#define dbg_ec_montgomery_point_print(msg, ...) do {\
+	ec_montgomery_point_print(EC_SIG_ALG " " msg, __VA_ARGS__);\
+} while(0)
+#define dbg_ec_edwards_point_print(msg, ...) do {\
+	ec_edwards_point_print(EC_SIG_ALG " " msg, __VA_ARGS__);\
+} while(0)
 #define dbg_priv_key_print(msg, ...) do {\
 	priv_key_print(EC_SIG_ALG " " msg, __VA_ARGS__);\
 } while(0)
@@ -46,6 +52,8 @@
 #define dbg_buf_print(msg, ...)
 #define dbg_nn_print(msg, ...)
 #define dbg_ec_point_print(msg, ...)
+#define dbg_ec_montgomery_point_print(msg, ...)
+#define dbg_ec_edwards_point_print(msg, ...)
 #define dbg_priv_key_print(msg, ...)
 #define dbg_pub_key_print(msg, ...)
 

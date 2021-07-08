@@ -21,4 +21,8 @@
 
 void ec_point_print(const char *msg, prj_pt_src_t prj_pt);
 
+void ec_montgomery_point_print(const char *msg, aff_pt_montgomery_src_t pt);
+
+void ec_edwards_point_print(const char *msg, aff_pt_edwards_src_t pt);
+
 #endif /* __PRINT_CURVES_H__ */
