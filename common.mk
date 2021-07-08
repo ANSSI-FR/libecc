@@ -215,3 +215,10 @@ endif
 ifeq ($(ASSERT_PRINT), 1)
 CFLAGS += -DUSE_ASSERT_PRINT
 endif
+
+# Do we want to use clang or gcc sanitizers?
+ifeq ($(USE_SANITIZERS),1)
+CFLAGS += -fsanitize=undefined -fsanitize=address
+endif
+
+
