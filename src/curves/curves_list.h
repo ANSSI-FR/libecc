@@ -32,6 +32,9 @@
 #include "known/ec_params_frp256v1.h"
 #include "known/ec_params_gost256.h"
 #include "known/ec_params_gost512.h"
+#include "known/ec_params_sm2p192test.h"
+#include "known/ec_params_sm2p256test.h"
+#include "known/ec_params_sm2p256v1.h"
 #include "known/ec_params_wei25519.h"
 #include "known/ec_params_wei448.h"
 
@@ -107,6 +110,12 @@ static const ec_mapping ec_maps[] = {
 #ifdef WITH_CURVE_GOST512
 	{.type = GOST512,.params = &GOST_512bits_curve_str_params},
 #endif /* WITH_CURVE_GOST512 */
+#ifdef WITH_CURVE_SM2P256TEST
+	{.type = SM2P256TEST,.params = &sm2p256test_str_params},
+#endif /* WITH_CURVE_SM2P256TEST */
+#ifdef WITH_CURVE_SM2P256V1
+	{.type = SM2P256V1,.params = &sm2p256v1_str_params},
+#endif /* WITH_CURVE_SM2P256V1 */
 #ifdef WITH_CURVE_WEI25519
 	{.type = WEI25519,.params = &wei25519_str_params},
 #endif /* WITH_CURVE_WEI25519 */
