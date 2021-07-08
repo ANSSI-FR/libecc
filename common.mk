@@ -38,6 +38,12 @@ WARNING_CFLAGS = -Weverything -Werror \
 		 -Wno-reserved-id-macro -Wno-padded \
 		 -Wno-packed -Wno-covered-switch-default \
 		 -Wno-used-but-marked-unused
+# Clang version >= 13? Adapt
+CLANG_VERSION_GTE_13 := $(shell echo `$(CC) -dumpversion | cut -f1-2 -d.` \>= 13.0 | sed -e 's/\./*100+/g' | bc)
+  ifeq ($(CLANG_VERSION_GTE_13), 1)
+  # We have to do this because the '_' prefix seems now reserved to builtins
+  WARNING_CFLAGS += -Wno-reserved-identifier
+  endif
 else
 WARNING_CFLAGS = -W -Werror -Wextra -Wall -Wunreachable-code
 endif
@@ -65,7 +71,7 @@ AR ?= ar
 RANLIB ?= ranlib
 # Default AR flags and RANLIB flags if not overriden by user
 AR_FLAGS ?= rcs
-RANLIB_FLAGS ?= 
+RANLIB_FLAGS ?=
 
 # Our debug flags
 DEBUG_CFLAGS = -DDEBUG -O -g
