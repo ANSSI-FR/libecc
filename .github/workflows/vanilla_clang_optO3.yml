@@ -9,12 +9,12 @@ jobs:
     strategy:
       #max-parallel: 10
       matrix:
-        cc: [gcc]
+        cc: [clang]
         blinding: [0, 1]
         complete: [0, 1]
         ladder: [0, 1]
         cryptofuzz: [0, 1]
-        optflags: ["", "-O2"]
+        optflags: [""]
     steps:
       # Checkout repository
       - name: checkout repository

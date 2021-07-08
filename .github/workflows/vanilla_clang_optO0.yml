@@ -14,11 +14,11 @@ jobs:
         complete: [0, 1]
         ladder: [0, 1]
         cryptofuzz: [0, 1]
-        optflags: ["", "-O2"]
+        optflags: ["-O0"]
     steps:
       # Checkout repository
       - name: checkout repository
-        uses: actions/checkout@v2      
+        uses: actions/checkout@v2
       # Run actions
       # Vanilla tests
       - name: vanilla tests
