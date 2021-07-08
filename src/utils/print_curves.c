@@ -23,9 +23,17 @@ void ec_point_print(const char *msg, prj_pt_src_t prj_pt)
 {
 	aff_pt y_aff;
 
+	if(prj_pt_iszero(prj_pt)){
+		ext_printf("%s: infinity\n", msg);
+		goto out;
+	}
+
 	prj_pt_to_aff(&y_aff, prj_pt);
 	ext_printf("%s", msg);
 	nn_print("x", &(y_aff.x.fp_val));
 	ext_printf("%s", msg);
 	nn_print("y", &(y_aff.y.fp_val));
+
+out:
+	aff_pt_uninit(&y_aff);
 }
