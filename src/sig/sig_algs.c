@@ -78,7 +78,9 @@ int init_pubkey_from_privkey(ec_pub_key *pub_key, ec_priv_key *priv_key)
 	int ret = -1;
 	u8 i;
 
-	priv_key_check_initialized(priv_key);
+	if(!priv_key_is_initialized(priv_key)){
+		goto err;
+        }
 
 	for (i = 0, sm = &ec_sig_maps[i];
 	     sm->type != UNKNOWN_SIG_ALG; sm = &ec_sig_maps[++i]) {
@@ -86,12 +88,12 @@ int init_pubkey_from_privkey(ec_pub_key *pub_key, ec_priv_key *priv_key)
 			/* NOTE: since sm is initalized with a structure
 	 		 * coming from a const source, we can safely call the callback here.
 	 		 */
-			sm->init_pub_key(pub_key, priv_key);
-			ret = 0;
+			ret = sm->init_pub_key(pub_key, priv_key);
 			break;
 		}
 	}
 
+err:
 	return ret;
 }
 
@@ -129,7 +131,7 @@ const ec_sig_mapping *get_sig_by_type(ec_sig_alg_type sig_type)
 	return ret;
 }
 
-/* Here, we provide a helper that sanity checks the provided signature 
+/* Here, we provide a helper that sanity checks the provided signature
  * mapping against the constant ones.
  */
 int ec_sig_mapping_callbacks_sanity_check(const ec_sig_mapping *sig)
@@ -188,22 +190,28 @@ err:
  */
 int ec_sig_ctx_callbacks_sanity_check(const struct ec_sign_context *sig_ctx)
 {
+	int ret = -1;
+
 	if(sig_ctx == NULL){
+		ret = -1;
 		goto err;
 	}
 	if(sig_ctx->ctx_magic != SIG_SIGN_MAGIC){
+		ret = -1;
 		goto err;
 	}
 	if(hash_mapping_callbacks_sanity_check(sig_ctx->h)){
+		ret = -1;
 		goto err;
 	}
 	if(ec_sig_mapping_callbacks_sanity_check(sig_ctx->sig)){
+		ret = -1;
 		goto err;
 	}
-	
-	return 0;
+
+	ret = 0;
 err:
-	return -1;
+	return ret;
 }
 
 /* Sanity check of a verification context to see if everything seems
@@ -211,22 +219,28 @@ err:
  */
 int ec_verify_ctx_callbacks_sanity_check(const struct ec_verify_context *verify_ctx)
 {
+	int ret = -1;
+
 	if(verify_ctx == NULL){
+		ret = -1;
 		goto err;
 	}
 	if(verify_ctx->ctx_magic != SIG_VERIFY_MAGIC){
+		ret = -1;
 		goto err;
 	}
 	if(hash_mapping_callbacks_sanity_check(verify_ctx->h)){
+		ret = -1;
 		goto err;
 	}
 	if(ec_sig_mapping_callbacks_sanity_check(verify_ctx->sig)){
+		ret = -1;
 		goto err;
 	}
-	
-	return 0;
+
+	ret = 0;
 err:
-	return -1;
+	return ret;
 }
 
 
@@ -610,6 +624,8 @@ int ec_structured_sig_import_from_buf(u8 *sig, u32 siglen,
                                       hash_alg_type * hash_type,
                                       u8 curve_name[MAX_CURVE_NAME_LEN])
 {
+	int ret = -1;
+
         u32 metadata_len = (3 * sizeof(u8));
 
 	MUST_HAVE((out_buf != NULL) && (sig_type != NULL) && (hash_type != NULL) && (curve_name != NULL));
@@ -625,20 +641,25 @@ int ec_structured_sig_import_from_buf(u8 *sig, u32 siglen,
          *      - One byte = the curve type (FRP256V1, ...)
          */
         MUST_HAVE(outlen <= (siglen + metadata_len));
-        if (outlen > (siglen + metadata_len))
-                return -1;
+        if (outlen > (siglen + metadata_len)){
+		ret = -1;
+                goto err;
+	}
 
         *sig_type = (ec_sig_alg_type)out_buf[0];
         *hash_type = (hash_alg_type)out_buf[1];
         if (ec_get_curve_name_by_type((ec_curve_type) out_buf[2],
                                       curve_name, MAX_CURVE_NAME_LEN)) {
-                return -1;
+                ret = -1;
+		goto err;
         }
 
         /* Copy the raw signature */
         local_memcpy(sig, out_buf + metadata_len, siglen);
 
-        return 0;
+	ret = 0;
+err:
+        return ret;
 }
 
 /*
@@ -655,6 +676,7 @@ int ec_structured_sig_export_to_buf(const u8 *sig, u32 siglen,
         u32 metadata_len = (3 * sizeof(u8));
         u8 curve_name_len;
         ec_curve_type curve_type;
+	int ret = -1;
 
 	MUST_HAVE((out_buf != NULL) && (curve_name != NULL));
         /* We only deal with signatures of length < 256 */
@@ -671,7 +693,8 @@ int ec_structured_sig_export_to_buf(const u8 *sig, u32 siglen,
          */
         MUST_HAVE(outlen >= (siglen + metadata_len));
         if (outlen < (siglen + metadata_len)) {
-                return -1;
+		ret = -1;
+                goto err;
         }
 
         out_buf[0] = (u8)sig_type;
@@ -680,11 +703,14 @@ int ec_structured_sig_export_to_buf(const u8 *sig, u32 siglen,
         curve_type = ec_get_curve_type_by_name(curve_name, curve_name_len);
         out_buf[2] = (u8)curve_type;
         if (out_buf[2] == UNKNOWN_CURVE) {
-                return -1;
+		ret = -1;
+                goto err;
         }
 
         /* Copy the raw signature */
         local_memcpy(out_buf + metadata_len, sig, siglen);
 
-        return 0;
+	ret = 0;
+err:
+        return ret;
 }
