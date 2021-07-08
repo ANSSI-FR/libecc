@@ -319,6 +319,8 @@ def getbitlen(bint):
     """
     Returns the number of bits encoding an integer
     """
+    if bint == None:
+        return 0
     if bint == 0:
         # Zero is encoded on one bit
         return 1
@@ -1331,8 +1333,12 @@ def is_base64(s):
 
 ### Curve helpers
 def export_curve_int(curvename, intname, bigint, size):
-    out  = "static const u8 "+curvename+"_"+intname+"[] = "+bigint_to_C_array(bigint, size)+"\n"
-    out += "TO_EC_STR_PARAM("+curvename+"_"+intname+");\n\n"
+    if bigint == None:
+        out  = "static const u8 "+curvename+"_"+intname+"[] = {\n\t0x00,\n};\n"
+        out += "TO_EC_STR_PARAM_FIXED_SIZE("+curvename+"_"+intname+", 0);\n\n"
+    else:
+        out  = "static const u8 "+curvename+"_"+intname+"[] = "+bigint_to_C_array(bigint, size)+"\n"
+        out += "TO_EC_STR_PARAM("+curvename+"_"+intname+");\n\n"
     return out
 
 def export_curve_string(curvename, stringname, stringvalue):
