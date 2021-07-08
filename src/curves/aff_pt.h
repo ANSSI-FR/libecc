@@ -19,6 +19,7 @@
 #include "../fp/fp.h"
 #include "ec_shortw.h"
 #include "ec_montgomery.h"
+#include "ec_edwards.h"
 
 typedef struct {
 	fp x;
@@ -46,6 +47,46 @@ int aff_pt_import_from_buf(aff_pt_t pt,
                            const u8 *pt_buf,
                            u16 pt_buf_len, ec_shortw_crv_src_t crv);
 int aff_pt_export_to_buf(aff_pt_src_t pt, u8 *pt_buf, u32 pt_buf_len);
+
+/*** Edwards curves related ***/
+typedef struct {
+	fp x;
+	fp y;
+	ec_edwards_crv_src_t crv;
+	word_t magic;
+} aff_pt_edwards;
+
+typedef aff_pt_edwards *aff_pt_edwards_t;
+typedef const aff_pt_edwards_t aff_pt_edwards_src_t;
+
+void aff_pt_edwards_check_initialized(aff_pt_edwards_src_t in);
+int aff_pt_edwards_is_initialized(aff_pt_edwards_src_t in);
+void aff_pt_edwards_init(aff_pt_edwards_t in, ec_edwards_crv_src_t curve);
+void aff_pt_edwards_init_from_coords(aff_pt_edwards_t in,
+			     ec_edwards_crv_src_t curve,
+			     fp_src_t ucoord, fp_src_t vcoord);
+void aff_pt_edwards_uninit(aff_pt_edwards_t in);
+int is_on_edwards_curve(fp_src_t u, fp_src_t v, ec_edwards_crv_src_t curve);
+int aff_pt_edwards_is_on_curve(aff_pt_edwards_src_t pt);
+void ec_edwards_aff_copy(aff_pt_edwards_t out, aff_pt_edwards_src_t in);
+int ec_edwards_aff_cmp(aff_pt_edwards_src_t in1, aff_pt_edwards_src_t in2);
+int aff_pt_edwards_import_from_buf(aff_pt_edwards_t pt,
+			   const u8 *pt_buf,
+			   u16 pt_buf_len, ec_edwards_crv_src_t crv);
+int aff_pt_edwards_export_to_buf(aff_pt_edwards_src_t pt, u8 *pt_buf, u32 pt_buf_len);
+
+void curve_edwards_to_montgomery(ec_edwards_crv_src_t edwards_crv, ec_montgomery_crv_t montgomery_crv, fp_src_t alpha_edwards);
+int curve_edwards_montgomery_check(ec_edwards_crv_src_t edwards_crv, ec_montgomery_crv_src_t montgomery_crv, fp_src_t alpha_edwards);
+
+void curve_montgomery_to_edwards(ec_montgomery_crv_src_t montgomery_crv, ec_edwards_crv_t edwards_crv, fp_src_t alpha_edwards);
+
+void curve_edwards_to_shortw(ec_edwards_crv_src_t edwards_crv, ec_shortw_crv_t shortw_crv, fp_src_t alpha_edwards);
+int curve_edwards_shortw_check(ec_edwards_crv_src_t edwards_crv, ec_shortw_crv_src_t shortw_crv, fp_src_t alpha_edwards);
+void curve_shortw_to_edwards(ec_shortw_crv_src_t shortw_crv, ec_edwards_crv_t edwards_crv, fp_src_t alpha_montgomery, fp_src_t gamma_montgomery, fp_src_t alpha_edwards);
+
+void aff_pt_edwards_to_shortw(aff_pt_edwards_src_t in_edwards, ec_shortw_crv_src_t shortw_crv, aff_pt_t out_shortw, fp_src_t alpha_edwards);
+void aff_pt_shortw_to_edwards(aff_pt_src_t in_shortw, ec_edwards_crv_src_t edwards_crv, aff_pt_edwards_t out_edwards, fp_src_t alpha_edwards);
+
 
 /*** Montgomery curves related ***/
 typedef struct {
