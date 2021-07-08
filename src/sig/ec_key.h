@@ -185,4 +185,7 @@ int ec_structured_key_pair_import_from_buf(ec_key_pair *kp,
 					   const u8 *pub_key_buf,
 					   u8 pub_key_buf_len,
 					   ec_sig_alg_type ec_key_alg);
+
+int generic_gen_priv_key(ec_priv_key *priv_key);
+
 #endif /* __EC_KEY_H__ */

@@ -18,6 +18,12 @@
 
 #include "sig_algs_internal.h"
 
+/* Generic private key generation function */
+int generic_gen_priv_key(ec_priv_key *priv_key);
+
+/* Private key generation function specific to each scheme */
+int gen_priv_key(ec_priv_key *priv_key);
+
 /*
  * Generic function to init a uninitialized public key from an initialized
  * private key. The function uses the expected logic to derive the key

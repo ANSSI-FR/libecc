@@ -16,6 +16,57 @@
 #include "sig_algs.h"
 
 /*
+ * Generic private key generation (generate a scalar in ]0,q[
+ * Common accross many schemes, but might diverge for some.
+ */
+int generic_gen_priv_key(ec_priv_key *priv_key)
+{
+	int ret = -1;
+
+	if(!priv_key_is_initialized(priv_key)){
+		ret = -1;
+		goto err;
+	}
+	/* Get a random value in ]0,q[ where q is the group generator order */
+	ret = nn_get_random_mod(&(priv_key->x), &(priv_key->params->ec_gen_order));
+	if (ret) {
+		ret = -1;
+		goto err;
+	}
+
+	ret = 0;
+err:
+	return ret;
+}
+
+/* Private key generation function per signature scheme */
+int gen_priv_key(ec_priv_key *priv_key)
+{
+	const ec_sig_mapping *sm;
+	int ret = -1;
+	u8 i;
+
+	if(!priv_key_is_initialized(priv_key)){
+		goto err;
+        }
+
+	for (i = 0, sm = &ec_sig_maps[i];
+	     sm->type != UNKNOWN_SIG_ALG; sm = &ec_sig_maps[++i]) {
+		if (sm->type == priv_key->key_type) {
+			/* NOTE: since sm is initalized with a structure
+	 		 * coming from a const source, we can safely call the callback here.
+	 		 */
+			ret = sm->gen_priv_key(priv_key);
+			break;
+		}
+	}
+
+err:
+	return ret;
+}
+
+
+/*
  * Generic function to init a uninitialized public key from an initialized
  * private key. The function uses the expected logic to derive the key
  * (e.g. Y=xG, Y=(x^-1)G, etc). It returns -1 on error (i.e. if the signature

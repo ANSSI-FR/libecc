@@ -527,20 +527,25 @@ int ec_key_pair_gen(ec_key_pair *kp, const ec_params *params,
 	MUST_HAVE(kp != NULL);
 	MUST_HAVE(params != NULL);
 
-	/* Get a random value in ]0,q[ */
-	ret = nn_get_random_mod(&(kp->priv_key.x), &(params->ec_gen_order));
-	if (ret) {
-		goto err;
-	}
-
 	/* Set key type and pointer to EC params for private key */
 	kp->priv_key.key_type = ec_key_alg;
 	kp->priv_key.params = (const ec_params *)params;
 	kp->priv_key.magic = PRIV_KEY_MAGIC;
 
+	/* Call our private key generation function */
+	ret = gen_priv_key(&(kp->priv_key));
+	if(ret){
+		ret = -1;
+		goto err;
+	}
+
 	/* Generate associated public key. */
 	ret = init_pubkey_from_privkey(&(kp->pub_key), &(kp->priv_key));
 
  err:
+	if(ret){
+		/* If we had an error, uninit private key */
+		kp->priv_key.magic = 0;
+	}
 	return ret;
 }

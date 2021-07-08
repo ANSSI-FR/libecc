@@ -44,6 +44,7 @@
 	MUST_HAVE(((A) != NULL) && 			\
 		  ((A)->name != NULL) && 		\
 		  ((A)->siglen != NULL) && 		\
+		  ((A)->gen_priv_key != NULL) && 	\
 		  ((A)->init_pub_key != NULL) && 	\
 		  ((A)->sign_init != NULL) && 		\
 		  ((A)->sign_update != NULL) && 	\
@@ -63,6 +64,7 @@ typedef struct {
 
 	u8 (*siglen) (u16 p_bit_len, u16 q_bit_len, u8 hsize, u8 blocksize);
 
+	int (*gen_priv_key) (ec_priv_key *priv_key);
 	int (*init_pub_key) (ec_pub_key *pub_key, const ec_priv_key *priv_key);
 
 	int (*sign_init) (struct ec_sign_context * ctx);
@@ -179,6 +181,7 @@ static const ec_sig_mapping ec_sig_maps[] = {
 	{.type = ECDSA,
 	 .name = "ECDSA",
 	 .siglen = ecdsa_siglen,
+	 .gen_priv_key = generic_gen_priv_key,
 	 .init_pub_key = ecdsa_init_pub_key,
 	 .sign_init = _ecdsa_sign_init,
 	 .sign_update = _ecdsa_sign_update,
@@ -196,6 +199,7 @@ static const ec_sig_mapping ec_sig_maps[] = {
 	{.type = ECKCDSA,
 	 .name = "ECKCDSA",
 	 .siglen = eckcdsa_siglen,
+	 .gen_priv_key = generic_gen_priv_key,
 	 .init_pub_key = eckcdsa_init_pub_key,
 	 .sign_init = _eckcdsa_sign_init,
 	 .sign_update = _eckcdsa_sign_update,
@@ -213,6 +217,7 @@ static const ec_sig_mapping ec_sig_maps[] = {
 	{.type = ECSDSA,
 	 .name = "ECSDSA",
 	 .siglen = ecsdsa_siglen,
+	 .gen_priv_key = generic_gen_priv_key,
 	 .init_pub_key = ecsdsa_init_pub_key,
 	 .sign_init = _ecsdsa_sign_init,
 	 .sign_update = _ecsdsa_sign_update,
@@ -230,6 +235,7 @@ static const ec_sig_mapping ec_sig_maps[] = {
 	{.type = ECOSDSA,
 	 .name = "ECOSDSA",
 	 .siglen = ecosdsa_siglen,
+	 .gen_priv_key = generic_gen_priv_key,
 	 .init_pub_key = ecosdsa_init_pub_key,
 	 .sign_init = _ecosdsa_sign_init,
 	 .sign_update = _ecosdsa_sign_update,
@@ -247,6 +253,7 @@ static const ec_sig_mapping ec_sig_maps[] = {
 	{.type = ECFSDSA,
 	 .name = "ECFSDSA",
 	 .siglen = ecfsdsa_siglen,
+	 .gen_priv_key = generic_gen_priv_key,
 	 .init_pub_key = ecfsdsa_init_pub_key,
 	 .sign_init = _ecfsdsa_sign_init,
 	 .sign_update = _ecfsdsa_sign_update,
@@ -264,6 +271,7 @@ static const ec_sig_mapping ec_sig_maps[] = {
 	{.type = ECGDSA,
 	 .name = "ECGDSA",
 	 .siglen = ecgdsa_siglen,
+	 .gen_priv_key = generic_gen_priv_key,
 	 .init_pub_key = ecgdsa_init_pub_key,
 	 .sign_init = _ecgdsa_sign_init,
 	 .sign_update = _ecgdsa_sign_update,
@@ -281,6 +289,7 @@ static const ec_sig_mapping ec_sig_maps[] = {
 	{.type = ECRDSA,
 	 .name = "ECRDSA",
 	 .siglen = ecrdsa_siglen,
+	 .gen_priv_key = generic_gen_priv_key,
 	 .init_pub_key = ecrdsa_init_pub_key,
 	 .sign_init = _ecrdsa_sign_init,
 	 .sign_update = _ecrdsa_sign_update,
@@ -297,6 +306,7 @@ static const ec_sig_mapping ec_sig_maps[] = {
 	{.type = UNKNOWN_SIG_ALG,	/* Needs to be kept last */
 	 .name = "UNKNOWN",
 	 .siglen = 0,
+	 .gen_priv_key = NULL,
 	 .init_pub_key = NULL,
 	 .sign_init = NULL,
 	 .sign_update = NULL,
