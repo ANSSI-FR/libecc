@@ -64,7 +64,7 @@
 	MUST_HAVE((olen_y) <= 255);							\
 	tmp[0] = (u8)(x);								\
 	tmp[1] = (u8)(olen_y);								\
-	h->hfunc_update((h_ctx), tmp, 2);						\
+	(h)->hfunc_update((h_ctx), tmp, 2);						\
 	if((y) != NULL){								\
 		(h)->hfunc_update((h_ctx), (y), (olen_y));				\
 	}										\
@@ -1063,7 +1063,7 @@ err:
 }
 
 /* Compute PH(M) with PH being the hash depending on the key type */
-static int eddsa_compute_ph(const u8 *message, u32 message_size, u8 *digest, u8 *digest_size, ec_sig_alg_type sig_type)
+static int eddsa_compute_ph(const u8 *message, u32 message_size, u8 *digest, u16 *digest_size, ec_sig_alg_type sig_type)
 {
 	hash_alg_type hash_type;
 	const hash_mapping *hash;
@@ -1128,26 +1128,38 @@ u8 eddsa_siglen(u16 p_bit_len, u16 q_bit_len, u8 hsize, u8 blocksize)
 #define EDDSA_SIGN_CHECK_INITIALIZED(A) \
 	MUST_HAVE((((void *)(A)) != NULL) && ((A)->magic == EDDSA_SIGN_MAGIC))
 
-int _eddsa_sign_init(struct ec_sign_context *ctx)
+int _eddsa_sign_init_ph(struct ec_sign_context *ctx)
 {
-	u16 digest_size;
-	u8 digest[MAX_DIGEST_SIZE];
 	int ret = -1;
+	u8 use_message_PH = 0;
 	ec_sig_alg_type key_type;
 
 	/* First, verify context has been initialized */
 	SIG_SIGN_CHECK_INITIALIZED(ctx);
-
-	/* Zero init our local variables */
-	local_memset(digest, 0, sizeof(digest));
 
 	/* Make things more readable */
 	const ec_key_pair *key_pair = ctx->key_pair;
 	const hash_mapping *h = ctx->h;
 	key_type = ctx->key_pair->priv_key.key_type;
 
+	/* Sanity check: this function is only supported in PH mode */
+#if defined(WITH_SIG_EDDSA25519)
+	if(key_type == EDDSA25519PH){
+		use_message_PH = 1;
+	}
+#endif
+#if defined(WITH_SIG_EDDSA448)
+	if(key_type == EDDSA448PH){
+		use_message_PH = 1;
+	}
+#endif
+	if(use_message_PH != 1){
+		ret = -1;
+		goto err;
+	}
+
 	/* Sanity check on hash types */
-	if((key_type != ctx->key_pair->pub_key.key_type) || (ctx->h->type != get_eddsa_hash_type(key_type))){
+	if((key_type != key_pair->pub_key.key_type) || (h->type != get_eddsa_hash_type(key_type))){
 		ret = -1;
 		goto err;
 	}
@@ -1158,7 +1170,7 @@ int _eddsa_sign_init(struct ec_sign_context *ctx)
 		goto err;
 	}
 	if ((!h) || (h->digest_size > MAX_DIGEST_SIZE) ||
-	    (ctx->h->block_size > MAX_BLOCK_SIZE)) {
+	    (h->block_size > MAX_BLOCK_SIZE)) {
 		ret = -1;
 		goto err;
 	}
@@ -1180,59 +1192,9 @@ int _eddsa_sign_init(struct ec_sign_context *ctx)
 		ret = -1;
 		goto err;
 	}
-	ctx->h->hfunc_init(&(ctx->sign_data.eddsa.h_ctx));
-
-	/* Update our hash context with half of the secret key */
-	digest_size = sizeof(digest);
-	if(eddsa_get_digest_from_priv_key(digest, &digest_size, &(ctx->key_pair->priv_key))){
-		ret = -1;
-		goto err;
-	}
-	/* Sanity check */
-	if(digest_size != h->digest_size){
-		ret = -1;
-		goto err;
-	}
-
-	/* Hash half the digest */
-	/* Since we call a callback, sanity check our mapping */
-	if(hash_mapping_callbacks_sanity_check(h)){
-		ret = -1;
-		goto err;
-	}
-	/* Sanity check on ancillary data len, its size must not exceed 255 bytes as per RFC8032 */
-	if(ctx->adata_len > 255){
-		ret = -1;
-		goto err;
-	}
-#if defined(WITH_SIG_EDDSA25519)
-	if(key_type == EDDSA25519CTX){
-		/* As per RFC8032, for EDDSA25519CTX the context SHOULD NOT be empty */
-		if(ctx->adata == NULL){
-			ret = -1;
-			goto err;
-		}
-		dom2(0, ctx->adata, ctx->adata_len, ctx->h, &(ctx->sign_data.eddsa.h_ctx));
-	}
-	if(key_type == EDDSA25519PH){
-		dom2(1, ctx->adata, ctx->adata_len, ctx->h, &(ctx->sign_data.eddsa.h_ctx));
-	}
-#endif
-#if defined(WITH_SIG_EDDSA448)
-	if(key_type == EDDSA448){
-		dom4(0, ctx->adata, ctx->adata_len, ctx->h, &(ctx->sign_data.eddsa.h_ctx));
-	}
-	if(key_type == EDDSA448PH){
-		dom4(1, ctx->adata, ctx->adata_len, ctx->h, &(ctx->sign_data.eddsa.h_ctx));
-	}
-#endif
-	ctx->h->hfunc_update(&(ctx->sign_data.eddsa.h_ctx), &digest[digest_size / 2], digest_size / 2);
+	h->hfunc_init(&(ctx->sign_data.eddsa.h_ctx));
 
 	/* Initialize other elements in the context */
-	ctx->sign_data.eddsa.update_called = 0;
-	local_memset(ctx->sign_data.eddsa.R, 0, sizeof(ctx->sign_data.eddsa.R));
-	local_memset(ctx->sign_data.eddsa.S, 0, sizeof(ctx->sign_data.eddsa.S));
-
 	ctx->sign_data.eddsa.magic = EDDSA_SIGN_MAGIC;
 
 	ret = 0;
@@ -1241,12 +1203,68 @@ err:
 	PTR_NULLIFY(key_pair);
 	PTR_NULLIFY(h);
 	VAR_ZEROIFY(key_type);
+	VAR_ZEROIFY(use_message_PH);
 
 	return ret;
 }
 
-int _eddsa_sign_update(struct ec_sign_context *ctx,
+int _eddsa_sign_update_ph(struct ec_sign_context *ctx,
 		       const u8 *chunk, u32 chunklen)
+{
+	int ret = -1;
+	ec_sig_alg_type key_type;
+	u8 use_message_PH = 0;
+
+	/*
+	 * First, verify context has been initialized and public
+	 * part too. This guarantees the context is an EDDSA
+	 * verification one and we do not update() or finalize()
+	 * before init().
+	 */
+	SIG_SIGN_CHECK_INITIALIZED(ctx);
+	EDDSA_SIGN_CHECK_INITIALIZED(&(ctx->sign_data.eddsa));
+
+	key_type = ctx->key_pair->priv_key.key_type;
+
+	/* Sanity check: this function is only supported in PH mode */
+#if defined(WITH_SIG_EDDSA25519)
+	if(key_type == EDDSA25519PH){
+		use_message_PH = 1;
+	}
+#endif
+#if defined(WITH_SIG_EDDSA448)
+	if(key_type == EDDSA448PH){
+		use_message_PH = 1;
+	}
+#endif
+	if(use_message_PH != 1){
+		ret = -1;
+		goto err;
+	}
+
+	/* Sanity check on hash types */
+	if(ctx->h->type != get_eddsa_hash_type(key_type)){
+		ret = -1;
+		goto err;
+	}
+
+	/* 2. Compute h = H(m) */
+	/* Since we call a callback, sanity check our mapping */
+	if(hash_mapping_callbacks_sanity_check(ctx->h)){
+		ret = -1;
+		goto err;
+	}
+	ctx->h->hfunc_update(&(ctx->sign_data.eddsa.h_ctx), chunk, chunklen);
+
+	ret = 0;
+err:
+	VAR_ZEROIFY(key_type);
+	VAR_ZEROIFY(use_message_PH);
+	return ret;
+
+}
+
+int _eddsa_sign_finalize_ph(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 {
 	nn r, s, S;
 #ifdef USE_SIG_BLINDING
@@ -1257,11 +1275,13 @@ int _eddsa_sign_update(struct ec_sign_context *ctx,
 	const ec_pub_key *pub_key;
 	prj_pt_src_t G;
 	u8 hash[MAX_DIGEST_SIZE];
+	u8 ph_hash[MAX_DIGEST_SIZE];
 	prj_pt R;
 	ec_edwards_crv crv_edwards;
 	aff_pt_edwards Tmp_edwards;
 	nn_src_t q;
 	u16 hsize;
+	u16 hash_size;
 	int ret;
 	ec_shortw_crv_src_t shortw_curve;
 	fp_src_t alpha_montgomery;
@@ -1281,28 +1301,14 @@ int _eddsa_sign_update(struct ec_sign_context *ctx,
 	 */
 	SIG_SIGN_CHECK_INITIALIZED(ctx);
 	EDDSA_SIGN_CHECK_INITIALIZED(&(ctx->sign_data.eddsa));
+	MUST_HAVE(sig != NULL);
 
-	/* Check that this is indeed the only time we call update */
-	/* XXX: FIXME: TODO: this implementation quirk is due to the way
-	 * EdDSA handles its pseudorandom nonce and scalar computation, that
-	 * is completely incompatible with the Init/Update/Finalize paradigm!
-	 *
-	 * As a matter of fact, PureEdDSA signature requires to process the message buffer
-	 * twice to complete the signature, which is not possible in constrained environments
-	 * as a preallocated buffer containing the whole message is needed.
-	 * A variant of the algorithm, HashEdDSA, exists to deal with the issue.
-	 *
-	 * For now, to be compatible with PureEdDSA we only allow *one* Update to be called
-	 * between Init and Finalize, and proceed with the necessary hash process
-	 * inside it. This is not completely satisfactory, as it breaks the original logics:
-	 * a better way of handling this is to add in the signature/verification context
-	 * a flag providing the capability of a given primitive to support Init/Update/Finalize
-	 * and force the user to use the proper API depending on this.
-	 */
-	if(ctx->sign_data.eddsa.update_called != 0){
-		ret = -1;
-		goto err;
-	}
+	/* Zero init out points and data */
+	local_memset(&R, 0, sizeof(prj_pt));
+	local_memset(&Tmp_edwards, 0, sizeof(aff_pt_edwards));
+	local_memset(&crv_edwards, 0, sizeof(ec_edwards_crv));
+	local_memset(hash, 0, sizeof(hash));
+	local_memset(ph_hash, 0, sizeof(ph_hash));
 
 	/* Key type */
 	key_type = ctx->key_pair->priv_key.key_type;
@@ -1313,21 +1319,13 @@ int _eddsa_sign_update(struct ec_sign_context *ctx,
 		goto err;
 	}
 
-	/* We tell that we cannot perform another update after this point */
-	ctx->sign_data.eddsa.update_called = 1;
-
-	/* Zero init out points and data */
-	local_memset(&R, 0, sizeof(prj_pt));
-	local_memset(&Tmp_edwards, 0, sizeof(aff_pt_edwards));
-	local_memset(&crv_edwards, 0, sizeof(ec_edwards_crv));
-	local_memset(hash, 0, sizeof(hash));
-
 	/* Make things more readable */
 	priv_key = &(ctx->key_pair->priv_key);
 	pub_key = &(ctx->key_pair->pub_key);
 	q = &(priv_key->params->ec_gen_order);
 	G = &(priv_key->params->ec_gen);
-	hsize = ctx->h->digest_size;
+	const hash_mapping *h = ctx->h;
+	hsize = h->digest_size;
 
 	shortw_curve = &(priv_key->params->ec_curve);
 	alpha_montgomery = &(priv_key->params->ec_alpha_montgomery);
@@ -1341,7 +1339,12 @@ int _eddsa_sign_update(struct ec_sign_context *ctx,
 	dbg_ec_point_print("G", &(priv_key->params->ec_gen));
 	dbg_pub_key_print("Y", &(ctx->key_pair->pub_key));
 
-	/* Do we use the raw message or its PH(M) hashed version? */
+	/* Check provided signature length */
+	if(siglen != EDDSA_SIGLEN(hsize)){
+		ret = -1;
+		goto err;
+	}
+	/* Is it indeed a PH version of the algorithm? */
 #if defined(WITH_SIG_EDDSA25519)
 	if(key_type == EDDSA25519PH){
 		use_message_PH = 1;
@@ -1357,38 +1360,63 @@ int _eddsa_sign_update(struct ec_sign_context *ctx,
 		use_message_PH_hsize = 64;
 	}
 #endif
-
-	/* Update hash h with message m */
-	/* Since we call a callback, sanity check our mapping */
-	if(hash_mapping_callbacks_sanity_check(ctx->h)){
+	/* Sanity check: this function is only supported in PH mode */
+	if(use_message_PH != 1){
 		ret = -1;
 		goto err;
 	}
-	if(use_message_PH == 1){
-		u8 ph_digest_size = sizeof(hash);
-		if(eddsa_compute_ph(chunk, chunklen, hash, &ph_digest_size, key_type)){
-			ret = -1;
-			goto err;
-		}
-		if(use_message_PH_hsize > ph_digest_size){
-			ret = -1;
-			goto err;
-		}
-		ctx->h->hfunc_update(&(ctx->sign_data.eddsa.h_ctx), hash, use_message_PH_hsize);
+
+	/* Finish the message hash session */
+	/* Since we call a callback, sanity check our mapping */
+	if(hash_mapping_callbacks_sanity_check(h)){
+		ret = -1;
+		goto err;
 	}
-	else{
-		ctx->h->hfunc_update(&(ctx->sign_data.eddsa.h_ctx), chunk, chunklen);
-	}
+	h->hfunc_finalize(&(ctx->sign_data.eddsa.h_ctx), ph_hash);
 
 	/* 1. Finish computing the nonce r = H(h256 || ... || h511 || m) */
-	local_memset(hash, 0, hsize);
-	/* Since we call a callback, sanity check our mapping */
-	if(hash_mapping_callbacks_sanity_check(ctx->h)){
+	/* Update our hash context with half of the secret key */
+	hash_size = sizeof(hash);
+	if(eddsa_get_digest_from_priv_key(hash, &hash_size, priv_key)){
 		ret = -1;
 		goto err;
 	}
-	ctx->h->hfunc_finalize(&(ctx->sign_data.eddsa.h_ctx), hash);
+	/* Sanity check */
+	if(hash_size != hsize){
+		ret = -1;
+		goto err;
+	}
+	/* Hash half the digest */
+	h->hfunc_init(&(ctx->sign_data.eddsa.h_ctx));
+	/* Sanity check on ancillary data len, its size must not exceed 255 bytes as per RFC8032 */
+	if(ctx->adata_len > 255){
+		ret = -1;
+		goto err;
+	}
+	/* At this point, we are ensured that we have PH versions of the algorithms */
+#if defined(WITH_SIG_EDDSA25519)
+	if(key_type == EDDSA25519PH){
+		dom2(1, ctx->adata, ctx->adata_len, h, &(ctx->sign_data.eddsa.h_ctx));
+	}
+#endif
+#if defined(WITH_SIG_EDDSA448)
+	if(key_type == EDDSA448PH){
+		dom4(1, ctx->adata, ctx->adata_len, h, &(ctx->sign_data.eddsa.h_ctx));
+	}
+#endif
+	h->hfunc_update(&(ctx->sign_data.eddsa.h_ctx), &hash[hsize / 2], hsize / 2);
+
+	/* Update hash h with message hash PH(m) */
+	if(use_message_PH_hsize > hsize){
+		ret = -1;
+		goto err;
+	}
+	h->hfunc_update(&(ctx->sign_data.eddsa.h_ctx), ph_hash, use_message_PH_hsize);
+
+	/* 1. Finish computing the nonce r = H(h256 || ... || h511 || PH(m)) */
+	h->hfunc_finalize(&(ctx->sign_data.eddsa.h_ctx), hash);
 	dbg_buf_print("h(h || m)", hash, hsize);
+
 	/* Import r as the hash scalar */
 	if(eddsa_decode_integer(&r, hash, hsize)){
 		ret = -1;
@@ -1399,7 +1427,7 @@ int _eddsa_sign_update(struct ec_sign_context *ctx,
 	/* Now perform our scalar multiplication.
 	 */
 #if defined(WITH_SIG_EDDSA448)
-	if((key_type == EDDSA448) || (key_type == EDDSA448PH)){
+	if(key_type == EDDSA448PH){
 		/* NOTE: in case of EDDSA448, because of the 4-isogeny we must divide our
 		 * scalar by 4.
 		 */
@@ -1431,21 +1459,17 @@ int _eddsa_sign_update(struct ec_sign_context *ctx,
 	}
 
 	/* Now compute S = (r + H(R || PubKey || PH(m)) * secret) mod q */
-	if(hash_mapping_callbacks_sanity_check(ctx->h)){
-		ret = -1;
-		goto err;
-	}
-	ctx->h->hfunc_init(&(ctx->sign_data.eddsa.h_ctx));
+	h->hfunc_init(&(ctx->sign_data.eddsa.h_ctx));
 	/* Encode R and update */
 	/* Transfer R to Edwards */
 	curve_shortw_to_edwards(shortw_curve, &crv_edwards, alpha_montgomery, gamma_montgomery, alpha_edwards);
 	prj_pt_shortw_to_aff_pt_edwards(&R, &crv_edwards, &Tmp_edwards, alpha_edwards);
 	dbg_ec_edwards_point_print("R", &Tmp_edwards);
-	if(EDDSA_R_LEN(hsize) > sizeof(ctx->sign_data.eddsa.R)){
+	if(EDDSA_R_LEN(hsize) > siglen){
 		ret = -1;
 		goto err;
 	}
-	if(eddsa_encode_point(&Tmp_edwards, alpha_edwards, ctx->sign_data.eddsa.R, EDDSA_R_LEN(hsize), key_type)){
+	if(eddsa_encode_point(&Tmp_edwards, alpha_edwards, &sig[0], EDDSA_R_LEN(hsize), key_type)){
 		ret = -1;
 		goto err;
 	}
@@ -1454,29 +1478,19 @@ int _eddsa_sign_update(struct ec_sign_context *ctx,
 		ret = -1;
 		goto err;
 	}
+	/* At this point, we are ensured that we have PH versions of the algorithms */
 #if defined(WITH_SIG_EDDSA25519)
-	if(key_type == EDDSA25519CTX){
-		/* As per RFC8032, for EDDSA25519CTX the context SHOULD NOT be empty */
-		if(ctx->adata == NULL){
-			ret = -1;
-			goto err;
-		}
-		dom2(0, ctx->adata, ctx->adata_len, ctx->h, &(ctx->sign_data.eddsa.h_ctx));
-	}
 	if(key_type == EDDSA25519PH){
-		dom2(1, ctx->adata, ctx->adata_len, ctx->h, &(ctx->sign_data.eddsa.h_ctx));
+		dom2(1, ctx->adata, ctx->adata_len, h, &(ctx->sign_data.eddsa.h_ctx));
 	}
 #endif
 #if defined(WITH_SIG_EDDSA448)
-	if(key_type == EDDSA448){
-		dom4(0, ctx->adata, ctx->adata_len, ctx->h, &(ctx->sign_data.eddsa.h_ctx));
-	}
 	if(key_type == EDDSA448PH){
-		dom4(1, ctx->adata, ctx->adata_len, ctx->h, &(ctx->sign_data.eddsa.h_ctx));
+		dom4(1, ctx->adata, ctx->adata_len, h, &(ctx->sign_data.eddsa.h_ctx));
 	}
 #endif
 	/* Update the hash with the encoded R point */
-	ctx->h->hfunc_update(&(ctx->sign_data.eddsa.h_ctx), ctx->sign_data.eddsa.R, EDDSA_R_LEN(hsize));
+	h->hfunc_update(&(ctx->sign_data.eddsa.h_ctx), &sig[0], EDDSA_R_LEN(hsize));
 	/* Encode the public key */
 	/* Transfer the public key to Edwards */
 	prj_pt_shortw_to_aff_pt_edwards(pub_key_y, &crv_edwards, &Tmp_edwards, alpha_edwards);
@@ -1491,25 +1505,11 @@ int _eddsa_sign_update(struct ec_sign_context *ctx,
 		goto err;
 	}
 	/* Update the hash with the encoded public key point */
-	ctx->h->hfunc_update(&(ctx->sign_data.eddsa.h_ctx), hash, EDDSA_R_LEN(hsize));
-	/* Update the hash with the message or its hash for the PH versions */
-	if(use_message_PH == 1){
-		u8 ph_digest_size = sizeof(hash);
-		if(eddsa_compute_ph(chunk, chunklen, hash, &ph_digest_size, key_type)){
-			ret = -1;
-			goto err;
-		}
-		if(use_message_PH_hsize > ph_digest_size){
-			ret = -1;
-			goto err;
-		}
-		ctx->h->hfunc_update(&(ctx->sign_data.eddsa.h_ctx), hash, use_message_PH_hsize);
-	}
-	else{
-		ctx->h->hfunc_update(&(ctx->sign_data.eddsa.h_ctx), chunk, chunklen);
-	}
+	h->hfunc_update(&(ctx->sign_data.eddsa.h_ctx), hash, EDDSA_R_LEN(hsize));
+	/* Update the hash with PH(m) */
+	h->hfunc_update(&(ctx->sign_data.eddsa.h_ctx), ph_hash, use_message_PH_hsize);
 	/* Finalize the hash */
-	ctx->h->hfunc_finalize(&(ctx->sign_data.eddsa.h_ctx), hash);
+	h->hfunc_finalize(&(ctx->sign_data.eddsa.h_ctx), hash);
 	dbg_buf_print("h(R || PubKey || PH(m))", hash, hsize);
 	/* Import our resulting hash as an integer in S */
 	if(eddsa_decode_integer(&S, hash, hsize)){
@@ -1554,18 +1554,17 @@ int _eddsa_sign_update(struct ec_sign_context *ctx,
 	nn_mul_mod(&S, &S, &binv, q);
 #endif
 	/* Store our S in the context as an encoded buffer */
-	if(EDDSA_S_LEN(hsize) > sizeof(ctx->sign_data.eddsa.S)){
+	if(EDDSA_S_LEN(hsize) > (siglen - EDDSA_R_LEN(hsize))){
 		ret = -1;
 		goto err;
 	}
-	if(eddsa_encode_integer(&S, ctx->sign_data.eddsa.S, EDDSA_S_LEN(hsize))){
+	if(eddsa_encode_integer(&S, &sig[EDDSA_R_LEN(hsize)], EDDSA_S_LEN(hsize))){
 		ret = -1;
 		goto err;
 	}
 
 	ret = 0;
  err:
-
 	/* Clean what remains on the stack */
 	PTR_NULLIFY(priv_key);
 	PTR_NULLIFY(pub_key);
@@ -1577,9 +1576,423 @@ int _eddsa_sign_update(struct ec_sign_context *ctx,
 	PTR_NULLIFY(alpha_edwards);
 	PTR_NULLIFY(pub_key_y);
 	VAR_ZEROIFY(hsize);
+	VAR_ZEROIFY(hash_size);
 	VAR_ZEROIFY(key_type);
 	VAR_ZEROIFY(use_message_PH);
 	VAR_ZEROIFY(use_message_PH_hsize);
+
+	if(prj_pt_is_initialized(&R)){
+		prj_pt_uninit(&R);
+	}
+	if(ec_edwards_crv_is_initialized(&crv_edwards)){
+		ec_edwards_crv_uninit(&crv_edwards);
+	}
+	if(aff_pt_edwards_is_initialized(&Tmp_edwards)){
+		aff_pt_edwards_uninit(&Tmp_edwards);
+	}
+	if(nn_is_initialized(&s)){
+		nn_uninit(&s);
+	}
+	if(nn_is_initialized(&r)){
+		nn_uninit(&r);
+	}
+	if(nn_is_initialized(&S)){
+		nn_uninit(&S);
+	}
+
+#ifdef USE_SIG_BLINDING
+	if(nn_is_initialized(&b)){
+	        nn_uninit(&b);
+	}
+	if(nn_is_initialized(&binv)){
+	        nn_uninit(&binv);
+	}
+#endif /* USE_SIG_BLINDING */
+	/*
+	 * We can now clear data part of the context. This will clear
+	 * magic and avoid further reuse of the whole context.
+	 */
+	local_memset(&(ctx->sign_data.eddsa), 0, sizeof(eddsa_sign_data));
+	local_memset(ph_hash, 0, sizeof(ph_hash));
+
+	return ret;
+}
+
+
+/******** Signature function specific to pure EdDSA where the message
+********* streaming mode via init/update/finalize is not supported.
+ */
+int _eddsa_sign(u8 *sig, u8 siglen, const ec_key_pair *key_pair,
+             const u8 *m, u32 mlen, int (*rand) (nn_t out, nn_src_t q),
+             ec_sig_alg_type sig_type, hash_alg_type hash_type, const u8 *adata, u16 adata_len)
+{
+	nn r, s, S;
+#ifdef USE_SIG_BLINDING
+        /* b is the blinding mask */
+        nn b, binv;
+#endif
+	int ret = -1;
+	ec_sig_alg_type key_type;
+	ec_shortw_crv_src_t shortw_curve;
+	fp_src_t alpha_montgomery;
+	fp_src_t gamma_montgomery;
+	fp_src_t alpha_edwards;
+	prj_pt_src_t pub_key_y;
+	u8 use_message_PH = 0;
+	u16 use_message_PH_hsize = 0;
+	prj_pt_src_t G;
+	prj_pt R;
+	aff_pt_edwards Tmp_edwards;
+	ec_edwards_crv crv_edwards;
+	u8 hash[MAX_DIGEST_SIZE];
+	u8 ph_hash[MAX_DIGEST_SIZE];
+	const ec_priv_key *priv_key;
+	const ec_pub_key *pub_key;
+	nn_src_t q;
+	u16 hsize, hash_size;
+	hash_context h_ctx;
+
+	/* Quirk to avoid unused parameter error.
+	 * NOTE: EdDSA does not use any notion of random Nonce, so no need
+	 * to use 'rand' here.
+	 */
+	MUST_HAVE(rand == rand);
+
+	/* Zero init out points and data */
+	local_memset(&R, 0, sizeof(prj_pt));
+	local_memset(&Tmp_edwards, 0, sizeof(aff_pt_edwards));
+	local_memset(&crv_edwards, 0, sizeof(ec_edwards_crv));
+	local_memset(hash, 0, sizeof(hash));
+	local_memset(ph_hash, 0, sizeof(ph_hash));
+
+	/* Sanity check on the key pair */
+	if(eddsa_key_pair_sanity_check(key_pair)){
+		ret = -1;
+		goto err;
+	}
+
+	/* Make things more readable */
+	const hash_mapping *h = get_hash_by_type(hash_type);
+	key_type = key_pair->priv_key.key_type;
+
+	/* Sanity check on the hash type */
+	if(h == NULL){
+		ret = -1;
+		goto err;
+	}
+	if(get_eddsa_hash_type(sig_type) != hash_type){
+		ret = -1;
+		goto err;
+	}
+	/* Sanity check on the key type */
+	if(key_type != sig_type){
+		ret = -1;
+		goto err;
+	}
+	if ((!h) || (h->digest_size > MAX_DIGEST_SIZE) ||
+	    (h->block_size > MAX_BLOCK_SIZE)) {
+		ret = -1;
+		goto err;
+	}
+	/*
+	 * Sanity check on hash size versus private key size
+	 */
+	if(nn_bitlen(&(key_pair->priv_key.x)) > (8 * h->digest_size)){
+		ret = -1;
+		goto err;
+	}
+
+	/* Make things more readable */
+	priv_key = &(key_pair->priv_key);
+	pub_key = &(key_pair->pub_key);
+	q = &(priv_key->params->ec_gen_order);
+	G = &(priv_key->params->ec_gen);
+	hsize = h->digest_size;
+
+	shortw_curve = &(priv_key->params->ec_curve);
+	alpha_montgomery = &(priv_key->params->ec_alpha_montgomery);
+	gamma_montgomery = &(priv_key->params->ec_gamma_montgomery);
+	alpha_edwards = &(priv_key->params->ec_alpha_edwards);
+	pub_key_y = &(pub_key->y);
+
+	dbg_nn_print("p", &(priv_key->params->ec_fp.p));
+	dbg_nn_print("q", &(priv_key->params->ec_gen_order));
+	dbg_priv_key_print("x", priv_key);
+	dbg_ec_point_print("G", &(priv_key->params->ec_gen));
+	dbg_pub_key_print("Y", &(pub_key));
+
+	/* Check provided signature length */
+	if(siglen != EDDSA_SIGLEN(hsize)){
+		ret = -1;
+		goto err;
+	}
+	/* Do we use the raw message or its PH(M) hashed version? */
+#if defined(WITH_SIG_EDDSA25519)
+	if(key_type == EDDSA25519PH){
+		use_message_PH = 1;
+		use_message_PH_hsize = hsize;
+	}
+#endif
+#if defined(WITH_SIG_EDDSA448)
+	if(key_type == EDDSA448PH){
+		use_message_PH = 1;
+		/* NOTE: as per RFC8032, EDDSA448PH uses
+		 * SHAKE256 with 64 bytes output.
+		 */
+		use_message_PH_hsize = 64;
+	}
+#endif
+	/* First of all, compute the message hash if necessary */
+	if(use_message_PH){
+		hash_size = sizeof(ph_hash);
+		if(eddsa_compute_ph(m, mlen, ph_hash, &hash_size, sig_type)){
+			ret = -1;
+			goto err;
+		}
+		if(use_message_PH_hsize > hash_size){
+			ret = -1;
+			goto err;
+		}
+	}
+	/* Initialize our hash context */
+	/* Compute half of the secret key */
+	hash_size = sizeof(hash);
+	if(eddsa_get_digest_from_priv_key(hash, &hash_size, &(key_pair->priv_key))){
+		ret = -1;
+		goto err;
+	}
+	/* Sanity check */
+	if(hash_size != hsize){
+		ret = -1;
+		goto err;
+	}
+	/* Sanity check on ancillary data len, its size must not exceed 255 bytes as per RFC8032 */
+	if(adata_len > 255){
+		ret = -1;
+		goto err;
+	}
+	/* Since we call a callback, sanity check our mapping */
+	if(hash_mapping_callbacks_sanity_check(h)){
+		ret = -1;
+		goto err;
+	}
+	h->hfunc_init(&h_ctx);
+#if defined(WITH_SIG_EDDSA25519)
+	if(key_type == EDDSA25519CTX){
+		/* As per RFC8032, for EDDSA25519CTX the context SHOULD NOT be empty */
+		if(adata == NULL){
+			ret = -1;
+			goto err;
+		}
+		dom2(0, adata, adata_len, h, &h_ctx);
+	}
+	if(key_type == EDDSA25519PH){
+		dom2(1, adata, adata_len, h, &h_ctx);
+	}
+#endif
+#if defined(WITH_SIG_EDDSA448)
+	if(key_type == EDDSA448){
+		dom4(0, adata, adata_len, h, &h_ctx);
+	}
+	if(key_type == EDDSA448PH){
+		dom4(1, adata, adata_len, h, &h_ctx);
+	}
+#endif
+	h->hfunc_update(&h_ctx, &hash[hsize / 2], hsize / 2);
+
+	/* Now finish computing the scalar r */
+	if(use_message_PH){
+		h->hfunc_update(&h_ctx, ph_hash, use_message_PH_hsize);
+	}
+	else{
+		h->hfunc_update(&h_ctx, m, mlen);
+	}
+	h->hfunc_finalize(&h_ctx, hash);
+	dbg_buf_print("h(h || PH(m))", hash, hsize);
+
+	/* Import r as the hash scalar */
+	if(eddsa_decode_integer(&r, hash, hsize)){
+		ret = -1;
+		goto err;
+	}
+	/* Reduce r modulo q for the next computation */
+	nn_mod(&r, &r, q);
+	/* Now perform our scalar multiplication.
+	 */
+#if defined(WITH_SIG_EDDSA448)
+	if((key_type == EDDSA448) || (key_type == EDDSA448PH)){
+		/* NOTE: in case of EDDSA448, because of the 4-isogeny we must divide our
+		 * scalar by 4.
+		 */
+		nn r_tmp;
+		nn_init(&r_tmp, 0);
+		nn_modinv_word(&r_tmp, WORD(4), q);
+		nn_mul_mod(&r_tmp, &r_tmp, &r, q);
+#ifdef USE_SIG_BLINDING
+		if(prj_pt_mul_monty_blind(&R, &r_tmp, G)){
+			ret = -1;
+			goto err;
+		}
+#else
+		prj_pt_mul_monty(&R, &r_tmp, G);
+#endif
+		nn_uninit(&r_tmp);
+	}
+	else
+#endif /* !defined(WITH_SIG_EDDSA448) */
+	{
+#ifdef USE_SIG_BLINDING
+		if(prj_pt_mul_monty_blind(&R, &r, G)){
+			ret = -1;
+			goto err;
+		}
+#else
+		prj_pt_mul_monty(&R, &r, G);
+#endif
+	}
+	/* Now compute S = (r + H(R || PubKey || PH(m)) * secret) mod q */
+	if(hash_mapping_callbacks_sanity_check(h)){
+		ret = -1;
+		goto err;
+	}
+	h->hfunc_init(&h_ctx);
+	/* Encode R and update */
+	/* Transfer R to Edwards */
+	curve_shortw_to_edwards(shortw_curve, &crv_edwards, alpha_montgomery, gamma_montgomery, alpha_edwards);
+	prj_pt_shortw_to_aff_pt_edwards(&R, &crv_edwards, &Tmp_edwards, alpha_edwards);
+	dbg_ec_edwards_point_print("R", &Tmp_edwards);
+	if(EDDSA_R_LEN(hsize) > siglen){
+		ret = -1;
+		goto err;
+	}
+	if(eddsa_encode_point(&Tmp_edwards, alpha_edwards, &sig[0], EDDSA_R_LEN(hsize), key_type)){
+		ret = -1;
+		goto err;
+	}
+	/* Sanity check on ancillary data len, its size must not exceed 255 bytes as per RFC8032 */
+	if(adata_len > 255){
+		ret = -1;
+		goto err;
+	}
+#if defined(WITH_SIG_EDDSA25519)
+	if(key_type == EDDSA25519CTX){
+		/* As per RFC8032, for EDDSA25519CTX the context SHOULD NOT be empty */
+		if(adata == NULL){
+			ret = -1;
+			goto err;
+		}
+		dom2(0, adata, adata_len, h, &h_ctx);
+	}
+	if(key_type == EDDSA25519PH){
+		dom2(1, adata, adata_len, h, &h_ctx);
+	}
+#endif
+#if defined(WITH_SIG_EDDSA448)
+	if(key_type == EDDSA448){
+		dom4(0, adata, adata_len, h, &h_ctx);
+	}
+	if(key_type == EDDSA448PH){
+		dom4(1, adata, adata_len, h, &h_ctx);
+	}
+#endif
+	/* Update the hash with the encoded R point */
+	h->hfunc_update(&h_ctx, &sig[0], EDDSA_R_LEN(hsize));
+	/* Encode the public key */
+	/* Transfer the public key to Edwards */
+	prj_pt_shortw_to_aff_pt_edwards(pub_key_y, &crv_edwards, &Tmp_edwards, alpha_edwards);
+	dbg_ec_edwards_point_print("A", &Tmp_edwards);
+	if(EDDSA_R_LEN(hsize) > sizeof(hash)){
+		ret = -1;
+		goto err;
+	}
+	/* NOTE: we use the hash buffer as a temporary buffer */
+	if(eddsa_encode_point(&Tmp_edwards, alpha_edwards, hash, EDDSA_R_LEN(hsize), key_type)){
+		ret = -1;
+		goto err;
+	}
+	/* Update the hash with the encoded public key point */
+	h->hfunc_update(&h_ctx, hash, EDDSA_R_LEN(hsize));
+	/* Update the hash with the message or its hash for the PH versions */
+	if(use_message_PH){
+		h->hfunc_update(&h_ctx, ph_hash, use_message_PH_hsize);
+	}
+	else{
+		h->hfunc_update(&h_ctx, m, mlen);
+	}
+	/* Finalize the hash */
+	h->hfunc_finalize(&h_ctx, hash);
+	dbg_buf_print("h(R || PubKey || PH(m))", hash, hsize);
+	/* Import our resulting hash as an integer in S */
+	if(eddsa_decode_integer(&S, hash, hsize)){
+		ret = -1;
+		goto err;
+	}
+	nn_mod(&S, &S, q);
+	/* Extract the digest */
+	hsize = sizeof(hash);
+	if(eddsa_get_digest_from_priv_key(hash, &hsize, priv_key)){
+		ret = -1;
+		goto err;
+	}
+	/* Encode the scalar s from the digest */
+	if(eddsa_compute_s(&s, hash, hsize)){
+		goto err;
+	}
+	nn_mod(&s, &s, q);
+#ifdef USE_SIG_BLINDING
+	/* Note: if we use blinding, r and H(R || PubKey || m) are multiplied by
+	 * a random value b in ]0,q[ */
+        ret = nn_get_random_mod(&b, q);
+        if (ret) {
+		ret = -1;
+                goto err;
+        }
+        dbg_nn_print("b", &b);
+	nn_modinv(&binv, &b, q);
+	/* If we use blinding, multiply by b */
+	nn_mul_mod(&S, &S, &b, q);
+	nn_mul_mod(&r, &r, &b, q);
+#endif
+	/* Multiply by the secret */
+	nn_mul_mod(&S, &S, &s, q);
+	/* The secret is not needed anymore */
+	nn_uninit(&s);
+	/* Add to r */
+	nn_mod_add(&S, &S, &r, q);
+#ifdef USE_SIG_BLINDING
+	/* Unblind the result */
+	nn_mul_mod(&S, &S, &binv, q);
+#endif
+	/* Store our S in the context as an encoded buffer */
+	if(EDDSA_S_LEN(hsize) > (siglen - EDDSA_R_LEN(hsize))){
+		ret = -1;
+		goto err;
+	}
+	if(eddsa_encode_integer(&S, &sig[EDDSA_R_LEN(hsize)], EDDSA_S_LEN(hsize))){
+		ret = -1;
+		goto err;
+	}
+
+	ret = 0;
+err:
+	/* Clean what remains on the stack */
+	PTR_NULLIFY(priv_key);
+	PTR_NULLIFY(pub_key);
+	PTR_NULLIFY(G);
+	PTR_NULLIFY(q);
+	PTR_NULLIFY(shortw_curve);
+	PTR_NULLIFY(alpha_montgomery);
+	PTR_NULLIFY(gamma_montgomery);
+	PTR_NULLIFY(alpha_edwards);
+	PTR_NULLIFY(pub_key_y);
+	VAR_ZEROIFY(hsize);
+	VAR_ZEROIFY(hash_size);
+	VAR_ZEROIFY(key_type);
+	VAR_ZEROIFY(use_message_PH);
+	VAR_ZEROIFY(use_message_PH_hsize);
+	local_memset(&h_ctx, 0, sizeof(h_ctx));
+	local_memset(hash, 0, sizeof(hash));
+	local_memset(ph_hash, 0, sizeof(ph_hash));
 
 	if(prj_pt_is_initialized(&R)){
 		prj_pt_uninit(&R);
@@ -1612,95 +2025,7 @@ int _eddsa_sign_update(struct ec_sign_context *ctx,
 	return ret;
 }
 
-int _eddsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
-{
-	u8 hsize;
-	int ret;
-	u8 *R, *S;
-	u8 R_size, S_size;
-
-	ret = -1;
-	/*
-	 * First, verify context has been initialized and private
-	 * part too. This guarantees the context is an EDDSA
-	 * signature one and we do not finalize() before init().
-	 */
-	SIG_SIGN_CHECK_INITIALIZED(ctx);
-	EDDSA_SIGN_CHECK_INITIALIZED(&(ctx->sign_data.eddsa));
-
-	/* Sanity check on hash types */
-	if((ctx->key_pair->priv_key.key_type != ctx->key_pair->pub_key.key_type) || \
-	   (ctx->h->type != get_eddsa_hash_type(ctx->key_pair->priv_key.key_type))){
-		ret = -1;
-		goto err;
-	}
-
-	/* Make things more readable */
-	hsize = ctx->h->digest_size;
-	R = ctx->sign_data.eddsa.R;
-	R_size = sizeof(ctx->sign_data.eddsa.R);
-	S = ctx->sign_data.eddsa.S;
-	S_size = sizeof(ctx->sign_data.eddsa.S);
-
-	/* Check given signature buffer length has the expected size */
-	if (siglen != EDDSA_SIGLEN(hsize)) {
-		ret = -1;
-		goto err;
-	}
-	if (siglen != (EDDSA_R_LEN(hsize) + EDDSA_S_LEN(hsize))) {
-		ret = -1;
-		goto err;
-	}
-
-	/* Check that update has been called */
-	/* XXX: FIXME: TODO: this implementation quirk is due to the way
-	 * EdDSA handles its pseudorandom nonce and scalar computation, that
-	 * is completely incompatible with the Init/Update/Finalize paradigm!
-	 *
-	 * As a matter of fact, PureEdDSA signature requires to process the message buffer
-	 * twice to complete the signature, which is not possible in constrained environments
-	 * as a preallocated buffer containing the whole message is needed.
-	 * A variant of the algorithm, HashEdDSA, exists to deal with the issue.
-	 *
-	 * For now, to be compatible with PureEdDSA we only allow *one* Update to be called
-	 * between Init and Finalize, and proceed with the necessary hash process
-	 * inside it. This is not completely satisfactory, as it breaks the original logics:
-	 * a better way of handling this is to add in the signature/verification context
-	 * a flag providing the capability of a given primitive to support Init/Update/Finalize
-	 * and force the user to use the proper API depending on this.
-	 */
-	if(ctx->sign_data.eddsa.update_called != 1){
-		ret = -1;
-		goto err;
-	}
-	/* Only copy our result elements in the signature */
-	if(EDDSA_R_LEN(hsize) > R_size){
-		ret = -1;
-		goto err;
-	}
-	local_memcpy(&sig[0], R, EDDSA_R_LEN(hsize));
-
-	if(EDDSA_S_LEN(hsize) > S_size){
-		ret = -1;
-		goto err;
-	}
-	local_memcpy(&sig[EDDSA_R_LEN(hsize)], S, EDDSA_S_LEN(hsize));
-
-	ret = 0;
-err:
-	/*
-	 * We can now clear data part of the context. This will clear
-	 * magic and avoid further reuse of the whole context.
-	 */
-	local_memset(&(ctx->sign_data.eddsa), 0, sizeof(eddsa_sign_data));
-	PTR_NULLIFY(R);
-	PTR_NULLIFY(S);
-	VAR_ZEROIFY(R_size);
-	VAR_ZEROIFY(S_size);
-
-	return ret;
-}
-
+/******************************************************************************/
 /*
  * Generic *internal* EDDSA verification functions (init, update and finalize).
  *

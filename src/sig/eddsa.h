@@ -44,10 +44,7 @@
 #endif
 
 typedef struct {
-	u8 R[EDDSA_R_LEN(MAX_DIGEST_SIZE)];
-	u8 S[EDDSA_S_LEN(MAX_DIGEST_SIZE)];
 	hash_context h_ctx;
-	u8 update_called;
 	word_t magic;
 } eddsa_sign_data;
 
@@ -58,12 +55,16 @@ int eddsa_init_pub_key(ec_pub_key *out_pub, const ec_priv_key *in_priv);
 
 u8 eddsa_siglen(u16 p_bit_len, u16 q_bit_len, u8 hsize, u8 blocksize);
 
-int _eddsa_sign_init(struct ec_sign_context *ctx);
+int _eddsa_sign_init_ph(struct ec_sign_context *ctx);
 
-int _eddsa_sign_update(struct ec_sign_context *ctx,
+int _eddsa_sign_update_ph(struct ec_sign_context *ctx,
 		       const u8 *chunk, u32 chunklen);
 
-int _eddsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen);
+int _eddsa_sign_finalize_ph(struct ec_sign_context *ctx, u8 *sig, u8 siglen);
+
+int _eddsa_sign(u8 *sig, u8 siglen, const ec_key_pair *key_pair,
+             const u8 *m, u32 mlen, int (*rand) (nn_t out, nn_src_t q),
+             ec_sig_alg_type sig_type, hash_alg_type hash_type, const u8 *adata, u16 adata_len);
 
 typedef struct {
 	prj_pt _R;

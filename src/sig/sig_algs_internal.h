@@ -51,9 +51,11 @@
 		  ((A)->sign_init != NULL) && 		\
 		  ((A)->sign_update != NULL) && 	\
 		  ((A)->sign_finalize != NULL) && 	\
+		  ((A)->sign != NULL) && 		\
 		  ((A)->verify_init != NULL) && 	\
 		  ((A)->verify_update != NULL) && 	\
-		  ((A)->verify_finalize != NULL)) 	\
+		  ((A)->verify_finalize != NULL) && 	\
+		  ((A)->verify != NULL)) 		\
 
 /*
  * All the signature algorithms we support are abstracted using the following
@@ -74,12 +76,18 @@ typedef struct {
 			    const u8 *chunk, u32 chunklen);
 	int (*sign_finalize) (struct ec_sign_context * ctx,
 			      u8 *sig, u8 siglen);
+	int (*sign) (u8 *sig, u8 siglen, const ec_key_pair *key_pair,
+            const u8 *m, u32 mlen, int (*rand) (nn_t out, nn_src_t q), ec_sig_alg_type sig_type,
+            hash_alg_type hash_type, const u8 *adata, u16 adata_len);
 
 	int (*verify_init) (struct ec_verify_context * ctx,
 			    const u8 *sig, u8 siglen);
 	int (*verify_update) (struct ec_verify_context * ctx,
 			      const u8 *chunk, u32 chunklen);
 	int (*verify_finalize) (struct ec_verify_context * ctx);
+	int (*verify) (const u8 *sig, u8 siglen, const ec_pub_key *pub_key,
+              const u8 *m, u32 mlen, ec_sig_alg_type sig_type,
+              hash_alg_type hash_type, const u8 *adata, u16 adata_len);
 } ec_sig_mapping;
 
 /*
@@ -197,6 +205,35 @@ struct ec_verify_context {
 #define SIG_VERIFY_CHECK_INITIALIZED(A) \
 	MUST_HAVE(((A) != NULL) &&	((A)->ctx_magic == SIG_VERIFY_MAGIC))
 
+/* Generic signature and verification APIs that will in fact call init / update / finalize in
+ * backend. Used for signature and verification functions that support these streaming APIs.
+ *
+ */
+int generic_ec_sign(u8 *sig, u8 siglen, const ec_key_pair *key_pair,
+             const u8 *m, u32 mlen, int (*rand) (nn_t out, nn_src_t q),
+             ec_sig_alg_type sig_type, hash_alg_type hash_type, const u8 *adata, u16 adata_len);
+int generic_ec_verify(const u8 *sig, u8 siglen, const ec_pub_key *pub_key,
+              const u8 *m, u32 mlen, ec_sig_alg_type sig_type,
+              hash_alg_type hash_type, const u8 *adata, u16 adata_len);
+/* Generic init / update / finalize functions returning an error and telling that they are
+ * unsupported.
+ */
+int unsupported_sign_init(struct ec_sign_context * ctx);
+int unsupported_sign_update(struct ec_sign_context * ctx,
+		    const u8 *chunk, u32 chunklen);
+int unsupported_sign_finalize(struct ec_sign_context * ctx,
+		      u8 *sig, u8 siglen);
+
+int is_sign_streaming_mode_supported(ec_sig_alg_type sig_type);
+
+int unsupported_verify_init(struct ec_verify_context * ctx,
+		    const u8 *sig, u8 siglen);
+int unsupported_verify_update(struct ec_verify_context * ctx,
+		      const u8 *chunk, u32 chunklen);
+int unsupported_verify_finalize(struct ec_verify_context * ctx);
+
+int is_verify_streaming_mode_supported(ec_sig_alg_type sig_type);
+
 /*
  * Each signature algorithm supported by the library and implemented
  * in ec{,ck,s,fs,g,r}dsa.{c,h} is referenced below.
@@ -212,9 +249,11 @@ static const ec_sig_mapping ec_sig_maps[] = {
 	 .sign_init = _ecdsa_sign_init,
 	 .sign_update = _ecdsa_sign_update,
 	 .sign_finalize = _ecdsa_sign_finalize,
+	 .sign = generic_ec_sign,
 	 .verify_init = _ecdsa_verify_init,
 	 .verify_update = _ecdsa_verify_update,
 	 .verify_finalize = _ecdsa_verify_finalize,
+	 .verify = generic_ec_verify,
 	 },
 #if (MAX_SIG_ALG_NAME_LEN < 6)
 #undef MAX_SIG_ALG_NAME_LEN
@@ -230,9 +269,11 @@ static const ec_sig_mapping ec_sig_maps[] = {
 	 .sign_init = _eckcdsa_sign_init,
 	 .sign_update = _eckcdsa_sign_update,
 	 .sign_finalize = _eckcdsa_sign_finalize,
+	 .sign = generic_ec_sign,
 	 .verify_init = _eckcdsa_verify_init,
 	 .verify_update = _eckcdsa_verify_update,
 	 .verify_finalize = _eckcdsa_verify_finalize,
+	 .verify = generic_ec_verify,
 	 },
 #if (MAX_SIG_ALG_NAME_LEN < 8)
 #undef MAX_SIG_ALG_NAME_LEN
@@ -248,9 +289,11 @@ static const ec_sig_mapping ec_sig_maps[] = {
 	 .sign_init = _ecsdsa_sign_init,
 	 .sign_update = _ecsdsa_sign_update,
 	 .sign_finalize = _ecsdsa_sign_finalize,
+	 .sign = generic_ec_sign,
 	 .verify_init = _ecsdsa_verify_init,
 	 .verify_update = _ecsdsa_verify_update,
 	 .verify_finalize = _ecsdsa_verify_finalize,
+	 .verify = generic_ec_verify,
 	 },
 #if (MAX_SIG_ALG_NAME_LEN < 7)
 #undef MAX_SIG_ALG_NAME_LEN
@@ -266,9 +309,11 @@ static const ec_sig_mapping ec_sig_maps[] = {
 	 .sign_init = _ecosdsa_sign_init,
 	 .sign_update = _ecosdsa_sign_update,
 	 .sign_finalize = _ecosdsa_sign_finalize,
+	 .sign = generic_ec_sign,
 	 .verify_init = _ecosdsa_verify_init,
 	 .verify_update = _ecosdsa_verify_update,
 	 .verify_finalize = _ecosdsa_verify_finalize,
+	 .verify = generic_ec_verify,
 	 },
 #if (MAX_SIG_ALG_NAME_LEN < 8)
 #undef MAX_SIG_ALG_NAME_LEN
@@ -284,9 +329,11 @@ static const ec_sig_mapping ec_sig_maps[] = {
 	 .sign_init = _ecfsdsa_sign_init,
 	 .sign_update = _ecfsdsa_sign_update,
 	 .sign_finalize = _ecfsdsa_sign_finalize,
+	 .sign = generic_ec_sign,
 	 .verify_init = _ecfsdsa_verify_init,
 	 .verify_update = _ecfsdsa_verify_update,
 	 .verify_finalize = _ecfsdsa_verify_finalize,
+	 .verify = generic_ec_verify,
 	 },
 #if (MAX_SIG_ALG_NAME_LEN < 8)
 #undef MAX_SIG_ALG_NAME_LEN
@@ -302,9 +349,11 @@ static const ec_sig_mapping ec_sig_maps[] = {
 	 .sign_init = _ecgdsa_sign_init,
 	 .sign_update = _ecgdsa_sign_update,
 	 .sign_finalize = _ecgdsa_sign_finalize,
+	 .sign = generic_ec_sign,
 	 .verify_init = _ecgdsa_verify_init,
 	 .verify_update = _ecgdsa_verify_update,
 	 .verify_finalize = _ecgdsa_verify_finalize,
+	 .verify = generic_ec_verify,
 	 },
 #if (MAX_SIG_ALG_NAME_LEN < 7)
 #undef MAX_SIG_ALG_NAME_LEN
@@ -320,9 +369,11 @@ static const ec_sig_mapping ec_sig_maps[] = {
 	 .sign_init = _ecrdsa_sign_init,
 	 .sign_update = _ecrdsa_sign_update,
 	 .sign_finalize = _ecrdsa_sign_finalize,
+	 .sign = generic_ec_sign,
 	 .verify_init = _ecrdsa_verify_init,
 	 .verify_update = _ecrdsa_verify_update,
 	 .verify_finalize = _ecrdsa_verify_finalize,
+	 .verify = generic_ec_verify,
 	 },
 #if (MAX_SIG_ALG_NAME_LEN < 7)
 #undef MAX_SIG_ALG_NAME_LEN
@@ -338,9 +389,11 @@ static const ec_sig_mapping ec_sig_maps[] = {
          .sign_init = _sm2_sign_init,
          .sign_update = _sm2_sign_update,
          .sign_finalize = _sm2_sign_finalize,
+	 .sign = generic_ec_sign,
          .verify_init = _sm2_verify_init,
          .verify_update = _sm2_verify_update,
          .verify_finalize = _sm2_verify_finalize,
+	 .verify = generic_ec_verify,
          },
 #if (MAX_SIG_ALG_NAME_LEN < 4)
 #undef MAX_SIG_ALG_NAME_LEN
@@ -353,36 +406,44 @@ static const ec_sig_mapping ec_sig_maps[] = {
 	 .siglen = eddsa_siglen,
 	 .gen_priv_key = eddsa_gen_priv_key,
 	 .init_pub_key = eddsa_init_pub_key,
-	 .sign_init = _eddsa_sign_init,
-	 .sign_update = _eddsa_sign_update,
-	 .sign_finalize = _eddsa_sign_finalize,
+	 /* NOTE: for "pure" EdDSA, streaming mode is not supported */
+	 .sign_init = unsupported_sign_init,
+	 .sign_update = unsupported_sign_update,
+	 .sign_finalize = unsupported_sign_finalize,
+	 .sign = _eddsa_sign,
 	 .verify_init = _eddsa_verify_init,
 	 .verify_update = _eddsa_verify_update,
 	 .verify_finalize = _eddsa_verify_finalize,
+	 .verify = generic_ec_verify,
 	 },
 	{.type = EDDSA25519CTX,
 	 .name = "EDDSA25519CTX",
 	 .siglen = eddsa_siglen,
 	 .gen_priv_key = eddsa_gen_priv_key,
 	 .init_pub_key = eddsa_init_pub_key,
-	 .sign_init = _eddsa_sign_init,
-	 .sign_update = _eddsa_sign_update,
-	 .sign_finalize = _eddsa_sign_finalize,
+	 /* NOTE: for "ctx" EdDSA, streaming mode is not supported */
+	 .sign_init = unsupported_sign_init,
+	 .sign_update = unsupported_sign_update,
+	 .sign_finalize = unsupported_sign_finalize,
+	 .sign = _eddsa_sign,
 	 .verify_init = _eddsa_verify_init,
 	 .verify_update = _eddsa_verify_update,
 	 .verify_finalize = _eddsa_verify_finalize,
+	 .verify = generic_ec_verify,
 	 },
 	{.type = EDDSA25519PH,
 	 .name = "EDDSA25519PH",
 	 .siglen = eddsa_siglen,
 	 .gen_priv_key = eddsa_gen_priv_key,
 	 .init_pub_key = eddsa_init_pub_key,
-	 .sign_init = _eddsa_sign_init,
-	 .sign_update = _eddsa_sign_update,
-	 .sign_finalize = _eddsa_sign_finalize,
+	 .sign_init = _eddsa_sign_init_ph,
+	 .sign_update = _eddsa_sign_update_ph,
+	 .sign_finalize = _eddsa_sign_finalize_ph,
+	 .sign = _eddsa_sign,
 	 .verify_init = _eddsa_verify_init,
 	 .verify_update = _eddsa_verify_update,
 	 .verify_finalize = _eddsa_verify_finalize,
+	 .verify = generic_ec_verify,
 	 },
 #if (MAX_SIG_ALG_NAME_LEN < 14)
 #undef MAX_SIG_ALG_NAME_LEN
@@ -395,24 +456,29 @@ static const ec_sig_mapping ec_sig_maps[] = {
 	 .siglen = eddsa_siglen,
 	 .gen_priv_key = eddsa_gen_priv_key,
 	 .init_pub_key = eddsa_init_pub_key,
-	 .sign_init = _eddsa_sign_init,
-	 .sign_update = _eddsa_sign_update,
-	 .sign_finalize = _eddsa_sign_finalize,
+	 /* NOTE: for "pure" EdDSA, streaming mode is not supported */
+	 .sign_init = unsupported_sign_init,
+	 .sign_update = unsupported_sign_update,
+	 .sign_finalize = unsupported_sign_finalize,
+	 .sign = _eddsa_sign,
 	 .verify_init = _eddsa_verify_init,
 	 .verify_update = _eddsa_verify_update,
 	 .verify_finalize = _eddsa_verify_finalize,
+	 .verify = generic_ec_verify,
 	 },
 	{.type = EDDSA448PH,
 	 .name = "EDDSA448PH",
 	 .siglen = eddsa_siglen,
 	 .gen_priv_key = eddsa_gen_priv_key,
 	 .init_pub_key = eddsa_init_pub_key,
-	 .sign_init = _eddsa_sign_init,
-	 .sign_update = _eddsa_sign_update,
-	 .sign_finalize = _eddsa_sign_finalize,
+	 .sign_init = _eddsa_sign_init_ph,
+	 .sign_update = _eddsa_sign_update_ph,
+	 .sign_finalize = _eddsa_sign_finalize_ph,
+	 .sign = _eddsa_sign,
 	 .verify_init = _eddsa_verify_init,
 	 .verify_update = _eddsa_verify_update,
 	 .verify_finalize = _eddsa_verify_finalize,
+	 .verify = generic_ec_verify,
 	 },
 #if (MAX_SIG_ALG_NAME_LEN < 11)
 #undef MAX_SIG_ALG_NAME_LEN
@@ -427,9 +493,11 @@ static const ec_sig_mapping ec_sig_maps[] = {
 	 .sign_init = NULL,
 	 .sign_update = NULL,
 	 .sign_finalize = NULL,
+	 .sign = NULL,
 	 .verify_init = NULL,
 	 .verify_update = NULL,
 	 .verify_finalize = NULL,
+	 .verify = NULL,
 	 },
 };
 

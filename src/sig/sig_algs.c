@@ -70,7 +70,6 @@ err:
 	return ret;
 }
 
-
 /*
  * Generic function to init a uninitialized public key from an initialized
  * private key. The function uses the expected logic to derive the key
@@ -164,6 +163,9 @@ int ec_sig_mapping_callbacks_sanity_check(const ec_sig_mapping *sig)
 			else if(sm->siglen != sig->siglen){
 				goto err;
 			}
+			else if(sm->gen_priv_key != sig->gen_priv_key){
+				goto err;
+			}
 			else if(sm->init_pub_key != sig->init_pub_key){
 				goto err;
 			}
@@ -176,6 +178,9 @@ int ec_sig_mapping_callbacks_sanity_check(const ec_sig_mapping *sig)
 			else if(sm->sign_finalize != sig->sign_finalize){
 				goto err;
 			}
+			else if(sm->sign != sig->sign){
+				goto err;
+			}
 			else if(sm->verify_init != sig->verify_init){
 				goto err;
 			}
@@ -183,6 +188,9 @@ int ec_sig_mapping_callbacks_sanity_check(const ec_sig_mapping *sig)
 				goto err;
 			}
 			else if(sm->verify_finalize != sig->verify_finalize){
+				goto err;
+			}
+			else if(sm->verify != sig->verify){
 				goto err;
 			}
 			else{
@@ -450,7 +458,8 @@ err:
 	return ret;
 }
 
-int _ec_sign(u8 *sig, u8 siglen, const ec_key_pair *key_pair,
+/* Generic signature using the init/update/finalize API */
+int generic_ec_sign(u8 *sig, u8 siglen, const ec_key_pair *key_pair,
 	     const u8 *m, u32 mlen,
 	     int (*rand) (nn_t out, nn_src_t q),
 	     ec_sig_alg_type sig_type, hash_alg_type hash_type, const u8 *adata, u16 adata_len)
@@ -472,6 +481,25 @@ int _ec_sign(u8 *sig, u8 siglen, const ec_key_pair *key_pair,
 
  err:
 
+	return ret;
+}
+
+int _ec_sign(u8 *sig, u8 siglen, const ec_key_pair *key_pair,
+	     const u8 *m, u32 mlen,
+	     int (*rand) (nn_t out, nn_src_t q),
+	     ec_sig_alg_type sig_type, hash_alg_type hash_type, const u8 *adata, u16 adata_len)
+{
+	const ec_sig_mapping *sm;
+	int ret = -1;
+
+	sm = get_sig_by_type(sig_type);
+	if((sm == NULL) || (sm->sign == NULL)){
+		ret = -1;
+		goto err;
+	}
+
+	ret = sm->sign(sig, siglen, key_pair, m, mlen, rand, sig_type, hash_type, adata, adata_len);
+err:
 	return ret;
 }
 
@@ -601,7 +629,7 @@ err:
 	return ret;
 }
 
-int ec_verify(const u8 *sig, u8 siglen, const ec_pub_key *pub_key,
+int generic_ec_verify(const u8 *sig, u8 siglen, const ec_pub_key *pub_key,
 	      const u8 *m, u32 mlen,
 	      ec_sig_alg_type sig_type, hash_alg_type hash_type, const u8 *adata, u16 adata_len)
 {
@@ -621,6 +649,25 @@ int ec_verify(const u8 *sig, u8 siglen, const ec_pub_key *pub_key,
 	ret = ec_verify_finalize(&ctx);
 
  err:
+	return ret;
+}
+
+int ec_verify(const u8 *sig, u8 siglen, const ec_pub_key *pub_key,
+	      const u8 *m, u32 mlen,
+	      ec_sig_alg_type sig_type, hash_alg_type hash_type, const u8 *adata, u16 adata_len)
+{
+
+	const ec_sig_mapping *sm;
+	int ret = -1;
+
+	sm = get_sig_by_type(sig_type);
+	if((sm == NULL) || (sm->sign == NULL)){
+		ret = -1;
+		goto err;
+	}
+
+	ret = sm->verify(sig, siglen, pub_key, m, mlen, sig_type, hash_type, adata, adata_len);
+err:
 	return ret;
 }
 
@@ -723,4 +770,121 @@ int ec_structured_sig_export_to_buf(const u8 *sig, u32 siglen,
 	ret = 0;
 err:
         return ret;
+}
+
+
+/* Signature finalization function */
+int unsupported_sign_init(struct ec_sign_context * ctx)
+{
+	/* Quirk to avoid unused variables */
+	MUST_HAVE(ctx == ctx);
+
+	/* Return an error in any case here */
+	return -1;
+}
+
+int unsupported_sign_update(struct ec_sign_context * ctx,
+                    const u8 *chunk, u32 chunklen)
+{
+	/* Quirk to avoid unused variables */
+	MUST_HAVE(ctx == ctx);
+	MUST_HAVE(chunk == chunk);
+	MUST_HAVE(chunklen == chunklen);
+
+	/* Return an error in any case here */
+	return -1;
+}
+
+int unsupported_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
+{
+	/* Quirk to avoid unused variables */
+	MUST_HAVE(ctx == ctx);
+	MUST_HAVE(sig == sig);
+	MUST_HAVE(siglen == siglen);
+
+	/* Return an error in any case here */
+	return -1;
+}
+
+int unsupported_verify_init(struct ec_verify_context * ctx,
+                    const u8 *sig, u8 siglen)
+{
+	/* Quirk to avoid unused variables */
+	MUST_HAVE(ctx == ctx);
+	MUST_HAVE(sig == sig);
+	MUST_HAVE(siglen == siglen);
+
+	/* Return an error in any case here */
+	return -1;
+}
+
+int unsupported_verify_update(struct ec_verify_context * ctx,
+                      const u8 *chunk, u32 chunklen)
+{
+	/* Quirk to avoid unused variables */
+	MUST_HAVE(ctx == ctx);
+	MUST_HAVE(chunk == chunk);
+	MUST_HAVE(chunklen == chunklen);
+
+	/* Return an error in any case here */
+	return -1;
+}
+
+int unsupported_verify_finalize(struct ec_verify_context * ctx)
+{
+	/* Quirk to avoid unused variables */
+	MUST_HAVE(ctx == ctx);
+
+	/* Return an error in any case here */
+	return -1;
+}
+
+/* This function returns 1 if the init/update/finalize mode
+ * is supported by the signature algorithm, 0 otherwise.
+ */
+int is_sign_streaming_mode_supported(ec_sig_alg_type sig_type)
+{
+	int ret = 0;
+	const ec_sig_mapping *sig = get_sig_by_type(sig_type);
+
+	if(sig == NULL){
+		ret = 0;
+		goto err;
+	}
+	if((sig->sign_init == unsupported_sign_init) ||\
+	   (sig->sign_update == unsupported_sign_update) ||\
+	   (sig->sign_finalize == unsupported_sign_finalize))
+	{
+		ret = 0;
+		goto err;
+	}
+
+	ret = 1;
+err:
+	return ret;
+}
+
+/* This function returns 1 if the init/update/finalize mode
+ * is supported by the verification algorithm, 0 otherwise.
+ */
+int is_verify_streaming_mode_supported(ec_sig_alg_type sig_type)
+{
+	int ret = 0;
+	const ec_sig_mapping *sig = get_sig_by_type(sig_type);
+
+	if(sig == NULL){
+		ret = 0;
+		goto err;
+	}
+	if((sig->verify_init == unsupported_verify_init) ||\
+	   (sig->verify_update == unsupported_verify_update) ||\
+	   (sig->verify_finalize == unsupported_verify_finalize))
+	{
+		ret = 0;
+		goto err;
+	}
+
+	ret = 1;
+err:
+	return ret;
 }
