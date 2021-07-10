@@ -42,6 +42,10 @@
 #define MAX_BLOCK_SIZE SHAKE256_BLOCK_SIZE
 #endif
 
+#define SHAKE256_HASH_MAGIC ((word_t)(0x4326763238134567ULL))
+#define SHAKE256_HASH_CHECK_INITIALIZED(A) \
+        MUST_HAVE((((void *)(A)) != NULL) && ((A)->magic == SHAKE256_HASH_MAGIC))
+
 typedef shake_context shake256_context;
 
 void shake256_init(shake256_context *ctx);

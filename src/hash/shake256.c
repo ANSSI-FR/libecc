@@ -16,16 +16,26 @@
 void shake256_init(shake256_context *ctx)
 {
 	_shake_init(ctx, SHAKE256_DIGEST_SIZE, SHAKE256_BLOCK_SIZE);
+
+        /* Tell that we are initialized */
+        ctx->magic = SHAKE256_HASH_MAGIC;
 }
 
 void shake256_update(shake256_context *ctx, const u8 *input, u32 ilen)
 {
+        SHAKE256_HASH_CHECK_INITIALIZED(ctx);
+
 	_shake_update((shake_context *)ctx, input, ilen);
 }
 
 void shake256_final(shake256_context *ctx, u8 output[SHAKE256_DIGEST_SIZE])
 {
+        SHAKE256_HASH_CHECK_INITIALIZED(ctx);
+
 	_shake_finalize((shake_context *)ctx, output);
+
+        /* Tell that we are uninitialized */
+        ctx->magic = 0;
 }
 
 void shake256_scattered(const u8 **inputs, const u32 *ilens,
