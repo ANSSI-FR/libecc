@@ -26,6 +26,9 @@ void _shake_init(shake_context *ctx, u8 digest_size, u8 block_size)
 	/* Detect endianness */
 	ctx->shake_endian = arch_is_big_endian() ? SHAKE_BIG : SHAKE_LITTLE;
 
+        /* Tell that we are initialized */
+	ctx->magic = SHAKE256_HASH_MAGIC;
+
         return;
 }
 
@@ -35,7 +38,8 @@ void _shake_update(shake_context *ctx, const u8 *input, u32 ilen)
         u32 i;
         u8 *state;
 
-        MUST_HAVE((ctx != NULL) && (input != NULL));
+        MUST_HAVE(input != NULL);
+        SHAKE256_HASH_CHECK_INITIALIZED(ctx);
 
         state = (u8*)(ctx->shake_state);
 
@@ -60,7 +64,8 @@ void _shake_finalize(shake_context *ctx, u8 *output)
         unsigned int i;
         u8 *state;
 
-        MUST_HAVE((ctx != NULL) && (output != NULL));
+        MUST_HAVE(output != NULL);
+        SHAKE256_HASH_CHECK_INITIALIZED(ctx);
         MUST_HAVE(ctx->shake_digest_size <= sizeof(ctx->shake_state));
 
         state = (u8*)(ctx->shake_state);
@@ -85,6 +90,9 @@ void _shake_finalize(shake_context *ctx, u8 *output)
         for(i = 0; i < ctx->shake_digest_size; i++){
                 output[i] = (ctx->shake_endian == SHAKE_LITTLE) ? state[i] : state[SWAP64_Idx(i)];
 	}
+
+        /* Tell that we are uninitialized */
+        ctx->magic = 0;
 
         return;
 }

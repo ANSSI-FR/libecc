@@ -26,7 +26,8 @@ static void sha224_process(sha224_context *ctx,
 	u32 W[64];
 	unsigned int i;
 
-	MUST_HAVE((ctx != NULL) && (data != NULL));
+        MUST_HAVE(data != NULL);
+        SHA224_HASH_CHECK_INITIALIZED(ctx);
 
 	/* Init our inner variables */
 	a = ctx->sha224_state[0];
@@ -73,6 +74,10 @@ void sha224_init(sha224_context *ctx)
 	ctx->sha224_state[5] = 0x68581511;
 	ctx->sha224_state[6] = 0x64F98FA7;
 	ctx->sha224_state[7] = 0xBEFA4FA4;
+
+        /* Tell that we are initialized */
+        ctx->magic = SHA224_HASH_MAGIC;
+
 }
 
 /* Update hash function */
@@ -83,7 +88,8 @@ void sha224_update(sha224_context *ctx, const u8 *input, u32 ilen)
 	u16 fill;
 	u8 left;
 
-	MUST_HAVE((ctx != NULL) && (input != NULL));
+        MUST_HAVE(input != NULL);
+        SHA224_HASH_CHECK_INITIALIZED(ctx);
 
 	/* Nothing to process, return */
 	if (ilen == 0) {
@@ -122,7 +128,8 @@ void sha224_final(sha224_context *ctx, u8 output[SHA224_DIGEST_SIZE])
 	unsigned int block_present = 0;
 	u8 last_padded_block[2 * SHA224_BLOCK_SIZE];
 
-	MUST_HAVE((ctx != NULL) && (output != NULL));
+        MUST_HAVE(output != NULL);
+        SHA224_HASH_CHECK_INITIALIZED(ctx);
 
 	/* Fill in our last block with zeroes */
 	local_memset(last_padded_block, 0, sizeof(last_padded_block));
@@ -160,6 +167,9 @@ void sha224_final(sha224_context *ctx, u8 output[SHA224_DIGEST_SIZE])
 	PUT_UINT32_BE(ctx->sha224_state[4], output, 16);
 	PUT_UINT32_BE(ctx->sha224_state[5], output, 20);
 	PUT_UINT32_BE(ctx->sha224_state[6], output, 24);
+
+        /* Tell that we are uninitialized */
+        ctx->magic = 0;
 }
 
 void sha224_scattered(const u8 **inputs, const u32 *ilens,

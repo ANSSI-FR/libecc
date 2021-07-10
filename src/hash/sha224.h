@@ -44,6 +44,10 @@
 #define MAX_BLOCK_SIZE SHA224_BLOCK_SIZE
 #endif
 
+#define SHA224_HASH_MAGIC ((word_t)(0x1120323b32342910ULL))
+#define SHA224_HASH_CHECK_INITIALIZED(A) \
+        MUST_HAVE((((void *)(A)) != NULL) && ((A)->magic == SHA224_HASH_MAGIC))
+
 typedef struct {
 	/* Number of bytes processed */
 	u64 sha224_total;
@@ -51,6 +55,8 @@ typedef struct {
 	u32 sha224_state[SHA224_STATE_SIZE];
 	/* Internal buffer to handle updates in a block */
 	u8 sha224_buffer[SHA224_BLOCK_SIZE];
+        /* Initialization magic value */
+        word_t magic;
 } sha224_context;
 
 void sha224_init(sha224_context *ctx);

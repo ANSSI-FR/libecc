@@ -38,6 +38,10 @@
 #define MAX_BLOCK_SIZE SM3_BLOCK_SIZE
 #endif
 
+#define SM3_HASH_MAGIC ((word_t)(0x2947510312849204ULL))
+#define SM3_HASH_CHECK_INITIALIZED(A) \
+        MUST_HAVE((((void *)(A)) != NULL) && ((A)->magic == SM3_HASH_MAGIC))
+
 typedef struct {
 	/* Number of bytes processed */
 	u64 sm3_total;
@@ -45,6 +49,8 @@ typedef struct {
 	u32 sm3_state[SM3_STATE_SIZE];
 	/* Internal buffer to handle updates in a block */
 	u8 sm3_buffer[SM3_BLOCK_SIZE];
+        /* Initialization magic value */
+        word_t magic;
 } sm3_context;
 
 void sm3_init(sm3_context *ctx);

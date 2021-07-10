@@ -87,6 +87,8 @@ static void sm3_process(sm3_context *ctx, const u8 data[SM3_BLOCK_SIZE])
 	u32 W[68 + 64];
 	unsigned int j;
 
+	SM3_HASH_CHECK_INITIALIZED(ctx);
+
 	/* Message Expansion Function ME */
 
 	for (j = 0; j < 16; j++) {
@@ -192,6 +194,9 @@ void sm3_init(sm3_context *ctx)
 	ctx->sm3_state[5] = 0x163138AA;
 	ctx->sm3_state[6] = 0xE38DEE4D;
 	ctx->sm3_state[7] = 0xB0FB0E4E;
+
+        /* Tell that we are initialized */
+        ctx->magic = SM3_HASH_MAGIC;
 }
 
 /* Update hash function */
@@ -202,7 +207,8 @@ void sm3_update(sm3_context *ctx, const u8 *input, u32 ilen)
 	u16 fill;
 	u8 left;
 
-	MUST_HAVE((ctx != NULL) && (input != NULL));
+	MUST_HAVE(input != NULL);
+	SM3_HASH_CHECK_INITIALIZED(ctx);
 
 	/* Nothing to process, return */
 	if (ilen == 0) {
@@ -242,7 +248,8 @@ void sm3_final(sm3_context *ctx, u8 output[SM3_DIGEST_SIZE])
 	unsigned int block_present = 0;
 	u8 last_padded_block[2 * SM3_BLOCK_SIZE];
 
-	MUST_HAVE((ctx != NULL) && (output != NULL));
+	MUST_HAVE(output != NULL);
+	SM3_HASH_CHECK_INITIALIZED(ctx);
 
 	/* Fill in our last block with zeroes */
 	local_memset(last_padded_block, 0, sizeof(last_padded_block));
@@ -281,6 +288,9 @@ void sm3_final(sm3_context *ctx, u8 output[SM3_DIGEST_SIZE])
 	PUT_UINT32_BE(ctx->sm3_state[5], output, 20);
 	PUT_UINT32_BE(ctx->sm3_state[6], output, 24);
 	PUT_UINT32_BE(ctx->sm3_state[7], output, 28);
+
+        /* Tell that we are uninitialized */
+        ctx->magic = 0;
 }
 
 void sm3_scattered(const u8 **inputs, const u32 *ilens,

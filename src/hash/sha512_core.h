@@ -34,6 +34,8 @@ typedef struct {
 	u64 sha512_state[SHA512_CORE_STATE_SIZE];
 	/* Internal buffer to handle updates in a block */
 	u8 sha512_buffer[SHA512_CORE_BLOCK_SIZE];
+        /* Initialization magic value */
+        word_t magic;
 } sha512_core_context;
 
 

@@ -13,6 +13,10 @@
 
 #include "keccak.h"
 
+#define SHAKE256_HASH_MAGIC ((word_t)(0x4326763238134567ULL))
+#define SHAKE256_HASH_CHECK_INITIALIZED(A) \
+        MUST_HAVE((((void *)(A)) != NULL) && ((A)->magic == SHAKE256_HASH_MAGIC))
+
 typedef enum {
 	SHAKE_LITTLE = 0,
 	SHAKE_BIG = 1,
@@ -29,6 +33,8 @@ typedef struct shake_context_ {
         u64 shake_idx;
         /* Keccak's state, viewed as a bi-dimensional array */
         u64 shake_state[KECCAK_SLICES * KECCAK_SLICES];
+        /* Initialization magic value */
+        word_t magic;
 } shake_context;
 
 

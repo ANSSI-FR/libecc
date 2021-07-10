@@ -34,6 +34,8 @@ typedef struct sha3_context_ {
         u64 sha3_idx;
         /* Keccak's state, viewed as a bi-dimensional array */
         u64 sha3_state[KECCAK_SLICES * KECCAK_SLICES];
+        /* Initialization magic value */
+        word_t magic;
 } sha3_context;
 
 
