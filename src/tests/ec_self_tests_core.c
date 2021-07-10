@@ -77,6 +77,91 @@ err:
 	return ret;
 }
 
+/* This function randomly splits the message input in small chunks to
+ * test the signature init / multiple updates / finalize mechanism for
+ * algorithms that support them.
+ */
+static int random_split_ec_sign(u8 *sig, u8 siglen, const ec_key_pair *key_pair,
+             const u8 *m, u32 mlen,
+             int (*rand) (nn_t out, nn_src_t q),
+             ec_sig_alg_type sig_type, hash_alg_type hash_type, const u8 *adata, u16 adata_len)
+{
+        struct ec_sign_context ctx;
+        int ret;
+
+        ret = _ec_sign_init(&ctx, key_pair, rand, sig_type, hash_type, adata, adata_len);
+        if (ret) {
+                goto err;
+        }
+	/* We randomly split the input message in chunks and proceed with updates */
+	u32 consumed = 0;
+	while(consumed < mlen){
+		u32 toconsume = 0;
+		ret = get_random((u8 *)&toconsume, sizeof(toconsume));
+		if (ret) {
+			ext_printf("Error when getting random\n");
+			goto err;
+		}
+		toconsume = (toconsume % (mlen - consumed));
+		if(((mlen - consumed) == 1) && (toconsume == 0)){
+			toconsume = 1;
+		}
+	        ret = ec_sign_update(&ctx, &m[consumed], toconsume);
+        	if (ret) {
+                	goto err;
+	        }
+		consumed += toconsume;
+	}
+
+        ret = ec_sign_finalize(&ctx, sig, siglen);
+
+ err:
+        return ret;
+}
+
+/* This function randomly splits the message input in small chunks to
+ * test the verification init / multiple updates / finalize mechanism for
+ * algorithms that support them.
+ */
+static int random_split_ec_verify(const u8 *sig, u8 siglen, const ec_pub_key *pub_key,
+              const u8 *m, u32 mlen,
+              ec_sig_alg_type sig_type, hash_alg_type hash_type, const u8 *adata, u16 adata_len)
+{
+        int ret;
+        struct ec_verify_context ctx;
+
+        ret = ec_verify_init(&ctx, pub_key, sig, siglen, sig_type, hash_type, adata, adata_len);
+        if (ret) {
+                goto err;
+        }
+
+	/* We randomly split the input message in chunks and proceed with updates */
+	u32 consumed = 0;
+	while(consumed < mlen){
+		u32 toconsume = 0;
+		ret = get_random((u8 *)&toconsume, sizeof(toconsume));
+		if (ret) {
+			ext_printf("Error when getting random\n");
+			goto err;
+		}
+		toconsume = (toconsume % (mlen - consumed));
+		if(((mlen - consumed) == 1) && (toconsume == 0)){
+			toconsume = 1;
+		}
+        	ret = ec_verify_update(&ctx, &m[consumed], toconsume);
+        	if (ret) {
+                	goto err;
+	        }
+		consumed += toconsume;
+	}
+
+        ret = ec_verify_finalize(&ctx);
+
+ err:
+        return ret;
+}
+
+
 /* Reduce pressure on the stack for small targets
  * by letting the user override this value.
  */
@@ -137,12 +222,83 @@ static int ec_import_export_test(const ec_test_case *c)
 			ext_printf("Error when signing\n");
 			goto err;
 		}
+		u8 sig_tmp1[EC_MAX_SIGLEN];
+		local_memset(sig_tmp1, 0, sizeof(sig_tmp1));
+		u8 sig_tmp2[EC_MAX_SIGLEN];
+		local_memset(sig_tmp2, 0, sizeof(sig_tmp2));
+		/* If the algorithm supports streaming mode, test it against direct mode */
+		if(is_sign_streaming_mode_supported(c->sig_type)){
+			if(siglen > sizeof(sig_tmp1)){
+				ret = -1;
+				goto err;
+			}
+			if(siglen > sizeof(sig_tmp2)){
+				ret = -1;
+				goto err;
+			}
+			ret = generic_ec_sign(sig_tmp1, siglen, &kp, msg, msglen,
+			       c->nn_random, c->sig_type, c->hash_type, c->adata, c->adata_len);
+			if(ret){
+				ext_printf("Error when signing\n");
+				ret = -1;
+				goto err;
+			}
+			ret = random_split_ec_sign(sig_tmp2, siglen, &kp, msg, msglen,
+			       c->nn_random, c->sig_type, c->hash_type, c->adata, c->adata_len);
+			if(ret){
+				ext_printf("Error when signing\n");
+				ret = -1;
+				goto err;
+			}
+			/* Verify signature equality only in case of deterministic signatures */
+			if(is_sign_deterministic(c->sig_type)){
+				if(!are_equal(sig, sig_tmp1, siglen)){
+					ext_printf("Error when signing: streaming and non streaming modes results differ "\
+						   "for deterministic signature scheme!\n");
+					ret = -1;
+					goto err;
+				}
+				if(!are_equal(sig, sig_tmp2, siglen)){
+					ext_printf("Error when signing: streaming and non streaming modes results differ "\
+						   "for deterministic signature scheme!\n");
+					ret = -1;
+					goto err;
+				}
+			}
+		}
 
 		ret = ec_verify(sig, siglen, &(kp.pub_key), msg, msglen,
 				c->sig_type, c->hash_type, c->adata, c->adata_len);
 		if (ret) {
 			ext_printf("Error when verifying signature\n");
 			goto err;
+		}
+		/* If the algorithm supports streaming mode, test it against direct mode */
+		if(is_verify_streaming_mode_supported(c->sig_type)){
+			if(is_sign_streaming_mode_supported(c->sig_type)){
+				ret = generic_ec_verify(sig_tmp2, siglen, &(kp.pub_key), msg, msglen,
+                                	c->sig_type, c->hash_type, c->adata, c->adata_len);
+			}
+			else{
+				ret = generic_ec_verify(sig, siglen, &(kp.pub_key), msg, msglen,
+                                	c->sig_type, c->hash_type, c->adata, c->adata_len);
+			}
+			if (ret) {
+				ext_printf("Error when verifying signature generic_ec_verify\n");
+				goto err;
+			}
+			if(is_sign_streaming_mode_supported(c->sig_type)){
+				ret = random_split_ec_verify(sig_tmp1, siglen, &(kp.pub_key), msg, msglen,
+                                	c->sig_type, c->hash_type, c->adata, c->adata_len);
+			}
+			else{
+				ret = random_split_ec_verify(sig, siglen, &(kp.pub_key), msg, msglen,
+                                	c->sig_type, c->hash_type, c->adata, c->adata_len);
+			}
+			if (ret) {
+				ext_printf("Error when verifying signature random_split_ec_verify\n");
+				goto err;
+			}
 		}
 #ifdef USE_CRYPTOFUZZ
 		/* Specific case where we have access to raw signature API */
@@ -232,15 +388,81 @@ static int ec_import_export_test(const ec_test_case *c)
 static int ec_test_sign(u8 *sig, u8 siglen, ec_key_pair *kp,
 			const ec_test_case *c)
 {
-	return _ec_sign(sig, siglen, kp, (const u8 *)(c->msg), c->msglen,
+	/* If the algorithm supports streaming, we check that both the streaming and
+	 * non streaming modes produce the same result.
+	 */
+	int ret = -1;
+	ret = _ec_sign(sig, siglen, kp, (const u8 *)(c->msg), c->msglen,
 				c->nn_random, c->sig_type, c->hash_type, c->adata, c->adata_len);
+	if(ret){
+		ret = -1;
+		goto err;
+	}
+	if(is_sign_streaming_mode_supported(c->sig_type)){
+		u8 sig_tmp[EC_MAX_SIGLEN];
+		if(siglen > sizeof(sig_tmp)){
+			ret = -1;
+			goto err;
+		}
+		ret = generic_ec_sign(sig_tmp, siglen, kp, (const u8 *)(c->msg), c->msglen,
+				c->nn_random, c->sig_type, c->hash_type, c->adata, c->adata_len);
+		if(ret){
+			ret = -1;
+			goto err;
+		}
+		if(!are_equal(sig, sig_tmp, siglen)){
+			goto err;
+		}
+		/* Now test the random split version */
+		ret = random_split_ec_sign(sig_tmp, siglen, kp, (const u8 *)(c->msg), c->msglen,
+                                c->nn_random, c->sig_type, c->hash_type, c->adata, c->adata_len);
+		if(ret){
+			ret = -1;
+			goto err;
+		}
+		if(!are_equal(sig, sig_tmp, siglen)){
+			goto err;
+		}
+	}
+
+	ret = 0;
+err:
+	return ret;
 }
 
 static int ec_test_verify(u8 *sig, u8 siglen, const ec_pub_key *pub_key,
 			  const ec_test_case *c)
 {
-	return ec_verify(sig, siglen, pub_key, (const u8 *)(c->msg), c->msglen,
+	/* If the algorithm supports streaming, we check that both the streaming and
+	 * non streaming modes produce the same result.
+	 */
+	int ret = -1;
+
+	ret = ec_verify(sig, siglen, pub_key, (const u8 *)(c->msg), c->msglen,
 				 c->sig_type, c->hash_type, c->adata, c->adata_len);
+	if(ret){
+		ret = -1;
+		goto err;
+	}
+	if(is_verify_streaming_mode_supported(c->sig_type)){
+		ret = generic_ec_verify(sig, siglen, pub_key, (const u8 *)(c->msg), c->msglen,
+				 c->sig_type, c->hash_type, c->adata, c->adata_len);
+		if(ret){
+			ret = -1;
+			goto err;
+		}
+		/* Now test the random split version */
+		ret = random_split_ec_verify(sig, siglen, pub_key, (const u8 *)(c->msg), c->msglen,
+                                 c->sig_type, c->hash_type, c->adata, c->adata_len);
+                if(ret){
+                        ret = -1;
+                        goto err;
+                }
+	}
+
+	ret = 0;
+err:
+	return ret;
 }
 
 /*

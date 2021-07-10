@@ -234,6 +234,8 @@ int unsupported_verify_finalize(struct ec_verify_context * ctx);
 
 int is_verify_streaming_mode_supported(ec_sig_alg_type sig_type);
 
+int is_sign_deterministic(ec_sig_alg_type sig_type);
+
 /*
  * Each signature algorithm supported by the library and implemented
  * in ec{,ck,s,fs,g,r}dsa.{c,h} is referenced below.

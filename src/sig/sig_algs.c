@@ -302,12 +302,12 @@ int ec_get_sig_len(const ec_params *params, ec_sig_alg_type sig_type,
 /* Generic signature */
 
 /*
- * Internal version of generic signature initialization function. Its purpose
+ * Core version of generic signature initialization function. Its purpose
  * is to initialize given sign context structure 'ctx' based on given key pair,
  * nn random function, signature and hash types. This version allows passing
  * a specific nn random function. It returns 0 on success, -1 on error.
  */
-static int _ec_sign_init(struct ec_sign_context *ctx,
+int _ec_sign_init(struct ec_sign_context *ctx,
 			 const ec_key_pair *key_pair,
 			 int (*rand) (nn_t out, nn_src_t q),
 			 ec_sig_alg_type sig_type, hash_alg_type hash_type, const u8 *adata, u16 adata_len)
@@ -885,6 +885,34 @@ int is_verify_streaming_mode_supported(ec_sig_alg_type sig_type)
 	}
 
 	ret = 1;
+err:
+	return ret;
+}
+
+/* Tells if the signature scheme is deterministic or not,
+ * e.g. if random nonces are used to produce signatures.
+ */
+int is_sign_deterministic(ec_sig_alg_type sig_type)
+{
+	int ret = 0;
+	const ec_sig_mapping *sig = get_sig_by_type(sig_type);
+
+	if(sig == NULL){
+		ret = 0;
+		goto err;
+	}
+	/* All EdDSA schemes are deterministic */
+#if defined(WITH_SIG_EDDSA25519)
+	if((sig_type == EDDSA25519) || (sig_type == EDDSA25519CTX) || (sig_type == EDDSA25519PH)){
+		ret = 1;
+	}
+#endif
+#if defined(WITH_SIG_EDDSA448)
+	if((sig_type == EDDSA448) || (sig_type == EDDSA448PH)){
+		ret = 1;
+	}
+#endif
+
 err:
 	return ret;
 }

@@ -49,6 +49,11 @@ int ec_get_sig_len(const ec_params *params, ec_sig_alg_type sig_type,
 
 /* Generic signature init/update/finalize */
 
+int _ec_sign_init(struct ec_sign_context *ctx,
+                         const ec_key_pair *key_pair,
+                         int (*rand) (nn_t out, nn_src_t q),
+                         ec_sig_alg_type sig_type, hash_alg_type hash_type, const u8 *adata, u16 adata_len);
+
 int ec_sign_init(struct ec_sign_context *ctx, const ec_key_pair *key_pair,
 		 ec_sig_alg_type sig_type, hash_alg_type hash_type, const u8 *adata, u16 adata_len);
 
