@@ -75,6 +75,9 @@ typedef union {
 #ifdef SHAKE256_BLOCK_SIZE
 	shake256_context shake256;
 #endif
+#ifdef SM3_BLOCK_SIZE
+	sm3_context sm3;
+#endif
 } hash_context;
 
 typedef void (*_hfunc_init) (hash_context * hctx);
