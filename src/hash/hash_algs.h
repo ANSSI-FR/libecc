@@ -31,6 +31,8 @@
 #include "sha3-512.h"
 #include "sm3.h"
 #include "shake256.h"
+#include "gost256.h"
+#include "gost512.h"
 #include "../utils/utils.h"
 
 #if (MAX_DIGEST_SIZE == 0)
@@ -77,6 +79,12 @@ typedef union {
 #endif
 #ifdef SM3_BLOCK_SIZE
 	sm3_context sm3;
+#endif
+#ifdef GOST256_BLOCK_SIZE
+	gost256_context gost256;
+#endif
+#ifdef GOST512_BLOCK_SIZE
+	gost512_context gost512;
 #endif
 } hash_context;
 
@@ -281,6 +289,34 @@ static const hash_mapping hash_maps[] = {
 #define MAX_HASH_ALG_NAME_LEN 9
 #endif /* MAX_HASH_ALG_NAME_LEN */
 #endif /* WITH_HASH_SHAKE256 */
+#ifdef WITH_HASH_GOST256
+	{.type = HASH_GOST256,	/* HASH_GOST256 */
+	 .name = "HASH_GOST256",
+	 .digest_size = GOST256_DIGEST_SIZE,
+	 .block_size = GOST256_BLOCK_SIZE,
+	 .hfunc_init = (_hfunc_init) gost256_init,
+	 .hfunc_update = (_hfunc_update) gost256_update,
+	 .hfunc_finalize = (_hfunc_finalize) gost256_final,
+	 .hfunc_scattered = gost256_scattered},
+#if (MAX_HASH_ALG_NAME_LEN < 13)
+#undef MAX_HASH_ALG_NAME_LEN
+#define MAX_HASH_ALG_NAME_LEN 13
+#endif /* MAX_HASH_ALG_NAME_LEN */
+#endif /* WITH_HASH_GOST256 */
+#ifdef WITH_HASH_GOST512
+	{.type = HASH_GOST512,	/* HASH_GOST512 */
+	 .name = "HASH_GOST512",
+	 .digest_size = GOST512_DIGEST_SIZE,
+	 .block_size = GOST512_BLOCK_SIZE,
+	 .hfunc_init = (_hfunc_init) gost512_init,
+	 .hfunc_update = (_hfunc_update) gost512_update,
+	 .hfunc_finalize = (_hfunc_finalize) gost512_final,
+	 .hfunc_scattered = gost512_scattered},
+#if (MAX_HASH_ALG_NAME_LEN < 13)
+#undef MAX_HASH_ALG_NAME_LEN
+#define MAX_HASH_ALG_NAME_LEN 13
+#endif /* MAX_HASH_ALG_NAME_LEN */
+#endif /* WITH_HASH_GOST512 */
 	{.type = UNKNOWN_HASH_ALG,	/* Needs to be kept last */
 	 .name = "UNKNOWN",
 	 .digest_size = 0,

@@ -95,6 +95,12 @@ typedef enum {
 #ifdef WITH_HASH_SHAKE256
 	SHAKE256 = 12,
 #endif
+#ifdef WITH_HASH_GOST256
+	HASH_GOST256 = 13,
+#endif
+#ifdef WITH_HASH_GOST512
+	HASH_GOST512 = 14,
+#endif
 } hash_alg_type;
 
 /* All curves we support */
