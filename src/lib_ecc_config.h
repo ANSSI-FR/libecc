@@ -73,6 +73,7 @@
 #define WITH_HASH_SHAKE256
 #define WITH_HASH_GOST256
 #define WITH_HASH_GOST512
+#define WITH_HMAC
 
 /* Supported sig/verif schemes */
 #define WITH_SIG_ECDSA
@@ -85,6 +86,7 @@
 #define WITH_SIG_SM2
 #define WITH_SIG_EDDSA25519
 #define WITH_SIG_EDDSA448
+#define WITH_SIG_DECDSA
 
 #endif /* WITH_LIBECC_CONFIG_OVERRIDE */
 

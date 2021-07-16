@@ -54,6 +54,9 @@ typedef enum {
 	EDDSA448   = 12,
 	EDDSA448PH = 13,
 #endif
+#ifdef WITH_SIG_DECDSA
+	DECDSA = 14,
+#endif
 } ec_sig_alg_type;
 
 /* Hash algorithm types */

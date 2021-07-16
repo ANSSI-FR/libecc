@@ -28,6 +28,7 @@
 #include "ecrdsa.h"
 #include "sm2.h"
 #include "eddsa.h"
+#include "decdsa.h"
 /* Includes for fuzzing */
 #ifdef USE_CRYPTOFUZZ
 #include "fuzzing_ecdsa.h"
@@ -487,6 +488,26 @@ static const ec_sig_mapping ec_sig_maps[] = {
 #define MAX_SIG_ALG_NAME_LEN 11
 #endif /* MAX_SIG_ALG_NAME_LEN */
 #endif /* WITH_SIG_EDDSA448 */
+#ifdef WITH_SIG_DECDSA
+	{.type = DECDSA,
+	 .name = "DECDSA",
+	 .siglen = decdsa_siglen,
+	 .gen_priv_key = generic_gen_priv_key,
+	 .init_pub_key = decdsa_init_pub_key,
+	 .sign_init = _decdsa_sign_init,
+	 .sign_update = _decdsa_sign_update,
+	 .sign_finalize = _decdsa_sign_finalize,
+	 .sign = generic_ec_sign,
+	 .verify_init = _decdsa_verify_init,
+	 .verify_update = _decdsa_verify_update,
+	 .verify_finalize = _decdsa_verify_finalize,
+	 .verify = generic_ec_verify,
+	 },
+#if (MAX_SIG_ALG_NAME_LEN < 7)
+#undef MAX_SIG_ALG_NAME_LEN
+#define MAX_SIG_ALG_NAME_LEN 7
+#endif /* MAX_SIG_ALG_NAME_LEN */
+#endif /* WITH_SIG_DECDSA */
 	{.type = UNKNOWN_SIG_ALG,	/* Needs to be kept last */
 	 .name = "UNKNOWN",
 	 .siglen = 0,
