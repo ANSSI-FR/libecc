@@ -167,6 +167,10 @@ int __ecsdsa_sign_init(struct ec_sign_context *ctx,
                 goto err;
         }
 #endif
+        if(ctx->rand == NULL){
+                ret = -1;
+                goto err;
+        }
 	ret = ctx->rand(&k, q);
 	if (ret) {
 		ret = -1;

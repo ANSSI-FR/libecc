@@ -358,6 +358,10 @@ int _eckcdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
                 goto err;
         }
 #endif
+        if(ctx->rand == NULL){
+                ret = -1;
+                goto err;
+        }
 	ret = ctx->rand(&k, q);
 	if (ret) {
 		goto err;
