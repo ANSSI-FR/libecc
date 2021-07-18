@@ -775,7 +775,7 @@ static int dump_hdr_info(const metadata_hdr * hdr)
 {
 	/* Dump the header */
 	printf("Metadata header info:\n");
-	printf("    magic   = 0x%08x\n", hdr->magic);
+	printf("    magic   = 0x%08lx\n", hdr->magic);
 	switch (hdr->type) {
 	case IMAGE_TYPE0:
 		printf("    type    = IMAGE_TYPE0\n");
@@ -790,12 +790,12 @@ static int dump_hdr_info(const metadata_hdr * hdr)
 		printf("    type    = IMAGE_TYPE3\n");
 		break;
 	default:
-		printf("    type %u unknown!\n", hdr->type);
+		printf("    type %lu unknown!\n", hdr->type);
 		break;
 	}
-	printf("    version = 0x%08x\n", hdr->version);
-	printf("    len	    = 0x%08x\n", hdr->len);
-	printf("    siglen  = 0x%08x\n", hdr->siglen);
+	printf("    version = 0x%08lx\n", hdr->version);
+	printf("    len	    = 0x%08lx\n", hdr->len);
+	printf("    siglen  = 0x%08lx\n", hdr->siglen);
 
 	return 0;
 }
@@ -901,7 +901,7 @@ static int verify_bin_file(const char *ec_name, const char *ec_sig_name,
 
 		/* Sanity checks on the header we get */
 		if (hdr.magic != HDR_MAGIC) {
-			printf("Error: got magic 0x%08x instead of 0x%08x "
+			printf("Error: got magic 0x%08lx instead of 0x%08x "
 			       "from metadata header\n", hdr.magic, HDR_MAGIC);
 			goto err;
 		}
@@ -910,14 +910,14 @@ static int verify_bin_file(const char *ec_name, const char *ec_sig_name,
 		MUST_HAVE(raw_data_len > (sizeof(hdr) + st_siglen));
 		exp_len = raw_data_len - sizeof(hdr) - st_siglen;
 		if (hdr.len != exp_len) {
-			printf("Error: got raw size of %u instead of %lu from "
+			printf("Error: got raw size of %lu instead of %lu from "
 			       "metadata header\n", hdr.len,
 			       (unsigned long)exp_len);
 			goto err;
 		}
 
 		if (hdr.siglen != st_siglen) {
-			printf("Error: got siglen %u instead of %d from "
+			printf("Error: got siglen %lu instead of %d from "
 			       "metadata header\n", hdr.siglen, siglen);
 			goto err;
 		}
