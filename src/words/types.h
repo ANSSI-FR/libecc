@@ -30,6 +30,12 @@
 #define ATTRIBUTE_SECTION(a)
 #endif
 
+/* Macro to trick the compiler of thinking a variable is used.
+ * Although this should not happen, sometimes because of #define
+ * oddities we might force this.
+ */
+#define VAR_USED(a) ((void)(a))
+
 /*** Handling the types ****/
 #ifdef WITH_STDLIB
 

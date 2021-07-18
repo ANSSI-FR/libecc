@@ -777,7 +777,7 @@ err:
 int unsupported_sign_init(struct ec_sign_context * ctx)
 {
 	/* Quirk to avoid unused variables */
-	MUST_HAVE(ctx == ctx);
+	VAR_USED(ctx);
 
 	/* Return an error in any case here */
 	return -1;
@@ -787,9 +787,9 @@ int unsupported_sign_update(struct ec_sign_context * ctx,
                     const u8 *chunk, u32 chunklen)
 {
 	/* Quirk to avoid unused variables */
-	MUST_HAVE(ctx == ctx);
-	MUST_HAVE(chunk == chunk);
-	MUST_HAVE(chunklen == chunklen);
+	VAR_USED(ctx);
+	VAR_USED(chunk);
+	VAR_USED(chunklen);
 
 	/* Return an error in any case here */
 	return -1;
@@ -798,9 +798,9 @@ int unsupported_sign_update(struct ec_sign_context * ctx,
 int unsupported_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 {
 	/* Quirk to avoid unused variables */
-	MUST_HAVE(ctx == ctx);
-	MUST_HAVE(sig == sig);
-	MUST_HAVE(siglen == siglen);
+	VAR_USED(ctx);
+	VAR_USED(sig);
+	VAR_USED(siglen);
 
 	/* Return an error in any case here */
 	return -1;
@@ -810,9 +810,9 @@ int unsupported_verify_init(struct ec_verify_context * ctx,
                     const u8 *sig, u8 siglen)
 {
 	/* Quirk to avoid unused variables */
-	MUST_HAVE(ctx == ctx);
-	MUST_HAVE(sig == sig);
-	MUST_HAVE(siglen == siglen);
+	VAR_USED(ctx);
+	VAR_USED(sig);
+	VAR_USED(siglen);
 
 	/* Return an error in any case here */
 	return -1;
@@ -822,9 +822,9 @@ int unsupported_verify_update(struct ec_verify_context * ctx,
                       const u8 *chunk, u32 chunklen)
 {
 	/* Quirk to avoid unused variables */
-	MUST_HAVE(ctx == ctx);
-	MUST_HAVE(chunk == chunk);
-	MUST_HAVE(chunklen == chunklen);
+	VAR_USED(ctx);
+	VAR_USED(chunk);
+	VAR_USED(chunklen);
 
 	/* Return an error in any case here */
 	return -1;
@@ -833,7 +833,7 @@ int unsupported_verify_update(struct ec_verify_context * ctx,
 int unsupported_verify_finalize(struct ec_verify_context * ctx)
 {
 	/* Quirk to avoid unused variables */
-	MUST_HAVE(ctx == ctx);
+	VAR_USED(ctx);
 
 	/* Return an error in any case here */
 	return -1;

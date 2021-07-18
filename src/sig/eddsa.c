@@ -431,7 +431,7 @@ static int eddsa_encode_point(aff_pt_edwards_src_t in, fp_src_t alpha_edwards, u
 	else
 #endif /* !defined(WITH_SIG_EDDSA448) */
 	{	/* EDDSA25519 and other cases */
-		MUST_HAVE(sig_alg == sig_alg); /* To avoid unused variable error */
+		VAR_USED(sig_alg); /* To avoid unused variable error */
 		lsb = nn_getbit(&(in->x.fp_val), 0);
 		if(eddsa_encode_integer(&(in->y.fp_val), buf, buflen)){
 			ret = -1;
@@ -531,7 +531,7 @@ static int eddsa_decode_point(aff_pt_edwards_t out, ec_edwards_crv_src_t edwards
 	else
 #endif /* !defined(WITH_SIG_EDDSA448) */
 	{
-		MUST_HAVE(sig_type == sig_type); /* To avoid unused variable error */
+		VAR_USED(sig_type); /* To avoid unused variable error */
 		fp_mul(&sqrt2, &sqrt2, &(edwards_curve->d));
 		/* (d y^2 + 1) */
 		fp_inc(&sqrt2, &sqrt2);
@@ -1656,7 +1656,7 @@ int _eddsa_sign(u8 *sig, u8 siglen, const ec_key_pair *key_pair,
 	 * NOTE: EdDSA does not use any notion of random Nonce, so no need
 	 * to use 'rand' here.
 	 */
-	MUST_HAVE(rand == rand);
+	VAR_USED(rand);
 
 	/* Zero init out points and data */
 	local_memset(&R, 0, sizeof(prj_pt));
