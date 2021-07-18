@@ -3904,6 +3904,10 @@ static const u8 sm2_nn_random_iso14888_3_SM2_256bits_test_curve_test_vectors_exp
         0x63, 0x27, 0xA6, 0x7E, 0xC7, 0xDE, 0xEB, 0xE7
 };
 
+static const char sm2_nn_random_iso14888_3_SM2_256bits_test_curve_test_vectors_msg[] = "message digest";
+
+static const char sm2_nn_random_iso14888_3_SM2_256bits_test_curve_test_vectors_adata[] = "ALICE123@YAHOO.COM";
+
 static const ec_test_case sm2_nn_random_iso14888_3_SM2_256bits_test_curve_test_case = {
         .name = "SM2-SM3/SM2P256TEST",
         .ec_str_p = &sm2p256test_str_params,
@@ -3911,13 +3915,13 @@ static const ec_test_case sm2_nn_random_iso14888_3_SM2_256bits_test_curve_test_c
         .priv_key_len = sizeof(sm2_nn_random_iso14888_3_SM2_256bits_test_curve_test_vectors_priv_key),
         .nn_random = sm2_nn_random_iso14888_3_SM2_256bits_test_curve_test_vector,
         .hash_type = SM3,
-        .msg = (const char *)"message digest",
-        .msglen = sizeof("message digest") - 1,
+        .msg = sm2_nn_random_iso14888_3_SM2_256bits_test_curve_test_vectors_msg,
+        .msglen = 14,
         .sig_type = SM2,
         .exp_sig = sm2_nn_random_iso14888_3_SM2_256bits_test_curve_test_vectors_expected_sig,
         .exp_siglen = sizeof(sm2_nn_random_iso14888_3_SM2_256bits_test_curve_test_vectors_expected_sig),
-	.adata = (const u8*)"ALICE123@YAHOO.COM",
-	.adata_len = sizeof("ALICE123@YAHOO.COM") - 1,
+	.adata = (const u8*)sm2_nn_random_iso14888_3_SM2_256bits_test_curve_test_vectors_adata,
+	.adata_len = 18,
 };
 #endif /* WITH_CURVE_SM2P256TEST */
 
