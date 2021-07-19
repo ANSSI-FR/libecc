@@ -1175,7 +1175,7 @@ err:
 }
 
 /* Compute PH(M) with PH being the hash depending on the key type */
-static int eddsa_compute_ph(const u8 *message, u32 message_size, u8 *digest, u16 *digest_size, ec_sig_alg_type sig_type)
+static int eddsa_compute_pre_hash(const u8 *message, u32 message_size, u8 *digest, u16 *digest_size, ec_sig_alg_type sig_type)
 {
 	hash_alg_type hash_type;
 	const hash_mapping *hash;
@@ -1240,7 +1240,7 @@ u8 eddsa_siglen(u16 p_bit_len, u16 q_bit_len, u8 hsize, u8 blocksize)
 #define EDDSA_SIGN_CHECK_INITIALIZED(A) \
 	MUST_HAVE((((void *)(A)) != NULL) && ((A)->magic == EDDSA_SIGN_MAGIC))
 
-int _eddsa_sign_init_ph(struct ec_sign_context *ctx)
+int _eddsa_sign_init_pre_hash(struct ec_sign_context *ctx)
 {
 	int ret = -1;
 	u8 use_message_PH = 0;
@@ -1320,7 +1320,7 @@ err:
 	return ret;
 }
 
-int _eddsa_sign_update_ph(struct ec_sign_context *ctx,
+int _eddsa_sign_update_pre_hash(struct ec_sign_context *ctx,
 		       const u8 *chunk, u32 chunklen)
 {
 	int ret = -1;
@@ -1376,7 +1376,7 @@ err:
 
 }
 
-int _eddsa_sign_finalize_ph(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
+int _eddsa_sign_finalize_pre_hash(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 {
 	nn r, s, S;
 #ifdef USE_SIG_BLINDING
@@ -1859,7 +1859,7 @@ int _eddsa_sign(u8 *sig, u8 siglen, const ec_key_pair *key_pair,
 	/* First of all, compute the message hash if necessary */
 	if(use_message_PH){
 		hash_size = sizeof(ph_hash);
-		if(eddsa_compute_ph(m, mlen, ph_hash, &hash_size, sig_type)){
+		if(eddsa_compute_pre_hash(m, mlen, ph_hash, &hash_size, sig_type)){
 			ret = -1;
 			goto err;
 		}
@@ -2275,7 +2275,7 @@ int _eddsa_verify_init(struct ec_verify_context *ctx, const u8 *sig, u8 siglen)
 		goto err;
 	}
 	ctx->h->hfunc_init(&(ctx->verify_data.eddsa.h_ctx));
-	ctx->h->hfunc_init(&(ctx->verify_data.eddsa.h_ctx_ph));
+	ctx->h->hfunc_init(&(ctx->verify_data.eddsa.h_ctx_pre_hash));
 #if defined(WITH_SIG_EDDSA25519)
 	if(key_type == EDDSA25519CTX){
 		/* As per RFC8032, for EDDSA25519CTX the context SHOULD NOT be empty */
@@ -2446,7 +2446,7 @@ int _eddsa_verify_update(struct ec_verify_context *ctx,
 	}
 	if(use_message_PH == 1){
 		/* In PH mode, update the dedicated hash context */
-		ctx->h->hfunc_update(&(ctx->verify_data.eddsa.h_ctx_ph), chunk, chunklen);
+		ctx->h->hfunc_update(&(ctx->verify_data.eddsa.h_ctx_pre_hash), chunk, chunklen);
 	}
 	else{
 		/* In normal mode, update the nominal hash context */
@@ -2539,7 +2539,7 @@ int _eddsa_verify_finalize(struct ec_verify_context *ctx)
 	}
 	/* Update the hash with the message or its hash for the PH versions */
 	if(use_message_PH == 1){
-		ctx->h->hfunc_finalize(&(ctx->verify_data.eddsa.h_ctx_ph), hash);
+		ctx->h->hfunc_finalize(&(ctx->verify_data.eddsa.h_ctx_pre_hash), hash);
 		if(use_message_PH_hsize > hsize){
 			ret = -1;
 			goto err;

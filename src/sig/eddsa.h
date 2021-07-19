@@ -55,12 +55,12 @@ int eddsa_init_pub_key(ec_pub_key *out_pub, const ec_priv_key *in_priv);
 
 u8 eddsa_siglen(u16 p_bit_len, u16 q_bit_len, u8 hsize, u8 blocksize);
 
-int _eddsa_sign_init_ph(struct ec_sign_context *ctx);
+int _eddsa_sign_init_pre_hash(struct ec_sign_context *ctx);
 
-int _eddsa_sign_update_ph(struct ec_sign_context *ctx,
+int _eddsa_sign_update_pre_hash(struct ec_sign_context *ctx,
 		       const u8 *chunk, u32 chunklen);
 
-int _eddsa_sign_finalize_ph(struct ec_sign_context *ctx, u8 *sig, u8 siglen);
+int _eddsa_sign_finalize_pre_hash(struct ec_sign_context *ctx, u8 *sig, u8 siglen);
 
 int _eddsa_sign(u8 *sig, u8 siglen, const ec_key_pair *key_pair,
              const u8 *m, u32 mlen, int (*rand) (nn_t out, nn_src_t q),
@@ -70,7 +70,7 @@ typedef struct {
 	prj_pt _R;
 	nn S;
 	hash_context h_ctx;
-	hash_context h_ctx_ph;
+	hash_context h_ctx_pre_hash;
 	word_t magic;
 } eddsa_verify_data;
 
