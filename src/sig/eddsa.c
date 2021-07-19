@@ -861,6 +861,7 @@ err:
 		local_memset(priv_key, 0, sizeof(ec_priv_key));
 	}
 	VAR_ZEROIFY(hash_type);
+	VAR_ZEROIFY(digest_size);
 
 	return ret;
 }
