@@ -100,18 +100,30 @@
  * EDDSA448 and variants only support WEI448 as a curve, and SHAKE256 as a "hash function".
  */
 static inline hash_alg_type get_eddsa_hash_type(ec_sig_alg_type sig_type){
+	hash_alg_type hash_type = UNKNOWN_HASH_ALG;
+
+	switch (sig_type) {
 #if defined(WITH_SIG_EDDSA25519)
-	if((sig_type == EDDSA25519) || (sig_type == EDDSA25519CTX) || (sig_type == EDDSA25519PH)){
-		return SHA512;
-	}
+		case EDDSA25519:
+		case EDDSA25519PH:
+		case EDDSA25519CTX:{
+			hash_type = SHA512;
+			break;
+		}
 #endif
 #if defined(WITH_SIG_EDDSA448)
-	if((sig_type == EDDSA448) || (sig_type == EDDSA448PH)){
-		return SHAKE256;
-	}
+		case EDDSA448:
+		case EDDSA448PH:{
+			hash_type = SHAKE256;
+			break;
+		}
 #endif
-
-	return UNKNOWN_HASH_ALG;
+		default:{
+			hash_type = UNKNOWN_HASH_ALG;
+			break;
+		}
+	}
+	return hash_type;
 }
 
 /*
@@ -121,27 +133,30 @@ static inline hash_alg_type get_eddsa_hash_type(ec_sig_alg_type sig_type){
 static int eddsa_key_type_check_curve(ec_sig_alg_type key_type,
 				      ec_curve_type curve_type)
 {
-	int ret;
+	int ret = -1;
 
 	switch (key_type) {
 #if defined(WITH_SIG_EDDSA25519)
-	case EDDSA25519:
-	case EDDSA25519PH:
-	case EDDSA25519CTX:
-		/* Check curve */
-		ret = (curve_type == WEI25519) ? 0 : -1;
-		break;
+		case EDDSA25519:
+		case EDDSA25519PH:
+		case EDDSA25519CTX:{
+			/* Check curve */
+			ret = (curve_type == WEI25519) ? 0 : -1;
+			break;
+		}
 #endif
 #if defined(WITH_SIG_EDDSA448)
-	case EDDSA448:
-	case EDDSA448PH:
-		/* Check curve */
-		ret = (curve_type == WEI448) ? 0 : -1;
-		break;
+		case EDDSA448:
+		case EDDSA448PH:{
+			/* Check curve */
+			ret = (curve_type == WEI448) ? 0 : -1;
+			break;
+		}
 #endif
-	default:
-		ret = -1;
-		break;
+		default:{
+			ret = -1;
+			break;
+		}
 	}
 
 	return ret;
