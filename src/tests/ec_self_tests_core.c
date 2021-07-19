@@ -432,6 +432,7 @@ static int ec_test_sign(u8 *sig, u8 siglen, ec_key_pair *kp,
 			goto err;
 		}
 		if(!are_equal(sig, sig_tmp, siglen)){
+			ret = -1;
 			goto err;
 		}
 		/* Now test the random split version */
@@ -442,6 +443,7 @@ static int ec_test_sign(u8 *sig, u8 siglen, ec_key_pair *kp,
 			goto err;
 		}
 		if(!are_equal(sig, sig_tmp, siglen)){
+			ret = -1;
 			goto err;
 		}
 	}
