@@ -45,6 +45,42 @@
 #endif
 #include "../utils/dbg_sig.h"
 
+
+static inline int dom(u16 x, const u8 *y, u16 olen_y, const hash_mapping *h, hash_context *h_ctx, u8 dom_type){
+	u8 tmp[2];
+	int ret = -1;
+
+	if((h == NULL) || (h_ctx == NULL)){
+		ret = -1;
+		goto err;
+	}
+	/* Sanity check on ancillary data len, its size must not exceed 255 bytes as per RFC8032 */
+	if((x > 255) || (olen_y > 255)){
+		ret = -1;
+		goto err;
+	}
+	if(dom_type == 2){
+		h->hfunc_update(h_ctx, (const u8*)"SigEd25519 no Ed25519 collisions", 32);
+	}
+	else if(dom_type == 4){
+		h->hfunc_update(h_ctx, (const u8*)"SigEd448", 8);
+	}
+	else{
+		ret = -1;
+		goto err;
+	}
+	tmp[0] = (u8)x;
+	tmp[1] = (u8)olen_y;
+	h->hfunc_update(h_ctx, tmp, 2);
+	if(y != NULL){
+		h->hfunc_update(h_ctx, y, olen_y);
+	}
+
+	ret = 0;
+err:
+	return ret;
+}
+
 #if defined(WITH_SIG_EDDSA25519)
 /* Helper for dom2(x, y).
  *
@@ -57,18 +93,9 @@
  *                of at most 255 octets.  "SigEd25519 no Ed25519
  *                collisions" is in ASCII (32 octets).
  */
-#define dom2(x, y, olen_y, h, h_ctx) do {						\
-	u8 tmp[2];									\
-	(h)->hfunc_update((h_ctx), (const u8*)"SigEd25519 no Ed25519 collisions", 32);	\
-	MUST_HAVE((x) <= 255);								\
-	MUST_HAVE((olen_y) <= 255);							\
-	tmp[0] = (u8)(x);								\
-	tmp[1] = (u8)(olen_y);								\
-	(h)->hfunc_update((h_ctx), tmp, 2);						\
-	if((y) != NULL){								\
-		(h)->hfunc_update((h_ctx), (y), (olen_y));				\
-	}										\
-} while(0)
+static inline int dom2(u16 x, const u8 *y, u16 olen_y, const hash_mapping *h, hash_context *h_ctx){
+	return dom(x, y, olen_y, h, h_ctx, 2);
+}
 #endif /* defined(WITH_SIG_EDDSA25519) */
 
 #if defined(WITH_SIG_EDDSA448)
@@ -81,18 +108,9 @@
  *                is an octet string of at most 255 octets.  "SigEd448"
  *                is in ASCII (8 octets).
  */
-#define dom4(x, y, olen_y, h, h_ctx) do {						\
-	u8 tmp[2];									\
-	h->hfunc_update((h_ctx), (const u8*)"SigEd448", 8);				\
-	MUST_HAVE((x) <= 255);								\
-	MUST_HAVE((olen_y) <= 255);							\
-	tmp[0] = (u8)(x);								\
-	tmp[1] = (u8)(olen_y);								\
-	(h)->hfunc_update((h_ctx), tmp, 2);						\
-	if((y) != NULL){								\
-		(h)->hfunc_update((h_ctx), (y), (olen_y));				\
-	}										\
-} while(0)
+static inline int dom4(u16 x, const u8 *y, u16 olen_y, const hash_mapping *h, hash_context *h_ctx){
+	return dom(x, y, olen_y, h, h_ctx, 4);
+}
 #endif /* defined(WITH_SIG_EDDSA448) */
 
 /* EdDSA sanity check on keys.
@@ -1482,20 +1500,21 @@ int _eddsa_sign_finalize_ph(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	}
 	/* Hash half the digest */
 	h->hfunc_init(&(ctx->sign_data.eddsa.h_ctx));
-	/* Sanity check on ancillary data len, its size must not exceed 255 bytes as per RFC8032 */
-	if(ctx->adata_len > 255){
-		ret = -1;
-		goto err;
-	}
 	/* At this point, we are ensured that we have PH versions of the algorithms */
 #if defined(WITH_SIG_EDDSA25519)
 	if(key_type == EDDSA25519PH){
-		dom2(1, ctx->adata, ctx->adata_len, h, &(ctx->sign_data.eddsa.h_ctx));
+		if(dom2(1, ctx->adata, ctx->adata_len, h, &(ctx->sign_data.eddsa.h_ctx))){
+			ret = -1;
+			goto err;
+		}
 	}
 #endif
 #if defined(WITH_SIG_EDDSA448)
 	if(key_type == EDDSA448PH){
-		dom4(1, ctx->adata, ctx->adata_len, h, &(ctx->sign_data.eddsa.h_ctx));
+		if(dom4(1, ctx->adata, ctx->adata_len, h, &(ctx->sign_data.eddsa.h_ctx))){
+			ret = -1;
+			goto err;
+		}
 	}
 #endif
 	h->hfunc_update(&(ctx->sign_data.eddsa.h_ctx), &hash[hsize / 2], hsize / 2);
@@ -1567,20 +1586,21 @@ int _eddsa_sign_finalize_ph(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 		ret = -1;
 		goto err;
 	}
-	/* Sanity check on ancillary data len, its size must not exceed 255 bytes as per RFC8032 */
-	if(ctx->adata_len > 255){
-		ret = -1;
-		goto err;
-	}
 	/* At this point, we are ensured that we have PH versions of the algorithms */
 #if defined(WITH_SIG_EDDSA25519)
 	if(key_type == EDDSA25519PH){
-		dom2(1, ctx->adata, ctx->adata_len, h, &(ctx->sign_data.eddsa.h_ctx));
+		if(dom2(1, ctx->adata, ctx->adata_len, h, &(ctx->sign_data.eddsa.h_ctx))){
+			ret = -1;
+			goto err;
+		}
 	}
 #endif
 #if defined(WITH_SIG_EDDSA448)
 	if(key_type == EDDSA448PH){
-		dom4(1, ctx->adata, ctx->adata_len, h, &(ctx->sign_data.eddsa.h_ctx));
+		if(dom4(1, ctx->adata, ctx->adata_len, h, &(ctx->sign_data.eddsa.h_ctx))){
+			ret = -1;
+			goto err;
+		}
 	}
 #endif
 	/* Update the hash with the encoded R point */
@@ -1860,11 +1880,6 @@ int _eddsa_sign(u8 *sig, u8 siglen, const ec_key_pair *key_pair,
 		ret = -1;
 		goto err;
 	}
-	/* Sanity check on ancillary data len, its size must not exceed 255 bytes as per RFC8032 */
-	if(adata_len > 255){
-		ret = -1;
-		goto err;
-	}
 	/* Since we call a callback, sanity check our mapping */
 	if(hash_mapping_callbacks_sanity_check(h)){
 		ret = -1;
@@ -1878,18 +1893,30 @@ int _eddsa_sign(u8 *sig, u8 siglen, const ec_key_pair *key_pair,
 			ret = -1;
 			goto err;
 		}
-		dom2(0, adata, adata_len, h, &h_ctx);
+		if(dom2(0, adata, adata_len, h, &h_ctx)){
+			ret = -1;
+			goto err;
+		}
 	}
 	if(key_type == EDDSA25519PH){
-		dom2(1, adata, adata_len, h, &h_ctx);
+		if(dom2(1, adata, adata_len, h, &h_ctx)){
+			ret = -1;
+			goto err;
+		}
 	}
 #endif
 #if defined(WITH_SIG_EDDSA448)
 	if(key_type == EDDSA448){
-		dom4(0, adata, adata_len, h, &h_ctx);
+		if(dom4(0, adata, adata_len, h, &h_ctx)){
+			ret = -1;
+			goto err;
+		}
 	}
 	if(key_type == EDDSA448PH){
-		dom4(1, adata, adata_len, h, &h_ctx);
+		if(dom4(1, adata, adata_len, h, &h_ctx)){
+			ret = -1;
+			goto err;
+		}
 	}
 #endif
 	h->hfunc_update(&h_ctx, &hash[hsize / 2], hsize / 2);
@@ -1963,11 +1990,6 @@ int _eddsa_sign(u8 *sig, u8 siglen, const ec_key_pair *key_pair,
 		ret = -1;
 		goto err;
 	}
-	/* Sanity check on ancillary data len, its size must not exceed 255 bytes as per RFC8032 */
-	if(adata_len > 255){
-		ret = -1;
-		goto err;
-	}
 #if defined(WITH_SIG_EDDSA25519)
 	if(key_type == EDDSA25519CTX){
 		/* As per RFC8032, for EDDSA25519CTX the context SHOULD NOT be empty */
@@ -1975,18 +1997,30 @@ int _eddsa_sign(u8 *sig, u8 siglen, const ec_key_pair *key_pair,
 			ret = -1;
 			goto err;
 		}
-		dom2(0, adata, adata_len, h, &h_ctx);
+		if(dom2(0, adata, adata_len, h, &h_ctx)){
+			ret = -1;
+			goto err;
+		}
 	}
 	if(key_type == EDDSA25519PH){
-		dom2(1, adata, adata_len, h, &h_ctx);
+		if(dom2(1, adata, adata_len, h, &h_ctx)){
+			ret = -1;
+			goto err;
+		}
 	}
 #endif
 #if defined(WITH_SIG_EDDSA448)
 	if(key_type == EDDSA448){
-		dom4(0, adata, adata_len, h, &h_ctx);
+		if(dom4(0, adata, adata_len, h, &h_ctx)){
+			ret = -1;
+			goto err;
+		}
 	}
 	if(key_type == EDDSA448PH){
-		dom4(1, adata, adata_len, h, &h_ctx);
+		if(dom4(1, adata, adata_len, h, &h_ctx)){
+			ret = -1;
+			goto err;
+		}
 	}
 #endif
 	/* Update the hash with the encoded R point */
@@ -2242,11 +2276,6 @@ int _eddsa_verify_init(struct ec_verify_context *ctx, const u8 *sig, u8 siglen)
 	}
 	ctx->h->hfunc_init(&(ctx->verify_data.eddsa.h_ctx));
 	ctx->h->hfunc_init(&(ctx->verify_data.eddsa.h_ctx_ph));
-	/* Sanity check on ancillary data len, its size must not exceed 255 bytes as per RFC8032 */
-	if(ctx->adata_len > 255){
-		ret = -1;
-		goto err;
-	}
 #if defined(WITH_SIG_EDDSA25519)
 	if(key_type == EDDSA25519CTX){
 		/* As per RFC8032, for EDDSA25519CTX the context SHOULD NOT be empty */
@@ -2254,18 +2283,30 @@ int _eddsa_verify_init(struct ec_verify_context *ctx, const u8 *sig, u8 siglen)
 			ret = -1;
 			goto err;
 		}
-		dom2(0, ctx->adata, ctx->adata_len, ctx->h, &(ctx->verify_data.eddsa.h_ctx));
+		if(dom2(0, ctx->adata, ctx->adata_len, ctx->h, &(ctx->verify_data.eddsa.h_ctx))){
+			ret = -1;
+			goto err;
+		}
 	}
 	if(key_type == EDDSA25519PH){
-		dom2(1, ctx->adata, ctx->adata_len, ctx->h, &(ctx->verify_data.eddsa.h_ctx));
+		if(dom2(1, ctx->adata, ctx->adata_len, ctx->h, &(ctx->verify_data.eddsa.h_ctx))){
+			ret = -1;
+			goto err;
+		}
 	}
 #endif
 #if defined(WITH_SIG_EDDSA448)
 	if(key_type == EDDSA448){
-		dom4(0, ctx->adata, ctx->adata_len, ctx->h, &(ctx->verify_data.eddsa.h_ctx));
+		if(dom4(0, ctx->adata, ctx->adata_len, ctx->h, &(ctx->verify_data.eddsa.h_ctx))){
+			ret = -1;
+			goto err;
+		}
 	}
 	if(key_type == EDDSA448PH){
-		dom4(1, ctx->adata, ctx->adata_len, ctx->h, &(ctx->verify_data.eddsa.h_ctx));
+		if(dom4(1, ctx->adata, ctx->adata_len, ctx->h, &(ctx->verify_data.eddsa.h_ctx))){
+			ret = -1;
+			goto err;
+		}
 	}
 #endif
 	/* Import R and S values from signature buffer */
