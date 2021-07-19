@@ -32,6 +32,19 @@
 #if defined(WITH_SIG_DECDSA)
 #include "../hash/hmac.h"
 
+/*
+ * Deterministic nonce generation function for deterministic ECDSA, as described in
+ * RFC6979.
+ * NOTE: Deterministic nonce generation for ECDSA is useful against attackers
+ * in contexts where only poor RNG/entropy are available, or when nonce bits leaking can
+ * be possible through side-channel attacks.
+ * However, in contexts where fault attacks are easy to mount, deterministic ECDSA can
+ * bring more security risks than regular ECDSA.
+ *
+ * Depending on the context where you use the library, choose carefully if you want to use
+ * the deterministic version or not.
+ *
+ */
 static int __ecdsa_rfc6979_nonce(nn_t k, nn_src_t q, bitcnt_t q_bit_len, nn_src_t x, const u8 *hash, u8 hsize, hash_alg_type hash_type)
 {
 	int ret = -1;
