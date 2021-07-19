@@ -328,7 +328,7 @@ err:
 }
 
 /* Extract the digest from the encoded private key */
-static int eddsa_get_digest_from_priv_key(u8 *digest, u16 *digest_size, const ec_priv_key *in_priv)
+static int eddsa_get_digest_from_priv_key(u8 *digest, u8 *digest_size, const ec_priv_key *in_priv)
 {
 	int ret = -1;
 	hash_alg_type hash_type;
@@ -907,7 +907,7 @@ err:
 int eddsa_init_pub_key(ec_pub_key *out_pub, const ec_priv_key *in_priv)
 {
 	prj_pt_src_t G;
-	u16 digest_size;
+	u8 digest_size;
 	u8 digest[MAX_DIGEST_SIZE];
 	/* Secret scalar used for public generation */
 	nn s;
@@ -1175,7 +1175,7 @@ err:
 }
 
 /* Compute PH(M) with PH being the hash depending on the key type */
-static int eddsa_compute_pre_hash(const u8 *message, u32 message_size, u8 *digest, u16 *digest_size, ec_sig_alg_type sig_type)
+static int eddsa_compute_pre_hash(const u8 *message, u32 message_size, u8 *digest, u8 *digest_size, ec_sig_alg_type sig_type)
 {
 	hash_alg_type hash_type;
 	const hash_mapping *hash;
@@ -1392,8 +1392,7 @@ int _eddsa_sign_finalize_pre_hash(struct ec_sign_context *ctx, u8 *sig, u8 sigle
 	ec_edwards_crv crv_edwards;
 	aff_pt_edwards Tmp_edwards;
 	nn_src_t q;
-	u16 hsize;
-	u16 hash_size;
+	u8 hsize, hash_size;
 	int ret;
 	ec_shortw_crv_src_t shortw_curve;
 	fp_src_t alpha_montgomery;
@@ -1403,6 +1402,7 @@ int _eddsa_sign_finalize_pre_hash(struct ec_sign_context *ctx, u8 *sig, u8 sigle
 	u8 use_message_pre_hash = 0;
 	u16 use_message_pre_hash_hsize = 0;
 	ec_sig_alg_type key_type;
+	u8 r_len, s_len;
 
 	ret = -1;
 	/*
@@ -1438,6 +1438,8 @@ int _eddsa_sign_finalize_pre_hash(struct ec_sign_context *ctx, u8 *sig, u8 sigle
 	G = &(priv_key->params->ec_gen);
 	const hash_mapping *h = ctx->h;
 	hsize = h->digest_size;
+	r_len = EDDSA_R_LEN(hsize);
+	s_len = EDDSA_S_LEN(hsize);
 
 	shortw_curve = &(priv_key->params->ec_curve);
 	alpha_montgomery = &(priv_key->params->ec_alpha_montgomery);
@@ -1452,7 +1454,7 @@ int _eddsa_sign_finalize_pre_hash(struct ec_sign_context *ctx, u8 *sig, u8 sigle
 	dbg_pub_key_print("Y", &(ctx->key_pair->pub_key));
 
 	/* Check provided signature length */
-	if(siglen != EDDSA_SIGLEN(hsize)){
+	if((siglen != EDDSA_SIGLEN(hsize)) || (siglen != (r_len + s_len))){
 		ret = -1;
 		goto err;
 	}
@@ -1578,11 +1580,11 @@ int _eddsa_sign_finalize_pre_hash(struct ec_sign_context *ctx, u8 *sig, u8 sigle
 	curve_shortw_to_edwards(shortw_curve, &crv_edwards, alpha_montgomery, gamma_montgomery, alpha_edwards);
 	prj_pt_shortw_to_aff_pt_edwards(&R, &crv_edwards, &Tmp_edwards, alpha_edwards);
 	dbg_ec_edwards_point_print("R", &Tmp_edwards);
-	if(EDDSA_R_LEN(hsize) > siglen){
+	if(r_len > siglen){
 		ret = -1;
 		goto err;
 	}
-	if(eddsa_encode_point(&Tmp_edwards, alpha_edwards, &sig[0], EDDSA_R_LEN(hsize), key_type)){
+	if(eddsa_encode_point(&Tmp_edwards, alpha_edwards, &sig[0], r_len, key_type)){
 		ret = -1;
 		goto err;
 	}
@@ -1604,22 +1606,22 @@ int _eddsa_sign_finalize_pre_hash(struct ec_sign_context *ctx, u8 *sig, u8 sigle
 	}
 #endif
 	/* Update the hash with the encoded R point */
-	h->hfunc_update(&(ctx->sign_data.eddsa.h_ctx), &sig[0], EDDSA_R_LEN(hsize));
+	h->hfunc_update(&(ctx->sign_data.eddsa.h_ctx), &sig[0], r_len);
 	/* Encode the public key */
 	/* Transfer the public key to Edwards */
 	prj_pt_shortw_to_aff_pt_edwards(pub_key_y, &crv_edwards, &Tmp_edwards, alpha_edwards);
 	dbg_ec_edwards_point_print("A", &Tmp_edwards);
-	if(EDDSA_R_LEN(hsize) > sizeof(hash)){
+	if(r_len > sizeof(hash)){
 		ret = -1;
 		goto err;
 	}
 	/* NOTE: we use the hash buffer as a temporary buffer */
-	if(eddsa_encode_point(&Tmp_edwards, alpha_edwards, hash, EDDSA_R_LEN(hsize), key_type)){
+	if(eddsa_encode_point(&Tmp_edwards, alpha_edwards, hash, r_len, key_type)){
 		ret = -1;
 		goto err;
 	}
 	/* Update the hash with the encoded public key point */
-	h->hfunc_update(&(ctx->sign_data.eddsa.h_ctx), hash, EDDSA_R_LEN(hsize));
+	h->hfunc_update(&(ctx->sign_data.eddsa.h_ctx), hash, r_len);
 	/* Update the hash with PH(m) */
 	h->hfunc_update(&(ctx->sign_data.eddsa.h_ctx), ph_hash, use_message_pre_hash_hsize);
 	/* Finalize the hash */
@@ -1668,11 +1670,11 @@ int _eddsa_sign_finalize_pre_hash(struct ec_sign_context *ctx, u8 *sig, u8 sigle
 	nn_mul_mod(&S, &S, &binv, q);
 #endif
 	/* Store our S in the context as an encoded buffer */
-	if(EDDSA_S_LEN(hsize) > (siglen - EDDSA_R_LEN(hsize))){
+	if(s_len > (siglen - r_len)){
 		ret = -1;
 		goto err;
 	}
-	if(eddsa_encode_integer(&S, &sig[EDDSA_R_LEN(hsize)], EDDSA_S_LEN(hsize))){
+	if(eddsa_encode_integer(&S, &sig[r_len], s_len)){
 		ret = -1;
 		goto err;
 	}
@@ -1694,6 +1696,8 @@ int _eddsa_sign_finalize_pre_hash(struct ec_sign_context *ctx, u8 *sig, u8 sigle
 	VAR_ZEROIFY(key_type);
 	VAR_ZEROIFY(use_message_pre_hash);
 	VAR_ZEROIFY(use_message_pre_hash_hsize);
+	VAR_ZEROIFY(r_len);
+	VAR_ZEROIFY(s_len);
 
 	if(prj_pt_is_initialized(&R)){
 		prj_pt_uninit(&R);
@@ -1763,8 +1767,9 @@ int _eddsa_sign(u8 *sig, u8 siglen, const ec_key_pair *key_pair,
 	const ec_priv_key *priv_key;
 	const ec_pub_key *pub_key;
 	nn_src_t q;
-	u16 hsize, hash_size;
+	u8 hsize, hash_size;
 	hash_context h_ctx;
+	u8 r_len, s_len;
 
 	/* Quirk to avoid unused parameter error.
 	 * NOTE: EdDSA does not use any notion of random Nonce, so no need
@@ -1822,6 +1827,8 @@ int _eddsa_sign(u8 *sig, u8 siglen, const ec_key_pair *key_pair,
 	q = &(priv_key->params->ec_gen_order);
 	G = &(priv_key->params->ec_gen);
 	hsize = h->digest_size;
+	r_len = EDDSA_R_LEN(hsize);
+	s_len = EDDSA_S_LEN(hsize);
 
 	shortw_curve = &(priv_key->params->ec_curve);
 	alpha_montgomery = &(priv_key->params->ec_alpha_montgomery);
@@ -1836,7 +1843,7 @@ int _eddsa_sign(u8 *sig, u8 siglen, const ec_key_pair *key_pair,
 	dbg_pub_key_print("Y", &(pub_key));
 
 	/* Check provided signature length */
-	if(siglen != EDDSA_SIGLEN(hsize)){
+	if((siglen != EDDSA_SIGLEN(hsize)) || (siglen != (r_len + s_len))){
 		ret = -1;
 		goto err;
 	}
@@ -1982,11 +1989,11 @@ int _eddsa_sign(u8 *sig, u8 siglen, const ec_key_pair *key_pair,
 	curve_shortw_to_edwards(shortw_curve, &crv_edwards, alpha_montgomery, gamma_montgomery, alpha_edwards);
 	prj_pt_shortw_to_aff_pt_edwards(&R, &crv_edwards, &Tmp_edwards, alpha_edwards);
 	dbg_ec_edwards_point_print("R", &Tmp_edwards);
-	if(EDDSA_R_LEN(hsize) > siglen){
+	if(r_len > siglen){
 		ret = -1;
 		goto err;
 	}
-	if(eddsa_encode_point(&Tmp_edwards, alpha_edwards, &sig[0], EDDSA_R_LEN(hsize), key_type)){
+	if(eddsa_encode_point(&Tmp_edwards, alpha_edwards, &sig[0], r_len, key_type)){
 		ret = -1;
 		goto err;
 	}
@@ -2024,22 +2031,22 @@ int _eddsa_sign(u8 *sig, u8 siglen, const ec_key_pair *key_pair,
 	}
 #endif
 	/* Update the hash with the encoded R point */
-	h->hfunc_update(&h_ctx, &sig[0], EDDSA_R_LEN(hsize));
+	h->hfunc_update(&h_ctx, &sig[0], r_len);
 	/* Encode the public key */
 	/* Transfer the public key to Edwards */
 	prj_pt_shortw_to_aff_pt_edwards(pub_key_y, &crv_edwards, &Tmp_edwards, alpha_edwards);
 	dbg_ec_edwards_point_print("A", &Tmp_edwards);
-	if(EDDSA_R_LEN(hsize) > sizeof(hash)){
+	if(r_len > sizeof(hash)){
 		ret = -1;
 		goto err;
 	}
 	/* NOTE: we use the hash buffer as a temporary buffer */
-	if(eddsa_encode_point(&Tmp_edwards, alpha_edwards, hash, EDDSA_R_LEN(hsize), key_type)){
+	if(eddsa_encode_point(&Tmp_edwards, alpha_edwards, hash, r_len, key_type)){
 		ret = -1;
 		goto err;
 	}
 	/* Update the hash with the encoded public key point */
-	h->hfunc_update(&h_ctx, hash, EDDSA_R_LEN(hsize));
+	h->hfunc_update(&h_ctx, hash, r_len);
 	/* Update the hash with the message or its hash for the PH versions */
 	if(use_message_pre_hash){
 		h->hfunc_update(&h_ctx, ph_hash, use_message_pre_hash_hsize);
@@ -2092,11 +2099,11 @@ int _eddsa_sign(u8 *sig, u8 siglen, const ec_key_pair *key_pair,
 	nn_mul_mod(&S, &S, &binv, q);
 #endif
 	/* Store our S in the context as an encoded buffer */
-	if(EDDSA_S_LEN(hsize) > (siglen - EDDSA_R_LEN(hsize))){
+	if(s_len > (siglen - r_len)){
 		ret = -1;
 		goto err;
 	}
-	if(eddsa_encode_integer(&S, &sig[EDDSA_R_LEN(hsize)], EDDSA_S_LEN(hsize))){
+	if(eddsa_encode_integer(&S, &sig[r_len], s_len)){
 		ret = -1;
 		goto err;
 	}
@@ -2118,6 +2125,8 @@ err:
 	VAR_ZEROIFY(key_type);
 	VAR_ZEROIFY(use_message_pre_hash);
 	VAR_ZEROIFY(use_message_pre_hash_hsize);
+	VAR_ZEROIFY(r_len);
+	VAR_ZEROIFY(s_len);
 	local_memset(&h_ctx, 0, sizeof(h_ctx));
 	local_memset(hash, 0, sizeof(hash));
 	local_memset(ph_hash, 0, sizeof(ph_hash));
