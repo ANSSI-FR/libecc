@@ -86,8 +86,10 @@ int _eddsa_verify_finalize(struct ec_verify_context *ctx);
 
 /* Functions specific to EdDSA */
 int eddsa_derive_priv_key(ec_priv_key *priv_key);
+int eddsa_import_priv_key(ec_priv_key *priv_key, const u8 *buf, u16 buflen, const ec_params *shortw_curve_params, ec_sig_alg_type sig_type);
 int eddsa_import_pub_key(ec_pub_key *out_pub, const u8 *buf, u16 buflen, const ec_params *shortw_curve_params, ec_sig_alg_type sig_type);
 int eddsa_export_pub_key(const ec_pub_key *in_pub, u8 *buf, u16 buflen);
+int eddsa_import_key_pair_from_priv_key_buf(ec_key_pair *kp, const u8 *buf, u16 buflen, const ec_params *shortw_curve_params, ec_sig_alg_type sig_type);
 
 #endif /* __EDDSA_H__ */
 #endif /* defined(WITH_SIG_EDDSA25519) || defined(WITH_SIG_EDDSA448) */

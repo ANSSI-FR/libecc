@@ -517,16 +517,8 @@ static int ec_sig_known_vector_tests_one(const ec_test_case *c)
 #if !defined(WITH_SIG_EDDSA25519) && defined(WITH_SIG_EDDSA448)
 	if((c->sig_type == EDDSA448) || (c->sig_type == EDDSA448PH)){
 #endif
-		ec_priv_key_import_from_buf(&(kp.priv_key), &params, c->priv_key,
-					    c->priv_key_len, c->sig_type);
-		/* Private key derivation */
-		if(eddsa_derive_priv_key(&(kp.priv_key))){
-			ret = -1;
-			failed_test = TEST_KEY_IMPORT_ERROR;
-			goto err;
-		}
-		/* Public key computation from private key */
-		if(eddsa_init_pub_key(&(kp.pub_key), &(kp.priv_key))){
+		/* Import the key pair using the EdDSA dedicated function */
+		if(eddsa_import_key_pair_from_priv_key_buf(&kp, c->priv_key, c->priv_key_len, &params, c->sig_type)){
 			ret = -1;
 			failed_test = TEST_KEY_IMPORT_ERROR;
 			goto err;

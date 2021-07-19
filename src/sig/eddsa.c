@@ -128,6 +128,9 @@ static int eddsa_priv_key_sanity_check(const ec_priv_key *in_priv)
 			ret = -1;
 			goto err;
 		}
+		else{
+			ret = 0;
+		}
 	}
 #endif
 #if defined(WITH_SIG_EDDSA448)
@@ -139,6 +142,9 @@ static int eddsa_priv_key_sanity_check(const ec_priv_key *in_priv)
 			ret = -1;
 			goto err;
 		}
+		else{
+			ret = 0;
+		}
 	}
 #endif
 #if !defined(WITH_SIG_EDDSA25519) && !defined(WITH_SIG_EDDSA448)
@@ -146,7 +152,6 @@ static int eddsa_priv_key_sanity_check(const ec_priv_key *in_priv)
 	goto err;
 #endif
 
-	ret = 0;
 err:
 	return ret;
 }
@@ -165,6 +170,9 @@ static int eddsa_pub_key_sanity_check(const ec_pub_key *in_pub)
 			ret = -1;
 			goto err;
 		}
+		else{
+			ret = 0;
+		}
 	}
 #endif
 #if defined(WITH_SIG_EDDSA448)
@@ -176,6 +184,9 @@ static int eddsa_pub_key_sanity_check(const ec_pub_key *in_pub)
 			ret = -1;
 			goto err;
 		}
+		else{
+			ret = 0;
+		}
 	}
 #endif
 #if !defined(WITH_SIG_EDDSA25519) && !defined(WITH_SIG_EDDSA448)
@@ -183,7 +194,6 @@ static int eddsa_pub_key_sanity_check(const ec_pub_key *in_pub)
 	goto err;
 #endif
 
-	ret = 0;
 err:
 	return ret;
 }
@@ -697,7 +707,7 @@ int eddsa_derive_priv_key(ec_priv_key *priv_key)
 		ret = -1;
 		goto err;
 	}
-	if((2 * priv_key->params->ec_fp.p_bitlen) >= (8 * digest_size)){
+	if((2 * priv_key->params->ec_fp.p_bitlen) >= (8 * (bitcnt_t)digest_size)){
 		ret = -1;
 		goto err;
 	}
@@ -792,7 +802,7 @@ int eddsa_gen_priv_key(ec_priv_key *priv_key)
 		ret = -1;
 		goto err;
 	}
-	if((2 * priv_key->params->ec_fp.p_bitlen) >= (8 * digest_size)){
+	if((2 * priv_key->params->ec_fp.p_bitlen) >= (8 * (bitcnt_t)digest_size)){
 		ret = -1;
 		goto err;
 	}
@@ -822,6 +832,64 @@ err:
 }
 
 
+/* Import an EdDSA private key from a raw buffer.
+ * NOTE: the private key must be a big number associated to the curve that depends
+ * on the flavor of EdDSA (Ed25519 or Ed448), and the result is a derived private key that can
+ * be used by the internal EdDSA functions. The derived key is a hash of the private key: we
+ * mainly perform this derivation early to prevent side-channel attacks and other leaks on the
+ * "root" private key.
+ */
+int eddsa_import_priv_key(ec_priv_key *priv_key, const u8 *buf, u16 buflen, const ec_params *shortw_curve_params, ec_sig_alg_type sig_type)
+{
+	int ret = -1;
+	hash_alg_type hash_type;
+	u8 digest_size;
+
+	/* Some sanity checks */
+	if((priv_key == NULL) || (buf == NULL) || (shortw_curve_params == NULL)){
+		ret = -1;
+		goto err;
+	}
+	/* Import the big number from our buffer */
+	nn_init_from_buf(&(priv_key->x), buf, buflen);
+	/* The bit length of our big number must be <= b, half the digest size */
+	if((hash_type = get_eddsa_hash_type(sig_type)) == UNKNOWN_HASH_ALG){
+		ret = -1;
+		goto err;
+	}
+	digest_size = 0;
+	if(get_hash_sizes(hash_type, &digest_size, NULL)){
+		ret = -1;
+		goto err;
+	}
+	if(nn_bitlen(&(priv_key->x)) > (8 * ((bitcnt_t)digest_size / 2))){
+		ret = -1;
+		goto err;
+	}
+
+	/* Initialize stuff */
+	priv_key->key_type = sig_type;
+	priv_key->params = shortw_curve_params;
+	priv_key->magic = PRIV_KEY_MAGIC;
+
+	/* Now derive the private key.
+	 * NOTE: sanity check on the private key is performed during derivation.
+	 */
+	if(eddsa_derive_priv_key(priv_key)){
+		ret = -1;
+		goto err;
+	}
+
+	ret = 0;
+err:
+	if((priv_key != NULL) && (ret != 0)){
+		local_memset(priv_key, 0, sizeof(ec_priv_key));
+	}
+	VAR_ZEROIFY(hash_type);
+
+	return ret;
+}
+
 /* NOTE: we perform EDDSA public key computation on the short Weierstrass
  * form of the curve thanks to the birational equivalence of curve
  * models (the isomorphism allows to perform the scalar multiplication
@@ -844,7 +912,7 @@ int eddsa_init_pub_key(ec_pub_key *out_pub, const ec_priv_key *in_priv)
 	/* Zero init public key to be generated */
 	local_memset(out_pub, 0, sizeof(ec_pub_key));
 
-	/* Check if private key is initialized. */
+	/* Check if private key is initialized and everything is OK with it */
 	if(eddsa_priv_key_sanity_check(in_priv)){
 		ret = -1;
 		goto err;
@@ -990,9 +1058,18 @@ int eddsa_import_pub_key(ec_pub_key *pub_key, const u8 *buf, u16 buflen, const e
 	pub_key->key_type = sig_type;
 	pub_key->params = shortw_curve_params;
 	pub_key->magic = PUB_KEY_MAGIC;
-	ret = 0;
 
+	/* Now sanity check our public key before validating the import */
+	if(eddsa_pub_key_sanity_check(pub_key)){
+		ret = -1;
+		goto err;
+	}
+
+	ret = 0;
 err:
+	if((pub_key != NULL) && (ret != 0)){
+		local_memset(pub_key, 0, sizeof(ec_pub_key));
+	}
 	PTR_NULLIFY(shortw_curve);
 	PTR_NULLIFY(alpha_montgomery);
 	PTR_NULLIFY(gamma_montgomery);
@@ -1059,6 +1136,32 @@ err:
 		ec_edwards_crv_uninit(&edwards_curve);
 	}
 
+	return ret;
+}
+
+/* Import an EdDSA key pair from a private key buffer */
+int eddsa_import_key_pair_from_priv_key_buf(ec_key_pair *kp, const u8 *buf, u16 buflen, const ec_params *shortw_curve_params, ec_sig_alg_type sig_type)
+{
+	int ret = -1;
+
+	if(kp == NULL){
+		ret = -1;
+		goto err;
+	}
+
+	/* Try to import the private key */
+	if(eddsa_import_priv_key(&(kp->priv_key), buf, buflen, shortw_curve_params, sig_type)){
+		ret = -1;
+		goto err;
+	}
+	/* Now derive the public key */
+	if(eddsa_init_pub_key(&(kp->pub_key), &(kp->priv_key))){
+		ret = -1;
+		goto err;
+	}
+
+	ret = 0;
+err:
 	return ret;
 }
 
