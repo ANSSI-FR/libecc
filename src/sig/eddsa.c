@@ -114,87 +114,62 @@ static inline hash_alg_type get_eddsa_hash_type(ec_sig_alg_type sig_type){
 	return UNKNOWN_HASH_ALG;
 }
 
-static int eddsa_priv_key_sanity_check(const ec_priv_key *in_priv)
+/*
+ * Check given EdDSA key type does match given curve type. Returns 0 on success,
+ * and -1 on error.
+ */
+static int eddsa_key_type_check_curve(ec_sig_alg_type key_type,
+				      ec_curve_type curve_type)
 {
-	int ret = -1;
+	int ret;
 
+	switch (key_type) {
 #if defined(WITH_SIG_EDDSA25519)
-	if((priv_key_is_initialized_and_type(in_priv, EDDSA25519))   || \
-	   (priv_key_is_initialized_and_type(in_priv, EDDSA25519PH)) || \
-	   (priv_key_is_initialized_and_type(in_priv, EDDSA25519CTX))
-	  ){
+	case EDDSA25519:
+	case EDDSA25519PH:
+	case EDDSA25519CTX:
 		/* Check curve */
-		if(in_priv->params->curve_type != WEI25519){
-			ret = -1;
-			goto err;
-		}
-		else{
-			ret = 0;
-		}
-	}
+		ret = (curve_type == WEI25519) ? 0 : -1;
+		break;
 #endif
 #if defined(WITH_SIG_EDDSA448)
-	if((priv_key_is_initialized_and_type(in_priv, EDDSA448))  || \
-	   (priv_key_is_initialized_and_type(in_priv, EDDSA448PH))
-	  ){
+	case EDDSA448:
+	case EDDSA448PH:
 		/* Check curve */
-		if(in_priv->params->curve_type != WEI448){
-			ret = -1;
-			goto err;
-		}
-		else{
-			ret = 0;
-		}
+		ret = (curve_type == WEI448) ? 0 : -1;
+		break;
+#endif
+	default:
+		ret = -1;
+		break;
 	}
-#endif
-#if !defined(WITH_SIG_EDDSA25519) && !defined(WITH_SIG_EDDSA448)
-	ret = -1;
-	goto err;
-#endif
 
-err:
+	return ret;
+}
+
+static int eddsa_priv_key_sanity_check(const ec_priv_key *in_priv)
+{
+	int ret = 0;
+
+	if ((!priv_key_is_initialized(in_priv)) ||
+	    eddsa_key_type_check_curve(in_priv->key_type,
+				       in_priv->params->curve_type)) {
+		ret = -1;
+	}
+
 	return ret;
 }
 
 static int eddsa_pub_key_sanity_check(const ec_pub_key *in_pub)
 {
-	int ret = -1;
+	int ret = 0;
 
-#if defined(WITH_SIG_EDDSA25519)
-	if((pub_key_is_initialized_and_type(in_pub, EDDSA25519))   || \
-	   (pub_key_is_initialized_and_type(in_pub, EDDSA25519PH)) || \
-	   (pub_key_is_initialized_and_type(in_pub, EDDSA25519CTX))
-	  ){
-		/* Check curve */
-		if(in_pub->params->curve_type != WEI25519){
-			ret = -1;
-			goto err;
-		}
-		else{
-			ret = 0;
-		}
+	if ((!pub_key_is_initialized(in_pub)) ||
+	    eddsa_key_type_check_curve(in_pub->key_type,
+				       in_pub->params->curve_type)) {
+		ret = -1;
 	}
-#endif
-#if defined(WITH_SIG_EDDSA448)
-	if((pub_key_is_initialized_and_type(in_pub, EDDSA448))  || \
-	   (pub_key_is_initialized_and_type(in_pub, EDDSA448PH))
-	  ){
-		/* Check curve */
-		if(in_pub->params->curve_type != WEI448){
-			ret = -1;
-			goto err;
-		}
-		else{
-			ret = 0;
-		}
-	}
-#endif
-#if !defined(WITH_SIG_EDDSA25519) && !defined(WITH_SIG_EDDSA448)
-	ret = -1;
-	goto err;
-#endif
 
-err:
 	return ret;
 }
 
