@@ -1575,7 +1575,6 @@ int _eddsa_sign_finalize_pre_hash(struct ec_sign_context *ctx, u8 *sig, u8 sigle
 
 	/* Now compute S = (r + H(R || PubKey || PH(m)) * secret) mod q */
 	h->hfunc_init(&(ctx->sign_data.eddsa.h_ctx));
-	/* Encode R and update */
 	/* Transfer R to Edwards */
 	curve_shortw_to_edwards(shortw_curve, &crv_edwards, alpha_montgomery, gamma_montgomery, alpha_edwards);
 	prj_pt_shortw_to_aff_pt_edwards(&R, &crv_edwards, &Tmp_edwards, alpha_edwards);
@@ -1584,6 +1583,7 @@ int _eddsa_sign_finalize_pre_hash(struct ec_sign_context *ctx, u8 *sig, u8 sigle
 		ret = -1;
 		goto err;
 	}
+	/* Encode R and update */
 	if(eddsa_encode_point(&Tmp_edwards, alpha_edwards, &sig[0], r_len, key_type)){
 		ret = -1;
 		goto err;
@@ -1771,11 +1771,14 @@ int _eddsa_sign(u8 *sig, u8 siglen, const ec_key_pair *key_pair,
 	hash_context h_ctx;
 	u8 r_len, s_len;
 
-	/* Quirk to avoid unused parameter error.
+	/*
 	 * NOTE: EdDSA does not use any notion of random Nonce, so no need
-	 * to use 'rand' here.
+	 * to use 'rand' here: we strictly check that NULL is provided.
 	 */
-	VAR_USED(rand);
+	if(rand != NULL){
+		ret = -1;
+		goto err;
+	}
 
 	/* Zero init out points and data */
 	local_memset(&R, 0, sizeof(prj_pt));
@@ -1984,7 +1987,6 @@ int _eddsa_sign(u8 *sig, u8 siglen, const ec_key_pair *key_pair,
 		goto err;
 	}
 	h->hfunc_init(&h_ctx);
-	/* Encode R and update */
 	/* Transfer R to Edwards */
 	curve_shortw_to_edwards(shortw_curve, &crv_edwards, alpha_montgomery, gamma_montgomery, alpha_edwards);
 	prj_pt_shortw_to_aff_pt_edwards(&R, &crv_edwards, &Tmp_edwards, alpha_edwards);
@@ -1993,6 +1995,7 @@ int _eddsa_sign(u8 *sig, u8 siglen, const ec_key_pair *key_pair,
 		ret = -1;
 		goto err;
 	}
+	/* Encode R and update */
 	if(eddsa_encode_point(&Tmp_edwards, alpha_edwards, &sig[0], r_len, key_type)){
 		ret = -1;
 		goto err;
@@ -2032,7 +2035,6 @@ int _eddsa_sign(u8 *sig, u8 siglen, const ec_key_pair *key_pair,
 #endif
 	/* Update the hash with the encoded R point */
 	h->hfunc_update(&h_ctx, &sig[0], r_len);
-	/* Encode the public key */
 	/* Transfer the public key to Edwards */
 	prj_pt_shortw_to_aff_pt_edwards(pub_key_y, &crv_edwards, &Tmp_edwards, alpha_edwards);
 	dbg_ec_edwards_point_print("A", &Tmp_edwards);
@@ -2040,6 +2042,7 @@ int _eddsa_sign(u8 *sig, u8 siglen, const ec_key_pair *key_pair,
 		ret = -1;
 		goto err;
 	}
+	/* Encode the public key */
 	/* NOTE: we use the hash buffer as a temporary buffer */
 	if(eddsa_encode_point(&Tmp_edwards, alpha_edwards, hash, r_len, key_type)){
 		ret = -1;
@@ -2069,7 +2072,6 @@ int _eddsa_sign(u8 *sig, u8 siglen, const ec_key_pair *key_pair,
 		ret = -1;
 		goto err;
 	}
-	/* Encode the scalar s from the digest */
 	if(eddsa_compute_s(&s, hash, hsize)){
 		goto err;
 	}
@@ -2103,6 +2105,7 @@ int _eddsa_sign(u8 *sig, u8 siglen, const ec_key_pair *key_pair,
 		ret = -1;
 		goto err;
 	}
+	/* Encode the scalar s from the digest */
 	if(eddsa_encode_integer(&S, &sig[r_len], s_len)){
 		ret = -1;
 		goto err;

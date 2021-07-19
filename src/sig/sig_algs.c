@@ -661,7 +661,7 @@ int ec_verify(const u8 *sig, u8 siglen, const ec_pub_key *pub_key,
 	int ret = -1;
 
 	sm = get_sig_by_type(sig_type);
-	if((sm == NULL) || (sm->sign == NULL)){
+	if((sm == NULL) || (sm->verify == NULL)){
 		ret = -1;
 		goto err;
 	}
@@ -851,8 +851,8 @@ int is_sign_streaming_mode_supported(ec_sig_alg_type sig_type)
 		ret = 0;
 		goto err;
 	}
-	if((sig->sign_init == unsupported_sign_init) ||\
-	   (sig->sign_update == unsupported_sign_update) ||\
+	if((sig->sign_init == unsupported_sign_init) ||
+	   (sig->sign_update == unsupported_sign_update) ||
 	   (sig->sign_finalize == unsupported_sign_finalize))
 	{
 		ret = 0;
@@ -876,8 +876,8 @@ int is_verify_streaming_mode_supported(ec_sig_alg_type sig_type)
 		ret = 0;
 		goto err;
 	}
-	if((sig->verify_init == unsupported_verify_init) ||\
-	   (sig->verify_update == unsupported_verify_update) ||\
+	if((sig->verify_init == unsupported_verify_init) ||
+	   (sig->verify_update == unsupported_verify_update) ||
 	   (sig->verify_finalize == unsupported_verify_finalize))
 	{
 		ret = 0;
