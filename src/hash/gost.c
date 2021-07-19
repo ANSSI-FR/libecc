@@ -82,7 +82,7 @@ static void gost_update(gost_context *ctx, const u8 *input, u32 ilen)
 static void gost_final(gost_context *ctx, u8 *output)
 {
         unsigned int block_present = 0;
-        u8 last_padded_block[2 * GOST_BLOCK_SIZE];
+        u8 last_padded_block[GOST_BLOCK_SIZE];
 	u64 Z[GOST_BLOCK_U64_SIZE];
 	unsigned int j;
 	u8 digest_size;
@@ -110,15 +110,8 @@ static void gost_final(gost_context *ctx, u8 *output)
         /* Put the 0x01 byte, beginning of padding  */
         last_padded_block[block_present] = 0x01;
 
-        /* Handle possible additional block */
-        if (block_present > (GOST_BLOCK_SIZE - 1)) {
-                /* We need an additional block */
-                gost_process(ctx, last_padded_block, (8 * GOST_BLOCK_SIZE));
-                gost_process(ctx, last_padded_block + GOST_BLOCK_SIZE, (8 * (ctx->gost_total % GOST_BLOCK_SIZE)));
-        } else {
-                /* We do not need an additional block */
-                gost_process(ctx, last_padded_block, (8 * (ctx->gost_total % GOST_BLOCK_SIZE)));
-        }
+	gost_process(ctx, last_padded_block, (8 * (ctx->gost_total % GOST_BLOCK_SIZE)));
+
 	gN(ctx->h, ctx->N, Z);
 	gN(ctx->h, ctx->Sigma, Z);
 
