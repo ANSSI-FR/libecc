@@ -98,11 +98,11 @@ typedef enum {
 #ifdef WITH_HASH_SHAKE256
 	SHAKE256 = 12,
 #endif
-#ifdef WITH_HASH_GOST256
-	HASH_GOST256 = 13,
+#ifdef WITH_HASH_STREEBOG256
+	STREEBOG256 = 13,
 #endif
-#ifdef WITH_HASH_GOST512
-	HASH_GOST512 = 14,
+#ifdef WITH_HASH_STREEBOG512
+	STREEBOG512 = 14,
 #endif
 } hash_alg_type;
 

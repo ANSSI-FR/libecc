@@ -1,14 +1,14 @@
-#ifndef __GOST_H__
-#define __GOST_H__
+#ifndef __STREEBOG_H__
+#define __STREEBOG_H__
 
 #include "../words/words.h"
 
-#if defined(WITH_HASH_GOST256) || defined(WITH_HASH_GOST512)
+#if defined(WITH_HASH_STREEBOG256) || defined(WITH_HASH_STREEBOG512)
 
 typedef enum {
-        GOST_LITTLE = 0,
-        GOST_BIG = 1,
-} gost_endianness;
+        STREEBOG_LITTLE = 0,
+        STREEBOG_BIG = 1,
+} streebog_endianness;
 
 /*
  * 64-bit integer manipulation macros (big endian and little endian)
@@ -42,9 +42,9 @@ do {                                    \
 #endif /* PUT_UINT64_LE */
 
 /* Detect endianness and perform the proper macro */
-#define GOST_PUT_UINT64(n,b,i,endian)   \
+#define STREEBOG_PUT_UINT64(n,b,i,endian)   \
 do {                                    \
-    if(endian == GOST_LITTLE){          \
+    if(endian == STREEBOG_LITTLE){          \
         PUT_UINT64_BE(n,b,i);           \
     }                                   \
     else{                               \
@@ -53,33 +53,33 @@ do {                                    \
 } while ( 0 )
 
 /********************/
-#define GOST_BLOCK_U64_SIZE (8)
-#define GOST_BLOCK_SIZE     (8 * GOST_BLOCK_U64_SIZE)
+#define STREEBOG_BLOCK_U64_SIZE (8)
+#define STREEBOG_BLOCK_SIZE     (8 * STREEBOG_BLOCK_U64_SIZE)
 
 /*
- * Generic context for all GOST (alias STREEBOG or STRIBOG) instances.
+ * Generic context for all STREEBOG (alias STREEBOG or STRIBOG) instances.
  * Only difference is digest size value, initialized in init() call and used in finalize().
- * In GOST 34.11-2012 (RFC6986) two digest sizes are difined: 256 and 512 bits.
+ * In STREEBOG 34.11-2012 (RFC6986) two digest sizes are defined: 256 and 512 bits.
  */
-typedef struct gost_context_ {
-        u8 gost_digest_size;
-        u8 gost_block_size;
-        gost_endianness gost_endian;
+typedef struct streebog_context_ {
+        u8 streebog_digest_size;
+        u8 streebog_block_size;
+        streebog_endianness streebog_endian;
         /* Number of bytes processed */
-        u64 gost_total;
-        /* GOST state */
-        u64 h[GOST_BLOCK_U64_SIZE];
-        u64 N[GOST_BLOCK_U64_SIZE];
-        u64 Sigma[GOST_BLOCK_U64_SIZE];
+        u64 streebog_total;
+        /* STREEBOG state */
+        u64 h[STREEBOG_BLOCK_U64_SIZE];
+        u64 N[STREEBOG_BLOCK_U64_SIZE];
+        u64 Sigma[STREEBOG_BLOCK_U64_SIZE];
         /* Internal buffer to handle updates in a block */
-        u8 gost_buffer[GOST_BLOCK_SIZE];
+        u8 streebog_buffer[STREEBOG_BLOCK_SIZE];
         /* Initialization magic value */
         word_t magic;
-} gost_context;
+} streebog_context;
 
 
-/* GOST constants*/
-static const u64 C[12][GOST_BLOCK_U64_SIZE] =
+/* STREEBOG constants*/
+static const u64 C[12][STREEBOG_BLOCK_U64_SIZE] =
 {
      { /* 0 */
 	(u64) 0xdd806559f2a64507,
@@ -205,7 +205,7 @@ static const u64 C[12][GOST_BLOCK_U64_SIZE] =
 
 
 
-static const u64 PI[GOST_BLOCK_U64_SIZE][256] = {
+static const u64 PI[STREEBOG_BLOCK_U64_SIZE][256] = {
 	{ /* 0 */
 		(u64) 0xd01f715b5c7ef8e6, (u64) 0x16fa240980778325,
 		(u64) 0xa8a42e857ee049c8, (u64) 0x6ac1068fa186465b,
@@ -1247,59 +1247,59 @@ static const u64 PI[GOST_BLOCK_U64_SIZE][256] = {
 #define P64(x) (B((x), 0, 0) | B((x), 1, 1) | B((x), 2, 2) | B((x), 3, 3) | B((x), 4, 4) | B((x), 5, 5) | B((x), 6, 6) | B((x), 7, 7))
 #define S64(x) (B((x), 0, 7) | B((x), 1, 6) | B((x), 2, 5) | B((x), 3, 4) | B((x), 4, 3) | B((x), 5, 2) | B((x), 6, 1) | B((x), 7, 0))
 
-static inline u64 gost_permute(const u64 in[GOST_BLOCK_U64_SIZE], u8 i)
+static inline u64 streebog_permute(const u64 in[STREEBOG_BLOCK_U64_SIZE], u8 i)
 {
 	u64 t = 0;
 	unsigned int j;
 
-	for(j = 0; j < GOST_BLOCK_U64_SIZE; j++){
+	for(j = 0; j < STREEBOG_BLOCK_U64_SIZE; j++){
 		t ^= PI[j][(in[j] >> (i * 8)) & 0xff];
 	}
 
 	return t;
 }
 
-static inline void gost_transform(u64 out[GOST_BLOCK_U64_SIZE], const u64 a[GOST_BLOCK_U64_SIZE], const u64 b[GOST_BLOCK_U64_SIZE])
+static inline void streebog_transform(u64 out[STREEBOG_BLOCK_U64_SIZE], const u64 a[STREEBOG_BLOCK_U64_SIZE], const u64 b[STREEBOG_BLOCK_U64_SIZE])
 {
-	u64 tmp[GOST_BLOCK_U64_SIZE];
+	u64 tmp[STREEBOG_BLOCK_U64_SIZE];
 	unsigned int j;
 
-	for(j = 0; j < GOST_BLOCK_U64_SIZE; j++){
+	for(j = 0; j < STREEBOG_BLOCK_U64_SIZE; j++){
 		tmp[j] = a[j] ^ b[j];
 	}
-	for(j = 0; j < GOST_BLOCK_U64_SIZE; j++){
-		out[j] = gost_permute(tmp, (u8)j);
+	for(j = 0; j < STREEBOG_BLOCK_U64_SIZE; j++){
+		out[j] = streebog_permute(tmp, (u8)j);
 	}
 
 	return;
 }
 
-static inline void gN(u64 h[GOST_BLOCK_U64_SIZE], const u64 m[GOST_BLOCK_U64_SIZE], const u64 N[GOST_BLOCK_U64_SIZE])
+static inline void gN(u64 h[STREEBOG_BLOCK_U64_SIZE], const u64 m[STREEBOG_BLOCK_U64_SIZE], const u64 N[STREEBOG_BLOCK_U64_SIZE])
 {
-	u64 K[GOST_BLOCK_U64_SIZE];
-	u64 T[GOST_BLOCK_U64_SIZE];
+	u64 K[STREEBOG_BLOCK_U64_SIZE];
+	u64 T[STREEBOG_BLOCK_U64_SIZE];
 	unsigned int j;
 
-	gost_transform(K, h, N);
-	gost_transform(T, K, m);
-	gost_transform(K, K, C[0]);
+	streebog_transform(K, h, N);
+	streebog_transform(T, K, m);
+	streebog_transform(K, K, C[0]);
 
 	for (j = 1; j < 12; j++) {
-		gost_transform(T, K, T);
-		gost_transform(K, K, C[j]);
+		streebog_transform(T, K, T);
+		streebog_transform(K, K, C[j]);
 	}
-	for(j = 0; j < GOST_BLOCK_U64_SIZE; j++){
+	for(j = 0; j < STREEBOG_BLOCK_U64_SIZE; j++){
 		h[j] ^= T[j] ^ K[j] ^ m[j];
 	}
 }
 
-static inline void gost_process(gost_context *ctx, const u8 *in, u64 num)
+static inline void streebog_process(streebog_context *ctx, const u8 *in, u64 num)
 {
-	u64 M[GOST_BLOCK_U64_SIZE];
+	u64 M[STREEBOG_BLOCK_U64_SIZE];
 	u64 l, CF;
 	unsigned int j;
 
-	for(j = 0; j < GOST_BLOCK_U64_SIZE; j++){
+	for(j = 0; j < STREEBOG_BLOCK_U64_SIZE; j++){
 		M[j] = P64(in[8 * j]);
 	}
 	gN(ctx->h, M, ctx->N);
@@ -1308,7 +1308,7 @@ static inline void gost_process(gost_context *ctx, const u8 *in, u64 num)
 	ctx->N[0] += num;
 
 	if((ctx->N[0] < l) || (ctx->N[0] < num)){
-		for(j = 1; j < GOST_BLOCK_U64_SIZE; j++){
+		for(j = 1; j < STREEBOG_BLOCK_U64_SIZE; j++){
 			ctx->N[j]++;
 			if(ctx->N[j] != 0){
 				break;
@@ -1318,7 +1318,7 @@ static inline void gost_process(gost_context *ctx, const u8 *in, u64 num)
 	/* Handle the carry flag */
 	CF = 0;
 	ctx->Sigma[0] += M[0];
-	for(j = 1; j < GOST_BLOCK_U64_SIZE; j++){
+	for(j = 1; j < STREEBOG_BLOCK_U64_SIZE; j++){
 		if(ctx->Sigma[j - 1] != M[j - 1]){
 			CF = (ctx->Sigma[j - 1] < M[j - 1]);
 		}
@@ -1328,6 +1328,6 @@ static inline void gost_process(gost_context *ctx, const u8 *in, u64 num)
 	return;
 }
 
-#endif /* defined(WITH_HASH_GOST256) || defined(WITH_HASH_GOST512) */
+#endif /* defined(WITH_HASH_STREEBOG256) || defined(WITH_HASH_STREEBOG512) */
 
-#endif /* __GOST_H__ */
+#endif /* __STREEBOG_H__ */
