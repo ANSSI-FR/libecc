@@ -1243,7 +1243,7 @@ u8 eddsa_siglen(u16 p_bit_len, u16 q_bit_len, u8 hsize, u8 blocksize)
 int _eddsa_sign_init_pre_hash(struct ec_sign_context *ctx)
 {
 	int ret = -1;
-	u8 use_message_PH = 0;
+	u8 use_message_pre_hash = 0;
 	ec_sig_alg_type key_type;
 
 	/* First, verify context has been initialized */
@@ -1257,15 +1257,15 @@ int _eddsa_sign_init_pre_hash(struct ec_sign_context *ctx)
 	/* Sanity check: this function is only supported in PH mode */
 #if defined(WITH_SIG_EDDSA25519)
 	if(key_type == EDDSA25519PH){
-		use_message_PH = 1;
+		use_message_pre_hash = 1;
 	}
 #endif
 #if defined(WITH_SIG_EDDSA448)
 	if(key_type == EDDSA448PH){
-		use_message_PH = 1;
+		use_message_pre_hash = 1;
 	}
 #endif
-	if(use_message_PH != 1){
+	if(use_message_pre_hash != 1){
 		ret = -1;
 		goto err;
 	}
@@ -1315,7 +1315,7 @@ err:
 	PTR_NULLIFY(key_pair);
 	PTR_NULLIFY(h);
 	VAR_ZEROIFY(key_type);
-	VAR_ZEROIFY(use_message_PH);
+	VAR_ZEROIFY(use_message_pre_hash);
 
 	return ret;
 }
@@ -1325,7 +1325,7 @@ int _eddsa_sign_update_pre_hash(struct ec_sign_context *ctx,
 {
 	int ret = -1;
 	ec_sig_alg_type key_type;
-	u8 use_message_PH = 0;
+	u8 use_message_pre_hash = 0;
 
 	/*
 	 * First, verify context has been initialized and public
@@ -1341,15 +1341,15 @@ int _eddsa_sign_update_pre_hash(struct ec_sign_context *ctx,
 	/* Sanity check: this function is only supported in PH mode */
 #if defined(WITH_SIG_EDDSA25519)
 	if(key_type == EDDSA25519PH){
-		use_message_PH = 1;
+		use_message_pre_hash = 1;
 	}
 #endif
 #if defined(WITH_SIG_EDDSA448)
 	if(key_type == EDDSA448PH){
-		use_message_PH = 1;
+		use_message_pre_hash = 1;
 	}
 #endif
-	if(use_message_PH != 1){
+	if(use_message_pre_hash != 1){
 		ret = -1;
 		goto err;
 	}
@@ -1371,7 +1371,7 @@ int _eddsa_sign_update_pre_hash(struct ec_sign_context *ctx,
 	ret = 0;
 err:
 	VAR_ZEROIFY(key_type);
-	VAR_ZEROIFY(use_message_PH);
+	VAR_ZEROIFY(use_message_pre_hash);
 	return ret;
 
 }
@@ -1400,8 +1400,8 @@ int _eddsa_sign_finalize_pre_hash(struct ec_sign_context *ctx, u8 *sig, u8 sigle
 	fp_src_t gamma_montgomery;
 	fp_src_t alpha_edwards;
 	prj_pt_src_t pub_key_y;
-	u8 use_message_PH = 0;
-	u16 use_message_PH_hsize = 0;
+	u8 use_message_pre_hash = 0;
+	u16 use_message_pre_hash_hsize = 0;
 	ec_sig_alg_type key_type;
 
 	ret = -1;
@@ -1459,21 +1459,21 @@ int _eddsa_sign_finalize_pre_hash(struct ec_sign_context *ctx, u8 *sig, u8 sigle
 	/* Is it indeed a PH version of the algorithm? */
 #if defined(WITH_SIG_EDDSA25519)
 	if(key_type == EDDSA25519PH){
-		use_message_PH = 1;
-		use_message_PH_hsize = hsize;
+		use_message_pre_hash = 1;
+		use_message_pre_hash_hsize = hsize;
 	}
 #endif
 #if defined(WITH_SIG_EDDSA448)
 	if(key_type == EDDSA448PH){
-		use_message_PH = 1;
+		use_message_pre_hash = 1;
 		/* NOTE: as per RFC8032, EDDSA448PH uses
 		 * SHAKE256 with 64 bytes output.
 		 */
-		use_message_PH_hsize = 64;
+		use_message_pre_hash_hsize = 64;
 	}
 #endif
 	/* Sanity check: this function is only supported in PH mode */
-	if(use_message_PH != 1){
+	if(use_message_pre_hash != 1){
 		ret = -1;
 		goto err;
 	}
@@ -1520,11 +1520,11 @@ int _eddsa_sign_finalize_pre_hash(struct ec_sign_context *ctx, u8 *sig, u8 sigle
 	h->hfunc_update(&(ctx->sign_data.eddsa.h_ctx), &hash[hsize / 2], hsize / 2);
 
 	/* Update hash h with message hash PH(m) */
-	if(use_message_PH_hsize > hsize){
+	if(use_message_pre_hash_hsize > hsize){
 		ret = -1;
 		goto err;
 	}
-	h->hfunc_update(&(ctx->sign_data.eddsa.h_ctx), ph_hash, use_message_PH_hsize);
+	h->hfunc_update(&(ctx->sign_data.eddsa.h_ctx), ph_hash, use_message_pre_hash_hsize);
 
 	/* 1. Finish computing the nonce r = H(h256 || ... || h511 || PH(m)) */
 	h->hfunc_finalize(&(ctx->sign_data.eddsa.h_ctx), hash);
@@ -1621,7 +1621,7 @@ int _eddsa_sign_finalize_pre_hash(struct ec_sign_context *ctx, u8 *sig, u8 sigle
 	/* Update the hash with the encoded public key point */
 	h->hfunc_update(&(ctx->sign_data.eddsa.h_ctx), hash, EDDSA_R_LEN(hsize));
 	/* Update the hash with PH(m) */
-	h->hfunc_update(&(ctx->sign_data.eddsa.h_ctx), ph_hash, use_message_PH_hsize);
+	h->hfunc_update(&(ctx->sign_data.eddsa.h_ctx), ph_hash, use_message_pre_hash_hsize);
 	/* Finalize the hash */
 	h->hfunc_finalize(&(ctx->sign_data.eddsa.h_ctx), hash);
 	dbg_buf_print("h(R || PubKey || PH(m))", hash, hsize);
@@ -1692,8 +1692,8 @@ int _eddsa_sign_finalize_pre_hash(struct ec_sign_context *ctx, u8 *sig, u8 sigle
 	VAR_ZEROIFY(hsize);
 	VAR_ZEROIFY(hash_size);
 	VAR_ZEROIFY(key_type);
-	VAR_ZEROIFY(use_message_PH);
-	VAR_ZEROIFY(use_message_PH_hsize);
+	VAR_ZEROIFY(use_message_pre_hash);
+	VAR_ZEROIFY(use_message_pre_hash_hsize);
 
 	if(prj_pt_is_initialized(&R)){
 		prj_pt_uninit(&R);
@@ -1752,8 +1752,8 @@ int _eddsa_sign(u8 *sig, u8 siglen, const ec_key_pair *key_pair,
 	fp_src_t gamma_montgomery;
 	fp_src_t alpha_edwards;
 	prj_pt_src_t pub_key_y;
-	u8 use_message_PH = 0;
-	u16 use_message_PH_hsize = 0;
+	u8 use_message_pre_hash = 0;
+	u16 use_message_pre_hash_hsize = 0;
 	prj_pt_src_t G;
 	prj_pt R;
 	aff_pt_edwards Tmp_edwards;
@@ -1843,27 +1843,27 @@ int _eddsa_sign(u8 *sig, u8 siglen, const ec_key_pair *key_pair,
 	/* Do we use the raw message or its PH(M) hashed version? */
 #if defined(WITH_SIG_EDDSA25519)
 	if(key_type == EDDSA25519PH){
-		use_message_PH = 1;
-		use_message_PH_hsize = hsize;
+		use_message_pre_hash = 1;
+		use_message_pre_hash_hsize = hsize;
 	}
 #endif
 #if defined(WITH_SIG_EDDSA448)
 	if(key_type == EDDSA448PH){
-		use_message_PH = 1;
+		use_message_pre_hash = 1;
 		/* NOTE: as per RFC8032, EDDSA448PH uses
 		 * SHAKE256 with 64 bytes output.
 		 */
-		use_message_PH_hsize = 64;
+		use_message_pre_hash_hsize = 64;
 	}
 #endif
 	/* First of all, compute the message hash if necessary */
-	if(use_message_PH){
+	if(use_message_pre_hash){
 		hash_size = sizeof(ph_hash);
 		if(eddsa_compute_pre_hash(m, mlen, ph_hash, &hash_size, sig_type)){
 			ret = -1;
 			goto err;
 		}
-		if(use_message_PH_hsize > hash_size){
+		if(use_message_pre_hash_hsize > hash_size){
 			ret = -1;
 			goto err;
 		}
@@ -1922,8 +1922,8 @@ int _eddsa_sign(u8 *sig, u8 siglen, const ec_key_pair *key_pair,
 	h->hfunc_update(&h_ctx, &hash[hsize / 2], hsize / 2);
 
 	/* Now finish computing the scalar r */
-	if(use_message_PH){
-		h->hfunc_update(&h_ctx, ph_hash, use_message_PH_hsize);
+	if(use_message_pre_hash){
+		h->hfunc_update(&h_ctx, ph_hash, use_message_pre_hash_hsize);
 	}
 	else{
 		h->hfunc_update(&h_ctx, m, mlen);
@@ -2041,8 +2041,8 @@ int _eddsa_sign(u8 *sig, u8 siglen, const ec_key_pair *key_pair,
 	/* Update the hash with the encoded public key point */
 	h->hfunc_update(&h_ctx, hash, EDDSA_R_LEN(hsize));
 	/* Update the hash with the message or its hash for the PH versions */
-	if(use_message_PH){
-		h->hfunc_update(&h_ctx, ph_hash, use_message_PH_hsize);
+	if(use_message_pre_hash){
+		h->hfunc_update(&h_ctx, ph_hash, use_message_pre_hash_hsize);
 	}
 	else{
 		h->hfunc_update(&h_ctx, m, mlen);
@@ -2116,8 +2116,8 @@ err:
 	VAR_ZEROIFY(hsize);
 	VAR_ZEROIFY(hash_size);
 	VAR_ZEROIFY(key_type);
-	VAR_ZEROIFY(use_message_PH);
-	VAR_ZEROIFY(use_message_PH_hsize);
+	VAR_ZEROIFY(use_message_pre_hash);
+	VAR_ZEROIFY(use_message_pre_hash_hsize);
 	local_memset(&h_ctx, 0, sizeof(h_ctx));
 	local_memset(hash, 0, sizeof(hash));
 	local_memset(ph_hash, 0, sizeof(ph_hash));
@@ -2408,7 +2408,7 @@ int _eddsa_verify_update(struct ec_verify_context *ctx,
 {
 	int ret = -1;
 	ec_sig_alg_type key_type;
-	u8 use_message_PH = 0;
+	u8 use_message_pre_hash = 0;
 
 	/*
 	 * First, verify context has been initialized and public
@@ -2430,12 +2430,12 @@ int _eddsa_verify_update(struct ec_verify_context *ctx,
 	/* Do we use the raw message or its PH(M) hashed version? */
 #if defined(WITH_SIG_EDDSA25519)
 	if(key_type == EDDSA25519PH){
-		use_message_PH = 1;
+		use_message_pre_hash = 1;
 	}
 #endif
 #if defined(WITH_SIG_EDDSA448)
 	if(key_type == EDDSA448PH){
-		use_message_PH = 1;
+		use_message_pre_hash = 1;
 	}
 #endif
 	/* 2. Compute h = H(m) */
@@ -2444,7 +2444,7 @@ int _eddsa_verify_update(struct ec_verify_context *ctx,
 		ret = -1;
 		goto err;
 	}
-	if(use_message_PH == 1){
+	if(use_message_pre_hash == 1){
 		/* In PH mode, update the dedicated hash context */
 		ctx->h->hfunc_update(&(ctx->verify_data.eddsa.h_ctx_pre_hash), chunk, chunklen);
 	}
@@ -2456,7 +2456,7 @@ int _eddsa_verify_update(struct ec_verify_context *ctx,
 	ret = 0;
 err:
 	VAR_ZEROIFY(key_type);
-	VAR_ZEROIFY(use_message_PH);
+	VAR_ZEROIFY(use_message_pre_hash);
 	return ret;
 }
 
@@ -2471,8 +2471,8 @@ int _eddsa_verify_finalize(struct ec_verify_context *ctx)
 	nn_src_t gen_cofactor;
 	int ret = -1;
 	ec_sig_alg_type key_type;
-	u8 use_message_PH = 0;
-	u16 use_message_PH_hsize = 0;
+	u8 use_message_pre_hash = 0;
+	u16 use_message_pre_hash_hsize = 0;
 
 	/*
 	 * First, verify context has been initialized and public
@@ -2507,17 +2507,17 @@ int _eddsa_verify_finalize(struct ec_verify_context *ctx)
 	/* Do we use the raw message or its PH(M) hashed version? */
 #if defined(WITH_SIG_EDDSA25519)
 	if(key_type == EDDSA25519PH){
-		use_message_PH = 1;
-		use_message_PH_hsize = hsize;
+		use_message_pre_hash = 1;
+		use_message_pre_hash_hsize = hsize;
 	}
 #endif
 #if defined(WITH_SIG_EDDSA448)
 	if(key_type == EDDSA448PH){
-		use_message_PH = 1;
+		use_message_pre_hash = 1;
 		/* NOTE: as per RFC8032, EDDSA448PH uses
 		 * SHAKE256 with 64 bytes output.
 		 */
-		use_message_PH_hsize = 64;
+		use_message_pre_hash_hsize = 64;
 	}
 #endif
 
@@ -2538,13 +2538,13 @@ int _eddsa_verify_finalize(struct ec_verify_context *ctx)
 		goto err;
 	}
 	/* Update the hash with the message or its hash for the PH versions */
-	if(use_message_PH == 1){
+	if(use_message_pre_hash == 1){
 		ctx->h->hfunc_finalize(&(ctx->verify_data.eddsa.h_ctx_pre_hash), hash);
-		if(use_message_PH_hsize > hsize){
+		if(use_message_pre_hash_hsize > hsize){
 			ret = -1;
 			goto err;
 		}
-		ctx->h->hfunc_update(&(ctx->verify_data.eddsa.h_ctx), hash, use_message_PH_hsize);
+		ctx->h->hfunc_update(&(ctx->verify_data.eddsa.h_ctx), hash, use_message_pre_hash_hsize);
 	}
 	ctx->h->hfunc_finalize(&(ctx->verify_data.eddsa.h_ctx), hash);
 	dbg_buf_print("hash = H(R || A || PH(M))", hash, hsize);
@@ -2607,8 +2607,8 @@ int _eddsa_verify_finalize(struct ec_verify_context *ctx)
 	PTR_NULLIFY(gen_cofactor);
 	VAR_ZEROIFY(hsize);
 	VAR_ZEROIFY(key_type);
-	VAR_ZEROIFY(use_message_PH);
-	VAR_ZEROIFY(use_message_PH_hsize);
+	VAR_ZEROIFY(use_message_pre_hash);
+	VAR_ZEROIFY(use_message_pre_hash_hsize);
 	if(nn_is_initialized(&h)){
 		nn_uninit(&h);
 	}
