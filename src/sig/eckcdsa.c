@@ -2,13 +2,13 @@
  *  Copyright (C) 2017 - This file is part of libecc project
  *
  *  Authors:
- *      Ryad BENADJILA <ryadbenadjila@gmail.com>
- *      Arnaud EBALARD <arnaud.ebalard@ssi.gouv.fr>
- *      Jean-Pierre FLORI <jean-pierre.flori@ssi.gouv.fr>
+ *	Ryad BENADJILA <ryadbenadjila@gmail.com>
+ *	Arnaud EBALARD <arnaud.ebalard@ssi.gouv.fr>
+ *	Jean-Pierre FLORI <jean-pierre.flori@ssi.gouv.fr>
  *
  *  Contributors:
- *      Nicolas VIVET <nicolas.vivet@ssi.gouv.fr>
- *      Karim KHALFALLAH <karim.khalfallah@ssi.gouv.fr>
+ *	Nicolas VIVET <nicolas.vivet@ssi.gouv.fr>
+ *	Karim KHALFALLAH <karim.khalfallah@ssi.gouv.fr>
  *
  *  This software is licensed under a dual BSD and GPL v2 license.
  *  See LICENSE file at the root folder of the project.
@@ -34,18 +34,18 @@ int eckcdsa_init_pub_key(ec_pub_key *out_pub, const ec_priv_key *in_priv)
 
 	MUST_HAVE(out_pub != NULL);
 
-        /* Zero init public key to be generated */
-        local_memset(out_pub, 0, sizeof(ec_pub_key));
+	/* Zero init public key to be generated */
+	local_memset(out_pub, 0, sizeof(ec_pub_key));
 
 	priv_key_check_initialized_and_type(in_priv, ECKCDSA);
 
 	/* Sanity check */
-        if(nn_cmp(&(in_priv->x), &(in_priv->params->ec_gen_order)) >= 0){
-                /* This should not happen and means that our
-                 * private key is not compliant!
-                 */
-                goto err;
-        }
+	if(nn_cmp(&(in_priv->x), &(in_priv->params->ec_gen_order)) >= 0){
+		/* This should not happen and means that our
+		 * private key is not compliant!
+		 */
+		goto err;
+	}
 
 	/* Y = (x^-1)G */
 	G = &(in_priv->params->ec_gen);
@@ -142,19 +142,19 @@ static void buf_lshift(u8 *buf, u8 buflen, u8 shift)
  *
  *| IUF - EC-KCDSA signature
  *|
- *| IUF  1. Compute h = H(z||m)
- *|   F  2. If |H| > bitlen(q), set h to beta' rightmost bits of
- *|         bitstring h (w/ beta' = 8 * ceil(bitlen(q) / 8)), i.e.
- *|         set h to I2BS(beta', BS2I(|H|, h) mod 2^beta')
- *|   F  3. Get a random value k in ]0,q[
- *|   F  4. Compute W = (W_x,W_y) = kG
- *|   F  5. Compute r = H(FE2OS(W_x)).
- *|   F  6. If |H| > bitlen(q), set r to beta' rightmost bits of
- *|         bitstring r (w/ beta' = 8 * ceil(bitlen(q) / 8)), i.e.
- *|         set r to I2BS(beta', BS2I(|H|, r) mod 2^beta')
- *|   F  7. Compute e = OS2I(r XOR h) mod q
- *|   F  8. Compute s = x(k - e) mod q
- *|   F  9. if s == 0, restart at step 3.
+ *| IUF	 1. Compute h = H(z||m)
+ *|   F	 2. If |H| > bitlen(q), set h to beta' rightmost bits of
+ *|	    bitstring h (w/ beta' = 8 * ceil(bitlen(q) / 8)), i.e.
+ *|	    set h to I2BS(beta', BS2I(|H|, h) mod 2^beta')
+ *|   F	 3. Get a random value k in ]0,q[
+ *|   F	 4. Compute W = (W_x,W_y) = kG
+ *|   F	 5. Compute r = H(FE2OS(W_x)).
+ *|   F	 6. If |H| > bitlen(q), set r to beta' rightmost bits of
+ *|	    bitstring r (w/ beta' = 8 * ceil(bitlen(q) / 8)), i.e.
+ *|	    set r to I2BS(beta', BS2I(|H|, r) mod 2^beta')
+ *|   F	 7. Compute e = OS2I(r XOR h) mod q
+ *|   F	 8. Compute s = x(k - e) mod q
+ *|   F	 9. if s == 0, restart at step 3.
  *|   F 10. return (r,s)
  *
  */
@@ -213,17 +213,17 @@ int _eckcdsa_sign_init(struct ec_sign_context *ctx)
 
 	dbg_pub_key_print("Y", pub_key);
 
-        /* Since we call a callback, sanity check our mapping */
-        if(hash_mapping_callbacks_sanity_check(ctx->h)){
+	/* Since we call a callback, sanity check our mapping */
+	if(hash_mapping_callbacks_sanity_check(ctx->h)){
 		ret = -1;
 		goto err;
-        }
+	}
 	ctx->h->hfunc_init(&(ctx->sign_data.eckcdsa.h_ctx));
-        /* Since we call a callback, sanity check our mapping */
-        if(hash_mapping_callbacks_sanity_check(ctx->h)){
+	/* Since we call a callback, sanity check our mapping */
+	if(hash_mapping_callbacks_sanity_check(ctx->h)){
 		ret = -1;
 		goto err;
-        }
+	}
 	ctx->h->hfunc_update(&(ctx->sign_data.eckcdsa.h_ctx), tmp_buf, z_len);
 	local_memset(tmp_buf, 0, sizeof(tmp_buf));
 
@@ -253,10 +253,10 @@ int _eckcdsa_sign_update(struct ec_sign_context *ctx,
 	ECKCDSA_SIGN_CHECK_INITIALIZED(&(ctx->sign_data.eckcdsa));
 
 	/* 1. Compute h = H(z||m) */
-        /* Since we call a callback, sanity check our mapping */
-        if(hash_mapping_callbacks_sanity_check(ctx->h)){
+	/* Since we call a callback, sanity check our mapping */
+	if(hash_mapping_callbacks_sanity_check(ctx->h)){
 		return -1;
-        }
+	}
 	ctx->h->hfunc_update(&(ctx->sign_data.eckcdsa.h_ctx), chunk, chunklen);
 
 	return 0;
@@ -291,8 +291,8 @@ int _eckcdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	SIG_SIGN_CHECK_INITIALIZED(ctx);
 	ECKCDSA_SIGN_CHECK_INITIALIZED(&(ctx->sign_data.eckcdsa));
 
-        /* Zero init points */
-        local_memset(&kG, 0, sizeof(prj_pt));
+	/* Zero init points */
+	local_memset(&kG, 0, sizeof(prj_pt));
 
 	/* Make things more readable */
 	priv_key = &(ctx->key_pair->priv_key);
@@ -305,14 +305,14 @@ int _eckcdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	s_len = (u8)ECKCDSA_S_LEN(q_bit_len);
 	x = &(priv_key->x);
 
-        /* Sanity check */
+	/* Sanity check */
 	if(nn_cmp(x, q) >= 0){
-                /* This should not happen and means that our
-                 * private key is not compliant!
-                 */
-                ret = -1;
-                goto err;
-        }
+		/* This should not happen and means that our
+		 * private key is not compliant!
+		 */
+		ret = -1;
+		goto err;
+	}
 	if (siglen != ECKCDSA_SIGLEN(hsize, q_bit_len)) {
 		ret = -1;
 		goto err;
@@ -324,11 +324,11 @@ int _eckcdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	dbg_ec_point_print("G", G);
 
 	/* 1. Compute h = H(z||m) */
-        /* Since we call a callback, sanity check our mapping */
-        if(hash_mapping_callbacks_sanity_check(ctx->h)){
+	/* Since we call a callback, sanity check our mapping */
+	if(hash_mapping_callbacks_sanity_check(ctx->h)){
 		ret = -1;
-                goto err;
-        }
+		goto err;
+	}
 	ctx->h->hfunc_finalize(&(ctx->sign_data.eckcdsa.h_ctx), hzm);
 	dbg_buf_print("h = H(z||m)  pre-mask", hzm, hsize);
 
@@ -348,20 +348,20 @@ int _eckcdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
  restart:
 	/* 3. Get a random value k in ]0,q[ */
 #ifdef NO_KNOWN_VECTORS
-        /* NOTE: when we do not need self tests for known vectors,
-         * we can be strict about random function handler!
-         * This allows us to avoid the corruption of such a pointer.
-         */
-        /* Sanity check on the handler before calling it */
-        if(ctx->rand != nn_get_random_mod){
-                ret = -1;
-                goto err;
-        }
+	/* NOTE: when we do not need self tests for known vectors,
+	 * we can be strict about random function handler!
+	 * This allows us to avoid the corruption of such a pointer.
+	 */
+	/* Sanity check on the handler before calling it */
+	if(ctx->rand != nn_get_random_mod){
+		ret = -1;
+		goto err;
+	}
 #endif
-        if(ctx->rand == NULL){
-                ret = -1;
-                goto err;
-        }
+	if(ctx->rand == NULL){
+		ret = -1;
+		goto err;
+	}
 	ret = ctx->rand(&k, q);
 	if (ret) {
 		goto err;
@@ -369,13 +369,13 @@ int _eckcdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	dbg_nn_print("k", &k);
 
 #ifdef USE_SIG_BLINDING
-        /* Note: if we use blinding, k and e are multiplied by
-         * a random value b in ]0,q[ */
-        ret = nn_get_random_mod(&b, q);
-        if (ret) {
-                goto err;
-        }
-        dbg_nn_print("b", &b);
+	/* Note: if we use blinding, k and e are multiplied by
+	 * a random value b in ]0,q[ */
+	ret = nn_get_random_mod(&b, q);
+	if (ret) {
+		goto err;
+	}
+	dbg_nn_print("b", &b);
 #endif /* USE_SIG_BLINDING */
 
 	/* 4. Compute W = (W_x,W_y) = kG */
@@ -385,7 +385,7 @@ int _eckcdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 		goto err;
 	}
 #else
-        prj_pt_mul_monty(&kG, &k, G);
+	prj_pt_mul_monty(&kG, &k, G);
 #endif /* USE_SIG_BLINDING */
 	prj_pt_to_aff(&W, &kG);
 	prj_pt_uninit(&kG);
@@ -396,23 +396,23 @@ int _eckcdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	local_memset(tmp_buf, 0, sizeof(tmp_buf));
 	fp_export_to_buf(tmp_buf, p_len, &(W.x));
 	aff_pt_uninit(&W);
-        /* Since we call a callback, sanity check our mapping */
-        if(hash_mapping_callbacks_sanity_check(ctx->h)){
+	/* Since we call a callback, sanity check our mapping */
+	if(hash_mapping_callbacks_sanity_check(ctx->h)){
 		ret = -1;
-                goto err;
-        }
+		goto err;
+	}
 	ctx->h->hfunc_init(&r_ctx);
-        /* Since we call a callback, sanity check our mapping */
-        if(hash_mapping_callbacks_sanity_check(ctx->h)){
+	/* Since we call a callback, sanity check our mapping */
+	if(hash_mapping_callbacks_sanity_check(ctx->h)){
 		ret = -1;
-                goto err;
-        }
+		goto err;
+	}
 	ctx->h->hfunc_update(&r_ctx, tmp_buf, p_len);
-        /* Since we call a callback, sanity check our mapping */
-        if(hash_mapping_callbacks_sanity_check(ctx->h)){
+	/* Since we call a callback, sanity check our mapping */
+	if(hash_mapping_callbacks_sanity_check(ctx->h)){
 		ret = -1;
-                goto err;
-        }
+		goto err;
+	}
 	ctx->h->hfunc_finalize(&r_ctx, r);
 	local_memset(tmp_buf, 0, p_len);
 	local_memset(&r_ctx, 0, sizeof(hash_context));
@@ -501,12 +501,12 @@ int _eckcdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	VAR_ZEROIFY(hsize);
 
 #ifdef USE_SIG_BLINDING
-        if(nn_is_initialized(&b)){
-                nn_uninit(&b);
-        }
-        if(nn_is_initialized(&binv)){
-                nn_uninit(&binv);
-        }
+	if(nn_is_initialized(&b)){
+		nn_uninit(&b);
+	}
+	if(nn_is_initialized(&binv)){
+		nn_uninit(&binv);
+	}
 #endif /* USE_SIG_BLINDING */
 
 	return ret;
@@ -525,21 +525,21 @@ int _eckcdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
  *
  *| IUF - EC-KCDSA verification
  *|
- *| I   1. Check the length of r:
- *|         - if |H| > bitlen(q), r must be of length
- *|           beta' = 8 * ceil(bitlen(q) / 8)
- *|         - if |H| <= bitlen(q), r must be of length hsize
- *| I   2. Check that s is in ]0,q[
+ *| I	1. Check the length of r:
+ *|	    - if |H| > bitlen(q), r must be of length
+ *|	      beta' = 8 * ceil(bitlen(q) / 8)
+ *|	    - if |H| <= bitlen(q), r must be of length hsize
+ *| I	2. Check that s is in ]0,q[
  *| IUF 3. Compute h = H(z||m)
  *|   F 4. If |H| > bitlen(q), set h to beta' rightmost bits of
- *|        bitstring h (w/ beta' = 8 * ceil(bitlen(q) / 8)), i.e.
- *|        set h to I2BS(beta', BS2I(|H|, h) mod 2^beta')
+ *|	   bitstring h (w/ beta' = 8 * ceil(bitlen(q) / 8)), i.e.
+ *|	   set h to I2BS(beta', BS2I(|H|, h) mod 2^beta')
  *|   F 5. Compute e = OS2I(r XOR h) mod q
  *|   F 6. Compute W' = sY + eG, where Y is the public key
  *|   F 7. Compute r' = h(W'x)
  *|   F 8. If |H| > bitlen(q), set r' to beta' rightmost bits of
- *|        bitstring r' (w/ beta' = 8 * ceil(bitlen(q) / 8)), i.e.
- *|        set r' to I2BS(beta', BS2I(|H|, r') mod 2^beta')
+ *|	   bitstring r' (w/ beta' = 8 * ceil(bitlen(q) / 8)), i.e.
+ *|	   set r' to I2BS(beta', BS2I(|H|, r') mod 2^beta')
  *|   F 9. Check if r == r'
  *
  */
@@ -586,7 +586,7 @@ int _eckcdsa_verify_init(struct ec_verify_context *ctx,
 	/*
 	 * 1. Check the length of r:
 	 *     - if |H| > bitlen(q), r must be of length
-	 *       beta' = 8 * ceil(bitlen(q) / 8)
+	 *	 beta' = 8 * ceil(bitlen(q) / 8)
 	 *     - if |H| <= bitlen(q), r must be of length hsize
 	 *
 	 * As we expect the signature as the concatenation of r and s, the check
@@ -629,17 +629,17 @@ int _eckcdsa_verify_init(struct ec_verify_context *ctx,
 
 	dbg_pub_key_print("Y", pub_key);
 
-        /* Since we call a callback, sanity check our mapping */
-        if(hash_mapping_callbacks_sanity_check(ctx->h)){
+	/* Since we call a callback, sanity check our mapping */
+	if(hash_mapping_callbacks_sanity_check(ctx->h)){
 		ret = -1;
-                goto err;
-        }
+		goto err;
+	}
 	ctx->h->hfunc_init(&(ctx->verify_data.eckcdsa.h_ctx));
-        /* Since we call a callback, sanity check our mapping */
-        if(hash_mapping_callbacks_sanity_check(ctx->h)){
+	/* Since we call a callback, sanity check our mapping */
+	if(hash_mapping_callbacks_sanity_check(ctx->h)){
 		ret = -1;
-                goto err;
-        }
+		goto err;
+	}
 	ctx->h->hfunc_update(&(ctx->verify_data.eckcdsa.h_ctx), tmp_buf,
 			     z_len);
 	local_memset(tmp_buf, 0, sizeof(tmp_buf));
@@ -692,10 +692,10 @@ int _eckcdsa_verify_update(struct ec_verify_context *ctx,
 	ECKCDSA_VERIFY_CHECK_INITIALIZED(&(ctx->verify_data.eckcdsa));
 
 	/* 3. Compute h = H(z||m) */
-        /* Since we call a callback, sanity check our mapping */
-        if(hash_mapping_callbacks_sanity_check(ctx->h)){
-		return -1;                
-        }
+	/* Since we call a callback, sanity check our mapping */
+	if(hash_mapping_callbacks_sanity_check(ctx->h)){
+		return -1;
+	}
 	ctx->h->hfunc_update(&(ctx->verify_data.eckcdsa.h_ctx),
 			     chunk, chunklen);
 
@@ -730,9 +730,9 @@ int _eckcdsa_verify_finalize(struct ec_verify_context *ctx)
 	SIG_VERIFY_CHECK_INITIALIZED(ctx);
 	ECKCDSA_VERIFY_CHECK_INITIALIZED(&(ctx->verify_data.eckcdsa));
 
-        /* Zero init points */
-        local_memset(&sY, 0, sizeof(prj_pt));
-        local_memset(&eG, 0, sizeof(prj_pt));
+	/* Zero init points */
+	local_memset(&sY, 0, sizeof(prj_pt));
+	local_memset(&eG, 0, sizeof(prj_pt));
 
 	/* Make things more readable */
 	pub_key = ctx->pub_key;
@@ -748,11 +748,11 @@ int _eckcdsa_verify_finalize(struct ec_verify_context *ctx)
 	s = &(ctx->verify_data.eckcdsa.s);
 
 	/* 3. Compute h = H(z||m) */
-        /* Since we call a callback, sanity check our mapping */
-        if(hash_mapping_callbacks_sanity_check(ctx->h)){
-                ret = -1;
-                goto err;
-        }
+	/* Since we call a callback, sanity check our mapping */
+	if(hash_mapping_callbacks_sanity_check(ctx->h)){
+		ret = -1;
+		goto err;
+	}
 	ctx->h->hfunc_finalize(&(ctx->verify_data.eckcdsa.h_ctx), hzm);
 	dbg_buf_print("h = H(z||m)  pre-mask", hzm, hsize);
 
@@ -795,23 +795,23 @@ int _eckcdsa_verify_finalize(struct ec_verify_context *ctx)
 	/* 7. Compute r' = h(W'x) */
 	local_memset(tmp_buf, 0, sizeof(tmp_buf));
 	fp_export_to_buf(tmp_buf, p_len, &(Wprime_aff.x));
-        /* Since we call a callback, sanity check our mapping */
-        if(hash_mapping_callbacks_sanity_check(ctx->h)){
-                ret = -1;
-                goto err;
-        }
+	/* Since we call a callback, sanity check our mapping */
+	if(hash_mapping_callbacks_sanity_check(ctx->h)){
+		ret = -1;
+		goto err;
+	}
 	ctx->h->hfunc_init(&r_prime_ctx);
-        /* Since we call a callback, sanity check our mapping */
-        if(hash_mapping_callbacks_sanity_check(ctx->h)){
-                ret = -1;
-                goto err;
-        }
+	/* Since we call a callback, sanity check our mapping */
+	if(hash_mapping_callbacks_sanity_check(ctx->h)){
+		ret = -1;
+		goto err;
+	}
 	ctx->h->hfunc_update(&r_prime_ctx, tmp_buf, p_len);
-        /* Since we call a callback, sanity check our mapping */
-        if(hash_mapping_callbacks_sanity_check(ctx->h)){
-                ret = -1;
-                goto err;
-        }
+	/* Since we call a callback, sanity check our mapping */
+	if(hash_mapping_callbacks_sanity_check(ctx->h)){
+		ret = -1;
+		goto err;
+	}
 	ctx->h->hfunc_finalize(&r_prime_ctx, r_prime);
 	local_memset(tmp_buf, 0, p_len);
 	local_memset(&r_prime_ctx, 0, sizeof(hash_context));

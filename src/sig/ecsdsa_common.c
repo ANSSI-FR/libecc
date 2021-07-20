@@ -2,13 +2,13 @@
  *  Copyright (C) 2017 - This file is part of libecc project
  *
  *  Authors:
- *      Ryad BENADJILA <ryadbenadjila@gmail.com>
- *      Arnaud EBALARD <arnaud.ebalard@ssi.gouv.fr>
- *      Jean-Pierre FLORI <jean-pierre.flori@ssi.gouv.fr>
+ *	Ryad BENADJILA <ryadbenadjila@gmail.com>
+ *	Arnaud EBALARD <arnaud.ebalard@ssi.gouv.fr>
+ *	Jean-Pierre FLORI <jean-pierre.flori@ssi.gouv.fr>
  *
  *  Contributors:
- *      Nicolas VIVET <nicolas.vivet@ssi.gouv.fr>
- *      Karim KHALFALLAH <karim.khalfallah@ssi.gouv.fr>
+ *	Nicolas VIVET <nicolas.vivet@ssi.gouv.fr>
+ *	Karim KHALFALLAH <karim.khalfallah@ssi.gouv.fr>
  *
  *  This software is licensed under a dual BSD and GPL v2 license.
  *  See LICENSE file at the root folder of the project.
@@ -35,15 +35,15 @@ int __ecsdsa_init_pub_key(ec_pub_key *out_pub, const ec_priv_key *in_priv,
 
 	MUST_HAVE(out_pub != NULL);
 
-        /* Zero init public key to be generated */
-        local_memset(out_pub, 0, sizeof(ec_pub_key));
+	/* Zero init public key to be generated */
+	local_memset(out_pub, 0, sizeof(ec_pub_key));
 
 	priv_key_check_initialized_and_type(in_priv, key_type);
 
 	/* Y = xG */
 	G = &(in_priv->params->ec_gen);
-        /* Use blinding when computing point scalar multiplication */
-        if(prj_pt_mul_monty_blind(&(out_pub->y), &(in_priv->x), G)){
+	/* Use blinding when computing point scalar multiplication */
+	if(prj_pt_mul_monty_blind(&(out_pub->y), &(in_priv->x), G)){
 		goto err;
 	}
 
@@ -80,11 +80,11 @@ u8 __ecsdsa_siglen(u16 p_bit_len, u16 q_bit_len, u8 hsize, u8 blocksize)
  *
  *| IUF - ECSDSA/ECOSDSA signature
  *|
- *| I   1. Get a random value k in ]0, q[
- *| I   2. Compute W = kG = (Wx, Wy)
+ *| I	1. Get a random value k in ]0, q[
+ *| I	2. Compute W = kG = (Wx, Wy)
  *| IUF 3. Compute r = H(Wx [|| Wy] || m)
- *|        - In the normal version (ECSDSA), r = H(Wx || Wy || m).
- *|        - In the optimized version (ECOSDSA), r = H(Wx || m).
+ *|	   - In the normal version (ECSDSA), r = H(Wx || Wy || m).
+ *|	   - In the optimized version (ECOSDSA), r = H(Wx || m).
  *|   F 4. Compute e = OS2I(r) mod q
  *|   F 5. if e == 0, restart at step 1.
  *|   F 6. Compute s = (k + ex) mod q.
@@ -131,8 +131,8 @@ int __ecsdsa_sign_init(struct ec_sign_context *ctx,
 	/* First, verify context has been initialized */
 	SIG_SIGN_CHECK_INITIALIZED(ctx);
 
-        /* Zero init points */
-        local_memset(&kG, 0, sizeof(prj_pt));
+	/* Zero init points */
+	local_memset(&kG, 0, sizeof(prj_pt));
 
 	/* Additional sanity checks on input params from context */
 	key_pair_check_initialized_and_type(ctx->key_pair, key_type);
@@ -157,20 +157,20 @@ int __ecsdsa_sign_init(struct ec_sign_context *ctx,
 
 	/* 1. Get a random value k in ]0, q[ */
 #ifdef NO_KNOWN_VECTORS
-        /* NOTE: when we do not need self tests for known vectors,
-         * we can be strict about random function handler!
-         * This allows us to avoid the corruption of such a pointer.
-         */
-        /* Sanity check on the handler before calling it */
-        if(ctx->rand != nn_get_random_mod){
-                ret = -1;
-                goto err;
-        }
+	/* NOTE: when we do not need self tests for known vectors,
+	 * we can be strict about random function handler!
+	 * This allows us to avoid the corruption of such a pointer.
+	 */
+	/* Sanity check on the handler before calling it */
+	if(ctx->rand != nn_get_random_mod){
+		ret = -1;
+		goto err;
+	}
 #endif
-        if(ctx->rand == NULL){
-                ret = -1;
-                goto err;
-        }
+	if(ctx->rand == NULL){
+		ret = -1;
+		goto err;
+	}
 	ret = ctx->rand(&k, q);
 	if (ret) {
 		ret = -1;
@@ -180,12 +180,12 @@ int __ecsdsa_sign_init(struct ec_sign_context *ctx,
 
 	/* 2. Compute W = kG = (Wx, Wy). */
 #ifdef USE_SIG_BLINDING
-        if(prj_pt_mul_monty_blind(&kG, &k, G)){
+	if(prj_pt_mul_monty_blind(&kG, &k, G)){
 		ret = -1;
 		goto err;
 	}
 #else
-        prj_pt_mul_monty(&kG, &k, G);
+	prj_pt_mul_monty(&kG, &k, G);
 #endif
 	prj_pt_to_aff(&W_aff, &kG);
 	prj_pt_uninit(&kG);
@@ -198,26 +198,26 @@ int __ecsdsa_sign_init(struct ec_sign_context *ctx,
 	 *    - In the normal version (ECSDSA), r = h(Wx || Wy || m).
 	 *    - In the optimized version (ECOSDSA), r = h(Wx || m).
 	 */
-        /* Since we call a callback, sanity check our mapping */
-        if(hash_mapping_callbacks_sanity_check(ctx->h)){
-                ret = -1;
-                goto err;
-        }
+	/* Since we call a callback, sanity check our mapping */
+	if(hash_mapping_callbacks_sanity_check(ctx->h)){
+		ret = -1;
+		goto err;
+	}
 	ctx->h->hfunc_init(&(ctx->sign_data.ecsdsa.h_ctx));
 	fp_export_to_buf(Wx, p_len, &(W_aff.x));
-        /* Since we call a callback, sanity check our mapping */
-        if(hash_mapping_callbacks_sanity_check(ctx->h)){
-                ret = -1;
-                goto err;
-        }
+	/* Since we call a callback, sanity check our mapping */
+	if(hash_mapping_callbacks_sanity_check(ctx->h)){
+		ret = -1;
+		goto err;
+	}
 	ctx->h->hfunc_update(&(ctx->sign_data.ecsdsa.h_ctx), Wx, p_len);
 	if (!optimized) {
 		fp_export_to_buf(Wy, p_len, &(W_aff.y));
-	        /* Since we call a callback, sanity check our mapping */
-        	if(hash_mapping_callbacks_sanity_check(ctx->h)){
-                	ret = -1;
-	                goto err;
-        	}
+		/* Since we call a callback, sanity check our mapping */
+		if(hash_mapping_callbacks_sanity_check(ctx->h)){
+			ret = -1;
+			goto err;
+		}
 		ctx->h->hfunc_update(&(ctx->sign_data.ecsdsa.h_ctx), Wy,
 				     p_len);
 	}
@@ -255,10 +255,10 @@ int __ecsdsa_sign_update(struct ec_sign_context *ctx,
 	ECSDSA_SIGN_CHECK_INITIALIZED(&(ctx->sign_data.ecsdsa));
 
 	/* 3. Compute r = H(Wx [|| Wy] || m) */
-        /* Since we call a callback, sanity check our mapping */
-        if(hash_mapping_callbacks_sanity_check(ctx->h)){
+	/* Since we call a callback, sanity check our mapping */
+	if(hash_mapping_callbacks_sanity_check(ctx->h)){
 		return -1;
-        }
+	}
 	ctx->h->hfunc_update(&(ctx->sign_data.ecsdsa.h_ctx), chunk, chunklen);
 
 	return 0;
@@ -275,8 +275,8 @@ int __ecsdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	u8 hsize;
 	int ret;
 #ifdef USE_SIG_BLINDING
-        /* b is the blinding mask */
-        nn b, binv;
+	/* b is the blinding mask */
+	nn b, binv;
 #endif /* USE_SIG_BLINDING */
 
 	/*
@@ -302,21 +302,21 @@ int __ecsdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	}
 
 #ifdef USE_SIG_BLINDING
-        ret = nn_get_random_mod(&b, q);
-        if (ret) {
-                ret = -1;
-                goto err;
-        }
-        dbg_nn_print("b", &b);
+	ret = nn_get_random_mod(&b, q);
+	if (ret) {
+		ret = -1;
+		goto err;
+	}
+	dbg_nn_print("b", &b);
 #endif /* USE_SIG_BLINDING */
 
 	/* 3. Compute r = H(Wx [|| Wy] || m) */
 	local_memset(r, 0, hsize);
-        /* Since we call a callback, sanity check our mapping */
-        if(hash_mapping_callbacks_sanity_check(ctx->h)){
-                ret = -1;
-                goto err;
-        }
+	/* Since we call a callback, sanity check our mapping */
+	if(hash_mapping_callbacks_sanity_check(ctx->h)){
+		ret = -1;
+		goto err;
+	}
 	ctx->h->hfunc_finalize(&(ctx->sign_data.ecsdsa.h_ctx), r);
 	dbg_buf_print("r", r, r_len);
 
@@ -337,27 +337,27 @@ int __ecsdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	}
 
 #ifdef USE_SIG_BLINDING
-        /* Blind e with b */
-        nn_mul_mod(&e, &e, &b, q);
+	/* Blind e with b */
+	nn_mul_mod(&e, &e, &b, q);
 #endif /* USE_SIG_BLINDING */
 
 	/* 6. Compute s = (k + ex) mod q. */
 	nn_mul_mod(&ex, x, &e, q);
 	nn_zero(&e);
 #ifdef USE_SIG_BLINDING
-        /* Blind k with b */
-        nn_mul_mod(&s, &(ctx->sign_data.ecsdsa.k), &b, q);
-        nn_mod_add(&s, &s, &ex, q);
+	/* Blind k with b */
+	nn_mul_mod(&s, &(ctx->sign_data.ecsdsa.k), &b, q);
+	nn_mod_add(&s, &s, &ex, q);
 #else
-        nn_mod_add(&s, &(ctx->sign_data.ecsdsa.k), &ex, q);
+	nn_mod_add(&s, &(ctx->sign_data.ecsdsa.k), &ex, q);
 #endif /* USE_SIG_BLINDING */
 	nn_zero(&ex);
 	nn_zero(&tmp);
 
 #ifdef USE_SIG_BLINDING
-        /* Unblind s */
-        nn_modinv(&binv, &b, q);
-        nn_mul_mod(&s, &s, &binv, q);
+	/* Unblind s */
+	nn_modinv(&binv, &b, q);
+	nn_mul_mod(&s, &s, &binv, q);
 #endif /* USE_SIG_BLINDING */
 	dbg_nn_print("s", &s);
 
@@ -397,12 +397,12 @@ int __ecsdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	VAR_ZEROIFY(hsize);
 
 #ifdef USE_SIG_BLINDING
-        if(nn_is_initialized(&b)){
-                nn_uninit(&b);
-        }
-        if(nn_is_initialized(&binv)){
-                nn_uninit(&binv);
-        }
+	if(nn_is_initialized(&b)){
+		nn_uninit(&b);
+	}
+	if(nn_is_initialized(&binv)){
+		nn_uninit(&binv);
+	}
 #endif /* USE_SIG_BLINDING */
 
 	return ret;
@@ -416,13 +416,13 @@ int __ecsdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 /*
  *| IUF - ECSDSA/ECOSDSA verification
  *|
- *| I   1. if s is not in ]0,q[, reject the signature.
- *| I   2. Compute e = -r mod q
- *| I   3. If e == 0, reject the signature.
- *| I   4. Compute W' = sG + eY
+ *| I	1. if s is not in ]0,q[, reject the signature.
+ *| I	2. Compute e = -r mod q
+ *| I	3. If e == 0, reject the signature.
+ *| I	4. Compute W' = sG + eY
  *| IUF 5. Compute r' = H(W'x [|| W'y] || m)
- *|        - In the normal version (ECSDSA), r' = H(W'x || W'y || m).
- *|        - In the optimized version (ECOSDSA), r' = H(W'x || m).
+ *|	   - In the normal version (ECSDSA), r' = H(W'x || W'y || m).
+ *|	   - In the optimized version (ECOSDSA), r' = H(W'x || m).
  *|   F 6. Accept the signature if and only if r and r' are the same
  *
  */
@@ -446,9 +446,9 @@ int __ecsdsa_verify_init(struct ec_verify_context *ctx,
 	/* First, verify context has been initialized */
 	SIG_VERIFY_CHECK_INITIALIZED(ctx);
 
-        /* Zero init points */
-        local_memset(&sG, 0, sizeof(prj_pt));
-        local_memset(&eY, 0, sizeof(prj_pt));
+	/* Zero init points */
+	local_memset(&sG, 0, sizeof(prj_pt));
+	local_memset(&eY, 0, sizeof(prj_pt));
 
 	/* Do some sanity checks on input params */
 	pub_key_check_initialized_and_type(ctx->pub_key, key_type);
@@ -519,26 +519,26 @@ int __ecsdsa_verify_init(struct ec_verify_context *ctx,
 	 *    - In the normal version (ECSDSA), r = h(W'x || W'y || m).
 	 *    - In the optimized version (ECOSDSA), r = h(W'x || m).
 	 */
-        /* Since we call a callback, sanity check our mapping */
-        if(hash_mapping_callbacks_sanity_check(ctx->h)){
-                ret = -1;
-                goto err;
-        }
+	/* Since we call a callback, sanity check our mapping */
+	if(hash_mapping_callbacks_sanity_check(ctx->h)){
+		ret = -1;
+		goto err;
+	}
 	ctx->h->hfunc_init(&(ctx->verify_data.ecsdsa.h_ctx));
 	fp_export_to_buf(Wprimex, p_len, &(Wprime_aff.x));
-        /* Since we call a callback, sanity check our mapping */
-        if(hash_mapping_callbacks_sanity_check(ctx->h)){
-                ret = -1;
-                goto err;
-        }
+	/* Since we call a callback, sanity check our mapping */
+	if(hash_mapping_callbacks_sanity_check(ctx->h)){
+		ret = -1;
+		goto err;
+	}
 	ctx->h->hfunc_update(&(ctx->verify_data.ecsdsa.h_ctx), Wprimex, p_len);
 	if (!optimized) {
 		fp_export_to_buf(Wprimey, p_len, &(Wprime_aff.y));
-        	/* Since we call a callback, sanity check our mapping */
-	        if(hash_mapping_callbacks_sanity_check(ctx->h)){
-                	ret = -1;
-        	        goto err;
-	        }
+		/* Since we call a callback, sanity check our mapping */
+		if(hash_mapping_callbacks_sanity_check(ctx->h)){
+			ret = -1;
+			goto err;
+		}
 		ctx->h->hfunc_update(&(ctx->verify_data.ecsdsa.h_ctx),
 				     Wprimey, p_len);
 	}
@@ -582,10 +582,10 @@ int __ecsdsa_verify_update(struct ec_verify_context *ctx,
 	ECSDSA_VERIFY_CHECK_INITIALIZED(&(ctx->verify_data.ecsdsa));
 
 	/* 5. Compute r' = H(W'x [|| W'y] || m) */
-        /* Since we call a callback, sanity check our mapping */
-        if(hash_mapping_callbacks_sanity_check(ctx->h)){
+	/* Since we call a callback, sanity check our mapping */
+	if(hash_mapping_callbacks_sanity_check(ctx->h)){
 		return -1;
-        }
+	}
 	ctx->h->hfunc_update(&(ctx->verify_data.ecsdsa.h_ctx), chunk,
 			     chunklen);
 
@@ -609,11 +609,11 @@ int __ecsdsa_verify_finalize(struct ec_verify_context *ctx)
 	r_len = ECSDSA_R_LEN(ctx->h->digest_size);
 
 	/* 5. Compute r' = H(W'x [|| W'y] || m) */
-        /* Since we call a callback, sanity check our mapping */
-        if(hash_mapping_callbacks_sanity_check(ctx->h)){
-                ret = -1;
-                goto err;
-        }
+	/* Since we call a callback, sanity check our mapping */
+	if(hash_mapping_callbacks_sanity_check(ctx->h)){
+		ret = -1;
+		goto err;
+	}
 	ctx->h->hfunc_finalize(&(ctx->verify_data.ecsdsa.h_ctx), r_prime);
 
 	/* 6. Accept the signature if and only if r and r' are the same */

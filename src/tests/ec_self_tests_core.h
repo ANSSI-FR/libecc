@@ -3933,37 +3933,37 @@ static const ec_test_case ecrdsa_pygostlib_2_GOST_512bits_curve_test_case = {
 /* First, SM2 test vector on a 256-bit SM2 TEST curve */
 
 static int sm2_nn_random_iso14888_3_SM2_256bits_test_curve_test_vector(nn_t out,
-                                                                      nn_src_t
-                                                                      q)
+								      nn_src_t
+								      q)
 {
-        const u8 k_buf[] = {
-                0x6C, 0xB2, 0x8D, 0x99, 0x38, 0x5C, 0x17, 0x5C,
-                0x94, 0xF9, 0x4E, 0x93, 0x48, 0x17, 0x66, 0x3F,
-                0xC1, 0x76, 0xD9, 0x25, 0xDD, 0x72, 0xB7, 0x27,
-                0x26, 0x0D, 0xBA, 0xAE, 0x1F, 0xB2, 0xF9, 0x6F
-        };
+	const u8 k_buf[] = {
+		0x6C, 0xB2, 0x8D, 0x99, 0x38, 0x5C, 0x17, 0x5C,
+		0x94, 0xF9, 0x4E, 0x93, 0x48, 0x17, 0x66, 0x3F,
+		0xC1, 0x76, 0xD9, 0x25, 0xDD, 0x72, 0xB7, 0x27,
+		0x26, 0x0D, 0xBA, 0xAE, 0x1F, 0xB2, 0xF9, 0x6F
+	};
 
-        nn_init_from_buf(out, k_buf, sizeof(k_buf));
+	nn_init_from_buf(out, k_buf, sizeof(k_buf));
 
-        return (nn_cmp(out, q) >= 0);
+	return (nn_cmp(out, q) >= 0);
 }
 
 static const u8 sm2_nn_random_iso14888_3_SM2_256bits_test_curve_test_vectors_priv_key[] = {
-        0x12, 0x8B, 0x2F, 0xA8, 0xBD, 0x43, 0x3C, 0x6C,
-        0x06, 0x8C, 0x8D, 0x80, 0x3D, 0xFF, 0x79, 0x79,
-        0x2A, 0x51, 0x9A, 0x55, 0x17, 0x1B, 0x1B, 0x65,
-        0x0C, 0x23, 0x66, 0x1D, 0x15, 0x89, 0x72, 0x63
+	0x12, 0x8B, 0x2F, 0xA8, 0xBD, 0x43, 0x3C, 0x6C,
+	0x06, 0x8C, 0x8D, 0x80, 0x3D, 0xFF, 0x79, 0x79,
+	0x2A, 0x51, 0x9A, 0x55, 0x17, 0x1B, 0x1B, 0x65,
+	0x0C, 0x23, 0x66, 0x1D, 0x15, 0x89, 0x72, 0x63
 };
 
 static const u8 sm2_nn_random_iso14888_3_SM2_256bits_test_curve_test_vectors_expected_sig[] = {
-        0x40, 0xF1, 0xEC, 0x59, 0xF7, 0x93, 0xD9, 0xF4,
-        0x9E, 0x09, 0xDC, 0xEF, 0x49, 0x13, 0x0D, 0x41,
-        0x94, 0xF7, 0x9F, 0xB1, 0xEE, 0xD2, 0xCA, 0xA5,
-        0x5B, 0xAC, 0xDB, 0x49, 0xC4, 0xE7, 0x55, 0xD1,
-        0x6F, 0xC6, 0xDA, 0xC3, 0x2C, 0x5D, 0x5C, 0xF1,
-        0x0C, 0x77, 0xDF, 0xB2, 0x0F, 0x7C, 0x2E, 0xB6,
-        0x67, 0xA4, 0x57, 0x87, 0x2F, 0xB0, 0x9E, 0xC5,
-        0x63, 0x27, 0xA6, 0x7E, 0xC7, 0xDE, 0xEB, 0xE7
+	0x40, 0xF1, 0xEC, 0x59, 0xF7, 0x93, 0xD9, 0xF4,
+	0x9E, 0x09, 0xDC, 0xEF, 0x49, 0x13, 0x0D, 0x41,
+	0x94, 0xF7, 0x9F, 0xB1, 0xEE, 0xD2, 0xCA, 0xA5,
+	0x5B, 0xAC, 0xDB, 0x49, 0xC4, 0xE7, 0x55, 0xD1,
+	0x6F, 0xC6, 0xDA, 0xC3, 0x2C, 0x5D, 0x5C, 0xF1,
+	0x0C, 0x77, 0xDF, 0xB2, 0x0F, 0x7C, 0x2E, 0xB6,
+	0x67, 0xA4, 0x57, 0x87, 0x2F, 0xB0, 0x9E, 0xC5,
+	0x63, 0x27, 0xA6, 0x7E, 0xC7, 0xDE, 0xEB, 0xE7
 };
 
 static const char sm2_nn_random_iso14888_3_SM2_256bits_test_curve_test_vectors_msg[] = "message digest";
@@ -3971,17 +3971,17 @@ static const char sm2_nn_random_iso14888_3_SM2_256bits_test_curve_test_vectors_m
 static const char sm2_nn_random_iso14888_3_SM2_256bits_test_curve_test_vectors_adata[] = "ALICE123@YAHOO.COM";
 
 static const ec_test_case sm2_nn_random_iso14888_3_SM2_256bits_test_curve_test_case = {
-        .name = "SM2-SM3/SM2P256TEST",
-        .ec_str_p = &sm2p256test_str_params,
-        .priv_key = sm2_nn_random_iso14888_3_SM2_256bits_test_curve_test_vectors_priv_key,
-        .priv_key_len = sizeof(sm2_nn_random_iso14888_3_SM2_256bits_test_curve_test_vectors_priv_key),
-        .nn_random = sm2_nn_random_iso14888_3_SM2_256bits_test_curve_test_vector,
-        .hash_type = SM3,
-        .msg = sm2_nn_random_iso14888_3_SM2_256bits_test_curve_test_vectors_msg,
-        .msglen = 14,
-        .sig_type = SM2,
-        .exp_sig = sm2_nn_random_iso14888_3_SM2_256bits_test_curve_test_vectors_expected_sig,
-        .exp_siglen = sizeof(sm2_nn_random_iso14888_3_SM2_256bits_test_curve_test_vectors_expected_sig),
+	.name = "SM2-SM3/SM2P256TEST",
+	.ec_str_p = &sm2p256test_str_params,
+	.priv_key = sm2_nn_random_iso14888_3_SM2_256bits_test_curve_test_vectors_priv_key,
+	.priv_key_len = sizeof(sm2_nn_random_iso14888_3_SM2_256bits_test_curve_test_vectors_priv_key),
+	.nn_random = sm2_nn_random_iso14888_3_SM2_256bits_test_curve_test_vector,
+	.hash_type = SM3,
+	.msg = sm2_nn_random_iso14888_3_SM2_256bits_test_curve_test_vectors_msg,
+	.msglen = 14,
+	.sig_type = SM2,
+	.exp_sig = sm2_nn_random_iso14888_3_SM2_256bits_test_curve_test_vectors_expected_sig,
+	.exp_siglen = sizeof(sm2_nn_random_iso14888_3_SM2_256bits_test_curve_test_vectors_expected_sig),
 	.adata = (const u8*)sm2_nn_random_iso14888_3_SM2_256bits_test_curve_test_vectors_adata,
 	.adata_len = 18,
 };
@@ -3994,16 +3994,16 @@ static const ec_test_case sm2_nn_random_iso14888_3_SM2_256bits_test_curve_test_c
 
 static int sm2_nn_random_sm2p256v1_test_vector(nn_t out, nn_src_t q)
 {
-        const u8 k_buf[] = {
+	const u8 k_buf[] = {
 		0x59, 0x27, 0x6E, 0x27, 0xD5, 0x06, 0x86, 0x1A, 0x16,
 		0x68, 0x0F, 0x3A, 0xD9, 0xC0, 0x2D, 0xCC, 0xEF, 0x3C,
 		0xC1, 0xFA, 0x3C, 0xDB, 0xE4, 0xCE, 0x6D, 0x54, 0xB8,
 		0x0D, 0xEA, 0xC1, 0xBC, 0x21,
-        };
+	};
 
-        nn_init_from_buf(out, k_buf, sizeof(k_buf));
+	nn_init_from_buf(out, k_buf, sizeof(k_buf));
 
-        return (nn_cmp(out, q) >= 0);
+	return (nn_cmp(out, q) >= 0);
 }
 
 static const u8 sm2_nn_random_sm2p256v1_test_vectors_priv_key[] = {
@@ -4030,17 +4030,17 @@ static const u8 tmp_msg_sm2_sm2p256v1[] = {
 	0x6D, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65, 0x20, 0x64, 0x69, 0x67, 0x65, 0x73, 0x74,
 };
 static const ec_test_case sm2_nn_random_sm2p256v1_test_case = {
-        .name = "SM2-SM3/SM2P256V1",
-        .ec_str_p = &sm2p256v1_str_params,
-        .priv_key = sm2_nn_random_sm2p256v1_test_vectors_priv_key,
-        .priv_key_len = sizeof(sm2_nn_random_sm2p256v1_test_vectors_priv_key),
-        .nn_random = sm2_nn_random_sm2p256v1_test_vector,
-        .hash_type = SM3,
-        .msg = (const char *)tmp_msg_sm2_sm2p256v1,
-        .msglen = sizeof(tmp_msg_sm2_sm2p256v1),
-        .sig_type = SM2,
-        .exp_sig = sm2_nn_random_sm2p256v1_test_vectors_expected_sig,
-        .exp_siglen = sizeof(sm2_nn_random_sm2p256v1_test_vectors_expected_sig),
+	.name = "SM2-SM3/SM2P256V1",
+	.ec_str_p = &sm2p256v1_str_params,
+	.priv_key = sm2_nn_random_sm2p256v1_test_vectors_priv_key,
+	.priv_key_len = sizeof(sm2_nn_random_sm2p256v1_test_vectors_priv_key),
+	.nn_random = sm2_nn_random_sm2p256v1_test_vector,
+	.hash_type = SM3,
+	.msg = (const char *)tmp_msg_sm2_sm2p256v1,
+	.msglen = sizeof(tmp_msg_sm2_sm2p256v1),
+	.sig_type = SM2,
+	.exp_sig = sm2_nn_random_sm2p256v1_test_vectors_expected_sig,
+	.exp_siglen = sizeof(sm2_nn_random_sm2p256v1_test_vectors_expected_sig),
 	.adata = sm2_nn_random_sm2p256v1_test_vectors_adata,
 	.adata_len = sizeof(sm2_nn_random_sm2p256v1_test_vectors_adata),
 };
@@ -4464,7 +4464,7 @@ static u32 encode_error_value(const ec_test_case *c, test_err_kind failed_test)
 
 	return (((u32)ctype << 24) |
 		((u32)stype << 16) |
-		((u32)htype <<  8) |
+		((u32)htype <<	8) |
 		((u32)etype));
 }
 

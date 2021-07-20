@@ -46,7 +46,7 @@
 
 #define SHA384_HASH_MAGIC ((word_t)(0x9227239b32098412ULL))
 #define SHA384_HASH_CHECK_INITIALIZED(A) \
-        MUST_HAVE((((void *)(A)) != NULL) && ((A)->magic == SHA384_HASH_MAGIC))
+	MUST_HAVE((((void *)(A)) != NULL) && ((A)->magic == SHA384_HASH_MAGIC))
 
 typedef struct {
 	/* Number of bytes processed on 128 bits */
@@ -55,8 +55,8 @@ typedef struct {
 	u64 sha384_state[SHA384_STATE_SIZE];
 	/* Internal buffer to handle updates in a block */
 	u8 sha384_buffer[SHA384_BLOCK_SIZE];
-        /* Initialization magic value */
-        word_t magic;
+	/* Initialization magic value */
+	word_t magic;
 } sha384_context;
 
 void sha384_init(sha384_context *ctx);

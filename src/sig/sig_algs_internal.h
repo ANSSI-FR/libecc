@@ -43,20 +43,20 @@
 /* Sanity check to ensure our sig mapping does not contain
  * NULL pointers
  */
-#define SIG_MAPPING_SANITY_CHECK(A) 			\
-	MUST_HAVE(((A) != NULL) && 			\
-		  ((A)->name != NULL) && 		\
-		  ((A)->siglen != NULL) && 		\
-		  ((A)->gen_priv_key != NULL) && 	\
-		  ((A)->init_pub_key != NULL) && 	\
-		  ((A)->sign_init != NULL) && 		\
-		  ((A)->sign_update != NULL) && 	\
-		  ((A)->sign_finalize != NULL) && 	\
-		  ((A)->sign != NULL) && 		\
-		  ((A)->verify_init != NULL) && 	\
-		  ((A)->verify_update != NULL) && 	\
-		  ((A)->verify_finalize != NULL) && 	\
-		  ((A)->verify != NULL)) 		\
+#define SIG_MAPPING_SANITY_CHECK(A)			\
+	MUST_HAVE(((A) != NULL) &&			\
+		  ((A)->name != NULL) &&		\
+		  ((A)->siglen != NULL) &&		\
+		  ((A)->gen_priv_key != NULL) &&	\
+		  ((A)->init_pub_key != NULL) &&	\
+		  ((A)->sign_init != NULL) &&		\
+		  ((A)->sign_update != NULL) &&		\
+		  ((A)->sign_finalize != NULL) &&	\
+		  ((A)->sign != NULL) &&		\
+		  ((A)->verify_init != NULL) &&		\
+		  ((A)->verify_update != NULL) &&	\
+		  ((A)->verify_finalize != NULL) &&	\
+		  ((A)->verify != NULL))		\
 
 /*
  * All the signature algorithms we support are abstracted using the following
@@ -78,8 +78,9 @@ typedef struct {
 	int (*sign_finalize) (struct ec_sign_context * ctx,
 			      u8 *sig, u8 siglen);
 	int (*sign) (u8 *sig, u8 siglen, const ec_key_pair *key_pair,
-            const u8 *m, u32 mlen, int (*rand) (nn_t out, nn_src_t q), ec_sig_alg_type sig_type,
-            hash_alg_type hash_type, const u8 *adata, u16 adata_len);
+		     const u8 *m, u32 mlen, int (*rand) (nn_t out, nn_src_t q),
+		     ec_sig_alg_type sig_type, hash_alg_type hash_type,
+		     const u8 *adata, u16 adata_len);
 
 	int (*verify_init) (struct ec_verify_context * ctx,
 			    const u8 *sig, u8 siglen);
@@ -87,8 +88,8 @@ typedef struct {
 			      const u8 *chunk, u32 chunklen);
 	int (*verify_finalize) (struct ec_verify_context * ctx);
 	int (*verify) (const u8 *sig, u8 siglen, const ec_pub_key *pub_key,
-              const u8 *m, u32 mlen, ec_sig_alg_type sig_type,
-              hash_alg_type hash_type, const u8 *adata, u16 adata_len);
+	      const u8 *m, u32 mlen, ec_sig_alg_type sig_type,
+	      hash_alg_type hash_type, const u8 *adata, u16 adata_len);
 } ec_sig_mapping;
 
 /*
@@ -124,10 +125,10 @@ typedef union {
 #ifdef WITH_SIG_ECRDSA		/* ECRDSA  */
 	ecrdsa_sign_data ecrdsa;
 #endif
-#ifdef WITH_SIG_SM2             /* SM2  */
-        sm2_sign_data sm2;
+#ifdef WITH_SIG_SM2		/* SM2	*/
+	sm2_sign_data sm2;
 #endif
-#if defined(WITH_SIG_EDDSA25519) || defined(WITH_SIG_EDDSA448) 	/* EDDSA25519, EDDSA448  */
+#if defined(WITH_SIG_EDDSA25519) || defined(WITH_SIG_EDDSA448)	/* EDDSA25519, EDDSA448	 */
 	eddsa_sign_data eddsa;
 #endif
 } sig_sign_data;
@@ -175,10 +176,10 @@ typedef union {
 #ifdef WITH_SIG_ECRDSA		/* ECRDSA */
 	ecrdsa_verify_data ecrdsa;
 #endif
-#ifdef WITH_SIG_SM2             /* SM2 */
-        sm2_verify_data sm2;
+#ifdef WITH_SIG_SM2		/* SM2 */
+	sm2_verify_data sm2;
 #endif
-#if defined(WITH_SIG_EDDSA25519) || defined(WITH_SIG_EDDSA448) 	/* EDDSA25519, EDDSA448  */
+#if defined(WITH_SIG_EDDSA25519) || defined(WITH_SIG_EDDSA448)	/* EDDSA25519, EDDSA448	 */
 	eddsa_verify_data eddsa;
 #endif
 } sig_verify_data;
@@ -211,11 +212,11 @@ struct ec_verify_context {
  *
  */
 int generic_ec_sign(u8 *sig, u8 siglen, const ec_key_pair *key_pair,
-             const u8 *m, u32 mlen, int (*rand) (nn_t out, nn_src_t q),
-             ec_sig_alg_type sig_type, hash_alg_type hash_type, const u8 *adata, u16 adata_len);
+	     const u8 *m, u32 mlen, int (*rand) (nn_t out, nn_src_t q),
+	     ec_sig_alg_type sig_type, hash_alg_type hash_type, const u8 *adata, u16 adata_len);
 int generic_ec_verify(const u8 *sig, u8 siglen, const ec_pub_key *pub_key,
-              const u8 *m, u32 mlen, ec_sig_alg_type sig_type,
-              hash_alg_type hash_type, const u8 *adata, u16 adata_len);
+	      const u8 *m, u32 mlen, ec_sig_alg_type sig_type,
+	      hash_alg_type hash_type, const u8 *adata, u16 adata_len);
 /* Generic init / update / finalize functions returning an error and telling that they are
  * unsupported.
  */
@@ -384,20 +385,20 @@ static const ec_sig_mapping ec_sig_maps[] = {
 #endif /* MAX_SIG_ALG_NAME_LEN */
 #endif /* WITH_SIG_ECRDSA */
 #ifdef WITH_SIG_SM2
-        {.type = SM2,
-         .name = "SM2",
-         .siglen = sm2_siglen,
+	{.type = SM2,
+	 .name = "SM2",
+	 .siglen = sm2_siglen,
 	 .gen_priv_key = sm2_gen_priv_key,
-         .init_pub_key = sm2_init_pub_key,
-         .sign_init = _sm2_sign_init,
-         .sign_update = _sm2_sign_update,
-         .sign_finalize = _sm2_sign_finalize,
+	 .init_pub_key = sm2_init_pub_key,
+	 .sign_init = _sm2_sign_init,
+	 .sign_update = _sm2_sign_update,
+	 .sign_finalize = _sm2_sign_finalize,
 	 .sign = generic_ec_sign,
-         .verify_init = _sm2_verify_init,
-         .verify_update = _sm2_verify_update,
-         .verify_finalize = _sm2_verify_finalize,
+	 .verify_init = _sm2_verify_init,
+	 .verify_update = _sm2_verify_update,
+	 .verify_finalize = _sm2_verify_finalize,
 	 .verify = generic_ec_verify,
-         },
+	 },
 #if (MAX_SIG_ALG_NAME_LEN < 4)
 #undef MAX_SIG_ALG_NAME_LEN
 #define MAX_SIG_ALG_NAME_LEN 4

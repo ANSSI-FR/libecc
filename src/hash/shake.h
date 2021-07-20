@@ -22,15 +22,15 @@ typedef enum {
  * value, initialized in init() call and used in finalize().
  */
 typedef struct shake_context_ {
-        u8 shake_digest_size;
-        u8 shake_block_size;
+	u8 shake_digest_size;
+	u8 shake_block_size;
 	shake_endianness shake_endian;
-        /* Local index, useful for the absorbing phase */
-        u64 shake_idx;
-        /* Keccak's state, viewed as a bi-dimensional array */
-        u64 shake_state[KECCAK_SLICES * KECCAK_SLICES];
-        /* Initialization magic value */
-        word_t magic;
+	/* Local index, useful for the absorbing phase */
+	u64 shake_idx;
+	/* Keccak's state, viewed as a bi-dimensional array */
+	u64 shake_state[KECCAK_SLICES * KECCAK_SLICES];
+	/* Initialization magic value */
+	word_t magic;
 } shake_context;
 
 

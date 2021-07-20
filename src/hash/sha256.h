@@ -46,7 +46,7 @@
 
 #define SHA256_HASH_MAGIC ((word_t)(0x11299a2b32098412ULL))
 #define SHA256_HASH_CHECK_INITIALIZED(A) \
-        MUST_HAVE((((void *)(A)) != NULL) && ((A)->magic == SHA256_HASH_MAGIC))
+	MUST_HAVE((((void *)(A)) != NULL) && ((A)->magic == SHA256_HASH_MAGIC))
 
 typedef struct {
 	/* Number of bytes processed */

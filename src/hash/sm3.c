@@ -195,8 +195,8 @@ void sm3_init(sm3_context *ctx)
 	ctx->sm3_state[6] = 0xE38DEE4D;
 	ctx->sm3_state[7] = 0xB0FB0E4E;
 
-        /* Tell that we are initialized */
-        ctx->magic = SM3_HASH_MAGIC;
+	/* Tell that we are initialized */
+	ctx->magic = SM3_HASH_MAGIC;
 }
 
 /* Update hash function */
@@ -289,8 +289,8 @@ void sm3_final(sm3_context *ctx, u8 output[SM3_DIGEST_SIZE])
 	PUT_UINT32_BE(ctx->sm3_state[6], output, 24);
 	PUT_UINT32_BE(ctx->sm3_state[7], output, 28);
 
-        /* Tell that we are uninitialized */
-        ctx->magic = 0;
+	/* Tell that we are uninitialized */
+	ctx->magic = 0;
 }
 
 void sm3_scattered(const u8 **inputs, const u32 *ilens,

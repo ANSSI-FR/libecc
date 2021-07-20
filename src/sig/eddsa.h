@@ -58,13 +58,15 @@ u8 eddsa_siglen(u16 p_bit_len, u16 q_bit_len, u8 hsize, u8 blocksize);
 int _eddsa_sign_init_pre_hash(struct ec_sign_context *ctx);
 
 int _eddsa_sign_update_pre_hash(struct ec_sign_context *ctx,
-		       const u8 *chunk, u32 chunklen);
+				const u8 *chunk, u32 chunklen);
 
-int _eddsa_sign_finalize_pre_hash(struct ec_sign_context *ctx, u8 *sig, u8 siglen);
+int _eddsa_sign_finalize_pre_hash(struct ec_sign_context *ctx,
+				  u8 *sig, u8 siglen);
 
 int _eddsa_sign(u8 *sig, u8 siglen, const ec_key_pair *key_pair,
-             const u8 *m, u32 mlen, int (*rand) (nn_t out, nn_src_t q),
-             ec_sig_alg_type sig_type, hash_alg_type hash_type, const u8 *adata, u16 adata_len);
+		const u8 *m, u32 mlen, int (*rand) (nn_t out, nn_src_t q),
+		ec_sig_alg_type sig_type, hash_alg_type hash_type,
+		const u8 *adata, u16 adata_len);
 
 typedef struct {
 	prj_pt _R;
@@ -86,10 +88,17 @@ int _eddsa_verify_finalize(struct ec_verify_context *ctx);
 
 /* Functions specific to EdDSA */
 int eddsa_derive_priv_key(ec_priv_key *priv_key);
-int eddsa_import_priv_key(ec_priv_key *priv_key, const u8 *buf, u16 buflen, const ec_params *shortw_curve_params, ec_sig_alg_type sig_type);
-int eddsa_import_pub_key(ec_pub_key *out_pub, const u8 *buf, u16 buflen, const ec_params *shortw_curve_params, ec_sig_alg_type sig_type);
+int eddsa_import_priv_key(ec_priv_key *priv_key, const u8 *buf, u16 buflen,
+			  const ec_params *shortw_curve_params,
+			  ec_sig_alg_type sig_type);
+int eddsa_import_pub_key(ec_pub_key *out_pub, const u8 *buf, u16 buflen,
+			 const ec_params *shortw_curve_params,
+			 ec_sig_alg_type sig_type);
 int eddsa_export_pub_key(const ec_pub_key *in_pub, u8 *buf, u16 buflen);
-int eddsa_import_key_pair_from_priv_key_buf(ec_key_pair *kp, const u8 *buf, u16 buflen, const ec_params *shortw_curve_params, ec_sig_alg_type sig_type);
+int eddsa_import_key_pair_from_priv_key_buf(ec_key_pair *kp,
+					    const u8 *buf, u16 buflen,
+					    const ec_params *shortw_curve_params,
+					    ec_sig_alg_type sig_type);
 
 #endif /* __EDDSA_H__ */
 #endif /* defined(WITH_SIG_EDDSA25519) || defined(WITH_SIG_EDDSA448) */

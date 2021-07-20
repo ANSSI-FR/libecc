@@ -45,7 +45,7 @@
 
 #define SHA3_224_HASH_MAGIC ((word_t)(0x1234563273932916ULL))
 #define SHA3_224_HASH_CHECK_INITIALIZED(A) \
-        MUST_HAVE((((void *)(A)) != NULL) && ((A)->magic == SHA3_224_HASH_MAGIC))
+	MUST_HAVE((((void *)(A)) != NULL) && ((A)->magic == SHA3_224_HASH_MAGIC))
 
 typedef sha3_context sha3_224_context;
 

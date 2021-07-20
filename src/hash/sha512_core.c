@@ -107,7 +107,7 @@ void sha512_core_final(sha512_core_context *ctx, u8 *output, u32 output_size)
 	u8 last_padded_block[2 * SHA512_CORE_BLOCK_SIZE];
 
 	MUST_HAVE((ctx != NULL) && (output != NULL));
-	
+
 	/* Fill in our last block with zeroes */
 	local_memset(last_padded_block, 0, sizeof(last_padded_block));
 
@@ -140,8 +140,8 @@ void sha512_core_final(sha512_core_context *ctx, u8 *output, u32 output_size)
 
 	/* Output the hash result truncated to the output size */
 	if(output_size >= SHA512_CORE_DIGEST_SIZE){
-		PUT_UINT64_BE(ctx->sha512_state[0], output, 0); 
-		PUT_UINT64_BE(ctx->sha512_state[1], output, 8); 
+		PUT_UINT64_BE(ctx->sha512_state[0], output,  0);
+		PUT_UINT64_BE(ctx->sha512_state[1], output,  8);
 		PUT_UINT64_BE(ctx->sha512_state[2], output, 16);
 		PUT_UINT64_BE(ctx->sha512_state[3], output, 24);
 		PUT_UINT64_BE(ctx->sha512_state[4], output, 32);
@@ -151,8 +151,8 @@ void sha512_core_final(sha512_core_context *ctx, u8 *output, u32 output_size)
 	}
 	else{
 		u8 tmp_output[SHA512_CORE_DIGEST_SIZE] = { 0 };
-		PUT_UINT64_BE(ctx->sha512_state[0], tmp_output, 0); 
-		PUT_UINT64_BE(ctx->sha512_state[1], tmp_output, 8); 
+		PUT_UINT64_BE(ctx->sha512_state[0], tmp_output,  0);
+		PUT_UINT64_BE(ctx->sha512_state[1], tmp_output,  8);
 		PUT_UINT64_BE(ctx->sha512_state[2], tmp_output, 16);
 		PUT_UINT64_BE(ctx->sha512_state[3], tmp_output, 24);
 		PUT_UINT64_BE(ctx->sha512_state[4], tmp_output, 32);

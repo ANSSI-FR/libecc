@@ -71,11 +71,11 @@ typedef int ssize_t;
  *	      but should be *mandatory* in C99 compliant ones)
  *
  * This means that:
- * 	1) We are sure that long long are 64-bit, short are 16-bit,
- * 	   and char are 8-bit (on the vast majority of platforms).
- * 	2) The two types that are not consistent across platforms are
- * 	the int and long types (e.g., int is 16 bits and long is 32 bits
- * 	on msp430-gcc LP32, while int is 32 bits and long is 32 bits
+ *	1) We are sure that long long are 64-bit, short are 16-bit,
+ *	   and char are 8-bit (on the vast majority of platforms).
+ *	2) The two types that are not consistent across platforms are
+ *	the int and long types (e.g., int is 16 bits and long is 32 bits
+ *	on msp430-gcc LP32, while int is 32 bits and long is 32 bits
  *	on x86_64 Linux platforms LLP64, and long becomes 64 bits on
  *	x86_64 Windows platforms LP64).
  *

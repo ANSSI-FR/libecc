@@ -167,8 +167,8 @@ void sha256_final(sha256_context *ctx, u8 output[SHA256_DIGEST_SIZE])
 	PUT_UINT32_BE(ctx->sha256_state[6], output, 24);
 	PUT_UINT32_BE(ctx->sha256_state[7], output, 28);
 
-        /* Tell that we are uninitialized */
-        ctx->magic = 0;
+	/* Tell that we are uninitialized */
+	ctx->magic = 0;
 }
 
 void sha256_scattered(const u8 **inputs, const u32 *ilens,

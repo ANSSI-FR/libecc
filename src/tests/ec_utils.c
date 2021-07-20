@@ -2,13 +2,13 @@
  *  Copyright (C) 2017 - This file is part of libecc project
  *
  *  Authors:
- *      Ryad BENADJILA <ryadbenadjila@gmail.com>
- *      Arnaud EBALARD <arnaud.ebalard@ssi.gouv.fr>
- *      Jean-Pierre FLORI <jean-pierre.flori@ssi.gouv.fr>
+ *	Ryad BENADJILA <ryadbenadjila@gmail.com>
+ *	Arnaud EBALARD <arnaud.ebalard@ssi.gouv.fr>
+ *	Jean-Pierre FLORI <jean-pierre.flori@ssi.gouv.fr>
  *
  *  Contributors:
- *      Nicolas VIVET <nicolas.vivet@ssi.gouv.fr>
- *      Karim KHALFALLAH <karim.khalfallah@ssi.gouv.fr>
+ *	Nicolas VIVET <nicolas.vivet@ssi.gouv.fr>
+ *	Karim KHALFALLAH <karim.khalfallah@ssi.gouv.fr>
  *
  *  This software is licensed under a dual BSD and GPL v2 license.
  *  See LICENSE file at the root folder of the project.
@@ -23,14 +23,14 @@
 
 sigjmp_buf cryptofuzz_jmpbuf;
 unsigned char cryptofuzz_longjmp_triggered = 0;
-#define cryptofuzz_save() do {                                                                  \
-        if(sigsetjmp(cryptofuzz_jmpbuf, 1) && (cryptofuzz_longjmp_triggered == 0)){             \
-                exit(-1);                                                                       \
-        }                                                                                       \
-        if(cryptofuzz_longjmp_triggered == 1){                                                  \
-                ext_printf("ASSERT error caught through cryptofuzz_jmpbuf\n");                  \
-                exit(-1);                                                                       \
-        }                                                                                       \
+#define cryptofuzz_save() do {									\
+	if(sigsetjmp(cryptofuzz_jmpbuf, 1) && (cryptofuzz_longjmp_triggered == 0)){		\
+		exit(-1);									\
+	}											\
+	if(cryptofuzz_longjmp_triggered == 1){							\
+		ext_printf("ASSERT error caught through cryptofuzz_jmpbuf\n");			\
+		exit(-1);									\
+	}											\
 } while(0);
 #endif
 
@@ -41,7 +41,7 @@ unsigned char cryptofuzz_longjmp_triggered = 0;
 #include <stdio.h>
 #endif
 
-#define HDR_MAGIC        0x34215609
+#define HDR_MAGIC	 0x34215609
 
 typedef enum {
 	IMAGE_TYPE0 = 0,
@@ -433,12 +433,12 @@ static int store_sig(const char *in_fname, const char *out_fname,
 	fclose(out_file);
 	return 0;
  err:
-        if(in_file != NULL){
+	if(in_file != NULL){
 		fclose(in_file);
-        }
-        if(out_file != NULL){
+	}
+	if(out_file != NULL){
 		fclose(out_file);
-        }
+	}
 	return -1;
 }
 
@@ -1165,12 +1165,12 @@ static int ec_scalar_mult(const char *ec_name,
 	}
 
 #ifdef USE_SIG_BLINDING
-        /* NB: we use a blind scalar multiplication here since we do not want our
-         * private d to leak ...
-         */
-        prj_pt_mul_monty_blind(&Q, &d, &Q);
+	/* NB: we use a blind scalar multiplication here since we do not want our
+	 * private d to leak ...
+	 */
+	prj_pt_mul_monty_blind(&Q, &d, &Q);
 #else
-        prj_pt_mul_monty(&Q, &d, &Q);
+	prj_pt_mul_monty(&Q, &d, &Q);
 #endif
 	/* Get the unique representation of the point */
 	prj_pt_unique(&Q, &Q);
@@ -1208,9 +1208,9 @@ static int ec_scalar_mult(const char *ec_name,
 	}
 
 	fclose(out_file);
-        /* Uninit local variables */
+	/* Uninit local variables */
 	nn_uninit(&d);
-        prj_pt_uninit(&Q);
+	prj_pt_uninit(&Q);
 
 	return 0;
 
@@ -1437,7 +1437,7 @@ int main(int argc, char *argv[])
 		}
 		if(sign_bin_file(argv[2], argv[3], argv[4], argv[5], argv[6],
 			      argv[7], argv[8], argv[9], adata, adata_len)){
-		 	return -1;
+			return -1;
 		}
 	}
 	else if (are_str_equal(argv[1], "struct_verify")) {

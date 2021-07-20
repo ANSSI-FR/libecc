@@ -46,7 +46,8 @@
 #include "../utils/dbg_sig.h"
 
 
-static inline int dom(u16 x, const u8 *y, u16 olen_y, const hash_mapping *h, hash_context *h_ctx, u8 dom_type){
+static inline int dom(u16 x, const u8 *y, u16 olen_y, const hash_mapping *h,
+		      hash_context *h_ctx, u8 dom_type){
 	u8 tmp[2];
 	int ret = -1;
 
@@ -93,7 +94,8 @@ err:
  *                of at most 255 octets.  "SigEd25519 no Ed25519
  *                collisions" is in ASCII (32 octets).
  */
-static inline int dom2(u16 x, const u8 *y, u16 olen_y, const hash_mapping *h, hash_context *h_ctx){
+static inline int dom2(u16 x, const u8 *y, u16 olen_y, const hash_mapping *h,
+		       hash_context *h_ctx){
 	return dom(x, y, olen_y, h, h_ctx, 2);
 }
 #endif /* defined(WITH_SIG_EDDSA25519) */
@@ -108,7 +110,8 @@ static inline int dom2(u16 x, const u8 *y, u16 olen_y, const hash_mapping *h, ha
  *                is an octet string of at most 255 octets.  "SigEd448"
  *                is in ASCII (8 octets).
  */
-static inline int dom4(u16 x, const u8 *y, u16 olen_y, const hash_mapping *h, hash_context *h_ctx){
+static inline int dom4(u16 x, const u8 *y, u16 olen_y, const hash_mapping *h,
+		       hash_context *h_ctx){
 	return dom(x, y, olen_y, h, h_ctx, 4);
 }
 #endif /* defined(WITH_SIG_EDDSA448) */
@@ -251,8 +254,8 @@ static int eddsa_decode_integer(nn_t nn_out, const u8 *buf, u16 buf_size)
 	if(buf_size > 1){
 		/* Inverse endianness of our input buffer */
 		for(i = 0; i < buf_size; i++){
-        		buf_little_endian[i] = buf[buf_size - 1 - i];
-	        }
+			buf_little_endian[i] = buf[buf_size - 1 - i];
+		}
 	}
 
 	/* Compute an integer from the buffer */
@@ -367,7 +370,8 @@ err:
 }
 
 /* Encode an Edwards curve affine point in canonical form */
-static int eddsa_encode_point(aff_pt_edwards_src_t in, fp_src_t alpha_edwards, u8 *buf, u16 buflen, ec_sig_alg_type sig_alg)
+static int eddsa_encode_point(aff_pt_edwards_src_t in, fp_src_t alpha_edwards,
+			      u8 *buf, u16 buflen, ec_sig_alg_type sig_alg)
 {
 	nn out_reduced;
 	u8 lsb;
@@ -397,14 +401,17 @@ static int eddsa_encode_point(aff_pt_edwards_src_t in, fp_src_t alpha_edwards, u
 	 */
 #if defined(WITH_SIG_EDDSA448)
 	if((sig_alg == EDDSA448) || (sig_alg == EDDSA448PH)){
-		/* In case of EDDSA448, we apply the 4-isogeny to transfer from Ed448
-		 * to Edwards448.
-		 * The isogeny maps (x, y) on Ed448 to (x1, y1) on Edwards448 using:
+		/*
+		 * In case of EDDSA448, we apply the 4-isogeny to transfer from
+		 * Ed448 to Edwards448.
+		 * The isogeny maps (x, y) on Ed448 to (x1, y1) on Edwards448
+		 * using:
 		 *      x1 = (4*x*y/c) / (y^2-x^2)
 		 *      y1 = (2-x^2-y^2) / (x^2+y^2) = (2 - (x^2+y^2)) / (x^2 + y^2)
 		 * and (0, 1) as well as (0, -1) are mapped to (0, 1)
-		 * We only need to encode our y1 here, but x1 computation is unfortunately
-		 * needed to get its LSB that is necessary for the encoding.
+		 * We only need to encode our y1 here, but x1 computation is
+		 * unfortunately needed to get its LSB that is necessary for
+		 * the encoding.
 		 */
 		fp tmp_x, tmp_y, y1;
 		/* Compute x1 to get our LSB */
@@ -456,8 +463,9 @@ static int eddsa_encode_point(aff_pt_edwards_src_t in, fp_src_t alpha_edwards, u
 			goto err;
 		}
 	}
-	/* Now deal with the sign for the last bit:
-	 * copy the least significant bit of the x coordinate in the MSB of the last octet.
+	/*
+	 * Now deal with the sign for the last bit: copy the least significant
+	 * bit of the x coordinate in the MSB of the last octet.
 	 */
 	if(buflen <= 1){
 		ret = -1;
@@ -472,13 +480,15 @@ err:
 }
 
 /* Decode an Edwards curve affine point from canonical form */
-static int eddsa_decode_point(aff_pt_edwards_t out, ec_edwards_crv_src_t edwards_curve, fp_src_t alpha_edwards, const u8 *buf, u16 buflen, ec_sig_alg_type sig_type)
+static int eddsa_decode_point(aff_pt_edwards_t out, ec_edwards_crv_src_t edwards_curve,
+			      fp_src_t alpha_edwards, const u8 *buf, u16 buflen,
+			      ec_sig_alg_type sig_type)
 {
 	fp x, y;
 	fp sqrt1, sqrt2;
 	u8 x_0;
 	u8 buf_little_endian[MAX_DIGEST_SIZE];
-        u32 i;
+	u32 i;
 	int ret = -1;
 
 #if defined(WITH_SIG_EDDSA448)
@@ -519,7 +529,7 @@ static int eddsa_decode_point(aff_pt_edwards_t out, ec_edwards_crv_src_t edwards
 		goto err;
 	}
 	for(i = 0; i < buflen; i++){
-        	buf_little_endian[i] = buf[buflen - 1 - i];
+		buf_little_endian[i] = buf[buflen - 1 - i];
 		if(i == 0){
 			/* Mask the sign bit */
 			buf_little_endian[i] &= 0x7f;
@@ -527,8 +537,10 @@ static int eddsa_decode_point(aff_pt_edwards_t out, ec_edwards_crv_src_t edwards
 	}
 	/* Try to decode the y coordinate */
 	fp_init_from_buf(&y, edwards_curve->a.ctx, buf_little_endian, buflen);
-	/* If we suceed, try to find our x coordinate that is the square root of
- 	 * (y^2 - 1) / (d y^2 + 1) or (y^2 - 1) / (d y^2 - 1) depending on the algorithm.
+	/*
+	 * If we suceed, try to find our x coordinate that is the square root of
+	 * (y^2 - 1) / (d y^2 + 1) or (y^2 - 1) / (d y^2 - 1) depending on the
+	 * algorithm.
 	 */
 	fp_init(&sqrt1, edwards_curve->a.ctx);
 	fp_init(&sqrt2, edwards_curve->a.ctx);
@@ -538,10 +550,13 @@ static int eddsa_decode_point(aff_pt_edwards_t out, ec_edwards_crv_src_t edwards
 	fp_dec(&sqrt1, &sqrt1);
 #if defined(WITH_SIG_EDDSA448)
 	if((sig_type == EDDSA448) || (sig_type == EDDSA448PH)){
-		/* If we deal with EDDSA448 we must handle the point on Edwards448 so we use
-		 * the dedicated d.
-  	 	 */
-		fp_init_from_buf(&d_edwards448, edwards_curve->a.ctx, (const u8*)d_edwards448_buff, sizeof(d_edwards448_buff));
+		/*
+		 * If we deal with EDDSA448 we must handle the point on
+		 * Edwards448 so we use the dedicated d.
+		 */
+		fp_init_from_buf(&d_edwards448, edwards_curve->a.ctx,
+				 (const u8*)d_edwards448_buff,
+				 sizeof(d_edwards448_buff));
 		fp_mul(&sqrt2, &sqrt2, &d_edwards448);
 		/* (d y^2 - 1) */
 		fp_dec(&sqrt2, &sqrt2);
@@ -574,15 +589,17 @@ static int eddsa_decode_point(aff_pt_edwards_t out, ec_edwards_crv_src_t edwards
 		ret = -1;
 		goto err;
 	}
-	/* In case of EDDSA448, we apply the 4-isogeny to transfer from Edwards448
-	 * to Ed448.
+	/*
+	 * In case of EDDSA448, we apply the 4-isogeny to transfer from
+	 * Edwards448 to Ed448.
 	 * The isogeny maps (x1, y1) on Edwards448 to (x, y) on Ed448 using:
-	 * 	x = alpha_edwards * (x1*y1) / (2-x1^2-y1^2)
+	 *	x = alpha_edwards * (x1*y1) / (2-x1^2-y1^2)
 	 *      y = (x1^2+y1^2) / (y1^2-x1^2)
 	 */
 #if defined(WITH_SIG_EDDSA448)
 	if((sig_type == EDDSA448) || (sig_type == EDDSA448PH)){
-		/* Use sqrt1 and sqrt2 as temporary buffers for x and y, and
+		/*
+		 * Use sqrt1 and sqrt2 as temporary buffers for x and y, and
 		 * d_edwards448 as scratch pad buffer
 		 */
 		fp_copy(&sqrt1, &x);
@@ -639,11 +656,12 @@ err:
 /*
  * Derive hash from private key.
  */
-static int eddsa_derive_priv_key_hash(const ec_priv_key *in_priv, u8 *buff, u16 bufflen)
+static int eddsa_derive_priv_key_hash(const ec_priv_key *in_priv,
+				      u8 *buf, u16 buflen)
 {
 	hash_alg_type hash_type;
 	const hash_mapping *hash;
-	u8 x_buff[EC_PRIV_KEY_MAX_SIZE];
+	u8 x_buf[EC_PRIV_KEY_MAX_SIZE];
 	int ret = -1;
 
 	if(eddsa_priv_key_sanity_check(in_priv)){
@@ -660,12 +678,12 @@ static int eddsa_derive_priv_key_hash(const ec_priv_key *in_priv, u8 *buff, u16 
 		goto err;
 	}
 	/* Get the private key as a buffer and hash it */
-	local_memset(x_buff, 0, sizeof(x_buff));
-	if(sizeof(x_buff) < (hash->digest_size / 2)){
+	local_memset(x_buf, 0, sizeof(x_buf));
+	if(sizeof(x_buf) < (hash->digest_size / 2)){
 		ret = -1;
 		goto err;
 	}
-	if(ec_priv_key_export_to_buf(in_priv, x_buff, (hash->digest_size / 2))){
+	if(ec_priv_key_export_to_buf(in_priv, x_buf, (hash->digest_size / 2))){
 		ret = -1;
 		goto err;
 	}
@@ -673,13 +691,13 @@ static int eddsa_derive_priv_key_hash(const ec_priv_key *in_priv, u8 *buff, u16 
 		ret = -1;
 		goto err;
 	}
-	if(bufflen < hash->digest_size){
+	if(buflen < hash->digest_size){
 		ret = -1;
 		goto err;
 	}
-	const u8 *in[2] = { x_buff, NULL };
+	const u8 *in[2] = { x_buf, NULL };
 	u32 in_len[2] = { (hash->digest_size / 2), 0 };
-	hash->hfunc_scattered(in, in_len, buff);
+	hash->hfunc_scattered(in, in_len, buf);
 
 	ret = 0;
 err:
@@ -695,7 +713,7 @@ err:
  */
 int eddsa_derive_priv_key(ec_priv_key *priv_key)
 {
-        int ret = -1;
+	int ret = -1;
 	u8 digest_size;
 	u8 digest[MAX_DIGEST_SIZE];
 	hash_alg_type hash_type;
@@ -731,7 +749,10 @@ int eddsa_derive_priv_key(ec_priv_key *priv_key)
 		goto err;
 	}
 
-	/* Now that we have our private scalar, derive the hash value of secret key */
+	/*
+	 * Now that we have our private scalar, derive the hash value of secret
+	 * key
+	 */
 	/* Hash the private key */
 	if(eddsa_derive_priv_key_hash(priv_key, digest, digest_size)){
 		ret = -1;
@@ -752,8 +773,13 @@ int eddsa_derive_priv_key(ec_priv_key *priv_key)
 	/* Now clear the low bits related to cofactor */
 	digest[0] &= ~(cofactor - 1);
 #if defined(WITH_SIG_EDDSA25519)
-	if((priv_key->key_type == EDDSA25519) || (priv_key->key_type == EDDSA25519CTX) || (priv_key->key_type == EDDSA25519PH)){
-		/* MSB of highest octet of half must be cleared, second MSB must be set */
+	if ((priv_key->key_type == EDDSA25519) ||
+	    (priv_key->key_type == EDDSA25519CTX) ||
+	    (priv_key->key_type == EDDSA25519PH)){
+		/*
+		 * MSB of highest octet of half must be cleared, second MSB must
+		 * be set
+		 */
 		digest[(digest_size / 2) - 1] &= 0x7f;
 		digest[(digest_size / 2) - 1] |= 0x40;
 	}
@@ -764,8 +790,9 @@ int eddsa_derive_priv_key(ec_priv_key *priv_key)
 			ret = -1;
 			goto err;
 		}
-		/* All eight bits of the last octet are cleared, highest bit of the second
-		 * to last octet is set.
+		/*
+		 * All eight bits of the last octet are cleared, highest bit
+		 * of the second to last octet is set.
 		 */
 		digest[(digest_size / 2) - 1] = 0;
 		digest[(digest_size / 2) - 2] |= 0x80;
@@ -775,17 +802,19 @@ int eddsa_derive_priv_key(ec_priv_key *priv_key)
 	ret = -1;
 	goto err;
 #endif
-	/* Now that we have derived our hash, store it in place of our secret value
-	 * NOTE: we do not need the secret value anymore since only the hash is needed.
+	/*
+	 * Now that we have derived our hash, store it in place of our secret
+	 * value NOTE: we do not need the secret value anymore since only the
+	 * hash is needed.
 	 */
 	nn_init_from_buf(&(priv_key->x), digest, digest_size);
 
-        ret = 0;
+	ret = 0;
 err:
 	VAR_ZEROIFY(hash_type);
 	VAR_ZEROIFY(digest_size);
 
-        return ret;
+	return ret;
 }
 
 /*
@@ -794,7 +823,7 @@ err:
  */
 int eddsa_gen_priv_key(ec_priv_key *priv_key)
 {
-        int ret = -1;
+	int ret = -1;
 	u8 digest_size;
 	hash_alg_type hash_type;
 
@@ -828,11 +857,11 @@ int eddsa_gen_priv_key(ec_priv_key *priv_key)
 	/* Generate a random private key
 	 * An EdDSA secret scalar is a b bit string with (2*b) the size of the hash function
 	 */
-        ret = nn_get_random_len(&(priv_key->x), (digest_size / 2));
+	ret = nn_get_random_len(&(priv_key->x), (digest_size / 2));
 	if (ret) {
 		ret = -1;
-                goto err;
-        }
+		goto err;
+	}
 
 	/* Derive the private key */
 	if(eddsa_derive_priv_key(priv_key)){
@@ -840,23 +869,26 @@ int eddsa_gen_priv_key(ec_priv_key *priv_key)
 		goto err;
 	}
 
-        ret = 0;
+	ret = 0;
 err:
 	VAR_ZEROIFY(hash_type);
 	VAR_ZEROIFY(digest_size);
 
-        return ret;
+	return ret;
 }
 
 
 /* Import an EdDSA private key from a raw buffer.
- * NOTE: the private key must be a big number associated to the curve that depends
- * on the flavor of EdDSA (Ed25519 or Ed448), and the result is a derived private key that can
- * be used by the internal EdDSA functions. The derived key is a hash of the private key: we
- * mainly perform this derivation early to prevent side-channel attacks and other leaks on the
+ * NOTE: the private key must be a big number associated to the curve that
+ * depends on the flavor of EdDSA (Ed25519 or Ed448), and the result is a
+ * derived private key that can be used by the internal EdDSA functions.
+ * The derived key is a hash of the private key: we mainly perform this
+ * derivation early to prevent side-channel attacks and other leaks on the
  * "root" private key.
  */
-int eddsa_import_priv_key(ec_priv_key *priv_key, const u8 *buf, u16 buflen, const ec_params *shortw_curve_params, ec_sig_alg_type sig_type)
+int eddsa_import_priv_key(ec_priv_key *priv_key, const u8 *buf, u16 buflen,
+			  const ec_params *shortw_curve_params,
+			  ec_sig_alg_type sig_type)
 {
 	int ret = -1;
 	hash_alg_type hash_type;
@@ -968,22 +1000,24 @@ int eddsa_init_pub_key(ec_pub_key *out_pub, const ec_priv_key *in_priv)
 		goto err;
 	}
 	/* Compute s x G where G is the base point */
-        /* Use blinding when computing point scalar multiplication as we manipulate
-	 * a fixed secret.
+	/*
+	 * Use blinding when computing point scalar multiplication as we
+	 * manipulate a fixed secret.
 	 */
 #if defined(WITH_SIG_EDDSA448)
 	if((in_priv->key_type == EDDSA448) || (in_priv->key_type == EDDSA448PH)){
 		/*
-		 * NOTE: because of the 4-isogeny between Ed448 and Edwards448, we actually
-		 * multiply by (s/4) since the base point of Edwards448 is four times the one
-		 * of Ed448.
-		 * Here, s/4 can be simply computed by right shifting by 2 as we are ensured that
-		 * our scalar is a multiple of 4 by construction.
+		 * NOTE: because of the 4-isogeny between Ed448 and Edwards448,
+		 * we actually multiply by (s/4) since the base point of
+		 * Edwards448 is four times the one of Ed448.
+		 * Here, s/4 can be simply computed by right shifting by 2 as
+		 * we are ensured that our scalar is a multiple of 4 by
+		 * construction.
 		 */
 		nn_rshift(&s, &s, 2);
 	}
 #endif
-        if(prj_pt_mul_monty_blind(&(out_pub->y), &s, G)){
+	if(prj_pt_mul_monty_blind(&(out_pub->y), &s, G)){
 		ret = -1;
 		goto err;
 	}
@@ -1005,7 +1039,9 @@ err:
  * (imports a public key from a buffer and checks its canonical form.)
  *
  */
-int eddsa_import_pub_key(ec_pub_key *pub_key, const u8 *buf, u16 buflen, const ec_params *shortw_curve_params, ec_sig_alg_type sig_type)
+int eddsa_import_pub_key(ec_pub_key *pub_key, const u8 *buf, u16 buflen,
+			 const ec_params *shortw_curve_params,
+			 ec_sig_alg_type sig_type)
 {
 	aff_pt_edwards _Tmp;
 	ec_edwards_crv edwards_curve;
@@ -1048,29 +1084,32 @@ int eddsa_import_pub_key(ec_pub_key *pub_key, const u8 *buf, u16 buflen, const e
 	pub_key_y = &(pub_key->y);
 
 	/* Get the isogenic Edwards curve */
-	curve_shortw_to_edwards(shortw_curve, &edwards_curve, alpha_montgomery, gamma_montgomery, alpha_edwards);
+	curve_shortw_to_edwards(shortw_curve, &edwards_curve, alpha_montgomery,
+				gamma_montgomery, alpha_edwards);
 
 	/* Decode the point in Edwards */
-	if(eddsa_decode_point(&_Tmp, &edwards_curve, alpha_edwards, buf, buflen, sig_type)){
+	if(eddsa_decode_point(&_Tmp, &edwards_curve, alpha_edwards, buf, buflen,
+			      sig_type)){
 		ret = -1;
 		goto err;
 	}
 	/* Then transfer to short Weierstrass in our public key */
-	aff_pt_edwards_to_prj_pt_shortw(&_Tmp, shortw_curve, pub_key_y, alpha_edwards);
+	aff_pt_edwards_to_prj_pt_shortw(&_Tmp, shortw_curve, pub_key_y,
+					alpha_edwards);
 #if defined(WITH_SIG_EDDSA448)
 	if((sig_type == EDDSA448) || (sig_type == EDDSA448PH)){
-		nn_src_t gen_order;
-		gen_order = &(shortw_curve_params->ec_gen_order);
-		/*
-		 * NOTE: because of the 4-isogeny between Ed448 and Edwards448, we actually
-		 * multiply by (s/4) since the base point of Edwards448 is four times the one
-		 * of Ed448.
-		 * Here, s/4 is computed by multiplying s by the modular inverse of 4.
-		 */
+		nn_src_t gen_order = &(shortw_curve_params->ec_gen_order);
 		nn tmp;
+		/*
+		 * NOTE: because of the 4-isogeny between Ed448 and Edwards448,
+		 * we actually multiply by (s/4) since the base point of
+		 * Edwards448 is four times the one of Ed448.
+		 * Here, s/4 is computed by multiplying s by the modular
+		 * inverse of 4.
+		 */
 		nn_init(&tmp, 0);
 		nn_modinv_word(&tmp, WORD(4), gen_order);
-        	prj_pt_mul_monty(&(pub_key->y), &tmp, pub_key_y);
+		prj_pt_mul_monty(&(pub_key->y), &tmp, pub_key_y);
 		nn_uninit(&tmp);
 		PTR_NULLIFY(gen_order);
 	}
@@ -1135,10 +1174,13 @@ int eddsa_export_pub_key(const ec_pub_key *in_pub, u8 *buf, u16 buflen)
 	pub_key_y = &(in_pub->y);
 
 	/* Transfer our short Weierstrass to Edwards representation */
-	curve_shortw_to_edwards(shortw_curve, &edwards_curve, alpha_montgomery, gamma_montgomery, alpha_edwards);
-	prj_pt_shortw_to_aff_pt_edwards(pub_key_y, &edwards_curve, &_Tmp, alpha_edwards);
+	curve_shortw_to_edwards(shortw_curve, &edwards_curve, alpha_montgomery,
+				gamma_montgomery, alpha_edwards);
+	prj_pt_shortw_to_aff_pt_edwards(pub_key_y, &edwards_curve, &_Tmp,
+					alpha_edwards);
 	/* Export to buffer canonical form */
-	if(eddsa_encode_point(&_Tmp, alpha_edwards, buf, buflen, in_pub->key_type)){
+	if(eddsa_encode_point(&_Tmp, alpha_edwards, buf,
+			      buflen,in_pub->key_type)){
 		ret = -1;
 		goto err;
 	}
@@ -1161,7 +1203,10 @@ err:
 }
 
 /* Import an EdDSA key pair from a private key buffer */
-int eddsa_import_key_pair_from_priv_key_buf(ec_key_pair *kp, const u8 *buf, u16 buflen, const ec_params *shortw_curve_params, ec_sig_alg_type sig_type)
+int eddsa_import_key_pair_from_priv_key_buf(ec_key_pair *kp,
+					    const u8 *buf, u16 buflen,
+					    const ec_params *shortw_curve_params,
+					    ec_sig_alg_type sig_type)
 {
 	int ret = -1;
 
@@ -1171,7 +1216,8 @@ int eddsa_import_key_pair_from_priv_key_buf(ec_key_pair *kp, const u8 *buf, u16 
 	}
 
 	/* Try to import the private key */
-	if(eddsa_import_priv_key(&(kp->priv_key), buf, buflen, shortw_curve_params, sig_type)){
+	if(eddsa_import_priv_key(&(kp->priv_key), buf, buflen,
+				 shortw_curve_params, sig_type)){
 		ret = -1;
 		goto err;
 	}
@@ -1187,7 +1233,9 @@ err:
 }
 
 /* Compute PH(M) with PH being the hash depending on the key type */
-static int eddsa_compute_pre_hash(const u8 *message, u32 message_size, u8 *digest, u8 *digest_size, ec_sig_alg_type sig_type)
+static int eddsa_compute_pre_hash(const u8 *message, u32 message_size,
+				  u8 *digest, u8 *digest_size,
+				  ec_sig_alg_type sig_type)
 {
 	hash_alg_type hash_type;
 	const hash_mapping *hash;
@@ -1283,7 +1331,8 @@ int _eddsa_sign_init_pre_hash(struct ec_sign_context *ctx)
 	}
 
 	/* Sanity check on hash types */
-	if((key_type != key_pair->pub_key.key_type) || (h->type != get_eddsa_hash_type(key_type))){
+	if((key_type != key_pair->pub_key.key_type) ||
+	   (h->type != get_eddsa_hash_type(key_type))){
 		ret = -1;
 		goto err;
 	}
@@ -1392,8 +1441,8 @@ int _eddsa_sign_finalize_pre_hash(struct ec_sign_context *ctx, u8 *sig, u8 sigle
 {
 	nn r, s, S;
 #ifdef USE_SIG_BLINDING
-        /* b is the blinding mask */
-        nn b, binv;
+	/* b is the blinding mask */
+	nn b, binv;
 #endif
 	const ec_priv_key *priv_key;
 	const ec_pub_key *pub_key;
@@ -1517,7 +1566,8 @@ int _eddsa_sign_finalize_pre_hash(struct ec_sign_context *ctx, u8 *sig, u8 sigle
 	/* At this point, we are ensured that we have PH versions of the algorithms */
 #if defined(WITH_SIG_EDDSA25519)
 	if(key_type == EDDSA25519PH){
-		if(dom2(1, ctx->adata, ctx->adata_len, h, &(ctx->sign_data.eddsa.h_ctx))){
+		if(dom2(1, ctx->adata, ctx->adata_len, h,
+			&(ctx->sign_data.eddsa.h_ctx))){
 			ret = -1;
 			goto err;
 		}
@@ -1525,7 +1575,8 @@ int _eddsa_sign_finalize_pre_hash(struct ec_sign_context *ctx, u8 *sig, u8 sigle
 #endif
 #if defined(WITH_SIG_EDDSA448)
 	if(key_type == EDDSA448PH){
-		if(dom4(1, ctx->adata, ctx->adata_len, h, &(ctx->sign_data.eddsa.h_ctx))){
+		if(dom4(1, ctx->adata, ctx->adata_len, h,
+			&(ctx->sign_data.eddsa.h_ctx))){
 			ret = -1;
 			goto err;
 		}
@@ -1538,7 +1589,8 @@ int _eddsa_sign_finalize_pre_hash(struct ec_sign_context *ctx, u8 *sig, u8 sigle
 		ret = -1;
 		goto err;
 	}
-	h->hfunc_update(&(ctx->sign_data.eddsa.h_ctx), ph_hash, use_message_pre_hash_hsize);
+	h->hfunc_update(&(ctx->sign_data.eddsa.h_ctx), ph_hash,
+			use_message_pre_hash_hsize);
 
 	/* 1. Finish computing the nonce r = H(h256 || ... || h511 || PH(m)) */
 	h->hfunc_finalize(&(ctx->sign_data.eddsa.h_ctx), hash);
@@ -1555,8 +1607,9 @@ int _eddsa_sign_finalize_pre_hash(struct ec_sign_context *ctx, u8 *sig, u8 sigle
 	 */
 #if defined(WITH_SIG_EDDSA448)
 	if(key_type == EDDSA448PH){
-		/* NOTE: in case of EDDSA448, because of the 4-isogeny we must divide our
-		 * scalar by 4.
+		/*
+		 * NOTE: in case of EDDSA448, because of the 4-isogeny we must
+		 * divide our scalar by 4.
 		 */
 		nn r_tmp;
 		nn_init(&r_tmp, 0);
@@ -1588,22 +1641,26 @@ int _eddsa_sign_finalize_pre_hash(struct ec_sign_context *ctx, u8 *sig, u8 sigle
 	/* Now compute S = (r + H(R || PubKey || PH(m)) * secret) mod q */
 	h->hfunc_init(&(ctx->sign_data.eddsa.h_ctx));
 	/* Transfer R to Edwards */
-	curve_shortw_to_edwards(shortw_curve, &crv_edwards, alpha_montgomery, gamma_montgomery, alpha_edwards);
-	prj_pt_shortw_to_aff_pt_edwards(&R, &crv_edwards, &Tmp_edwards, alpha_edwards);
+	curve_shortw_to_edwards(shortw_curve, &crv_edwards, alpha_montgomery,
+				gamma_montgomery, alpha_edwards);
+	prj_pt_shortw_to_aff_pt_edwards(&R, &crv_edwards, &Tmp_edwards,
+					alpha_edwards);
 	dbg_ec_edwards_point_print("R", &Tmp_edwards);
 	if(r_len > siglen){
 		ret = -1;
 		goto err;
 	}
 	/* Encode R and update */
-	if(eddsa_encode_point(&Tmp_edwards, alpha_edwards, &sig[0], r_len, key_type)){
+	if(eddsa_encode_point(&Tmp_edwards, alpha_edwards, &sig[0],
+			      r_len, key_type)){
 		ret = -1;
 		goto err;
 	}
 	/* At this point, we are ensured that we have PH versions of the algorithms */
 #if defined(WITH_SIG_EDDSA25519)
 	if(key_type == EDDSA25519PH){
-		if(dom2(1, ctx->adata, ctx->adata_len, h, &(ctx->sign_data.eddsa.h_ctx))){
+		if(dom2(1, ctx->adata, ctx->adata_len, h,
+			&(ctx->sign_data.eddsa.h_ctx))){
 			ret = -1;
 			goto err;
 		}
@@ -1611,7 +1668,8 @@ int _eddsa_sign_finalize_pre_hash(struct ec_sign_context *ctx, u8 *sig, u8 sigle
 #endif
 #if defined(WITH_SIG_EDDSA448)
 	if(key_type == EDDSA448PH){
-		if(dom4(1, ctx->adata, ctx->adata_len, h, &(ctx->sign_data.eddsa.h_ctx))){
+		if(dom4(1, ctx->adata, ctx->adata_len, h,
+			&(ctx->sign_data.eddsa.h_ctx))){
 			ret = -1;
 			goto err;
 		}
@@ -1621,21 +1679,24 @@ int _eddsa_sign_finalize_pre_hash(struct ec_sign_context *ctx, u8 *sig, u8 sigle
 	h->hfunc_update(&(ctx->sign_data.eddsa.h_ctx), &sig[0], r_len);
 	/* Encode the public key */
 	/* Transfer the public key to Edwards */
-	prj_pt_shortw_to_aff_pt_edwards(pub_key_y, &crv_edwards, &Tmp_edwards, alpha_edwards);
+	prj_pt_shortw_to_aff_pt_edwards(pub_key_y, &crv_edwards,
+					&Tmp_edwards, alpha_edwards);
 	dbg_ec_edwards_point_print("A", &Tmp_edwards);
 	if(r_len > sizeof(hash)){
 		ret = -1;
 		goto err;
 	}
 	/* NOTE: we use the hash buffer as a temporary buffer */
-	if(eddsa_encode_point(&Tmp_edwards, alpha_edwards, hash, r_len, key_type)){
+	if(eddsa_encode_point(&Tmp_edwards, alpha_edwards, hash,
+			      r_len, key_type)){
 		ret = -1;
 		goto err;
 	}
 	/* Update the hash with the encoded public key point */
 	h->hfunc_update(&(ctx->sign_data.eddsa.h_ctx), hash, r_len);
 	/* Update the hash with PH(m) */
-	h->hfunc_update(&(ctx->sign_data.eddsa.h_ctx), ph_hash, use_message_pre_hash_hsize);
+	h->hfunc_update(&(ctx->sign_data.eddsa.h_ctx), ph_hash,
+			use_message_pre_hash_hsize);
 	/* Finalize the hash */
 	h->hfunc_finalize(&(ctx->sign_data.eddsa.h_ctx), hash);
 	dbg_buf_print("h(R || PubKey || PH(m))", hash, hsize);
@@ -1660,12 +1721,12 @@ int _eddsa_sign_finalize_pre_hash(struct ec_sign_context *ctx, u8 *sig, u8 sigle
 #ifdef USE_SIG_BLINDING
 	/* Note: if we use blinding, r and H(R || PubKey || m) are multiplied by
 	 * a random value b in ]0,q[ */
-        ret = nn_get_random_mod(&b, q);
-        if (ret) {
+	ret = nn_get_random_mod(&b, q);
+	if (ret) {
 		ret = -1;
-                goto err;
-        }
-        dbg_nn_print("b", &b);
+		goto err;
+	}
+	dbg_nn_print("b", &b);
 	nn_modinv(&binv, &b, q);
 	/* If we use blinding, multiply by b */
 	nn_mul_mod(&S, &S, &b, q);
@@ -1732,10 +1793,10 @@ int _eddsa_sign_finalize_pre_hash(struct ec_sign_context *ctx, u8 *sig, u8 sigle
 
 #ifdef USE_SIG_BLINDING
 	if(nn_is_initialized(&b)){
-	        nn_uninit(&b);
+		nn_uninit(&b);
 	}
 	if(nn_is_initialized(&binv)){
-	        nn_uninit(&binv);
+		nn_uninit(&binv);
 	}
 #endif /* USE_SIG_BLINDING */
 	/*
@@ -1753,13 +1814,14 @@ int _eddsa_sign_finalize_pre_hash(struct ec_sign_context *ctx, u8 *sig, u8 sigle
 ********* streaming mode via init/update/finalize is not supported.
  */
 int _eddsa_sign(u8 *sig, u8 siglen, const ec_key_pair *key_pair,
-             const u8 *m, u32 mlen, int (*rand) (nn_t out, nn_src_t q),
-             ec_sig_alg_type sig_type, hash_alg_type hash_type, const u8 *adata, u16 adata_len)
+		const u8 *m, u32 mlen, int (*rand) (nn_t out, nn_src_t q),
+		ec_sig_alg_type sig_type, hash_alg_type hash_type,
+		const u8 *adata, u16 adata_len)
 {
 	nn r, s, S;
 #ifdef USE_SIG_BLINDING
-        /* b is the blinding mask */
-        nn b, binv;
+	/* b is the blinding mask */
+	nn b, binv;
 #endif
 	int ret = -1;
 	ec_sig_alg_type key_type;
@@ -1964,8 +2026,9 @@ int _eddsa_sign(u8 *sig, u8 siglen, const ec_key_pair *key_pair,
 	 */
 #if defined(WITH_SIG_EDDSA448)
 	if((key_type == EDDSA448) || (key_type == EDDSA448PH)){
-		/* NOTE: in case of EDDSA448, because of the 4-isogeny we must divide our
-		 * scalar by 4.
+		/*
+		 * NOTE: in case of EDDSA448, because of the 4-isogeny we must
+		 * divide our scalar by 4.
 		 */
 		nn r_tmp;
 		nn_init(&r_tmp, 0);
@@ -2000,21 +2063,27 @@ int _eddsa_sign(u8 *sig, u8 siglen, const ec_key_pair *key_pair,
 	}
 	h->hfunc_init(&h_ctx);
 	/* Transfer R to Edwards */
-	curve_shortw_to_edwards(shortw_curve, &crv_edwards, alpha_montgomery, gamma_montgomery, alpha_edwards);
-	prj_pt_shortw_to_aff_pt_edwards(&R, &crv_edwards, &Tmp_edwards, alpha_edwards);
+	curve_shortw_to_edwards(shortw_curve, &crv_edwards, alpha_montgomery,
+				gamma_montgomery, alpha_edwards);
+	prj_pt_shortw_to_aff_pt_edwards(&R, &crv_edwards, &Tmp_edwards,
+					alpha_edwards);
 	dbg_ec_edwards_point_print("R", &Tmp_edwards);
 	if(r_len > siglen){
 		ret = -1;
 		goto err;
 	}
 	/* Encode R and update */
-	if(eddsa_encode_point(&Tmp_edwards, alpha_edwards, &sig[0], r_len, key_type)){
+	if(eddsa_encode_point(&Tmp_edwards, alpha_edwards, &sig[0],
+			      r_len, key_type)){
 		ret = -1;
 		goto err;
 	}
 #if defined(WITH_SIG_EDDSA25519)
 	if(key_type == EDDSA25519CTX){
-		/* As per RFC8032, for EDDSA25519CTX the context SHOULD NOT be empty */
+		/*
+		 * As per RFC8032, for EDDSA25519CTX the context
+		 * SHOULD NOT be empty
+		 */
 		if(adata == NULL){
 			ret = -1;
 			goto err;
@@ -2048,7 +2117,8 @@ int _eddsa_sign(u8 *sig, u8 siglen, const ec_key_pair *key_pair,
 	/* Update the hash with the encoded R point */
 	h->hfunc_update(&h_ctx, &sig[0], r_len);
 	/* Transfer the public key to Edwards */
-	prj_pt_shortw_to_aff_pt_edwards(pub_key_y, &crv_edwards, &Tmp_edwards, alpha_edwards);
+	prj_pt_shortw_to_aff_pt_edwards(pub_key_y, &crv_edwards, &Tmp_edwards,
+					alpha_edwards);
 	dbg_ec_edwards_point_print("A", &Tmp_edwards);
 	if(r_len > sizeof(hash)){
 		ret = -1;
@@ -2056,7 +2126,8 @@ int _eddsa_sign(u8 *sig, u8 siglen, const ec_key_pair *key_pair,
 	}
 	/* Encode the public key */
 	/* NOTE: we use the hash buffer as a temporary buffer */
-	if(eddsa_encode_point(&Tmp_edwards, alpha_edwards, hash, r_len, key_type)){
+	if(eddsa_encode_point(&Tmp_edwards, alpha_edwards,
+			      hash, r_len, key_type)){
 		ret = -1;
 		goto err;
 	}
@@ -2091,12 +2162,12 @@ int _eddsa_sign(u8 *sig, u8 siglen, const ec_key_pair *key_pair,
 #ifdef USE_SIG_BLINDING
 	/* Note: if we use blinding, r and H(R || PubKey || m) are multiplied by
 	 * a random value b in ]0,q[ */
-        ret = nn_get_random_mod(&b, q);
-        if (ret) {
+	ret = nn_get_random_mod(&b, q);
+	if (ret) {
 		ret = -1;
-                goto err;
-        }
-        dbg_nn_print("b", &b);
+		goto err;
+	}
+	dbg_nn_print("b", &b);
 	nn_modinv(&binv, &b, q);
 	/* If we use blinding, multiply by b */
 	nn_mul_mod(&S, &S, &b, q);
@@ -2167,10 +2238,10 @@ err:
 
 #ifdef USE_SIG_BLINDING
 	if(nn_is_initialized(&b)){
-	        nn_uninit(&b);
+		nn_uninit(&b);
 	}
 	if(nn_is_initialized(&binv)){
-	        nn_uninit(&binv);
+		nn_uninit(&binv);
 	}
 #endif /* USE_SIG_BLINDING */
 
@@ -2239,6 +2310,8 @@ int _eddsa_verify_init(struct ec_verify_context *ctx, const u8 *sig, u8 siglen)
 	fp_src_t alpha_edwards;
 	nn_src_t gen_cofactor;
 	prj_pt_src_t pub_key_y;
+	hash_context *h_ctx;
+	hash_context *h_ctx_pre_hash;
 
 	/* First, verify context has been initialized */
 	SIG_VERIFY_CHECK_INITIALIZED(ctx);
@@ -2275,6 +2348,8 @@ int _eddsa_verify_init(struct ec_verify_context *ctx, const u8 *sig, u8 siglen)
 	gen_cofactor = &(pub_key->params->ec_gen_cofactor);
 	pub_key_y = &(pub_key->y);
 	ec_sig_alg_type key_type = pub_key->key_type;
+	h_ctx = &(ctx->verify_data.eddsa.h_ctx);
+	h_ctx_pre_hash = &(ctx->verify_data.eddsa.h_ctx_pre_hash);
 
 	/* Sanity check on hash types */
 	if(ctx->h->type != get_eddsa_hash_type(key_type)){
@@ -2298,8 +2373,8 @@ int _eddsa_verify_init(struct ec_verify_context *ctx, const u8 *sig, u8 siglen)
 		ret = -1;
 		goto err;
 	}
-	ctx->h->hfunc_init(&(ctx->verify_data.eddsa.h_ctx));
-	ctx->h->hfunc_init(&(ctx->verify_data.eddsa.h_ctx_pre_hash));
+	ctx->h->hfunc_init(h_ctx);
+	ctx->h->hfunc_init(h_ctx_pre_hash);
 #if defined(WITH_SIG_EDDSA25519)
 	if(key_type == EDDSA25519CTX){
 		/* As per RFC8032, for EDDSA25519CTX the context SHOULD NOT be empty */
@@ -2307,13 +2382,13 @@ int _eddsa_verify_init(struct ec_verify_context *ctx, const u8 *sig, u8 siglen)
 			ret = -1;
 			goto err;
 		}
-		if(dom2(0, ctx->adata, ctx->adata_len, ctx->h, &(ctx->verify_data.eddsa.h_ctx))){
+		if(dom2(0, ctx->adata, ctx->adata_len, ctx->h, h_ctx)){
 			ret = -1;
 			goto err;
 		}
 	}
 	if(key_type == EDDSA25519PH){
-		if(dom2(1, ctx->adata, ctx->adata_len, ctx->h, &(ctx->verify_data.eddsa.h_ctx))){
+		if(dom2(1, ctx->adata, ctx->adata_len, ctx->h, h_ctx)){
 			ret = -1;
 			goto err;
 		}
@@ -2321,13 +2396,13 @@ int _eddsa_verify_init(struct ec_verify_context *ctx, const u8 *sig, u8 siglen)
 #endif
 #if defined(WITH_SIG_EDDSA448)
 	if(key_type == EDDSA448){
-		if(dom4(0, ctx->adata, ctx->adata_len, ctx->h, &(ctx->verify_data.eddsa.h_ctx))){
+		if(dom4(0, ctx->adata, ctx->adata_len, ctx->h, h_ctx)){
 			ret = -1;
 			goto err;
 		}
 	}
 	if(key_type == EDDSA448PH){
-		if(dom4(1, ctx->adata, ctx->adata_len, ctx->h, &(ctx->verify_data.eddsa.h_ctx))){
+		if(dom4(1, ctx->adata, ctx->adata_len, ctx->h, h_ctx)){
 			ret = -1;
 			goto err;
 		}
@@ -2336,8 +2411,10 @@ int _eddsa_verify_init(struct ec_verify_context *ctx, const u8 *sig, u8 siglen)
 	/* Import R and S values from signature buffer */
 	/*******************************/
 	/* Import R as an Edwards point */
-	curve_shortw_to_edwards(shortw_curve, &crv_edwards, alpha_montgomery, gamma_montgomery, alpha_edwards);
-	if(eddsa_decode_point(&R, &crv_edwards, alpha_edwards, &sig[0], EDDSA_R_LEN(hsize), key_type)){
+	curve_shortw_to_edwards(shortw_curve, &crv_edwards, alpha_montgomery,
+				gamma_montgomery, alpha_edwards);
+	if(eddsa_decode_point(&R, &crv_edwards, alpha_edwards, &sig[0],
+			      EDDSA_R_LEN(hsize), key_type)){
 		/* NOTE: non canonical R are checked and rejected here */
 		ret = -1;
 		goto err;
@@ -2346,7 +2423,7 @@ int _eddsa_verify_init(struct ec_verify_context *ctx, const u8 *sig, u8 siglen)
 	/* Transfer our public point R to Weierstrass */
 	aff_pt_edwards_to_prj_pt_shortw(&R, shortw_curve, _R, alpha_edwards);
 	/* Update the hash with the encoded R */
-	ctx->h->hfunc_update(&(ctx->verify_data.eddsa.h_ctx), &sig[0], EDDSA_R_LEN(hsize));
+	ctx->h->hfunc_update(h_ctx, &sig[0], EDDSA_R_LEN(hsize));
 
 	/*******************************/
 	/* Import S as an integer */
@@ -2363,8 +2440,8 @@ int _eddsa_verify_init(struct ec_verify_context *ctx, const u8 *sig, u8 siglen)
 
 	/*******************************/
 	/* Encode the public key
-	 * NOTE: since we deal with a public key transfered to Weierstrass, encoding checking
-	 * has been handled elsewhere.
+	 * NOTE: since we deal with a public key transfered to Weierstrass,
+	 * encoding checking has been handled elsewhere.
 	 */
 	/* Reject the signature if the public key is one of small order points.
 	 * We multiply by the cofactor: since this is a public verification,
@@ -2395,7 +2472,7 @@ int _eddsa_verify_init(struct ec_verify_context *ctx, const u8 *sig, u8 siglen)
 	}
 
 	/* Update the hash with the encoded public key */
-	ctx->h->hfunc_update(&(ctx->verify_data.eddsa.h_ctx), buff, EDDSA_R_LEN(hsize));
+	ctx->h->hfunc_update(h_ctx, buff, EDDSA_R_LEN(hsize));
 
 	/* Context magic set */
 	ctx->verify_data.eddsa.magic = EDDSA_VERIFY_MAGIC;
@@ -2433,6 +2510,8 @@ int _eddsa_verify_update(struct ec_verify_context *ctx,
 	int ret = -1;
 	ec_sig_alg_type key_type;
 	u8 use_message_pre_hash = 0;
+	hash_context *h_ctx;
+	hash_context *h_ctx_pre_hash;
 
 	/*
 	 * First, verify context has been initialized and public
@@ -2444,6 +2523,8 @@ int _eddsa_verify_update(struct ec_verify_context *ctx,
 	EDDSA_VERIFY_CHECK_INITIALIZED(&(ctx->verify_data.eddsa));
 
 	key_type = ctx->pub_key->key_type;
+	h_ctx = &(ctx->verify_data.eddsa.h_ctx);
+	h_ctx_pre_hash = &(ctx->verify_data.eddsa.h_ctx_pre_hash);
 
 	/* Sanity check on hash types */
 	if(ctx->h->type != get_eddsa_hash_type(key_type)){
@@ -2470,11 +2551,12 @@ int _eddsa_verify_update(struct ec_verify_context *ctx,
 	}
 	if(use_message_pre_hash == 1){
 		/* In PH mode, update the dedicated hash context */
-		ctx->h->hfunc_update(&(ctx->verify_data.eddsa.h_ctx_pre_hash), chunk, chunklen);
+		ctx->h->hfunc_update(h_ctx_pre_hash,
+				     chunk, chunklen);
 	}
 	else{
 		/* In normal mode, update the nominal hash context */
-		ctx->h->hfunc_update(&(ctx->verify_data.eddsa.h_ctx), chunk, chunklen);
+		ctx->h->hfunc_update(h_ctx, chunk, chunklen);
 	}
 
 	ret = 0;
@@ -2497,6 +2579,8 @@ int _eddsa_verify_finalize(struct ec_verify_context *ctx)
 	ec_sig_alg_type key_type;
 	u8 use_message_pre_hash = 0;
 	u16 use_message_pre_hash_hsize = 0;
+	hash_context *h_ctx;
+	hash_context *h_ctx_pre_hash;
 
 	/*
 	 * First, verify context has been initialized and public
@@ -2520,6 +2604,8 @@ int _eddsa_verify_finalize(struct ec_verify_context *ctx)
 	_R = &(ctx->verify_data.eddsa._R);
 	gen_cofactor = &(ctx->pub_key->params->ec_gen_cofactor);
 	key_type = ctx->pub_key->key_type;
+	h_ctx = &(ctx->verify_data.eddsa.h_ctx);
+	h_ctx_pre_hash = &(ctx->verify_data.eddsa.h_ctx_pre_hash);
 
 	/* Sanity check on hash types */
 	if(ctx->h->type != get_eddsa_hash_type(key_type)){
@@ -2563,14 +2649,14 @@ int _eddsa_verify_finalize(struct ec_verify_context *ctx)
 	}
 	/* Update the hash with the message or its hash for the PH versions */
 	if(use_message_pre_hash == 1){
-		ctx->h->hfunc_finalize(&(ctx->verify_data.eddsa.h_ctx_pre_hash), hash);
+		ctx->h->hfunc_finalize(h_ctx_pre_hash, hash);
 		if(use_message_pre_hash_hsize > hsize){
 			ret = -1;
 			goto err;
 		}
-		ctx->h->hfunc_update(&(ctx->verify_data.eddsa.h_ctx), hash, use_message_pre_hash_hsize);
+		ctx->h->hfunc_update(h_ctx, hash, use_message_pre_hash_hsize);
 	}
-	ctx->h->hfunc_finalize(&(ctx->verify_data.eddsa.h_ctx), hash);
+	ctx->h->hfunc_finalize(h_ctx, hash);
 	dbg_buf_print("hash = H(R || A || PH(M))", hash, hsize);
 
 	/* 3. Import our hash as a NN and reduce it modulo q */

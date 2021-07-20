@@ -33,14 +33,14 @@ void sha512_256_init(sha512_256_context *ctx)
 	ctx->sha512_state[6] = (u64)(0x2B0199FC2C85B8AA);
 	ctx->sha512_state[7] = (u64)(0x0EB72DDC81C52CA2);
 
-        /* Tell that we are initialized */
-        ctx->magic = SHA512_256_HASH_MAGIC;
+	/* Tell that we are initialized */
+	ctx->magic = SHA512_256_HASH_MAGIC;
 }
 
 /* Update hash function */
 void sha512_256_update(sha512_256_context *ctx, const u8 *input, u32 ilen)
 {
-        SHA512_256_HASH_CHECK_INITIALIZED(ctx);
+	SHA512_256_HASH_CHECK_INITIALIZED(ctx);
 
 	sha512_core_update(ctx, input, ilen);
 
@@ -50,12 +50,12 @@ void sha512_256_update(sha512_256_context *ctx, const u8 *input, u32 ilen)
 /* Finalize */
 void sha512_256_final(sha512_256_context *ctx, u8 output[SHA512_256_DIGEST_SIZE])
 {
-        SHA512_256_HASH_CHECK_INITIALIZED(ctx);
+	SHA512_256_HASH_CHECK_INITIALIZED(ctx);
 
 	sha512_core_final(ctx, output, SHA512_256_DIGEST_SIZE);
 
-        /* Tell that we are uninitialized */
-        ctx->magic = 0;
+	/* Tell that we are uninitialized */
+	ctx->magic = 0;
 
 	return;
 }

@@ -2,13 +2,13 @@
  *  Copyright (C) 2017 - This file is part of libecc project
  *
  *  Authors:
- *      Ryad BENADJILA <ryadbenadjila@gmail.com>
- *      Arnaud EBALARD <arnaud.ebalard@ssi.gouv.fr>
- *      Jean-Pierre FLORI <jean-pierre.flori@ssi.gouv.fr>
+ *	Ryad BENADJILA <ryadbenadjila@gmail.com>
+ *	Arnaud EBALARD <arnaud.ebalard@ssi.gouv.fr>
+ *	Jean-Pierre FLORI <jean-pierre.flori@ssi.gouv.fr>
  *
  *  Contributors:
- *      Nicolas VIVET <nicolas.vivet@ssi.gouv.fr>
- *      Karim KHALFALLAH <karim.khalfallah@ssi.gouv.fr>
+ *	Nicolas VIVET <nicolas.vivet@ssi.gouv.fr>
+ *	Karim KHALFALLAH <karim.khalfallah@ssi.gouv.fr>
  *
  *  This software is licensed under a dual BSD and GPL v2 license.
  *  See LICENSE file at the root folder of the project.
@@ -35,27 +35,27 @@ int ecgdsa_init_pub_key(ec_pub_key *out_pub, const ec_priv_key *in_priv)
 
 	MUST_HAVE(out_pub != NULL);
 
-        /* Zero init public key to be generated */
-        local_memset(out_pub, 0, sizeof(ec_pub_key));
+	/* Zero init public key to be generated */
+	local_memset(out_pub, 0, sizeof(ec_pub_key));
 
 	priv_key_check_initialized_and_type(in_priv, ECGDSA);
 
-        /* Sanity check */
-        if(nn_cmp(&(in_priv->x), &(in_priv->params->ec_gen_order)) >= 0){
-                /* This should not happen and means that our
-                 * private key is not compliant!
-                 */
-                goto err;
-        }
+	/* Sanity check */
+	if(nn_cmp(&(in_priv->x), &(in_priv->params->ec_gen_order)) >= 0){
+		/* This should not happen and means that our
+		 * private key is not compliant!
+		 */
+		goto err;
+	}
 
 	/* Y = (x^-1)G */
 	G = &(in_priv->params->ec_gen);
 	nn_modinv(&xinv, &(in_priv->x), &(in_priv->params->ec_gen_order));
-        /* Use blinding with scalar_b when computing point scalar multiplication */
-        if(prj_pt_mul_monty_blind(&(out_pub->y), &xinv, G)){
+	/* Use blinding with scalar_b when computing point scalar multiplication */
+	if(prj_pt_mul_monty_blind(&(out_pub->y), &xinv, G)){
 		goto err;
 	}
-        nn_uninit(&xinv);
+	nn_uninit(&xinv);
 
 	out_pub->key_type = ECGDSA;
 	out_pub->params = in_priv->params;
@@ -89,7 +89,7 @@ u8 ecgdsa_siglen(u16 p_bit_len, u16 q_bit_len, u8 hsize, u8 blocksize)
  *| IUF - EC-GDSA signature
  *|
  *|  UF 1. Compute h = H(m). If |h| > bitlen(q), set h to bitlen(q)
- *|        leftmost (most significant) bits of h
+ *|	   leftmost (most significant) bits of h
  *|   F 2. Compute e = - OS2I(h) mod q
  *|   F 3. Get a random value k in ]0,q[
  *|   F 4. Compute W = (W_x,W_y) = kG
@@ -137,10 +137,10 @@ int _ecgdsa_sign_init(struct ec_sign_context *ctx)
 	 * Initialize hash context stored in our private part of context
 	 * and record data init has been done
 	 */
-        /* Since we call a callback, sanity check our mapping */
-        if(hash_mapping_callbacks_sanity_check(ctx->h)){
+	/* Since we call a callback, sanity check our mapping */
+	if(hash_mapping_callbacks_sanity_check(ctx->h)){
 		return -1;
-        }
+	}
 	ctx->h->hfunc_init(&(ctx->sign_data.ecgdsa.h_ctx));
 	ctx->sign_data.ecgdsa.magic = ECGDSA_SIGN_MAGIC;
 
@@ -160,10 +160,10 @@ int _ecgdsa_sign_update(struct ec_sign_context *ctx,
 	ECGDSA_SIGN_CHECK_INITIALIZED(&(ctx->sign_data.ecgdsa));
 
 	/* 1. Compute h = H(m) */
-        /* Since we call a callback, sanity check our mapping */
-        if(hash_mapping_callbacks_sanity_check(ctx->h)){
+	/* Since we call a callback, sanity check our mapping */
+	if(hash_mapping_callbacks_sanity_check(ctx->h)){
 		return -1;
-        }
+	}
 	ctx->h->hfunc_update(&(ctx->sign_data.ecgdsa.h_ctx), chunk, chunklen);
 
 	return 0;
@@ -174,8 +174,8 @@ int _ecgdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	nn_src_t q, x;
 	nn tmp, tmp2, s, e, kr, k, r;
 #ifdef USE_SIG_BLINDING
-        /* b is the blinding mask */
-        nn b, binv;
+	/* b is the blinding mask */
+	nn b, binv;
 #endif
 	u8 e_buf[MAX_DIGEST_SIZE];
 	const ec_priv_key *priv_key;
@@ -195,8 +195,8 @@ int _ecgdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	SIG_SIGN_CHECK_INITIALIZED(ctx);
 	ECGDSA_SIGN_CHECK_INITIALIZED(&(ctx->sign_data.ecgdsa));
 
-        /* Zero init points */
-        local_memset(&kG, 0, sizeof(prj_pt));
+	/* Zero init points */
+	local_memset(&kG, 0, sizeof(prj_pt));
 
 	/* Make things more readable */
 	priv_key = &(ctx->key_pair->priv_key);
@@ -210,14 +210,14 @@ int _ecgdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	s_len = (u8)ECGDSA_S_LEN(q_bit_len);
 	hsize = ctx->h->digest_size;
 
-        /* Sanity check */
-        if(nn_cmp(x, q) >= 0){
-                /* This should not happen and means that our
-                 * private key is not compliant!
-                 */
-                ret = -1;
-                goto err;
-        }
+	/* Sanity check */
+	if(nn_cmp(x, q) >= 0){
+		/* This should not happen and means that our
+		 * private key is not compliant!
+		 */
+		ret = -1;
+		goto err;
+	}
 
 	if (siglen != ECGDSA_SIGLEN(q_bit_len)) {
 		ret = -1;
@@ -238,29 +238,29 @@ int _ecgdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 
 	/* 1. Compute h = H(m) */
 	local_memset(e_buf, 0, hsize);
-        /* Since we call a callback, sanity check our mapping */
-        if(hash_mapping_callbacks_sanity_check(ctx->h)){
-                ret = -1;
-                goto err;
-        }
+	/* Since we call a callback, sanity check our mapping */
+	if(hash_mapping_callbacks_sanity_check(ctx->h)){
+		ret = -1;
+		goto err;
+	}
 	ctx->h->hfunc_finalize(&(ctx->sign_data.ecgdsa.h_ctx), e_buf);
 	dbg_buf_print("H(m)", e_buf, hsize);
 
-        /*
-         * If |h| > bitlen(q), set h to bitlen(q)
-         * leftmost bits of h.
-         *
-         */
-        rshift = 0;
-        if ((hsize * 8) > q_bit_len) {
-                rshift = (hsize * 8) - q_bit_len;
-        }
+	/*
+	 * If |h| > bitlen(q), set h to bitlen(q)
+	 * leftmost bits of h.
+	 *
+	 */
+	rshift = 0;
+	if ((hsize * 8) > q_bit_len) {
+		rshift = (hsize * 8) - q_bit_len;
+	}
 	nn_init_from_buf(&tmp, e_buf, hsize);
 	local_memset(e_buf, 0, hsize);
-        if (rshift) {
-                nn_rshift_fixedlen(&tmp, &tmp, rshift);
-        }
-        dbg_nn_print("H(m) truncated as nn", &tmp);
+	if (rshift) {
+		nn_rshift_fixedlen(&tmp, &tmp, rshift);
+	}
+	dbg_nn_print("H(m) truncated as nn", &tmp);
 
 	/*
 	 * 2. Convert h to an integer and then compute e = -h mod q,
@@ -280,20 +280,20 @@ int _ecgdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
  restart:
 	/* 3. Get a random value k in ]0,q[ */
 #ifdef NO_KNOWN_VECTORS
-        /* NOTE: when we do not need self tests for known vectors,
-         * we can be strict about random function handler!
-         * This allows us to avoid the corruption of such a pointer.
-         */
-        /* Sanity check on the handler before calling it */
-        if(ctx->rand != nn_get_random_mod){
-                ret = -1;
-                goto err;
-        }
+	/* NOTE: when we do not need self tests for known vectors,
+	 * we can be strict about random function handler!
+	 * This allows us to avoid the corruption of such a pointer.
+	 */
+	/* Sanity check on the handler before calling it */
+	if(ctx->rand != nn_get_random_mod){
+		ret = -1;
+		goto err;
+	}
 #endif
-        if(ctx->rand == NULL){
-                ret = -1;
-                goto err;
-        }
+	if(ctx->rand == NULL){
+		ret = -1;
+		goto err;
+	}
 	ret = ctx->rand(&k, q);
 	if (ret) {
 		nn_uninit(&tmp2);
@@ -304,29 +304,29 @@ int _ecgdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	}
 
 #ifdef USE_SIG_BLINDING
-        /* Note: if we use blinding, e and e are multiplied by
-         * a random value b in ]0,q[ */
-        ret = nn_get_random_mod(&b, q);
-        if (ret) {
+	/* Note: if we use blinding, e and e are multiplied by
+	 * a random value b in ]0,q[ */
+	ret = nn_get_random_mod(&b, q);
+	if (ret) {
 		nn_uninit(&tmp2);
 		nn_uninit(&tmp);
 		nn_uninit(&e);
 		ret = -1;
-                goto err;
-        }
-        dbg_nn_print("b", &b);
+		goto err;
+	}
+	dbg_nn_print("b", &b);
 #endif /* USE_SIG_BLINDING */
 
 
 	/* 4. Compute W = kG = (Wx, Wy) */
 #ifdef USE_SIG_BLINDING
-        /* We use blinding for the scalar multiplication */
-        if(prj_pt_mul_monty_blind(&kG, &k, G)){
+	/* We use blinding for the scalar multiplication */
+	if(prj_pt_mul_monty_blind(&kG, &k, G)){
 		ret = -1;
 		goto err;
 	}
 #else
-        prj_pt_mul_monty(&kG, &k, G);
+	prj_pt_mul_monty(&kG, &k, G);
 #endif /* USE_SIG_BLINDING */
 	prj_pt_to_aff(&W, &kG);
 	prj_pt_uninit(&kG);
@@ -402,12 +402,12 @@ int _ecgdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	PTR_NULLIFY(G);
 
 #ifdef USE_SIG_BLINDING
-        if(nn_is_initialized(&b)){
-                nn_uninit(&b);
-        }
-        if(nn_is_initialized(&binv)){
-                nn_uninit(&binv);
-        }
+	if(nn_is_initialized(&b)){
+		nn_uninit(&b);
+	}
+	if(nn_is_initialized(&binv)){
+		nn_uninit(&binv);
+	}
 #endif /* USE_SIG_BLINDING */
 
 	return ret;
@@ -426,9 +426,9 @@ int _ecgdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
  *
  *| IUF - EC-GDSA verification
  *|
- *| I   1. Reject the signature if r or s is 0.
+ *| I	1. Reject the signature if r or s is 0.
  *|  UF 2. Compute h = H(m). If |h| > bitlen(q), set h to bitlen(q)
- *|        leftmost (most significant) bits of h
+ *|	   leftmost (most significant) bits of h
  *|   F 3. Compute e = OS2I(h) mod q
  *|   F 4. Compute u = ((r^-1)e mod q)
  *|   F 5. Compute v = ((r^-1)s mod q)
@@ -495,11 +495,11 @@ int _ecgdsa_verify_init(struct ec_verify_context *ctx,
 	}
 
 	/* Initialize the remaining of verify context */
-        /* Since we call a callback, sanity check our mapping */
-        if(hash_mapping_callbacks_sanity_check(ctx->h)){
-                ret = -1;
-                goto err;
-        }
+	/* Since we call a callback, sanity check our mapping */
+	if(hash_mapping_callbacks_sanity_check(ctx->h)){
+		ret = -1;
+		goto err;
+	}
 	ctx->h->hfunc_init(&(ctx->verify_data.ecgdsa.h_ctx));
 	ctx->verify_data.ecgdsa.magic = ECGDSA_VERIFY_MAGIC;
 
@@ -529,10 +529,10 @@ int _ecgdsa_verify_update(struct ec_verify_context *ctx,
 	ECGDSA_VERIFY_CHECK_INITIALIZED(&(ctx->verify_data.ecgdsa));
 
 	/* 2. Compute h = H(m) */
-        /* Since we call a callback, sanity check our mapping */
-        if(hash_mapping_callbacks_sanity_check(ctx->h)){
+	/* Since we call a callback, sanity check our mapping */
+	if(hash_mapping_callbacks_sanity_check(ctx->h)){
 		return -1;
-        }
+	}
 	ctx->h->hfunc_update(&(ctx->verify_data.ecgdsa.h_ctx), chunk,
 			     chunklen);
 
@@ -559,9 +559,9 @@ int _ecgdsa_verify_finalize(struct ec_verify_context *ctx)
 	SIG_VERIFY_CHECK_INITIALIZED(ctx);
 	ECGDSA_VERIFY_CHECK_INITIALIZED(&(ctx->verify_data.ecgdsa));
 
-        /* Zero init points */
-        local_memset(&uG, 0, sizeof(prj_pt));
-        local_memset(&vY, 0, sizeof(prj_pt));
+	/* Zero init points */
+	local_memset(&uG, 0, sizeof(prj_pt));
+	local_memset(&vY, 0, sizeof(prj_pt));
 
 	/* Make things more readable */
 	G = &(ctx->pub_key->params->ec_gen);
@@ -573,29 +573,29 @@ int _ecgdsa_verify_finalize(struct ec_verify_context *ctx)
 	hsize = ctx->h->digest_size;
 
 	/* 2. Compute h = H(m) */
-        /* Since we call a callback, sanity check our mapping */
-        if(hash_mapping_callbacks_sanity_check(ctx->h)){
-                ret = -1;
-                goto err;
-        }
+	/* Since we call a callback, sanity check our mapping */
+	if(hash_mapping_callbacks_sanity_check(ctx->h)){
+		ret = -1;
+		goto err;
+	}
 	ctx->h->hfunc_finalize(&(ctx->verify_data.ecgdsa.h_ctx), e_buf);
 	dbg_buf_print("H(m)", e_buf, hsize);
 
-        /*
-         * If |h| > bitlen(q), set h to bitlen(q)
-         * leftmost bits of h.
-         *
-         */
-        rshift = 0;
-        if ((hsize * 8) > q_bit_len) {
-                rshift = (hsize * 8) - q_bit_len;
-        }
+	/*
+	 * If |h| > bitlen(q), set h to bitlen(q)
+	 * leftmost bits of h.
+	 *
+	 */
+	rshift = 0;
+	if ((hsize * 8) > q_bit_len) {
+		rshift = (hsize * 8) - q_bit_len;
+	}
 	nn_init_from_buf(&tmp, e_buf, hsize);
 	local_memset(e_buf, 0, hsize);
-        if (rshift) {
-                nn_rshift_fixedlen(&tmp, &tmp, rshift);
-        }
-        dbg_nn_print("H(m) truncated as nn", &tmp);
+	if (rshift) {
+		nn_rshift_fixedlen(&tmp, &tmp, rshift);
+	}
+	dbg_nn_print("H(m) truncated as nn", &tmp);
 
 	/* 3. Compute e by converting h to an integer and reducing it mod q */
 	nn_mod(&e, &tmp, q);

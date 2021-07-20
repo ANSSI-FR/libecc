@@ -1,3 +1,13 @@
+/*
+ *  Copyright (C) 2021 - This file is part of libecc project
+ *
+ *  Authors:
+ *      Ryad BENADJILA <ryadbenadjila@gmail.com>
+ *      Arnaud EBALARD <arnaud.ebalard@ssi.gouv.fr>
+ *
+ *  This software is licensed under a dual BSD and GPL v2 license.
+ *  See LICENSE file at the root folder of the project.
+ */
 #include "../lib_ecc_config.h"
 #ifdef WITH_HASH_STREEBOG512
 
@@ -30,7 +40,7 @@
 
 #define STREEBOG512_HASH_MAGIC ((word_t)(0x3293187509128364ULL))
 #define STREEBOG512_HASH_CHECK_INITIALIZED(A) \
-        MUST_HAVE((((void *)(A)) != NULL) && ((A)->magic == STREEBOG512_HASH_MAGIC))
+	MUST_HAVE((((void *)(A)) != NULL) && ((A)->magic == STREEBOG512_HASH_MAGIC))
 
 typedef streebog_context streebog512_context;
 

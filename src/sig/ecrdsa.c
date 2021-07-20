@@ -2,13 +2,13 @@
  *  Copyright (C) 2017 - This file is part of libecc project
  *
  *  Authors:
- *      Ryad BENADJILA <ryadbenadjila@gmail.com>
- *      Arnaud EBALARD <arnaud.ebalard@ssi.gouv.fr>
- *      Jean-Pierre FLORI <jean-pierre.flori@ssi.gouv.fr>
+ *	Ryad BENADJILA <ryadbenadjila@gmail.com>
+ *	Arnaud EBALARD <arnaud.ebalard@ssi.gouv.fr>
+ *	Jean-Pierre FLORI <jean-pierre.flori@ssi.gouv.fr>
  *
  *  Contributors:
- *      Nicolas VIVET <nicolas.vivet@ssi.gouv.fr>
- *      Karim KHALFALLAH <karim.khalfallah@ssi.gouv.fr>
+ *	Nicolas VIVET <nicolas.vivet@ssi.gouv.fr>
+ *	Karim KHALFALLAH <karim.khalfallah@ssi.gouv.fr>
  *
  *  This software is licensed under a dual BSD and GPL v2 license.
  *  See LICENSE file at the root folder of the project.
@@ -33,23 +33,23 @@ int ecrdsa_init_pub_key(ec_pub_key *out_pub, const ec_priv_key *in_priv)
 
 	MUST_HAVE(out_pub != NULL);
 
-        /* Zero init public key to be generated */
-        local_memset(out_pub, 0, sizeof(ec_pub_key));
+	/* Zero init public key to be generated */
+	local_memset(out_pub, 0, sizeof(ec_pub_key));
 
 	priv_key_check_initialized_and_type(in_priv, ECRDSA);
 
 	/* Sanity check */
-        if(nn_cmp(&(in_priv->x), &(in_priv->params->ec_gen_order)) >= 0){
-                /* This should not happen and means that our
-                 * private key is not compliant!
-                 */
-                goto err;
-        }
+	if(nn_cmp(&(in_priv->x), &(in_priv->params->ec_gen_order)) >= 0){
+		/* This should not happen and means that our
+		 * private key is not compliant!
+		 */
+		goto err;
+	}
 
 	/* Y = xG */
 	G = &(in_priv->params->ec_gen);
-        /* Use blinding when computing point scalar multiplication */
-        if(prj_pt_mul_monty_blind(&(out_pub->y), &(in_priv->x), G)){
+	/* Use blinding when computing point scalar multiplication */
+	if(prj_pt_mul_monty_blind(&(out_pub->y), &(in_priv->x), G)){
 		goto err;
 	}
 
@@ -84,14 +84,14 @@ u8 ecrdsa_siglen(u16 p_bit_len, u16 q_bit_len, u8 hsize, u8 blocksize)
  *
  *| IUF - EC-RDSA signature
  *|
- *|  UF  1. Compute h = H(m)
- *|   F  2. Get a random value k in ]0,q[
- *|   F  3. Compute W = (W_x,W_y) = kG
- *|   F  4. Compute r = W_x mod q
- *|   F  5. If r is 0, restart the process at step 2.
- *|   F  6. Compute e = OS2I(h) mod q. If e is 0, set e to 1.
- *|   F  7. Compute s = (rx + ke) mod q
- *|   F  8. If s is 0, restart the process at step 2.
+ *|  UF	 1. Compute h = H(m)
+ *|   F	 2. Get a random value k in ]0,q[
+ *|   F	 3. Compute W = (W_x,W_y) = kG
+ *|   F	 4. Compute r = W_x mod q
+ *|   F	 5. If r is 0, restart the process at step 2.
+ *|   F	 6. Compute e = OS2I(h) mod q. If e is 0, set e to 1.
+ *|   F	 7. Compute s = (rx + ke) mod q
+ *|   F	 8. If s is 0, restart the process at step 2.
  *|   F 11. Return (r,s)
  *
  */
@@ -117,10 +117,10 @@ int _ecrdsa_sign_init(struct ec_sign_context *ctx)
 	 * Initialize hash context stored in our private part of context
 	 * and record data init has been done
 	 */
-        /* Since we call a callback, sanity check our mapping */
-        if(hash_mapping_callbacks_sanity_check(ctx->h)){
+	/* Since we call a callback, sanity check our mapping */
+	if(hash_mapping_callbacks_sanity_check(ctx->h)){
 		return -1;
-        }
+	}
 	ctx->h->hfunc_init(&(ctx->sign_data.ecrdsa.h_ctx));
 	ctx->sign_data.ecrdsa.magic = ECRDSA_SIGN_MAGIC;
 
@@ -139,10 +139,10 @@ int _ecrdsa_sign_update(struct ec_sign_context *ctx,
 	SIG_SIGN_CHECK_INITIALIZED(ctx);
 	ECRDSA_SIGN_CHECK_INITIALIZED(&(ctx->sign_data.ecrdsa));
 
-        /* Since we call a callback, sanity check our mapping */
-        if(hash_mapping_callbacks_sanity_check(ctx->h)){
+	/* Since we call a callback, sanity check our mapping */
+	if(hash_mapping_callbacks_sanity_check(ctx->h)){
 		return -1;
-        }
+	}
 	ctx->h->hfunc_update(&(ctx->sign_data.ecrdsa.h_ctx), chunk, chunklen);
 
 	return 0;
@@ -154,8 +154,8 @@ int _ecrdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	const ec_priv_key *priv_key;
 	nn tmp, s, rx, ke, k, r, e;
 #ifdef USE_SIG_BLINDING
-        /* b is the blinding mask */
-        nn b, binv;
+	/* b is the blinding mask */
+	nn b, binv;
 #endif /* USE_SIG_BLINDING */
 	u8 h_buf[MAX_DIGEST_SIZE];
 	prj_pt_src_t G;
@@ -173,8 +173,8 @@ int _ecrdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	SIG_SIGN_CHECK_INITIALIZED(ctx);
 	ECRDSA_SIGN_CHECK_INITIALIZED(&(ctx->sign_data.ecrdsa));
 
-        /* Zero init points */
-        local_memset(&kG, 0, sizeof(prj_pt));
+	/* Zero init points */
+	local_memset(&kG, 0, sizeof(prj_pt));
 
 	/* Make things more readable */
 	priv_key = &(ctx->key_pair->priv_key);
@@ -188,13 +188,13 @@ int _ecrdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	hsize = ctx->h->digest_size;
 
 	/* Sanity check */
-        if(nn_cmp(x, q) >= 0){
-                /* This should not happen and means that our
-                 * private key is not compliant!
-                 */
-                ret = -1;
-                goto err;
-        }
+	if(nn_cmp(x, q) >= 0){
+		/* This should not happen and means that our
+		 * private key is not compliant!
+		 */
+		ret = -1;
+		goto err;
+	}
 
 	if (NN_MAX_BIT_LEN < p_bit_len) {
 		ret = -1;
@@ -215,15 +215,15 @@ int _ecrdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
  restart:
 	/* 2. Get a random value k in ]0, q[ ... */
 #ifdef NO_KNOWN_VECTORS
-        /* NOTE: when we do not need self tests for known vectors,
-         * we can be strict about random function handler!
-         * This allows us to avoid the corruption of such a pointer.
-         */
-        /* Sanity check on the handler before calling it */
-        if(ctx->rand != nn_get_random_mod){
-                ret = -1;
-                goto err;
-        }
+	/* NOTE: when we do not need self tests for known vectors,
+	 * we can be strict about random function handler!
+	 * This allows us to avoid the corruption of such a pointer.
+	 */
+	/* Sanity check on the handler before calling it */
+	if(ctx->rand != nn_get_random_mod){
+		ret = -1;
+		goto err;
+	}
 #endif
 	if(ctx->rand == NULL){
 		ret = -1;
@@ -237,24 +237,24 @@ int _ecrdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 
 	dbg_nn_print("k", &k);
 #ifdef USE_SIG_BLINDING
-        /* Note: if we use blinding, k and e are multiplied by
-         * a random value b in ]0,q[ */
-        ret = nn_get_random_mod(&b, q);
-        if (ret) {
-                goto err;
-        }
-        dbg_nn_print("b", &b);
+	/* Note: if we use blinding, k and e are multiplied by
+	 * a random value b in ]0,q[ */
+	ret = nn_get_random_mod(&b, q);
+	if (ret) {
+		goto err;
+	}
+	dbg_nn_print("b", &b);
 #endif /* USE_SIG_BLINDING */
 
 	/* 3. Compute W = kG = (Wx, Wy) */
 #ifdef USE_SIG_BLINDING
-        /* We use blinding for the scalar multiplication */
-        if(prj_pt_mul_monty_blind(&kG, &k, G)){
+	/* We use blinding for the scalar multiplication */
+	if(prj_pt_mul_monty_blind(&kG, &k, G)){
 		ret = -1;
 		goto err;
 	}
 #else
-        prj_pt_mul_monty(&kG, &k, G);
+	prj_pt_mul_monty(&kG, &k, G);
 #endif /* USE_SIG_BLINDING */
 	prj_pt_to_aff(&W, &kG);
 	prj_pt_uninit(&kG);
@@ -276,11 +276,11 @@ int _ecrdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 
 	/* 6. Compute e = OS2I(h) mod q. If e is 0, set e to 1. */
 	local_memset(h_buf, 0, hsize);
-        /* Since we call a callback, sanity check our mapping */
-        if(hash_mapping_callbacks_sanity_check(ctx->h)){
-                ret = -1;
-                goto err;
-        }
+	/* Since we call a callback, sanity check our mapping */
+	if(hash_mapping_callbacks_sanity_check(ctx->h)){
+		ret = -1;
+		goto err;
+	}
 	ctx->h->hfunc_finalize(&(ctx->sign_data.ecrdsa.h_ctx), h_buf);
 	dbg_buf_print("H(m)", h_buf, hsize);
 	nn_init_from_buf(&tmp, h_buf, hsize);
@@ -292,9 +292,9 @@ int _ecrdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	dbg_nn_print("e", &e);
 
 #ifdef USE_SIG_BLINDING
-        /* In case of blinding, we blind r and e */
-        nn_mul_mod(&r, &r, &b, q);
-        nn_mul_mod(&e, &e, &b, q);
+	/* In case of blinding, we blind r and e */
+	nn_mul_mod(&r, &r, &b, q);
+	nn_mul_mod(&e, &e, &b, q);
 #endif /* USE_SIG_BLINDING */
 
 	/* Compute s = (rx + ke) mod q */
@@ -308,7 +308,7 @@ int _ecrdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	nn_zero(&tmp);
 #ifdef USE_SIG_BLINDING
 	/* Unblind s */
-        nn_modinv(&binv, &b, q);
+	nn_modinv(&binv, &b, q);
 	nn_mul_mod(&s, &s, &binv, q);
 #endif /* USE_SIG_BLINDING */
 
@@ -345,12 +345,12 @@ int _ecrdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	PTR_NULLIFY(x);
 
 #ifdef USE_SIG_BLINDING
-        if(nn_is_initialized(&b)){
-                nn_uninit(&b);
-        }
-        if(nn_is_initialized(&binv)){
-                nn_uninit(&binv);
-        }
+	if(nn_is_initialized(&b)){
+		nn_uninit(&b);
+	}
+	if(nn_is_initialized(&binv)){
+		nn_uninit(&binv);
+	}
 #endif /* USE_SIG_BLINDING */
 
 	return ret;
@@ -430,11 +430,11 @@ int _ecrdsa_verify_init(struct ec_verify_context *ctx,
 	nn_zero(&r);
 	nn_copy(&(ctx->verify_data.ecrdsa.s), &s);
 	nn_zero(&s);
-        /* Since we call a callback, sanity check our mapping */
-        if(hash_mapping_callbacks_sanity_check(ctx->h)){
-                ret = -1;
-                goto err;
-        }
+	/* Since we call a callback, sanity check our mapping */
+	if(hash_mapping_callbacks_sanity_check(ctx->h)){
+		ret = -1;
+		goto err;
+	}
 	ctx->h->hfunc_init(&(ctx->verify_data.ecrdsa.h_ctx));
 	ctx->verify_data.ecrdsa.magic = ECRDSA_VERIFY_MAGIC;
 
@@ -464,10 +464,10 @@ int _ecrdsa_verify_update(struct ec_verify_context *ctx,
 	ECRDSA_VERIFY_CHECK_INITIALIZED(&(ctx->verify_data.ecrdsa));
 
 	/* 2. Compute h = H(m) */
-        /* Since we call a callback, sanity check our mapping */
-        if(hash_mapping_callbacks_sanity_check(ctx->h)){
+	/* Since we call a callback, sanity check our mapping */
+	if(hash_mapping_callbacks_sanity_check(ctx->h)){
 		return -1;
-        }
+	}
 	ctx->h->hfunc_update(&(ctx->verify_data.ecrdsa.h_ctx), chunk,
 			     chunklen);
 
@@ -494,9 +494,9 @@ int _ecrdsa_verify_finalize(struct ec_verify_context *ctx)
 	SIG_VERIFY_CHECK_INITIALIZED(ctx);
 	ECRDSA_VERIFY_CHECK_INITIALIZED(&(ctx->verify_data.ecrdsa));
 
-        /* Zero init points */
-        local_memset(&uG, 0, sizeof(prj_pt));
-        local_memset(&vY, 0, sizeof(prj_pt));
+	/* Zero init points */
+	local_memset(&uG, 0, sizeof(prj_pt));
+	local_memset(&vY, 0, sizeof(prj_pt));
 
 	/* Make things more readable */
 	G = &(ctx->pub_key->params->ec_gen);
@@ -508,11 +508,11 @@ int _ecrdsa_verify_finalize(struct ec_verify_context *ctx)
 
 	/* 2. Compute h = H(m) */
 	local_memset(h_buf, 0, hsize);
-        /* Since we call a callback, sanity check our mapping */
-        if(hash_mapping_callbacks_sanity_check(ctx->h)){
-                ret = -1;
-                goto err;
-        }
+	/* Since we call a callback, sanity check our mapping */
+	if(hash_mapping_callbacks_sanity_check(ctx->h)){
+		ret = -1;
+		goto err;
+	}
 	ctx->h->hfunc_finalize(&(ctx->verify_data.ecrdsa.h_ctx), h_buf);
 	dbg_buf_print("H(m)", h_buf, hsize);
 

@@ -33,19 +33,21 @@
 #include "../hash/hmac.h"
 
 /*
- * Deterministic nonce generation function for deterministic ECDSA, as described in
- * RFC6979.
+ * Deterministic nonce generation function for deterministic ECDSA, as
+ * described in RFC6979.
  * NOTE: Deterministic nonce generation for ECDSA is useful against attackers
- * in contexts where only poor RNG/entropy are available, or when nonce bits leaking can
- * be possible through side-channel attacks.
- * However, in contexts where fault attacks are easy to mount, deterministic ECDSA can
- * bring more security risks than regular ECDSA.
+ * in contexts where only poor RNG/entropy are available, or when nonce bits
+ * leaking can be possible through side-channel attacks.
+ * However, in contexts where fault attacks are easy to mount, deterministic
+ * ECDSA can bring more security risks than regular ECDSA.
  *
- * Depending on the context where you use the library, choose carefully if you want to use
- * the deterministic version or not.
+ * Depending on the context where you use the library, choose carefully if
+ * you want to use the deterministic version or not.
  *
  */
-static int __ecdsa_rfc6979_nonce(nn_t k, nn_src_t q, bitcnt_t q_bit_len, nn_src_t x, const u8 *hash, u8 hsize, hash_alg_type hash_type)
+static int __ecdsa_rfc6979_nonce(nn_t k, nn_src_t q, bitcnt_t q_bit_len,
+				 nn_src_t x, const u8 *hash, u8 hsize,
+				 hash_alg_type hash_type)
 {
 	int ret = -1;
 	u8 V[MAX_DIGEST_SIZE];
@@ -64,7 +66,7 @@ static int __ecdsa_rfc6979_nonce(nn_t k, nn_src_t q, bitcnt_t q_bit_len, nn_src_
 	nn_check_initialized(x);
 	MUST_HAVE(hash != NULL);
 
-        q_len = (u8)BYTECEIL(q_bit_len);
+	q_len = (u8)BYTECEIL(q_bit_len);
 
 	if((q_len > EC_PRIV_KEY_MAX_SIZE) || (hsize > MAX_BLOCK_SIZE)){
 		ret = -1;
@@ -154,20 +156,20 @@ static int __ecdsa_rfc6979_nonce(nn_t k, nn_src_t q, bitcnt_t q_bit_len, nn_src_
 	/* Step h. now apply the generation algorithm until we get
 	 * a proper nonce value:
 	 * 1.  Set T to the empty sequence.  The length of T (in bits) is
-         * denoted tlen; thus, at that point, tlen = 0.
+	 * denoted tlen; thus, at that point, tlen = 0.
 	 * 2.  While tlen < qlen, do the following:
 	 *    V = HMAC_K(V)
 	 *    T = T || V
 	 * 3.  Compute:
-         *    k = bits2int(T)
-         * If that value of k is within the [1,q-1] range, and is
-         * suitable for DSA or ECDSA (i.e., it results in an r value
-         * that is not 0; see Section 3.4), then the generation of k is
-         * finished.  The obtained value of k is used in DSA or ECDSA.
-         * Otherwise, compute:
-         *    K = HMAC_K(V || 0x00)
-         *    V = HMAC_K(V)
-         * and loop (try to generate a new T, and so on).
+	 *    k = bits2int(T)
+	 * If that value of k is within the [1,q-1] range, and is
+	 * suitable for DSA or ECDSA (i.e., it results in an r value
+	 * that is not 0; see Section 3.4), then the generation of k is
+	 * finished.  The obtained value of k is used in DSA or ECDSA.
+	 * Otherwise, compute:
+	 *    K = HMAC_K(V || 0x00)
+	 *    V = HMAC_K(V)
+	 * and loop (try to generate a new T, and so on).
 	 */
 restart:
 	t_bit_len = 0;
@@ -219,7 +221,8 @@ err:
 }
 #endif
 
-int __ecdsa_init_pub_key(ec_pub_key *out_pub, const ec_priv_key *in_priv, ec_sig_alg_type key_type)
+int __ecdsa_init_pub_key(ec_pub_key *out_pub, const ec_priv_key *in_priv,
+			 ec_sig_alg_type key_type)
 {
 	prj_pt_src_t G;
 
@@ -230,18 +233,18 @@ int __ecdsa_init_pub_key(ec_pub_key *out_pub, const ec_priv_key *in_priv, ec_sig
 
 	priv_key_check_initialized_and_type(in_priv, key_type);
 
-        /* Sanity check */
-        if(nn_cmp(&(in_priv->x), &(in_priv->params->ec_gen_order)) >= 0){
-                /* This should not happen and means that our
-                 * private key is not compliant!
-                 */
-                goto err;
-        }
+	/* Sanity check */
+	if(nn_cmp(&(in_priv->x), &(in_priv->params->ec_gen_order)) >= 0){
+		/* This should not happen and means that our
+		 * private key is not compliant!
+		 */
+		goto err;
+	}
 
 	/* Y = xG */
 	G = &(in_priv->params->ec_gen);
-        /* Use blinding when computing point scalar multiplication */
-        if(prj_pt_mul_monty_blind(&(out_pub->y), &(in_priv->x), G)){
+	/* Use blinding when computing point scalar multiplication */
+	if(prj_pt_mul_monty_blind(&(out_pub->y), &(in_priv->x), G)){
 		goto err;
 	}
 
@@ -274,18 +277,18 @@ u8 __ecdsa_siglen(u16 p_bit_len, u16 q_bit_len, u8 hsize, u8 blocksize)
  * information in which function(s) (init(), update() or finalize())
  * a specific step is performed):
  *
- *| IUF  - ECDSA signature
+ *| IUF	 - ECDSA signature
  *|
- *|  UF  1. Compute h = H(m)
- *|   F  2. If |h| > bitlen(q), set h to bitlen(q)
- *|         leftmost (most significant) bits of h
- *|   F  3. e = OS2I(h) mod q
- *|   F  4. Get a random value k in ]0,q[
- *|   F  5. Compute W = (W_x,W_y) = kG
- *|   F  6. Compute r = W_x mod q
- *|   F  7. If r is 0, restart the process at step 4.
- *|   F  8. If e == rx, restart the process at step 4.
- *|   F  9. Compute s = k^-1 * (xr + e) mod q
+ *|  UF	 1. Compute h = H(m)
+ *|   F	 2. If |h| > bitlen(q), set h to bitlen(q)
+ *|	    leftmost (most significant) bits of h
+ *|   F	 3. e = OS2I(h) mod q
+ *|   F	 4. Get a random value k in ]0,q[
+ *|   F	 5. Compute W = (W_x,W_y) = kG
+ *|   F	 6. Compute r = W_x mod q
+ *|   F	 7. If r is 0, restart the process at step 4.
+ *|   F	 8. If e == rx, restart the process at step 4.
+ *|   F	 9. Compute s = k^-1 * (xr + e) mod q
  *|   F 10. If s is 0, restart the process at step 4.
  *|   F 11. Return (r,s)
  *
@@ -362,12 +365,13 @@ int __ecdsa_sign_update(struct ec_sign_context *ctx,
 	return 0;
 }
 
-int __ecdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen, ec_sig_alg_type key_type)
+int __ecdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen,
+			  ec_sig_alg_type key_type)
 {
 	nn k, r, e, tmp, tmp2, s, kinv;
 #ifdef USE_SIG_BLINDING
-        /* b is the blinding mask */
-        nn b;
+	/* b is the blinding mask */
+	nn b;
 #endif
 	const ec_priv_key *priv_key;
 	prj_pt_src_t G;
@@ -404,7 +408,7 @@ int __ecdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen, ec_si
 
 	MUST_HAVE(priv_key->key_type == key_type);
 
-        /* Sanity check */
+	/* Sanity check */
 	if(nn_cmp(x, q) >= 0){
 		/* This should not happen and means that our
 		 * private key is not compliant!
@@ -458,7 +462,7 @@ int __ecdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen, ec_si
 	if (rshift) {
 		nn_rshift_fixedlen(&tmp2, &tmp2, rshift);
 	}
-	dbg_nn_print("h   final import as nn", &tmp2);
+	dbg_nn_print("h	  final import as nn", &tmp2);
 	nn_mod(&e, &tmp2, q);
 	dbg_nn_print("e", &e);
 
@@ -496,7 +500,8 @@ int __ecdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen, ec_si
 			goto err;
 		}
 		/* Deterministically generate k as RFC6979 mandates */
-		ret = __ecdsa_rfc6979_nonce(&k, q, q_bit_len, &(priv_key->x), hash, hsize, ctx->h->type);
+		ret = __ecdsa_rfc6979_nonce(&k, q, q_bit_len, &(priv_key->x),
+					    hash, hsize, ctx->h->type);
 	}
 #else
 	{
@@ -516,14 +521,14 @@ int __ecdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen, ec_si
 #ifdef USE_SIG_BLINDING
 	/* Note: if we use blinding, r and e are multiplied by
 	 * a random value b in ]0,q[ */
-        ret = nn_get_random_mod(&b, q);
-        if (ret) {
+	ret = nn_get_random_mod(&b, q);
+	if (ret) {
 		nn_uninit(&tmp2);
 		nn_uninit(&e);
 		ret = -1;
-                goto err;
-        }
-        dbg_nn_print("b", &b);
+		goto err;
+	}
+	dbg_nn_print("b", &b);
 #endif /* USE_SIG_BLINDING */
 
 
@@ -534,7 +539,7 @@ int __ecdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen, ec_si
 		goto err;
 	}
 #else
-        prj_pt_mul_monty(&kG, &k, G);
+	prj_pt_mul_monty(&kG, &k, G);
 #endif /* USE_SIG_BLINDING */
 	prj_pt_to_aff(&W, &kG);
 	prj_pt_uninit(&kG);
@@ -584,8 +589,9 @@ int __ecdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen, ec_si
 	dbg_nn_print("(xr + e) mod q", &tmp2);
 
 #ifdef USE_SIG_BLINDING
-	/* In case of blinding, we compute (b*k)^-1, and 
-	 * b^-1 will automatically unblind (r*x) in the following
+	/*
+	 * In case of blinding, we compute (b*k)^-1, and b^-1 will
+	 * automatically unblind (r*x) in the following.
 	 */
 	nn_mul_mod(&k, &k, &b, q);
 #endif
@@ -632,9 +638,9 @@ int __ecdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen, ec_si
 	VAR_ZEROIFY(hsize);
 
 #ifdef USE_SIG_BLINDING
-        if(nn_is_initialized(&b)){
-                nn_uninit(&b);
-        }
+	if(nn_is_initialized(&b)){
+		nn_uninit(&b);
+	}
 #endif /* USE_SIG_BLINDING */
 
 	return ret;
@@ -651,18 +657,18 @@ int __ecdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen, ec_si
  * information in which function(s) (init(), update() or finalize())
  * a specific step is performed):
  *
- *| IUF  - ECDSA verification
+ *| IUF	 - ECDSA verification
  *|
- *| I    1. Reject the signature if r or s is 0.
- *|  UF  2. Compute h = H(m)
- *|   F  3. If |h| > bitlen(q), set h to bitlen(q)
- *|         leftmost (most significant) bits of h
- *|   F  4. Compute e = OS2I(h) mod q
- *|   F  5. Compute u = (s^-1)e mod q
- *|   F  6. Compute v = (s^-1)r mod q
- *|   F  7. Compute W' = uG + vY
- *|   F  8. If W' is the point at infinity, reject the signature.
- *|   F  9. Compute r' = W'_x mod q
+ *| I	 1. Reject the signature if r or s is 0.
+ *|  UF	 2. Compute h = H(m)
+ *|   F	 3. If |h| > bitlen(q), set h to bitlen(q)
+ *|	    leftmost (most significant) bits of h
+ *|   F	 4. Compute e = OS2I(h) mod q
+ *|   F	 5. Compute u = (s^-1)e mod q
+ *|   F	 6. Compute v = (s^-1)r mod q
+ *|   F	 7. Compute W' = uG + vY
+ *|   F	 8. If W' is the point at infinity, reject the signature.
+ *|   F	 9. Compute r' = W'_x mod q
  *|   F 10. Accept the signature if and only if r equals r'
  *
  */
@@ -671,7 +677,8 @@ int __ecdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen, ec_si
 #define ECDSA_VERIFY_CHECK_INITIALIZED(A) \
 	MUST_HAVE((((void *)(A)) != NULL) && ((A)->magic == ECDSA_VERIFY_MAGIC))
 
-int __ecdsa_verify_init(struct ec_verify_context *ctx, const u8 *sig, u8 siglen, ec_sig_alg_type key_type)
+int __ecdsa_verify_init(struct ec_verify_context *ctx, const u8 *sig, u8 siglen,
+			ec_sig_alg_type key_type)
 {
 	bitcnt_t q_bit_len;
 	u8 q_len;
@@ -762,7 +769,8 @@ int __ecdsa_verify_update(struct ec_verify_context *ctx,
 	return 0;
 }
 
-int __ecdsa_verify_finalize(struct ec_verify_context *ctx, ec_sig_alg_type key_type)
+int __ecdsa_verify_finalize(struct ec_verify_context *ctx,
+			    ec_sig_alg_type key_type)
 {
 	prj_pt uG, vY, W_prime;
 	nn e, tmp, sinv, u, v, r_prime;
@@ -831,7 +839,7 @@ int __ecdsa_verify_finalize(struct ec_verify_context *ctx, ec_sig_alg_type key_t
 	if (rshift) {
 		nn_rshift_fixedlen(&tmp, &tmp, rshift);
 	}
-	dbg_nn_print("h   final import as nn", &tmp);
+	dbg_nn_print("h	  final import as nn", &tmp);
 
 	nn_mod(&e, &tmp, q);
 	nn_uninit(&tmp);
