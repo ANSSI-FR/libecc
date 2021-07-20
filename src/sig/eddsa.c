@@ -449,7 +449,7 @@ static int eddsa_encode_point(aff_pt_edwards_src_t in, fp_src_t alpha_edwards, u
 	else
 #endif /* !defined(WITH_SIG_EDDSA448) */
 	{	/* EDDSA25519 and other cases */
-		VAR_USED(sig_alg); /* To avoid unused variable error */
+		FORCE_USED_VAR(sig_alg); /* To avoid unused variable error */
 		lsb = nn_getbit(&(in->x.fp_val), 0);
 		if(eddsa_encode_integer(&(in->y.fp_val), buf, buflen)){
 			ret = -1;
@@ -549,7 +549,7 @@ static int eddsa_decode_point(aff_pt_edwards_t out, ec_edwards_crv_src_t edwards
 	else
 #endif /* !defined(WITH_SIG_EDDSA448) */
 	{
-		VAR_USED(sig_type); /* To avoid unused variable error */
+		FORCE_USED_VAR(sig_type); /* To avoid unused variable error */
 		fp_mul(&sqrt2, &sqrt2, &(edwards_curve->d));
 		/* (d y^2 + 1) */
 		fp_inc(&sqrt2, &sqrt2);

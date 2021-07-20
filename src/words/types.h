@@ -34,7 +34,7 @@
  * Although this should not happen, sometimes because of #define
  * oddities we might force this.
  */
-#define VAR_USED(a) ((void)(a))
+#define FORCE_USED_VAR(a) ((void)(a))
 
 /*** Handling the types ****/
 #ifdef WITH_STDLIB
