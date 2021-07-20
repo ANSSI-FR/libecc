@@ -683,6 +683,9 @@ static int eddsa_derive_priv_key_hash(const ec_priv_key *in_priv, u8 *buff, u16 
 
 	ret = 0;
 err:
+	PTR_NULLIFY(hash);
+	VAR_ZEROIFY(hash_type);
+
 	return ret;
 }
 
@@ -779,6 +782,9 @@ int eddsa_derive_priv_key(ec_priv_key *priv_key)
 
         ret = 0;
 err:
+	VAR_ZEROIFY(hash_type);
+	VAR_ZEROIFY(digest_size);
+
         return ret;
 }
 
@@ -836,6 +842,9 @@ int eddsa_gen_priv_key(ec_priv_key *priv_key)
 
         ret = 0;
 err:
+	VAR_ZEROIFY(hash_type);
+	VAR_ZEROIFY(digest_size);
+
         return ret;
 }
 
@@ -861,7 +870,8 @@ int eddsa_import_priv_key(ec_priv_key *priv_key, const u8 *buf, u16 buflen, cons
 	/* Import the big number from our buffer */
 	nn_init_from_buf(&(priv_key->x), buf, buflen);
 	/* The bit length of our big number must be <= b, half the digest size */
-	if((hash_type = get_eddsa_hash_type(sig_type)) == UNKNOWN_HASH_ALG){
+	hash_type = get_eddsa_hash_type(sig_type);
+	if(hash_type == UNKNOWN_HASH_ALG){
 		ret = -1;
 		goto err;
 	}
@@ -984,6 +994,8 @@ int eddsa_init_pub_key(ec_pub_key *out_pub, const ec_priv_key *in_priv)
 
 	ret = 0;
 err:
+	PTR_NULLIFY(G);
+	VAR_ZEROIFY(digest_size);
 	nn_uninit(&s);
 	return ret;
 }
