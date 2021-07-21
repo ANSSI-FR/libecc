@@ -133,11 +133,10 @@ static void streebog_final(streebog_context *ctx, u8 *output)
 
 	idx = 0;
 
-
 	if(digest_size == 64){
 		/* 512-bit hash case */
-		STREEBOG_PUT_UINT64(ctx->h[0], output, idx,  ctx->streebog_endian); idx += 8;
-		STREEBOG_PUT_UINT64(ctx->h[1], output, idx,  ctx->streebog_endian); idx += 8;
+		STREEBOG_PUT_UINT64(ctx->h[0], output, idx, ctx->streebog_endian); idx += 8;
+		STREEBOG_PUT_UINT64(ctx->h[1], output, idx, ctx->streebog_endian); idx += 8;
 		STREEBOG_PUT_UINT64(ctx->h[2], output, idx, ctx->streebog_endian); idx += 8;
 		STREEBOG_PUT_UINT64(ctx->h[3], output, idx, ctx->streebog_endian); idx += 8;
 	}
