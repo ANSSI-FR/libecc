@@ -188,7 +188,7 @@ void ec_shortw_aff_to_prj(prj_pt_t out, aff_pt_src_t in)
 	aff_pt_check_initialized(in);
 	
 	/* The input affine point must be on the curve */
-	MUST_HAVE(is_on_curve(&(in->x), &(in->y), in->crv) == 1);
+	MUST_HAVE(is_on_shortw_curve(&(in->x), &(in->y), in->crv) == 1);
 
 	prj_pt_init(out, in->crv);
 
@@ -268,6 +268,29 @@ int prj_pt_eq_or_opp(prj_pt_src_t in1, prj_pt_src_t in2)
 	fp_uninit(&Y2);
 
 	return ret;
+}
+
+/* Compute the opposite of a projective point. Supports aliasing. */
+void prj_pt_neg(prj_pt_t out, prj_pt_src_t in)
+{
+	fp Y_opposite;
+
+	prj_pt_check_initialized(in);
+
+	fp_init(&Y_opposite, (in->Y).ctx);
+	fp_neg(&Y_opposite, &(in->Y));
+
+	/* Handle aliasing */
+	if (out == in) {
+		prj_pt _in;
+		prj_pt_copy(&_in, in);
+		prj_pt_init_from_coords(out, _in.crv, &(_in.X), &Y_opposite, &(_in.Z));
+		prj_pt_uninit(&_in);
+	} else {
+		prj_pt_init_from_coords(out, in->crv, &(in->X), &Y_opposite, &(in->Z));
+	}
+
+	fp_uninit(&Y_opposite);
 }
 
 /*
@@ -873,27 +896,29 @@ static void _prj_pt_mul_ltr_dbl_add_always(prj_pt_t out, nn_src_t m, prj_pt_src_
 	 * This helps dealing with constant time.
 	 */
 	nn m_msb_fixed;
-	nn order_square;
+	nn_src_t curve_order;
+	nn curve_order_square;
 
 	/* Check that the input is on the curve */
 	MUST_HAVE(prj_pt_is_on_curve(in) == 1);
 	/* Compute m' from m depending on the rule described above */
+	curve_order = &(in->crv->order);
 	/* First compute q**2 */
-	nn_sqr(&order_square, &(in->crv->order));
+	nn_sqr(&curve_order_square, curve_order);
 	/* Then compute m' depending on m size */
-	if(nn_cmp(m, &(in->crv->order)) < 0){
+	if(nn_cmp(m, curve_order) < 0){
 		/* Case where m < q */
-		nn_add(&m_msb_fixed, m, &(in->crv->order));
+		nn_add(&m_msb_fixed, m, curve_order);
 		bitcnt_t msb_bit_len = nn_bitlen(&m_msb_fixed);
-		bitcnt_t order_bitlen = nn_bitlen(&(in->crv->order));
-		nn_cnd_add((msb_bit_len == order_bitlen), &m_msb_fixed, &m_msb_fixed, &(in->crv->order));
+		bitcnt_t order_bitlen = nn_bitlen(curve_order);
+		nn_cnd_add((msb_bit_len == order_bitlen), &m_msb_fixed, &m_msb_fixed, curve_order);
 	}
-	else if(nn_cmp(m, &order_square) < 0){
+	else if(nn_cmp(m, &curve_order_square) < 0){
 		/* Case where m >= q and m < (q**2) */
-		nn_add(&m_msb_fixed, m, &order_square);
+		nn_add(&m_msb_fixed, m, &curve_order_square);
 		bitcnt_t msb_bit_len = nn_bitlen(&m_msb_fixed);
-		bitcnt_t order_square_bitlen = nn_bitlen(&order_square);
-		nn_cnd_add((msb_bit_len == order_square_bitlen), &m_msb_fixed, &m_msb_fixed, &order_square);
+		bitcnt_t curve_order_square_bitlen = nn_bitlen(&curve_order_square);
+		nn_cnd_add((msb_bit_len == curve_order_square_bitlen), &m_msb_fixed, &m_msb_fixed, &curve_order_square);
 
 	}
 	else{
@@ -973,7 +998,7 @@ static void _prj_pt_mul_ltr_dbl_add_always(prj_pt_t out, nn_src_t m, prj_pt_src_
 	nn_uninit(&r);
 	fp_uninit(&l);
 	nn_uninit(&m_msb_fixed);
-	nn_uninit(&order_square);
+	nn_uninit(&curve_order_square);
 }
 #endif
 
@@ -1023,28 +1048,30 @@ static void _prj_pt_mul_ltr_ladder(prj_pt_t out, nn_src_t m, prj_pt_src_t in)
 	 * This helps dealing with constant time.
 	 */
 	nn m_msb_fixed;
-	nn order_square;
+	nn_src_t curve_order;
+	nn curve_order_square;
 
 	/* Check that the input is on the curve */
 	MUST_HAVE(prj_pt_is_on_curve(in) == 1);
 
 	/* Compute m' from m depending on the rule described above */
+	curve_order = &(in->crv->order);
 	/* First compute q**2 */
-	nn_sqr(&order_square, &(in->crv->order));
+	nn_sqr(&curve_order_square, curve_order);
 	/* Then compute m' depending on m size */
-	if(nn_cmp(m, &(in->crv->order)) < 0){
+	if(nn_cmp(m, curve_order) < 0){
 		/* Case where m < q */
-		nn_add(&m_msb_fixed, m, &(in->crv->order));
+		nn_add(&m_msb_fixed, m, curve_order);
 		bitcnt_t msb_bit_len = nn_bitlen(&m_msb_fixed);
-		bitcnt_t order_bitlen = nn_bitlen(&(in->crv->order));
-		nn_cnd_add((msb_bit_len == order_bitlen), &m_msb_fixed, &m_msb_fixed, &(in->crv->order));
+		bitcnt_t order_bitlen = nn_bitlen(curve_order);
+		nn_cnd_add((msb_bit_len == order_bitlen), &m_msb_fixed, &m_msb_fixed, curve_order);
 	}
-	else if(nn_cmp(m, &order_square) < 0){
+	else if(nn_cmp(m, &curve_order_square) < 0){
 		/* Case where m >= q and m < (q**2) */
-		nn_add(&m_msb_fixed, m, &order_square);
+		nn_add(&m_msb_fixed, m, &curve_order_square);
 		bitcnt_t msb_bit_len = nn_bitlen(&m_msb_fixed);
-		bitcnt_t order_square_bitlen = nn_bitlen(&order_square);
-		nn_cnd_add((msb_bit_len == order_square_bitlen), &m_msb_fixed, &m_msb_fixed, &order_square);
+		bitcnt_t curve_order_square_bitlen = nn_bitlen(&curve_order_square);
+		nn_cnd_add((msb_bit_len == curve_order_square_bitlen), &m_msb_fixed, &m_msb_fixed, &curve_order_square);
 
 	}
 	else{
@@ -1138,7 +1165,7 @@ static void _prj_pt_mul_ltr_ladder(prj_pt_t out, nn_src_t m, prj_pt_src_t in)
 	nn_uninit(&r);
 	fp_uninit(&l);
 	nn_uninit(&m_msb_fixed);
-	nn_uninit(&order_square);
+	nn_uninit(&curve_order_square);
 }
 #endif
 
@@ -1176,19 +1203,175 @@ void prj_pt_mul(prj_pt_t out, nn_src_t m, prj_pt_src_t in)
 }
 
 
-int prj_pt_mul_blind(prj_pt_t out, nn_src_t m, prj_pt_src_t in, nn_t b, nn_src_t q)
+int prj_pt_mul_blind(prj_pt_t out, nn_src_t m, prj_pt_src_t in)
 {
-        /* Blind the scalar m with (b*q) */
-        nn_mul(b, b, q);
-        nn_add(b, b, m);
-        /* NOTE: point blinding is performed in the lower
-         * functions
-         */
+	/* Blind the scalar m with (b*q) */
+	/* First compute the order x cofactor */
+	nn b;
+	nn_src_t q;
+	int ret;
 
-        /* Perform the scalar multiplication */
-        prj_pt_mul(out, b, in);
+	q = &(in->crv->order);
 
-        /* Zero the mask to avoid information leak */
-        nn_zero(b);
-        return 0;
+	ret = nn_get_random_mod(&b, q);
+	if (ret) {
+		goto err;
+	}
+
+	nn_mul(&b, &b, q);
+	nn_add(&b, &b, m);
+
+	/* NOTE: point blinding is performed in the lower
+	 * functions
+	 */
+
+	/* Perform the scalar multiplication */
+	prj_pt_mul(out, &b, in);
+
+	/* Zero the mask to avoid information leak */
+	nn_zero(&b);
+	nn_uninit(&b);
+
+	return 0;
+err:
+	/* Zero the mask to avoid information leak */
+	nn_zero(&b);
+	nn_uninit(&b);
+
+	return -1;
 }
+
+/*
+ * Map points from Edwards to short Weierstrass projective points through Montgomery (composition mapping).
+ *     Point at infinity (0, 1) -> (0, 1, 0) is treated as an exception, which is trivially not constant time.
+ *     This is OK since our mapping functions should be used at the non sensitive input and output
+ *     interfaces.
+ * 
+ */
+void aff_pt_edwards_to_prj_pt_shortw(aff_pt_edwards_src_t in_edwards, ec_shortw_crv_src_t shortw_crv, prj_pt_t out_shortw, fp_src_t alpha_edwards)
+{
+	aff_pt out_shortw_aff;
+	fp one;
+
+	/* Check the curves compatibility */
+	MUST_HAVE(curve_edwards_shortw_check(in_edwards->crv, shortw_crv, alpha_edwards) == 1);
+	
+	/* Initialize output point with curve */
+	prj_pt_init(out_shortw, shortw_crv);
+
+	fp_init(&one, in_edwards->x.ctx);
+	fp_one(&one);
+	/* Check if we are the point at infinity
+	 * This check induces a non consant time exception, but the current function must be called on
+	 * public data anyways.
+	 */
+	if(fp_iszero(&(in_edwards->x)) && (fp_cmp(&(in_edwards->y), &one) == 0)){
+		prj_pt_zero(out_shortw);
+		goto out;
+	}
+	
+	/* Use the affine mapping */
+	aff_pt_edwards_to_shortw(in_edwards, shortw_crv, &out_shortw_aff, alpha_edwards);
+	/* And then map the short Weierstrass affine to projective coordinates */
+	ec_shortw_aff_to_prj(out_shortw, &out_shortw_aff);
+	aff_pt_uninit(&out_shortw_aff);
+
+out:
+	fp_uninit(&one);
+	return;
+}
+
+/*
+ * Map points from short Weierstrass projective points to Edwards through Montgomery (composition mapping).
+ *     Point at infinity with Z=0 (in projective coordinates) -> (0, 1) is treated as an exception, which is trivially not constant time.
+ *     This is OK since our mapping functions should be used at the non sensitive input and output
+ *     interfaces.
+ * 
+ */
+void prj_pt_shortw_to_aff_pt_edwards(prj_pt_src_t in_shortw, ec_edwards_crv_src_t edwards_crv, aff_pt_edwards_t out_edwards, fp_src_t alpha_edwards)
+{
+	aff_pt in_shortw_aff;
+
+	/* Check the curves compatibility */
+	MUST_HAVE(curve_edwards_shortw_check(edwards_crv, in_shortw->crv, alpha_edwards) == 1);
+	
+	/* Initialize output point with curve */
+	aff_pt_init(&in_shortw_aff, in_shortw->crv);
+
+	/* Check if we are the point at infinity
+	 * This check induces a non consant time exception, but the current function must be called on
+	 * public data anyways.
+	 */
+	if(prj_pt_iszero(in_shortw)){
+		fp zero, one;
+		fp_init(&zero, in_shortw->X.ctx);
+		fp_init(&one, in_shortw->X.ctx);
+		/**/
+		fp_zero(&zero);
+		fp_one(&one);
+		/**/
+		aff_pt_edwards_init_from_coords(out_edwards, edwards_crv, &zero, &one);
+		/**/		
+		fp_uninit(&zero);
+		fp_uninit(&one);
+		goto out;
+	}
+
+	/* Map projective to affine on the short Weierstrass */
+	prj_pt_to_aff(&in_shortw_aff, in_shortw);
+	/* Use the affine mapping */
+	aff_pt_shortw_to_edwards(&in_shortw_aff, edwards_crv, out_edwards, alpha_edwards);
+
+out:
+	aff_pt_uninit(&in_shortw_aff);
+
+	return;
+}
+
+/*
+ * Map points from Montgomery to short Weierstrass projective points.
+ */
+void aff_pt_montgomery_to_prj_pt_shortw(aff_pt_montgomery_src_t in_montgomery, ec_shortw_crv_src_t shortw_crv, prj_pt_t out_shortw)
+{
+	aff_pt out_shortw_aff;
+
+	/* Check the curves compatibility */
+	MUST_HAVE(curve_montgomery_shortw_check(in_montgomery->crv, shortw_crv) == 1);
+	
+	/* Initialize output point with curve */
+	prj_pt_init(out_shortw, shortw_crv);
+	
+	/* Use the affine mapping */
+	aff_pt_montgomery_to_shortw(in_montgomery, shortw_crv, &out_shortw_aff);
+	/* And then map the short Weierstrass affine to projective coordinates */
+	ec_shortw_aff_to_prj(out_shortw, &out_shortw_aff);
+
+	aff_pt_uninit(&out_shortw_aff);
+
+	return;
+}
+
+/*
+ * Map points from short Weierstrass projective points to Montgomery.
+ * 
+ */
+void prj_pt_shortw_to_aff_pt_montgomery(prj_pt_src_t in_shortw, ec_montgomery_crv_src_t montgomery_crv, aff_pt_montgomery_t out_montgomery)
+{
+	aff_pt in_shortw_aff;
+
+	/* Check the curves compatibility */
+	MUST_HAVE(curve_montgomery_shortw_check(montgomery_crv, in_shortw->crv) == 1);
+	
+	/* Initialize output point with curve */
+	aff_pt_init(&in_shortw_aff, in_shortw->crv);
+
+	/* Map projective to affine on the short Weierstrass */
+	prj_pt_to_aff(&in_shortw_aff, in_shortw);
+	/* Use the affine mapping */
+	aff_pt_shortw_to_montgomery(&in_shortw_aff, montgomery_crv, out_montgomery);
+
+	aff_pt_uninit(&in_shortw_aff);
+
+	return;
+}
+

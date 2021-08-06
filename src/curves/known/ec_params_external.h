@@ -28,6 +28,14 @@ typedef struct {
 		.buflen = sizeof(pname)                 \
 	}
 
+
+#define TO_EC_STR_PARAM_FIXED_SIZE(pname, sz) \
+	static const ec_str_param pname##_str_param = { \
+		.buf = pname,				\
+		.buflen = (sz)				\
+	}
+
+
 #define PARAM_BUF_LEN(param) ((param)->buflen)
 #define PARAM_BUF_PTR(param) ((param)->buf)
 
@@ -64,7 +72,7 @@ typedef struct {
 	/* Curve coefficients and number of points */
 	const ec_str_param *a;
 	const ec_str_param *b;
-	const ec_str_param *npoints;
+	const ec_str_param *curve_order;
 
 	/*
 	 * Projective coordinates of generator
@@ -73,9 +81,20 @@ typedef struct {
 	const ec_str_param *gx;
 	const ec_str_param *gy;
 	const ec_str_param *gz;
-	const ec_str_param *order;
-	const ec_str_param *order_bitlen;
+	const ec_str_param *gen_order;
+	const ec_str_param *gen_order_bitlen;
 	const ec_str_param *cofactor;
+
+	/*
+	 * Optional transfert coefficients to Montgomery curve.
+	 */
+	const ec_str_param *alpha_montgomery;
+	const ec_str_param *gamma_montgomery;
+
+	/*
+	 * Optional transfert coefficient to Edwards curve.
+	 */
+	const ec_str_param *alpha_edwards;
 
 	/* OID and pretty name */
 	const ec_str_param *oid;

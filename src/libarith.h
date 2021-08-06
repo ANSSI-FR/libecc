@@ -32,6 +32,7 @@
 #include "fp/fp_add.h"
 #include "fp/fp_montgomery.h"
 #include "fp/fp_mul.h"
+#include "fp/fp_sqrt.h"
 #include "fp/fp_pow.h"
 #include "fp/fp_rand.h"
 #include "utils/print_fp.h"

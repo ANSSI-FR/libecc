@@ -55,6 +55,16 @@ void fp_inv(fp_t out, fp_src_t in)
 	MUST_HAVE(ret == 1);
 }
 
+void fp_inv_word(fp_t out, word_t w)
+{
+	int ret;
+
+	fp_check_initialized(out);
+
+	ret = nn_modinv_word(&(out->fp_val), w, &(out->ctx->p));
+	MUST_HAVE(ret == 1);
+}
+
 void fp_div(fp_t out, fp_src_t num, fp_src_t den)
 {
 	fp inv;

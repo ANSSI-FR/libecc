@@ -219,6 +219,19 @@ void fp_one(fp_t out)
 	nn_set_wlen(&(out->fp_val), out->ctx->p.wlen);
 }
 
+/* Set out to the asked word: the value must be < p */
+void fp_set_word_value(fp_t out, word_t val)
+{
+	fp_check_initialized(out);
+
+	/* Check that our value is indeed < p */
+	MUST_HAVE(nn_cmp_word(&(out->ctx->p), val) > 0);
+
+	/* Set the word in the NN layer */
+	nn_set_word_value(&(out->fp_val), val);	
+}
+
+
 /*
  * Compare given Fp elements. The function returns -1 if the value of in1 is
  * less than that of in2, 0 if they are equal and 1 if the value of in2 is

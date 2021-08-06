@@ -42,14 +42,14 @@ check_triplet_wordsize(){
 	COMPILATION_LOG_FILE=$CROSSBUILD_OUTPUT/compilation_log/compilation_log_"$triplet"_"$wordsize"
 	ERROR_LOG_FILE=$CROSSBUILD_OUTPUT/error_log/error_log_"$triplet"_"$wordsize"
 	# NOTE: for 64 bit triplets, mltiarc/crossbuild docker's gcc 4.9 has a bug handling loop unrolling in -O3 and
-	# is mistaken in detecting arrays overflows at compilation time ... 
+	# is mistaken in detecting arrays overflows at compilation time ...
 	# See https://gcc.gnu.org/bugzilla/show_bug.cgi?id=64277
 	if [ "$triplet" = "x86_64-w64-mingw32" ] || [ "$triplet" = "aarch64-linux-gnu" ]; then
 		extra_lib_cflags="-O2"
 		extra_bin_cflags=""
         # NOTE: on darwin based clang, some of our options are too recent for the installed
         # llvm ... Hence we remove warnings as errors here
-	
+
 	elif [ "$triplet" = "i386-apple-darwin" ] || [ "$triplet" = "x86_64-apple-darwin" ] || [ "$triplet" = "x86_64h-apple-darwin" ]; then
 		extra_lib_cflags="-Wno-error"
 		extra_bin_cflags="-Wno-error"

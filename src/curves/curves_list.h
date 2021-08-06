@@ -32,6 +32,13 @@
 #include "known/ec_params_frp256v1.h"
 #include "known/ec_params_gost256.h"
 #include "known/ec_params_gost512.h"
+#include "known/ec_params_sm2p192test.h"
+#include "known/ec_params_sm2p256test.h"
+#include "known/ec_params_sm2p256v1.h"
+#include "known/ec_params_wei25519.h"
+#include "known/ec_params_wei448.h"
+#include "known/ec_params_gost_R3410_2012_256_paramSetA.h"
+#include "known/ec_params_secp256k1.h"
 
 /* ADD curves header here */
 /* XXX: Do not remove the comment above, as it is
@@ -42,7 +49,7 @@
 #ifndef CURVES_MAX_P_BIT_LEN
 #error "Max p bit length is 0; did you disable all curves in lib_ecc_config.h?"
 #endif
-#if (CURVES_MAX_Q_BIT_LEN > 65535)
+#if (CURVES_MAX_P_BIT_LEN > 65535)
 #error "Prime field length (in bytes) MUST fit on an u16!"
 #endif
 
@@ -50,6 +57,13 @@
 #error "Max q bit length is 0; did you disable all curves in lib_ecc_config.h?"
 #endif
 #if (CURVES_MAX_Q_BIT_LEN > 65535)
+#error "Generator order length (in bytes) MUST fit on an u16!"
+#endif
+
+#ifndef CURVES_MAX_CURVE_ORDER_BIT_LEN
+#error "Max curve order bit length is 0; did you disable all curves in lib_ecc_config.h?"
+#endif
+#if (CURVES_MAX_CURVE_ORDER_BIT_LEN > 65535)
 #error "Curve order length (in bytes) MUST fit on an u16!"
 #endif
 
@@ -98,6 +112,24 @@ static const ec_mapping ec_maps[] = {
 #ifdef WITH_CURVE_GOST512
 	{.type = GOST512,.params = &GOST_512bits_curve_str_params},
 #endif /* WITH_CURVE_GOST512 */
+#ifdef WITH_CURVE_SM2P256TEST
+	{.type = SM2P256TEST,.params = &sm2p256test_str_params},
+#endif /* WITH_CURVE_SM2P256TEST */
+#ifdef WITH_CURVE_SM2P256V1
+	{.type = SM2P256V1,.params = &sm2p256v1_str_params},
+#endif /* WITH_CURVE_SM2P256V1 */
+#ifdef WITH_CURVE_WEI25519
+	{.type = WEI25519,.params = &wei25519_str_params},
+#endif /* WITH_CURVE_WEI25519 */
+#ifdef WITH_CURVE_WEI448
+	{.type = WEI448,.params = &wei448_str_params},
+#endif /* WITH_CURVE_WEI448 */
+#ifdef WITH_CURVE_GOST_R3410_2012_256_PARAMSETA
+	{ .type = GOST_R3410_2012_256_PARAMSETA, .params = &gost_R3410_2012_256_paramSetA_str_params },
+#endif /* WITH_CURVE_GOST_R3410_2012_256_PARAMSETA */
+#ifdef WITH_CURVE_SECP256K1
+	{.type = SECP256K1,.params = &secp256k1_str_params},
+#endif /* WITH_CURVE_SECP256K1 */
 /* ADD curves mapping here */
 /* XXX: Do not remove the comment above, as it is
  * used by external tools as a placeholder to add or

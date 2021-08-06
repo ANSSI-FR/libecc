@@ -29,14 +29,18 @@
 #include "sha3-256.h"
 #include "sha3-384.h"
 #include "sha3-512.h"
+#include "sm3.h"
+#include "shake256.h"
+#include "streebog256.h"
+#include "streebog512.h"
 #include "../utils/utils.h"
 
 #if (MAX_DIGEST_SIZE == 0)
-#error "It seems you disabled all hash algorithmsin lib_ecc_config.h"
+#error "It seems you disabled all hash algorithms in lib_ecc_config.h"
 #endif
 
 #if (MAX_BLOCK_SIZE == 0)
-#error "It seems you disabled all hash algorithmsin lib_ecc_config.h"
+#error "It seems you disabled all hash algorithms in lib_ecc_config.h"
 #endif
 
 typedef union {
@@ -69,6 +73,18 @@ typedef union {
 #endif
 #ifdef SHA3_512_BLOCK_SIZE
 	sha3_512_context sha3_512;
+#endif
+#ifdef SHAKE256_BLOCK_SIZE
+	shake256_context shake256;
+#endif
+#ifdef SM3_BLOCK_SIZE
+	sm3_context sm3;
+#endif
+#ifdef STREEBOG256_BLOCK_SIZE
+	streebog256_context streebog256;
+#endif
+#ifdef STREEBOG512_BLOCK_SIZE
+	streebog512_context streebog512;
 #endif
 } hash_context;
 
@@ -245,6 +261,62 @@ static const hash_mapping hash_maps[] = {
 #define MAX_HASH_ALG_NAME_LEN 9
 #endif /* MAX_HASH_ALG_NAME_LEN */
 #endif /* WITH_HASH_SHA3_512 */
+#ifdef WITH_HASH_SM3
+        {.type = SM3,   /* SM3 */
+         .name = "SM3",
+         .digest_size = SM3_DIGEST_SIZE,
+         .block_size = SM3_BLOCK_SIZE,
+         .hfunc_init = (_hfunc_init) sm3_init,
+         .hfunc_update = (_hfunc_update) sm3_update,
+         .hfunc_finalize = (_hfunc_finalize) sm3_final,
+         .hfunc_scattered = sm3_scattered},
+#if (MAX_HASH_ALG_NAME_LEN < 4)
+#undef MAX_HASH_ALG_NAME_LEN
+#define MAX_HASH_ALG_NAME_LEN 4
+#endif /* MAX_HASH_ALG_NAME_LEN */
+#endif /* WITH_HASH_SM3 */
+#ifdef WITH_HASH_SHAKE256
+	{.type = SHAKE256,	/* SHAKE256 */
+	 .name = "SHAKE256",
+	 .digest_size = SHAKE256_DIGEST_SIZE,
+	 .block_size = SHAKE256_BLOCK_SIZE,
+	 .hfunc_init = (_hfunc_init) shake256_init,
+	 .hfunc_update = (_hfunc_update) shake256_update,
+	 .hfunc_finalize = (_hfunc_finalize) shake256_final,
+	 .hfunc_scattered = shake256_scattered},
+#if (MAX_HASH_ALG_NAME_LEN < 9)
+#undef MAX_HASH_ALG_NAME_LEN
+#define MAX_HASH_ALG_NAME_LEN 9
+#endif /* MAX_HASH_ALG_NAME_LEN */
+#endif /* WITH_HASH_SHAKE256 */
+#ifdef WITH_HASH_STREEBOG256
+	{.type = STREEBOG256,	/* STREEBOG256 */
+	 .name = "STREEBOG256",
+	 .digest_size = STREEBOG256_DIGEST_SIZE,
+	 .block_size = STREEBOG256_BLOCK_SIZE,
+	 .hfunc_init = (_hfunc_init) streebog256_init,
+	 .hfunc_update = (_hfunc_update) streebog256_update,
+	 .hfunc_finalize = (_hfunc_finalize) streebog256_final,
+	 .hfunc_scattered = streebog256_scattered},
+#if (MAX_HASH_ALG_NAME_LEN < 12)
+#undef MAX_HASH_ALG_NAME_LEN
+#define MAX_HASH_ALG_NAME_LEN 12
+#endif /* MAX_HASH_ALG_NAME_LEN */
+#endif /* WITH_HASH_STREEBOG256 */
+#ifdef WITH_HASH_STREEBOG512
+	{.type = STREEBOG512,	/* STREEBOG512 */
+	 .name = "STREEBOG512",
+	 .digest_size = STREEBOG512_DIGEST_SIZE,
+	 .block_size = STREEBOG512_BLOCK_SIZE,
+	 .hfunc_init = (_hfunc_init) streebog512_init,
+	 .hfunc_update = (_hfunc_update) streebog512_update,
+	 .hfunc_finalize = (_hfunc_finalize) streebog512_final,
+	 .hfunc_scattered = streebog512_scattered},
+#if (MAX_HASH_ALG_NAME_LEN < 12)
+#undef MAX_HASH_ALG_NAME_LEN
+#define MAX_HASH_ALG_NAME_LEN 12
+#endif /* MAX_HASH_ALG_NAME_LEN */
+#endif /* WITH_HASH_STREEBOG512 */
 	{.type = UNKNOWN_HASH_ALG,	/* Needs to be kept last */
 	 .name = "UNKNOWN",
 	 .digest_size = 0,

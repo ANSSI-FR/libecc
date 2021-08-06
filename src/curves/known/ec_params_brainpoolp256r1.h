@@ -97,13 +97,14 @@ static const u8 brainpoolp256r1_b[] = {
 
 TO_EC_STR_PARAM(brainpoolp256r1_b);
 
-static const u8 brainpoolp256r1_npoints[] = {
+#define CURVE_BRAINPOOLP256R1_CURVE_ORDER_BITLEN 256
+static const u8 brainpoolp256r1_curve_order[] = {
 	0xA9, 0xFB, 0x57, 0xDB, 0xA1, 0xEE, 0xA9, 0xBC, 0x3E, 0x66, 0x0A, 0x90,
 	0x9D, 0x83, 0x8D, 0x71, 0x8C, 0x39, 0x7A, 0xA3, 0xB5, 0x61, 0xA6, 0xF7,
 	0x90, 0x1E, 0x0E, 0x82, 0x97, 0x48, 0x56, 0xA7
 };
 
-TO_EC_STR_PARAM(brainpoolp256r1_npoints);
+TO_EC_STR_PARAM(brainpoolp256r1_curve_order);
 
 static const u8 brainpoolp256r1_gx[] = {
 	0x8B, 0xD2, 0xAE, 0xB9, 0xCB, 0x7E, 0x57, 0xCB, 0x2C, 0x4B, 0x48, 0x2F,
@@ -130,22 +131,40 @@ static const u8 brainpoolp256r1_gz[] = {
 
 TO_EC_STR_PARAM(brainpoolp256r1_gz);
 
-static const u8 brainpoolp256r1_order[] = {
+static const u8 brainpoolp256r1_gen_order[] = {
 	0xA9, 0xFB, 0x57, 0xDB, 0xA1, 0xEE, 0xA9, 0xBC, 0x3E, 0x66, 0x0A, 0x90,
 	0x9D, 0x83, 0x8D, 0x71, 0x8C, 0x39, 0x7A, 0xA3, 0xB5, 0x61, 0xA6, 0xF7,
 	0x90, 0x1E, 0x0E, 0x82, 0x97, 0x48, 0x56, 0xA7
 };
 
-TO_EC_STR_PARAM(brainpoolp256r1_order);
+TO_EC_STR_PARAM(brainpoolp256r1_gen_order);
 
 #define CURVE_BRAINPOOLP256R1_Q_BITLEN 256
-static const u8 brainpoolp256r1_order_bitlen[] = { 0x01, 0x00 };
+static const u8 brainpoolp256r1_gen_order_bitlen[] = { 0x01, 0x00 };
 
-TO_EC_STR_PARAM(brainpoolp256r1_order_bitlen);
+TO_EC_STR_PARAM(brainpoolp256r1_gen_order_bitlen);
 
 static const u8 brainpoolp256r1_cofactor[] = { 0x01 };
 
 TO_EC_STR_PARAM(brainpoolp256r1_cofactor);
+
+static const u8 brainpoolp256r1_alpha_montgomery[] = {
+	0x00,
+};
+
+TO_EC_STR_PARAM_FIXED_SIZE(brainpoolp256r1_alpha_montgomery, 0);
+
+static const u8 brainpoolp256r1_gamma_montgomery[] = {
+	0x00,
+};
+
+TO_EC_STR_PARAM_FIXED_SIZE(brainpoolp256r1_gamma_montgomery, 0);
+
+static const u8 brainpoolp256r1_alpha_edwards[] = {
+	0x00,
+};
+
+TO_EC_STR_PARAM_FIXED_SIZE(brainpoolp256r1_alpha_edwards, 0);
 
 static const u8 brainpoolp256r1_oid[] = "1.3.36.3.3.2.8.1.1.7";
 TO_EC_STR_PARAM(brainpoolp256r1_oid);
@@ -164,13 +183,16 @@ static const ec_str_params brainpoolp256r1_str_params = {
 	.p_reciprocal = &brainpoolp256r1_p_reciprocal_str_param,
 	.a = &brainpoolp256r1_a_str_param,
 	.b = &brainpoolp256r1_b_str_param,
-	.npoints = &brainpoolp256r1_npoints_str_param,
+	.curve_order = &brainpoolp256r1_curve_order_str_param,
 	.gx = &brainpoolp256r1_gx_str_param,
 	.gy = &brainpoolp256r1_gy_str_param,
 	.gz = &brainpoolp256r1_gz_str_param,
-	.order = &brainpoolp256r1_order_str_param,
-	.order_bitlen = &brainpoolp256r1_order_bitlen_str_param,
+	.gen_order = &brainpoolp256r1_gen_order_str_param,
+	.gen_order_bitlen = &brainpoolp256r1_gen_order_bitlen_str_param,
 	.cofactor = &brainpoolp256r1_cofactor_str_param,
+	.alpha_montgomery = &brainpoolp256r1_alpha_montgomery_str_param,
+	.gamma_montgomery = &brainpoolp256r1_gamma_montgomery_str_param,
+	.alpha_edwards = &brainpoolp256r1_alpha_edwards_str_param,
 	.oid = &brainpoolp256r1_oid_str_param,
 	.name = &brainpoolp256r1_name_str_param,
 };
@@ -191,6 +213,13 @@ static const ec_str_params brainpoolp256r1_str_params = {
 #if (CURVES_MAX_Q_BIT_LEN < CURVE_BRAINPOOLP256R1_Q_BITLEN)
 #undef CURVES_MAX_Q_BIT_LEN
 #define CURVES_MAX_Q_BIT_LEN CURVE_BRAINPOOLP256R1_Q_BITLEN
+#endif
+#ifndef CURVES_MAX_CURVE_ORDER_BIT_LEN
+#define CURVES_MAX_CURVE_ORDER_BIT_LEN    0
+#endif
+#if (CURVES_MAX_CURVE_ORDER_BIT_LEN < CURVE_BRAINPOOLP256R1_CURVE_ORDER_BITLEN)
+#undef CURVES_MAX_CURVE_ORDER_BIT_LEN
+#define CURVES_MAX_CURVE_ORDER_BIT_LEN CURVE_BRAINPOOLP256R1_CURVE_ORDER_BITLEN
 #endif
 
 #endif /* __EC_PARAMS_BRAINPOOLP256R1_H__ */

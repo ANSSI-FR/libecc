@@ -45,6 +45,10 @@
 #define MAX_BLOCK_SIZE SHA512_256_BLOCK_SIZE
 #endif
 
+#define SHA512_256_HASH_MAGIC ((word_t)(0x1239567373987616ULL))
+#define SHA512_256_HASH_CHECK_INITIALIZED(A) \
+        MUST_HAVE((((void *)(A)) != NULL) && ((A)->magic == SHA512_256_HASH_MAGIC))
+
 typedef sha512_core_context sha512_256_context;
 
 void sha512_256_init(sha512_256_context *ctx);

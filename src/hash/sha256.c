@@ -26,7 +26,8 @@ static void sha256_process(sha256_context *ctx,
 	u32 W[64];
 	unsigned int i;
 
-	MUST_HAVE((ctx != NULL) && (data != NULL));
+	MUST_HAVE(data != NULL);
+	SHA256_HASH_CHECK_INITIALIZED(ctx);
 
 	/* Init our inner variables */
 	a = ctx->sha256_state[0];
@@ -62,8 +63,6 @@ static void sha256_process(sha256_context *ctx,
 /* Init hash function */
 void sha256_init(sha256_context *ctx)
 {
-	MUST_HAVE(ctx != NULL);
-
 	ctx->sha256_total = 0;
 	ctx->sha256_state[0] = 0x6A09E667;
 	ctx->sha256_state[1] = 0xBB67AE85;
@@ -73,6 +72,9 @@ void sha256_init(sha256_context *ctx)
 	ctx->sha256_state[5] = 0x9B05688C;
 	ctx->sha256_state[6] = 0x1F83D9AB;
 	ctx->sha256_state[7] = 0x5BE0CD19;
+
+	/* Tell that we are initialized */
+	ctx->magic = SHA256_HASH_MAGIC;
 }
 
 /* Update hash function */
@@ -83,7 +85,8 @@ void sha256_update(sha256_context *ctx, const u8 *input, u32 ilen)
 	u16 fill;
 	u8 left;
 
-	MUST_HAVE((ctx != NULL) && (input != NULL));
+	MUST_HAVE(input != NULL);
+	SHA256_HASH_CHECK_INITIALIZED(ctx);
 
 	/* Nothing to process, return */
 	if (ilen == 0) {
@@ -123,7 +126,8 @@ void sha256_final(sha256_context *ctx, u8 output[SHA256_DIGEST_SIZE])
 	unsigned int block_present = 0;
 	u8 last_padded_block[2 * SHA256_BLOCK_SIZE];
 
-	MUST_HAVE((ctx != NULL) && (output != NULL));
+	MUST_HAVE(output != NULL);
+	SHA256_HASH_CHECK_INITIALIZED(ctx);
 
 	/* Fill in our last block with zeroes */
 	local_memset(last_padded_block, 0, sizeof(last_padded_block));
@@ -162,6 +166,9 @@ void sha256_final(sha256_context *ctx, u8 output[SHA256_DIGEST_SIZE])
 	PUT_UINT32_BE(ctx->sha256_state[5], output, 20);
 	PUT_UINT32_BE(ctx->sha256_state[6], output, 24);
 	PUT_UINT32_BE(ctx->sha256_state[7], output, 28);
+
+	/* Tell that we are uninitialized */
+	ctx->magic = 0;
 }
 
 void sha256_scattered(const u8 **inputs, const u32 *ilens,

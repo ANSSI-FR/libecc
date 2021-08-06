@@ -14,6 +14,7 @@
  *  See LICENSE file at the root folder of the project.
  */
 #include "ec_params.h"
+#include "curves.h"
 
 /*
  * Initialize (already allocated) curve parameters structure pointed by
@@ -22,7 +23,7 @@
 void import_params(ec_params *out_params, const ec_str_params *in_str_params)
 {
 	nn tmp_p, tmp_p_bitlen, tmp_r, tmp_r_square, tmp_mpinv, tmp_p_shift;
-	nn tmp_p_normalized, tmp_p_reciprocal, tmp_npoints, tmp_order;
+	nn tmp_p_normalized, tmp_p_reciprocal, tmp_curve_order, tmp_order;
 	nn tmp_order_bitlen, tmp_cofactor;
 	fp tmp_a, tmp_b, tmp_gx, tmp_gy, tmp_gz;
 
@@ -87,14 +88,14 @@ void import_params(ec_params *out_params, const ec_str_params *in_str_params)
 	 * by g and the associated cofactor (i.e. npoints / order).
 	 */
 	nn_init_from_buf(&tmp_order,
-			 PARAM_BUF_PTR(in_str_params->order),
-			 PARAM_BUF_LEN(in_str_params->order));
+			 PARAM_BUF_PTR(in_str_params->gen_order),
+			 PARAM_BUF_LEN(in_str_params->gen_order));
 	nn_init(&(out_params->ec_gen_order), tmp_order.wlen * WORD_BYTES);
 	nn_copy(&(out_params->ec_gen_order), &tmp_order);
 
 	nn_init_from_buf(&tmp_order_bitlen,
-			 PARAM_BUF_PTR(in_str_params->order_bitlen),
-			 PARAM_BUF_LEN(in_str_params->order_bitlen));
+			 PARAM_BUF_PTR(in_str_params->gen_order_bitlen),
+			 PARAM_BUF_LEN(in_str_params->gen_order_bitlen));
 	out_params->ec_gen_order_bitlen = (bitcnt_t)(tmp_order_bitlen.val[0]);
 
 	nn_init_from_buf(&tmp_cofactor,
@@ -104,15 +105,13 @@ void import_params(ec_params *out_params, const ec_str_params *in_str_params)
 		tmp_cofactor.wlen * WORD_BYTES);
 	nn_copy(&(out_params->ec_gen_cofactor), &tmp_cofactor);
 
-	/* Now, we can create curve context from a and b. */
-	ec_shortw_crv_init(&(out_params->ec_curve), &tmp_a, &tmp_b, &tmp_order);
-
 	/* Now we can store the number of points on the curve */
-	nn_init_from_buf(&tmp_npoints,
-			 PARAM_BUF_PTR(in_str_params->npoints),
-			 PARAM_BUF_LEN(in_str_params->npoints));
-	nn_init(&(out_params->ec_curve_points), tmp_npoints.wlen * WORD_BYTES);
-	nn_copy(&(out_params->ec_curve_points), &tmp_npoints);
+	nn_init_from_buf(&tmp_curve_order,
+			 PARAM_BUF_PTR(in_str_params->curve_order),
+			 PARAM_BUF_LEN(in_str_params->curve_order));
+
+	/* Now, we can create curve context from a and b. */
+	ec_shortw_crv_init(&(out_params->ec_curve), &tmp_a, &tmp_b, &tmp_curve_order);
 
 	/* Let's now import G from its affine coordinates (gx,gy) */
 	fp_init_from_buf(&tmp_gx, &(out_params->ec_fp),
@@ -128,17 +127,36 @@ void import_params(ec_params *out_params, const ec_str_params *in_str_params)
 				&(out_params->ec_curve),
 				&tmp_gx, &tmp_gy, &tmp_gz);
 
+	/* Let's get the optional alpha transfert coefficients */
+	fp_init_from_buf(&(out_params->ec_alpha_montgomery), &(out_params->ec_fp),
+			 PARAM_BUF_PTR(in_str_params->alpha_montgomery),
+			 PARAM_BUF_LEN(in_str_params->alpha_montgomery));
+	fp_init_from_buf(&(out_params->ec_gamma_montgomery), &(out_params->ec_fp),
+			 PARAM_BUF_PTR(in_str_params->gamma_montgomery),
+			 PARAM_BUF_LEN(in_str_params->gamma_montgomery));
+
+	fp_init_from_buf(&(out_params->ec_alpha_edwards), &(out_params->ec_fp),
+			 PARAM_BUF_PTR(in_str_params->alpha_edwards),
+			 PARAM_BUF_LEN(in_str_params->alpha_edwards));
+
 	/* Import a local copy of curve OID */
+	MUST_HAVE(in_str_params->oid->buflen < MAX_CURVE_OID_LEN);
 	local_memset(out_params->curve_oid, 0, MAX_CURVE_OID_LEN);
 	local_strncpy((char *)out_params->curve_oid,
 		      (const char *)in_str_params->oid->buf,
-		      MAX_CURVE_OID_LEN - 1);
+		      in_str_params->oid->buflen);
 
 	/* Import a local copy of curve name */
+	MUST_HAVE(in_str_params->name->buflen < MAX_CURVE_NAME_LEN);
 	local_memset(out_params->curve_name, 0, MAX_CURVE_NAME_LEN);
 	local_strncpy((char *)out_params->curve_name,
 		      (const char *)in_str_params->name->buf,
-		      MAX_CURVE_NAME_LEN - 1);
+		      in_str_params->name->buflen);
+
+	/* Get the curve type */
+	ec_curve_type curve_type = ec_get_curve_type_by_name(in_str_params->name->buf, in_str_params->name->buflen);
+	MUST_HAVE(curve_type != UNKNOWN_CURVE);
+	out_params->curve_type = curve_type;
 
 	/* Uninit temporary parameters */
 	nn_uninit(&tmp_p);
@@ -150,7 +168,7 @@ void import_params(ec_params *out_params, const ec_str_params *in_str_params)
 	nn_uninit(&tmp_p_reciprocal);
 	fp_uninit(&tmp_a);
 	fp_uninit(&tmp_b);
-	nn_uninit(&tmp_npoints);
+	nn_uninit(&tmp_curve_order);
 	fp_uninit(&tmp_gx);
 	fp_uninit(&tmp_gy);
 	fp_uninit(&tmp_gz);

@@ -18,6 +18,12 @@
 
 #include "sig_algs_internal.h"
 
+/* Generic private key generation function */
+int generic_gen_priv_key(ec_priv_key *priv_key);
+
+/* Private key generation function specific to each scheme */
+int gen_priv_key(ec_priv_key *priv_key);
+
 /*
  * Generic function to init a uninitialized public key from an initialized
  * private key. The function uses the expected logic to derive the key
@@ -41,28 +47,34 @@ int ec_verify_ctx_callbacks_sanity_check(const struct ec_verify_context *verify_
 int ec_get_sig_len(const ec_params *params, ec_sig_alg_type sig_type,
 		   hash_alg_type hash_type, u8 *siglen);
 
-/* Generic signature */
+/* Generic signature init/update/finalize */
+
+int _ec_sign_init(struct ec_sign_context *ctx,
+                         const ec_key_pair *key_pair,
+                         int (*rand) (nn_t out, nn_src_t q),
+                         ec_sig_alg_type sig_type, hash_alg_type hash_type, const u8 *adata, u16 adata_len);
 
 int ec_sign_init(struct ec_sign_context *ctx, const ec_key_pair *key_pair,
-		 ec_sig_alg_type sig_type, hash_alg_type hash_type);
+		 ec_sig_alg_type sig_type, hash_alg_type hash_type, const u8 *adata, u16 adata_len);
 
 int ec_sign_update(struct ec_sign_context *ctx, const u8 *chunk, u32 chunklen);
 
 int ec_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen);
 
 int _ec_sign(u8 *sig, u8 siglen, const ec_key_pair *key_pair,
-	     const u8 *m, u32 mlen, int (*rand) (nn_t out, nn_src_t q),
-	     ec_sig_alg_type sig_type, hash_alg_type hash_type);
+             const u8 *m, u32 mlen,
+             int (*rand) (nn_t out, nn_src_t q),
+             ec_sig_alg_type sig_type, hash_alg_type hash_type, const u8 *adata, u16 adata_len);
 
 int ec_sign(u8 *sig, u8 siglen, const ec_key_pair *key_pair,
-	    const u8 *m, u32 mlen, ec_sig_alg_type sig_type,
-	    hash_alg_type hash_type);
+            const u8 *m, u32 mlen,
+            ec_sig_alg_type sig_type, hash_alg_type hash_type, const u8 *adata, u16 adata_len);
 
-/* Generic signature verification */
+/* Generic signature verification init/update/finalize */
 
 int ec_verify_init(struct ec_verify_context *ctx, const ec_pub_key *pub_key,
 		   const u8 *sig, u8 siglen, ec_sig_alg_type sig_type,
-		   hash_alg_type hash_type);
+		   hash_alg_type hash_type, const u8 *adata, u16 adata_len);
 
 int ec_verify_update(struct ec_verify_context *ctx,
 		     const u8 *chunk, u32 chunklen);
@@ -70,8 +82,8 @@ int ec_verify_update(struct ec_verify_context *ctx,
 int ec_verify_finalize(struct ec_verify_context *ctx);
 
 int ec_verify(const u8 *sig, u8 siglen, const ec_pub_key *pub_key,
-	      const u8 *m, u32 mlen, ec_sig_alg_type sig_type,
-	      hash_alg_type hash_type);
+              const u8 *m, u32 mlen,
+              ec_sig_alg_type sig_type, hash_alg_type hash_type, const u8 *adata, u16 adata_len);
 
 int ec_structured_sig_import_from_buf(u8 *sig, u32 siglen,
                                       const u8 *out_buf, u32 outlen,

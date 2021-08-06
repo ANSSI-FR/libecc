@@ -166,18 +166,18 @@ def mod_sqrt(a, p):
 ##########################################################
 ### Math elliptic curves basic blocks
 
-# WARNING: these blocks are only here for testing purpose and 
+# WARNING: these blocks are only here for testing purpose and
 # are not intended to be used in a security oriented library!
 # This explains the usage of naive affine coordinates fomulas
 class Curve(object):
     def __init__(self, a, b, prime, order, cofactor, gx, gy, npoints, name, oid):
         self.a = a
-        self.b = b 
+        self.b = b
         self.p = prime
         self.q = order
         self.c = cofactor
         self.gx = gx
-        self.gy = gy            
+        self.gy = gy
         self.n = npoints
         self.name = name
         self.oid = oid
@@ -187,7 +187,7 @@ class Curve(object):
     # Deep copy is implemented using the ~X operator
     def __invert__(self):
         return copy.deepcopy(self)
-            
+
 
 class Point(object):
     # Affine coordinates (x, y), infinity point is (None, None)
@@ -292,7 +292,7 @@ def fromprivkey(privkey, is_eckcdsa=False):
     if is_eckcdsa == False:
         return PubKey(curve, privkey.x * G)
     else:
-        return PubKey(curve, modinv(privkey.x, q) * G)    
+        return PubKey(curve, modinv(privkey.x, q) * G)
 
 def genKeyPair(curve, is_eckcdsa=False):
     p = curve.p
@@ -319,6 +319,8 @@ def getbitlen(bint):
     """
     Returns the number of bits encoding an integer
     """
+    if bint == None:
+        return 0
     if bint == 0:
         # Zero is encoded on one bit
         return 1
@@ -363,7 +365,7 @@ def expand(bitstring, bitlen, direction):
 
 def truncate(bitstring, bitlen, keep):
     """
-    Takes a bit string and truncates it to keep the left 
+    Takes a bit string and truncates it to keep the left
     most or the right most bits
     """
     strbitlen = 8*len(bitstring)
@@ -490,7 +492,7 @@ def ecdsa_sign(hashfunc, keypair, message, k=None):
     q_limit_len = getbitlen(q)
     # Compute the hash
     (h, _, _) = hashfunc(message)
-    # Truncate hash value 
+    # Truncate hash value
     h = truncate(h, q_limit_len, "LEFT")
     # Convert the hash value to an int
     e = stringtoint(h) % q
@@ -543,7 +545,7 @@ def ecdsa_verify(hashfunc, keypair, message, sig):
         return False
     # Compute the hash
     (h, _, _) = hashfunc(message)
-    # Truncate hash value 
+    # Truncate hash value
     h = truncate(h, q_limit_len, "LEFT")
     # Convert the hash value to an int
     e = stringtoint(h) % q
@@ -596,7 +598,7 @@ def eckcdsa_sign(hashfunc, keypair, message, k=None):
         z = expand(z, 8*hblocksize, "RIGHT")
     # Compute the hash
     (h, _, _) = hashfunc(z + message)
-    # Truncate hash value 
+    # Truncate hash value
     h = truncate(h, q_limit_len, "RIGHT")
     OK = False
     while OK == False:
@@ -661,7 +663,7 @@ def eckcdsa_verify(hashfunc, keypair, message, sig):
         z = expand(z, 8*hblocksize, "RIGHT")
     # Compute the hash
     (h, _, _) = hashfunc(z + message)
-    # Truncate hash value 
+    # Truncate hash value
     h = truncate(h, q_limit_len, "RIGHT")
     e = (r ^ stringtoint(h)) % q
     W_ = (s * pubkey.Y) + (e * G)
@@ -670,7 +672,7 @@ def eckcdsa_verify(hashfunc, keypair, message, sig):
     if stringtoint(r_) == r:
         return True
     else:
-        return False    
+        return False
 
 # *| IUF - ECFSDSA signature
 # *|
@@ -726,7 +728,7 @@ def ecfsdsa_verify(hashfunc, keypair, message, sig):
     q = pubkey.curve.q
     gx = pubkey.curve.gx
     gy = pubkey.curve.gy
-    G = Point(pubkey.curve, gx, gy)    
+    G = Point(pubkey.curve, gx, gy)
     # Extract coordinates from r and s from signature
     if len(sig) != (2*getbytelen(p)) + getbytelen(q):
         raise Exception("ECFSDSA verify: bad signature length!")
@@ -747,7 +749,22 @@ def ecfsdsa_verify(hashfunc, keypair, message, sig):
         return True
     else:
         return False
-    
+
+
+# NOTE: ISO/IEC 14888-3 standard seems to diverge from the existing implementations
+# of ECRDSA when treating the message hash, and from the examples of certificates provided
+# in RFC 7091 and draft-deremin-rfc4491-bis. While in ISO/IEC 14888-3 it is explicitely asked
+# to proceed with the hash of the message as big endian, the RFCs derived from the Russian
+# standard expect the hash value to be treated as little endian when importing it as an integer
+# (this discrepancy is exhibited and confirmed by test vectors present in ISO/IEC 14888-3, and
+# by X.509 certificates present in the RFCs). This seems (to be confirmed) to be a discrepancy of
+# ISO/IEC 14888-3 algorithm description that must be fixed there.
+#
+# In order to be conservative, libecc uses the Russian standard behavior as expected to be in line with
+# other implemetations, but keeps the ISO/IEC 14888-3 behavior if forced/asked by the user using
+# the USE_ISO14888_3_ECRDSA toggle. This allows to keep backward compatibility with previous versions of the
+# library if needed.
+
 # *| IUF - ECRDSA signature
 # *|
 # *|  UF  1. Compute h = H(m)
@@ -756,10 +773,13 @@ def ecfsdsa_verify(hashfunc, keypair, message, sig):
 # *|   F  4. Compute r = W_x mod q
 # *|   F  5. If r is 0, restart the process at step 2.
 # *|   F  6. Compute e = OS2I(h) mod q. If e is 0, set e to 1.
+# *|         NOTE: here, ISO/IEC 14888-3 and RFCs differ in the way e treated.
+# *|         e = OS2I(h) for ISO/IEC 14888-3, or e = OS2I(reversed(h)) when endianness of h
+# *|         is reversed for RFCs.
 # *|   F  7. Compute s = (rx + ke) mod q
 # *|   F  8. If s is 0, restart the process at step 2.
 # *|   F 11. Return (r,s)
-def ecrdsa_sign(hashfunc, keypair, message, k=None):
+def ecrdsa_sign(hashfunc, keypair, message, k=None, use_iso14888_divergence=False):
     privkey = keypair.privkey
     # Get important parameters from the curve
     p = privkey.curve.p
@@ -768,6 +788,9 @@ def ecrdsa_sign(hashfunc, keypair, message, k=None):
     gy = privkey.curve.gy
     G = Point(privkey.curve, gx, gy)
     (h, _, _) = hashfunc(message)
+    if use_iso14888_divergence == False:
+        # Reverse the endianness for Russian standard RFC ECRDSA (contrary to ISO/IEC 14888-3 case)
+        h = h[::-1]
     OK = False
     while OK == False:
         if k == None:
@@ -786,25 +809,28 @@ def ecrdsa_sign(hashfunc, keypair, message, k=None):
             continue
         OK = True
     return (expand(inttostring(r), 8*getbytelen(q), "LEFT") + expand(inttostring(s), 8*getbytelen(q), "LEFT"), k)
-    
+
 # *| IUF - ECRDSA verification
 # *|
 # *|  UF 1. Check that r and s are both in ]0,q[
 # *|   F 2. Compute h = H(m)
 # *|   F 3. Compute e = OS2I(h)^-1 mod q
+# *|         NOTE: here, ISO/IEC 14888-3 and RFCs differ in the way e treated.
+# *|         e = OS2I(h) for ISO/IEC 14888-3, or e = OS2I(reversed(h)) when endianness of h
+# *|         is reversed for RFCs.
 # *|   F 4. Compute u = es mod q
 # *|   F 4. Compute v = -er mod q
 # *|   F 5. Compute W' = uG + vY = (W'_x, W'_y)
 # *|   F 6. Let's now compute r' = W'_x mod q
 # *|   F 7. Check r and r' are the same
-def ecrdsa_verify(hashfunc, keypair, message, sig):
+def ecrdsa_verify(hashfunc, keypair, message, sig, use_iso14888_divergence=False):
     pubkey = keypair.pubkey
     # Get important parameters from the curve
     p = pubkey.curve.p
     q = pubkey.curve.q
     gx = pubkey.curve.gx
     gy = pubkey.curve.gy
-    G = Point(pubkey.curve, gx, gy)    
+    G = Point(pubkey.curve, gx, gy)
     # Extract coordinates from r and s from signature
     if len(sig) != 2*getbytelen(q):
         raise Exception("ECRDSA verify: bad signature length!")
@@ -815,6 +841,9 @@ def ecrdsa_verify(hashfunc, keypair, message, sig):
     if s == 0 or s > q:
         raise Exception("ECRDSA verify: s not in ]0,q[")
     (h, _, _) = hashfunc(message)
+    if use_iso14888_divergence == False:
+        # Reverse the endianness for Russian standard RFC ECRDSA (contrary to ISO/IEC 14888-3 case)
+        h = h[::-1]
     e = modinv(stringtoint(h) % q, q)
     u = (e * s) % q
     v = (-e * r) % q
@@ -848,7 +877,7 @@ def ecgdsa_sign(hashfunc, keypair, message, k=None):
     G = Point(privkey.curve, gx, gy)
     (h, _, _) = hashfunc(message)
     q_limit_len = getbitlen(q)
-    # Truncate hash value 
+    # Truncate hash value
     h = truncate(h, q_limit_len, "LEFT")
     e = (-stringtoint(h)) % q
     OK = False
@@ -885,7 +914,7 @@ def ecgdsa_verify(hashfunc, keypair, message, sig):
     q = pubkey.curve.q
     gx = pubkey.curve.gx
     gy = pubkey.curve.gy
-    G = Point(pubkey.curve, gx, gy)    
+    G = Point(pubkey.curve, gx, gy)
     # Extract coordinates from r and s from signature
     if len(sig) != 2*getbytelen(q):
         raise Exception("ECGDSA verify: bad signature length!")
@@ -897,7 +926,7 @@ def ecgdsa_verify(hashfunc, keypair, message, sig):
         raise Exception("ECGDSA verify: s not in ]0,q[")
     (h, _, _) = hashfunc(message)
     q_limit_len = getbitlen(q)
-    # Truncate hash value 
+    # Truncate hash value
     h = truncate(h, q_limit_len, "LEFT")
     e = stringtoint(h) % q
     r_inv = modinv(r, q)
@@ -939,7 +968,7 @@ def ecsdsa_common_sign(hashfunc, keypair, message, optimized, k=None):
         W = k * G
         if optimized == False:
             (r, _, _) = hashfunc(expand(inttostring(W.x), 8*getbytelen(p), "LEFT") + expand(inttostring(W.y), 8*getbytelen(p), "LEFT") + message)
-        else:    
+        else:
             (r, _, _) = hashfunc(expand(inttostring(W.x), 8*getbytelen(p), "LEFT") + message)
         e = stringtoint(r) % q
         if e == 0:
@@ -988,7 +1017,7 @@ def ecsdsa_common_verify(hashfunc, keypair, message, sig, optimized):
     W_ = s * G + e * pubkey.Y
     if optimized == False:
         (r_, _, _) = hashfunc(expand(inttostring(W_.x), 8*getbytelen(p), "LEFT") + expand(inttostring(W_.y), 8*getbytelen(p), "LEFT") + message)
-    else:    
+    else:
         (r_, _, _) = hashfunc(expand(inttostring(W_.x), 8*getbytelen(p), "LEFT") + message)
     if sig[:int(hlen)] == r_:
         return True
@@ -1010,8 +1039,8 @@ all_hash_funcs = [ (sha224, "SHA224"), (sha256, "SHA256"), (sha384, "SHA384"), (
 all_sig_algs = [ (ecdsa_sign, ecdsa_verify, genKeyPair, "ECDSA"),
          (eckcdsa_sign, eckcdsa_verify, eckcdsa_genKeyPair, "ECKCDSA"),
          (ecfsdsa_sign, ecfsdsa_verify, genKeyPair, "ECFSDSA"),
-         (ecrdsa_sign, ecrdsa_verify, genKeyPair, "ECRDSA"), 
-         (ecgdsa_sign, ecgdsa_verify, eckcdsa_genKeyPair, "ECGDSA"), 
+         (ecrdsa_sign, ecrdsa_verify, genKeyPair, "ECRDSA"),
+         (ecgdsa_sign, ecgdsa_verify, eckcdsa_genKeyPair, "ECGDSA"),
          (ecsdsa_sign, ecsdsa_verify, genKeyPair, "ECSDSA"),
          (ecosdsa_sign, ecosdsa_verify, genKeyPair, "ECOSDSA"), ]
 
@@ -1049,6 +1078,8 @@ def gen_self_test(curve, hashfunc, sig_alg_sign, sig_alg_verify, sig_alg_genkeyp
         # Check that everything is OK with a verify
         if sig_alg_verify(hashfunc, keypair, message, sig) != True:
             raise Exception("Error during self test generation: sig verify failed! "+test_name+ "   /  msg="+message+"   /   sig="+binascii.hexlify(sig)+"    /    k="+hex(k)+"   /   privkey.x="+hex(keypair.privkey.x))
+        if sig_alg_name == "ECRDSA":
+            out_vectors += "#ifndef USE_ISO14888_3_ECRDSA\n"
         # Now generate the test vector
         out_vectors += "#ifdef WITH_HASH_"+hashfunc_name.upper()+"\n"
         out_vectors += "#ifdef WITH_CURVE_"+curve.name.upper()+"\n"
@@ -1075,14 +1106,68 @@ def gen_self_test(curve, hashfunc, sig_alg_sign, sig_alg_verify, sig_alg_genkeyp
         out_vectors += "#endif /* WITH_HASH_"+hashfunc_name+" */\n"
         out_vectors += "#endif /* WITH_CURVE_"+curve.name+" */\n"
         out_vectors += "#endif /* WITH_SIG_"+sig_alg_name+" */\n"
-        out_name  = "#ifdef WITH_HASH_"+hashfunc_name.upper()+"/* For "+test_name+" */\n"
+        if sig_alg_name == "ECRDSA":
+            out_vectors += "#endif /* !USE_ISO14888_3_ECRDSA */\n"
+        out_name = ""
+        if sig_alg_name == "ECRDSA":
+            out_name += "#ifndef USE_ISO14888_3_ECRDSA"+"/* For "+test_name+" */\n"
+        out_name += "#ifdef WITH_HASH_"+hashfunc_name.upper()+"/* For "+test_name+" */\n"
         out_name += "#ifdef WITH_CURVE_"+curve.name.upper()+"/* For "+test_name+" */\n"
         out_name += "#ifdef WITH_SIG_"+sig_alg_name.upper()+"/* For "+test_name+" */\n"
         out_name += "\t&"+test_name+"_test_case,\n"
         out_name += "#endif /* WITH_HASH_"+hashfunc_name+" for "+test_name+" */\n"
         out_name += "#endif /* WITH_CURVE_"+curve.name+" for "+test_name+" */\n"
         out_name += "#endif /* WITH_SIG_"+sig_alg_name+" for "+test_name+" */"
+        if sig_alg_name == "ECRDSA":
+            out_name += "\n#endif /* !USE_ISO14888_3_ECRDSA */"+"/* For "+test_name+" */"
         output_list.append((out_name, out_vectors))
+        # In the specific case of ECRDSA, we also generate an ISO/IEC compatible test vector
+        if sig_alg_name == "ECRDSA":
+            out_vectors = ""
+            (sig, k) = sig_alg_sign(hashfunc, keypair, message, use_iso14888_divergence=True)
+            # Check that everything is OK with a verify
+            if sig_alg_verify(hashfunc, keypair, message, sig, use_iso14888_divergence=True) != True:
+                raise Exception("Error during self test generation: sig verify failed! "+test_name+ "   /  msg="+message+"   /   sig="+binascii.hexlify(sig)+"    /    k="+hex(k)+"   /   privkey.x="+hex(keypair.privkey.x))
+            out_vectors += "#ifdef USE_ISO14888_3_ECRDSA\n"
+            # Now generate the test vector
+            out_vectors += "#ifdef WITH_HASH_"+hashfunc_name.upper()+"\n"
+            out_vectors += "#ifdef WITH_CURVE_"+curve.name.upper()+"\n"
+            out_vectors += "#ifdef WITH_SIG_"+sig_alg_name.upper()+"\n"
+            out_vectors += "/* "+test_name+" known test vectors */\n"
+            out_vectors += "static int "+test_name+"_test_vectors_get_random(nn_t out, nn_src_t q)\n{\n"
+            # k_buf MUST be exported padded to the length of q
+            out_vectors += "\tconst u8 k_buf[] = "+bigint_to_C_array(k, getbytelen(curve.q))
+            out_vectors += "\tnn_init_from_buf(out, k_buf, sizeof(k_buf));\n\treturn (nn_cmp(out, q) >= 0);\n}\n"
+            out_vectors += "static const u8 "+test_name+"_test_vectors_priv_key[] = \n"+bigint_to_C_array(keypair.privkey.x, getbytelen(keypair.privkey.x))
+            out_vectors += "static const u8 "+test_name+"_test_vectors_expected_sig[] = \n"+bigint_to_C_array(stringtoint(sig), len(sig))
+            out_vectors += "static const ec_test_case "+test_name+"_test_case = {\n"
+            out_vectors += "\t.name = \""+test_name+"\",\n"
+            out_vectors += "\t.ec_str_p = &"+curve.name+"_str_params,\n"
+            out_vectors += "\t.priv_key = "+test_name+"_test_vectors_priv_key,\n"
+            out_vectors += "\t.priv_key_len = sizeof("+test_name+"_test_vectors_priv_key),\n"
+            out_vectors += "\t.nn_random = "+test_name+"_test_vectors_get_random,\n"
+            out_vectors += "\t.hash_type = "+hashfunc_name+",\n"
+            out_vectors += "\t.msg = \""+message+"\",\n"
+            out_vectors += "\t.msglen = "+str(len(message))+",\n"
+            out_vectors += "\t.sig_type = "+sig_alg_name+",\n"
+            out_vectors += "\t.exp_sig = "+test_name+"_test_vectors_expected_sig,\n"
+            out_vectors += "\t.exp_siglen = sizeof("+test_name+"_test_vectors_expected_sig),\n};\n"
+            out_vectors += "#endif /* WITH_HASH_"+hashfunc_name+" */\n"
+            out_vectors += "#endif /* WITH_CURVE_"+curve.name+" */\n"
+            out_vectors += "#endif /* WITH_SIG_"+sig_alg_name+" */\n"
+            out_vectors += "#endif /* USE_ISO14888_3_ECRDSA */\n"
+            out_name = ""
+            out_name += "#ifdef USE_ISO14888_3_ECRDSA"+"/* For "+test_name+" */\n"
+            out_name += "#ifdef WITH_HASH_"+hashfunc_name.upper()+"/* For "+test_name+" */\n"
+            out_name += "#ifdef WITH_CURVE_"+curve.name.upper()+"/* For "+test_name+" */\n"
+            out_name += "#ifdef WITH_SIG_"+sig_alg_name.upper()+"/* For "+test_name+" */\n"
+            out_name += "\t&"+test_name+"_test_case,\n"
+            out_name += "#endif /* WITH_HASH_"+hashfunc_name+" for "+test_name+" */\n"
+            out_name += "#endif /* WITH_CURVE_"+curve.name+" for "+test_name+" */\n"
+            out_name += "#endif /* WITH_SIG_"+sig_alg_name+" for "+test_name+" */\n"
+            out_name += "#endif /* USE_ISO14888_3_ECRDSA */"+"/* For "+test_name+" */"
+            output_list.append((out_name, out_vectors))
+
     return output_list
 
 def gen_self_tests(curve, num):
@@ -1147,9 +1232,9 @@ def extract_DER_oid(derbuf):
 
 # See ECParameters sequence in RFC 3279
 def parse_DER_ECParameters(derbuf):
-    # XXX: this is a very ugly way of extracting the information 
-    # regarding an EC curve, but since the ASN.1 structure is quite 
-    # "static", this might be sufficient without embedding a full 
+    # XXX: this is a very ugly way of extracting the information
+    # regarding an EC curve, but since the ASN.1 structure is quite
+    # "static", this might be sufficient without embedding a full
     # ASN.1 parser ...
     # Default return (a, b, prime, order, cofactor, gx, gy)
     default_ret = (0, 0, 0, 0, 0, 0, 0)
@@ -1165,14 +1250,14 @@ def parse_DER_ECParameters(derbuf):
     (check, size_FieldID, FieldID) = extract_DER_sequence(ECParameters[size_ECPVer:])
     if check == False:
         return (False, default_ret)
-    # Get OID 
+    # Get OID
     (check, size_Oid, Oid) = extract_DER_oid(FieldID)
     if check == False:
         return (False, default_ret)
     # Does the OID correspond to a prime field?
     if(Oid != "\x2A\x86\x48\xCE\x3D\x01\x01"):
         print("DER parse error: only prime fields are supported ...")
-        return (False, default_ret)    
+        return (False, default_ret)
     # Get prime p of prime field
     (check, size_P, P) = extract_DER_integer(FieldID[size_Oid:])
     if check == False:
@@ -1232,7 +1317,7 @@ def parse_DER_ECParameters(derbuf):
             gy = prime - beta
     else:
         print("DER parse error: hybrid points are unsupported!")
-        return (False, default_ret)        
+        return (False, default_ret)
     return (True, (a, b, prime, order, cofactor, gx, gy))
 
 ##########################################################
@@ -1249,7 +1334,7 @@ def bigint_to_C_array(bint, size):
     for i in range(0, len(hexstr) - 1, 2):
         if (i%16 == 0):
             if(i!=0):
-                out_str += "\n"    
+                out_str += "\n"
             out_str += "\t"
         out_str += "0x"+hexstr[i:i+2]+", "
     out_str += "\n};\n"
@@ -1300,7 +1385,7 @@ def file_remove_pattern(fname, pat):
             if not re.search(pat, line):
                 out.write(line)
         out.close()
-    
+
     if os.path.exists(fname):
         remove_file(fname)
     os.rename(out_fname, fname)
@@ -1331,8 +1416,12 @@ def is_base64(s):
 
 ### Curve helpers
 def export_curve_int(curvename, intname, bigint, size):
-    out  = "static const u8 "+curvename+"_"+intname+"[] = "+bigint_to_C_array(bigint, size)+"\n"
-    out += "TO_EC_STR_PARAM("+curvename+"_"+intname+");\n\n"
+    if bigint == None:
+        out  = "static const u8 "+curvename+"_"+intname+"[] = {\n\t0x00,\n};\n"
+        out += "TO_EC_STR_PARAM_FIXED_SIZE("+curvename+"_"+intname+", 0);\n\n"
+    else:
+        out  = "static const u8 "+curvename+"_"+intname+"[] = "+bigint_to_C_array(bigint, size)+"\n"
+        out += "TO_EC_STR_PARAM("+curvename+"_"+intname+");\n\n"
     return out
 
 def export_curve_string(curvename, stringname, stringvalue):
@@ -1343,14 +1432,14 @@ def export_curve_string(curvename, stringname, stringvalue):
 def export_curve_struct(curvename, paramname, paramnamestr):
     return "\t."+paramname+" = &"+curvename+"_"+paramnamestr+"_str_param, \n"
 
-def curve_params(name, prime, pbitlen, a, b, gx, gy, order, cofactor, oid):
+def curve_params(name, prime, pbitlen, a, b, gx, gy, order, cofactor, oid, alpha_montgomery, gamma_montgomery, alpha_edwards):
     """
-    Take as input some elliptic curve parameters and generate the 
+    Take as input some elliptic curve parameters and generate the
     C parameters in a string
     """
     bytesize = int(pbitlen / 8)
     if pbitlen % 8 != 0:
-        bytesize += 1 
+        bytesize += 1
     # Compute the rounded word size for each word size
     if bytesize % 8 != 0:
         wordsbitsize64 = 8*((int(bytesize/8)+1)*8)
@@ -1382,7 +1471,7 @@ def curve_params(name, prime, pbitlen, a, b, gx, gy, order, cofactor, oid):
     ec_params_string += "#define __EC_PARAMS_"+name.upper()+"_H__\n"
     ec_params_string += "#include \"../known/ec_params_external.h\"\n"
     ec_params_string += export_curve_int(name, "p", prime, bytesize)
-    
+
     ec_params_string += "#define CURVE_"+name.upper()+"_P_BITLEN "+str(pbitlen)+"\n"
     ec_params_string += export_curve_int(name, "p_bitlen", pbitlen, getbytelen(pbitlen))
 
@@ -1410,26 +1499,35 @@ def curve_params(name, prime, pbitlen, a, b, gx, gy, order, cofactor, oid):
     ec_params_string += "#else                     /* unknown word size */\n"
     ec_params_string += "#error \"Unsupported word size\"\n"
     ec_params_string += "#endif\n\n"
-    
+
     ec_params_string += export_curve_int(name, "a", a, bytesize)
     ec_params_string += export_curve_int(name, "b", b, bytesize)
-    ec_params_string += export_curve_int(name, "npoints", npoints, getbytelen(npoints))
+
+    curve_order_bitlen = getbitlen(npoints)
+    ec_params_string += "#define CURVE_"+name.upper()+"_CURVE_ORDER_BITLEN "+str(curve_order_bitlen)+"\n"
+    ec_params_string += export_curve_int(name, "curve_order", npoints, getbytelen(npoints))
+
     ec_params_string += export_curve_int(name, "gx", gx, bytesize)
     ec_params_string += export_curve_int(name, "gy", gy, bytesize)
     ec_params_string += export_curve_int(name, "gz", 0x01, bytesize)
 
     qbitlen = getbitlen(order)
-    ec_params_string += export_curve_int(name, "order", order, getbytelen(order))
+
+    ec_params_string += export_curve_int(name, "gen_order", order, getbytelen(order))
     ec_params_string += "#define CURVE_"+name.upper()+"_Q_BITLEN "+str(qbitlen)+"\n"
-    ec_params_string += export_curve_int(name, "order_bitlen", qbitlen, getbytelen(qbitlen))
+    ec_params_string += export_curve_int(name, "gen_order_bitlen", qbitlen, getbytelen(qbitlen))
 
     ec_params_string += export_curve_int(name, "cofactor", cofactor, getbytelen(cofactor))
 
-    ec_params_string += export_curve_string(name, "name", name.upper()); 
+    ec_params_string += export_curve_int(name, "alpha_montgomery", alpha_montgomery, getbytelen(alpha_montgomery))
+    ec_params_string += export_curve_int(name, "gamma_montgomery", gamma_montgomery, getbytelen(gamma_montgomery))
+    ec_params_string += export_curve_int(name, "alpha_edwards", alpha_edwards, getbytelen(alpha_edwards))
+
+    ec_params_string += export_curve_string(name, "name", name.upper());
 
     if oid == None:
         oid = ""
-    ec_params_string += export_curve_string(name, "oid", oid); 
+    ec_params_string += export_curve_string(name, "oid", oid);
 
     ec_params_string += "static const ec_str_params "+name+"_str_params = {\n"+\
     export_curve_struct(name, "p", "p") +\
@@ -1442,13 +1540,16 @@ def curve_params(name, prime, pbitlen, a, b, gx, gy, order, cofactor, oid):
     export_curve_struct(name, "p_reciprocal", "p_reciprocal") +\
     export_curve_struct(name, "a", "a") +\
     export_curve_struct(name, "b", "b") +\
-    export_curve_struct(name, "npoints", "npoints") +\
+    export_curve_struct(name, "curve_order", "curve_order") +\
     export_curve_struct(name, "gx", "gx") +\
     export_curve_struct(name, "gy", "gy") +\
     export_curve_struct(name, "gz", "gz") +\
-    export_curve_struct(name, "order", "order") +\
-    export_curve_struct(name, "order_bitlen", "order_bitlen") +\
+    export_curve_struct(name, "gen_order", "gen_order") +\
+    export_curve_struct(name, "gen_order_bitlen", "gen_order_bitlen") +\
     export_curve_struct(name, "cofactor", "cofactor") +\
+    export_curve_struct(name, "alpha_montgomery", "alpha_montgomery") +\
+    export_curve_struct(name, "gamma_montgomery", "gamma_montgomery") +\
+    export_curve_struct(name, "alpha_edwards", "alpha_edwards") +\
     export_curve_struct(name, "oid", "oid") +\
     export_curve_struct(name, "name", "name")
     ec_params_string += "};\n\n"
@@ -1469,6 +1570,13 @@ def curve_params(name, prime, pbitlen, a, b, gx, gy, order, cofactor, oid):
     "#if (CURVES_MAX_Q_BIT_LEN < CURVE_"+name.upper()+"_Q_BITLEN)\n"+\
     "#undef CURVES_MAX_Q_BIT_LEN\n"+\
     "#define CURVES_MAX_Q_BIT_LEN CURVE_"+name.upper()+"_Q_BITLEN\n"+\
+    "#endif\n"+\
+    "#ifndef CURVES_MAX_CURVE_ORDER_BIT_LEN\n"+\
+    "#define CURVES_MAX_CURVE_ORDER_BIT_LEN    0\n"+\
+    "#endif\n"+\
+    "#if (CURVES_MAX_CURVE_ORDER_BIT_LEN < CURVE_"+name.upper()+"_CURVE_ORDER_BITLEN)\n"+\
+    "#undef CURVES_MAX_CURVE_ORDER_BIT_LEN\n"+\
+    "#define CURVES_MAX_CURVE_ORDER_BIT_LEN CURVE_"+name.upper()+"_CURVE_ORDER_BITLEN\n"+\
     "#endif\n\n"
 
     ec_params_string += "/*\n"+\
@@ -1490,7 +1598,7 @@ def curve_params(name, prime, pbitlen, a, b, gx, gy, order, cofactor, oid):
     "#endif\n\n"
 
     ec_params_string += "#endif /* __EC_PARAMS_"+name.upper()+"_H__ */\n\n"+"#endif /* WITH_CURVE_"+name.upper()+" */\n"
-    
+
     return ec_params_string
 
 def usage():
@@ -1564,8 +1672,9 @@ def parse_cmd_line(args):
     Get elliptic curve parameters from command line
     """
     name = oid = prime = a = b = gx = gy = g = order = cofactor = ECfile = remove = remove_all = add_test_vectors = None
+    alpha_montgomery = gamma_montgomery = alpha_edwards = None
     try:
-        opts, args = getopt.getopt(sys.argv[1:], ":h", ["help", "remove", "remove-all", "name=", "prime=", "a=", "b=", "generator=", "gx=", "gy=", "order=", "cofactor=", "ECfile=", "oid=", "add-test-vectors="])
+        opts, args = getopt.getopt(sys.argv[1:], ":h", ["help", "remove", "remove-all", "name=", "prime=", "a=", "b=", "generator=", "gx=", "gy=", "order=", "cofactor=", "alpha_montgomery=","gamma_montgomery=", "alpha_edwards=", "ECfile=", "oid=", "add-test-vectors="])
     except getopt.GetoptError as err:
         # print help information and exit:
         print(err) # will print something like "option -a not recognized"
@@ -1580,7 +1689,7 @@ def parse_cmd_line(args):
             # Prepend the custom string before name to avoid any collision
             name = "user_defined_"+name
             # Replace any unwanted name char
-            name = re.sub("\-", "_", name) 
+            name = re.sub("\-", "_", name)
         elif o in ("--oid="):
             oid = arg
         elif o in ("--prime"):
@@ -1599,6 +1708,12 @@ def parse_cmd_line(args):
             order = get_int(arg.replace(' ', ''))
         elif o in ("--cofactor"):
             cofactor = get_int(arg.replace(' ', ''))
+        elif o in ("--alpha_montgomery"):
+            alpha_montgomery = get_int(arg.replace(' ', ''))
+        elif o in ("--gamma_montgomery"):
+            gamma_montgomery = get_int(arg.replace(' ', ''))
+        elif o in ("--alpha_edwards"):
+            alpha_edwards = get_int(arg.replace(' ', ''))
         elif o in ("--remove"):
             remove = True
         elif o in ("--remove-all"):
@@ -1698,7 +1813,7 @@ def parse_cmd_line(args):
             return False
         # Open the file
         try:
-            buf = open(ECfile, 'rb').read()            
+            buf = open(ECfile, 'rb').read()
         except:
             print("Error: cannot open ECfile file "+ECfile)
             return False
@@ -1714,7 +1829,7 @@ def parse_cmd_line(args):
         if (check == False):
             print("Error: error when parsing ECfile file "+ECfile+" (malformed or unsupported ASN.1)")
             return False
-        
+
     else:
         if (prime == None) or (a == None) or (b == None) or (gx == None) or (gy == None) or (order == None) or (cofactor == None) or (name == None):
             err_string = (prime == None)*"prime "+(a == None)*"a "+(b == None)*"b "+(gx == None)*"gx "+(gy == None)*"gy "+(order == None)*"order "+(cofactor == None)*"cofactor "+(name == None)*"name "
@@ -1738,10 +1853,19 @@ def parse_cmd_line(args):
     if pow(gy, 2, prime) != ((pow(gx, 3, prime) + (a*gx) + b) % prime):
         print("Error: the given parameters (prime, a, b, gx, gy) do not verify the elliptic curve equation!")
         return False
-    
+
+    # Check Montgomery and Edwards transfer coefficients
+    if ((alpha_montgomery != None) and (gamma_montgomery == None)) or ((alpha_montgomery == None) and (gamma_montgomery != None)):
+        print("Error: alpha_montgomery and gamma_montgomery must be both defined if used!")
+        return False
+    if (alpha_edwards != None):
+        if (alpha_montgomery == None) or (gamma_montgomery == None):
+            print("Error: alpha_edwards needs alpha_montgomery and gamma_montgomery to be both defined if used!")
+            return False
+
     # Now that we have our parameters, call the function to get bitlen
     pbitlen = getbitlen(prime)
-    ec_params = curve_params(name, prime, pbitlen, a, b, gx, gy, order, cofactor, oid)
+    ec_params = curve_params(name, prime, pbitlen, a, b, gx, gy, order, cofactor, oid, alpha_montgomery, gamma_montgomery, alpha_edwards)
     # Check if there is a name collision somewhere
     if os.path.exists(ec_params_path + "ec_params_"+name+".h") == True :
         print("Error: file %s already exists!" % (ec_params_path + "ec_params_"+name+".h"))
@@ -1761,30 +1885,30 @@ def parse_cmd_line(args):
     magic_re = "\/\* "+magic+" \*\/"
     magic_back = "/* "+magic+" */"
     file_replace_pattern(curves_list_path + "curves_list.h", magic_re, "#include \"user_defined/ec_params_"+name+".h\"\n"+magic_back)
-    # Add the curve mapping 
+    # Add the curve mapping
     magic = "ADD curves mapping here"
-    magic_re = "\/\* "+magic+" \*\/"    
+    magic_re = "\/\* "+magic+" \*\/"
     magic_back = "/* "+magic+" */"
     file_replace_pattern(curves_list_path + "curves_list.h", magic_re, "#ifdef WITH_CURVE_"+name.upper()+"\n\t{ .type = "+name.upper()+", .params = &"+name+"_str_params },\n#endif /* WITH_CURVE_"+name.upper()+" */\n"+magic_back)
     # Add the new curve type in the enum
     # First we get the number of already defined curves so that we increment the enum counter
     num_with_curve = num_patterns_in_file(lib_ecc_types_path + "lib_ecc_types.h", "#ifdef WITH_CURVE_")
-    magic = "ADD curves type here" 
-    magic_re = "\/\* "+magic+" \*\/"    
+    magic = "ADD curves type here"
+    magic_re = "\/\* "+magic+" \*\/"
     magic_back = "/* "+magic+" */"
     file_replace_pattern(lib_ecc_types_path + "lib_ecc_types.h", magic_re, "#ifdef WITH_CURVE_"+name.upper()+"\n\t"+name.upper()+" = "+str(num_with_curve+1)+",\n#endif /* WITH_CURVE_"+name.upper()+" */\n"+magic_back)
     # Add the new curve define in the config
-    magic = "ADD curves define here" 
-    magic_re = "\/\* "+magic+" \*\/"    
+    magic = "ADD curves define here"
+    magic_re = "\/\* "+magic+" \*\/"
     magic_back = "/* "+magic+" */"
     file_replace_pattern(lib_ecc_config_path + "lib_ecc_config.h", magic_re, "#define WITH_CURVE_"+name.upper()+"\n"+magic_back)
-    
+
     # Do we need to add some test vectors?
     if add_test_vectors != None:
         print("Test vectors generation asked: this can take some time! Please wait ...")
         # Create curve
         c = Curve(a, b, prime, order, cofactor, gx, gy, cofactor * order, name, oid)
-        # Generate key pair for the algorithm 
+        # Generate key pair for the algorithm
         vectors = gen_self_tests(c, add_test_vectors)
         # Iterate through all the tests
         f = open(ec_self_tests_path + "ec_self_tests_core_"+name+".h", 'w')

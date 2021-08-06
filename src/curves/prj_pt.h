@@ -65,6 +65,8 @@ int prj_pt_cmp(prj_pt_src_t in1, prj_pt_src_t in2);
 
 int prj_pt_eq_or_opp(prj_pt_src_t in1, prj_pt_src_t in2);
 
+void prj_pt_neg(prj_pt_t out, prj_pt_src_t in);
+
 int prj_pt_import_from_buf(prj_pt_t pt,
 			   const u8 *pt_buf,
 			   u16 pt_buf_len, ec_shortw_crv_src_t crv);
@@ -83,6 +85,22 @@ void prj_pt_dbl(prj_pt_t dbl, prj_pt_src_t in);
 
 void prj_pt_mul(prj_pt_t out, nn_src_t m, prj_pt_src_t in);
 
-int prj_pt_mul_blind(prj_pt_t out, nn_src_t m, prj_pt_src_t in, nn_t b, nn_src_t q);
+int prj_pt_mul_blind(prj_pt_t out, nn_src_t m, prj_pt_src_t in);
 
+void aff_pt_edwards_to_prj_pt_shortw(aff_pt_edwards_src_t in_edwards,
+				     ec_shortw_crv_src_t shortw_crv,
+				     prj_pt_t out_shortw, fp_src_t alpha);
+
+void aff_pt_montgomery_to_prj_pt_shortw(aff_pt_montgomery_src_t in_montgomery,
+					ec_shortw_crv_src_t shortw_crv,
+					prj_pt_t out_shortw);
+
+void prj_pt_shortw_to_aff_pt_edwards(prj_pt_src_t in_shortw,
+				     ec_edwards_crv_src_t edwards_crv,
+				     aff_pt_edwards_t out_edwards,
+				     fp_src_t alpha);
+
+void prj_pt_shortw_to_aff_pt_montgomery(prj_pt_src_t in_shortw,
+					ec_montgomery_crv_src_t montgomery_crv,
+					aff_pt_montgomery_t out_montgomery);
 #endif /* __PRJ_PT_H__ */

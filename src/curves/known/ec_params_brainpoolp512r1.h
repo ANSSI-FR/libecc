@@ -123,7 +123,8 @@ static const u8 brainpoolp512r1_b[] = {
 
 TO_EC_STR_PARAM(brainpoolp512r1_b);
 
-static const u8 brainpoolp512r1_npoints[] = {
+#define CURVE_BRAINPOOLP512R1_CURVE_ORDER_BITLEN 512
+static const u8 brainpoolp512r1_curve_order[] = {
 	0xAA, 0xDD, 0x9D, 0xB8, 0xDB, 0xE9, 0xC4, 0x8B,
 	0x3F, 0xD4, 0xE6, 0xAE, 0x33, 0xC9, 0xFC, 0x07,
 	0xCB, 0x30, 0x8D, 0xB3, 0xB3, 0xC9, 0xD2, 0x0E,
@@ -134,7 +135,7 @@ static const u8 brainpoolp512r1_npoints[] = {
 	0xB5, 0x87, 0x96, 0x82, 0x9C, 0xA9, 0x00, 0x69
 };
 
-TO_EC_STR_PARAM(brainpoolp512r1_npoints);
+TO_EC_STR_PARAM(brainpoolp512r1_curve_order);
 
 static const u8 brainpoolp512r1_gx[] = {
 	0x81, 0xAE, 0xE4, 0xBD, 0xD8, 0x2E, 0xD9, 0x64,
@@ -162,7 +163,7 @@ static const u8 brainpoolp512r1_gy[] = {
 
 TO_EC_STR_PARAM(brainpoolp512r1_gy);
 
-static const u8 brainpool512r1_gz[] = {
+static const u8 brainpoolp512r1_gz[] = {
 	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -173,9 +174,9 @@ static const u8 brainpool512r1_gz[] = {
 	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01
 };
 
-TO_EC_STR_PARAM(brainpool512r1_gz);
+TO_EC_STR_PARAM(brainpoolp512r1_gz);
 
-static const u8 brainpoolp512r1_order[] = {
+static const u8 brainpoolp512r1_gen_order[] = {
 	0xAA, 0xDD, 0x9D, 0xB8, 0xDB, 0xE9, 0xC4, 0x8B,
 	0x3F, 0xD4, 0xE6, 0xAE, 0x33, 0xC9, 0xFC, 0x07,
 	0xCB, 0x30, 0x8D, 0xB3, 0xB3, 0xC9, 0xD2, 0x0E,
@@ -186,16 +187,34 @@ static const u8 brainpoolp512r1_order[] = {
 	0xB5, 0x87, 0x96, 0x82, 0x9C, 0xA9, 0x00, 0x69
 };
 
-TO_EC_STR_PARAM(brainpoolp512r1_order);
+TO_EC_STR_PARAM(brainpoolp512r1_gen_order);
 
 #define CURVE_BRAINPOOLP512R1_Q_BITLEN 512
-static const u8 brainpoolp512r1_order_bitlen[] = { 0x02, 0x00 };
+static const u8 brainpoolp512r1_gen_order_bitlen[] = { 0x02, 0x00 };
 
-TO_EC_STR_PARAM(brainpoolp512r1_order_bitlen);
+TO_EC_STR_PARAM(brainpoolp512r1_gen_order_bitlen);
 
 static const u8 brainpoolp512r1_cofactor[] = { 0x01 };
 
 TO_EC_STR_PARAM(brainpoolp512r1_cofactor);
+
+static const u8 brainpoolp512r1_alpha_montgomery[] = {
+	0x00,
+};
+
+TO_EC_STR_PARAM_FIXED_SIZE(brainpoolp512r1_alpha_montgomery, 0);
+
+static const u8 brainpoolp512r1_gamma_montgomery[] = {
+	0x00,
+};
+
+TO_EC_STR_PARAM_FIXED_SIZE(brainpoolp512r1_gamma_montgomery, 0);
+
+static const u8 brainpoolp512r1_alpha_edwards[] = {
+	0x00,
+};
+
+TO_EC_STR_PARAM_FIXED_SIZE(brainpoolp512r1_alpha_edwards, 0);
 
 static const u8 brainpoolp512r1_oid[] = "1.3.36.3.3.2.8.1.1.13";
 TO_EC_STR_PARAM(brainpoolp512r1_oid);
@@ -214,13 +233,16 @@ static const ec_str_params brainpoolp512r1_str_params = {
 	.p_reciprocal = &brainpoolp512r1_p_reciprocal_str_param,
 	.a = &brainpoolp512r1_a_str_param,
 	.b = &brainpoolp512r1_b_str_param,
-	.npoints = &brainpoolp512r1_npoints_str_param,
+	.curve_order = &brainpoolp512r1_curve_order_str_param,
 	.gx = &brainpoolp512r1_gx_str_param,
 	.gy = &brainpoolp512r1_gy_str_param,
-	.gz = &brainpool512r1_gz_str_param,
-	.order = &brainpoolp512r1_order_str_param,
-	.order_bitlen = &brainpoolp512r1_order_bitlen_str_param,
+	.gz = &brainpoolp512r1_gz_str_param,
+	.gen_order = &brainpoolp512r1_gen_order_str_param,
+	.gen_order_bitlen = &brainpoolp512r1_gen_order_bitlen_str_param,
 	.cofactor = &brainpoolp512r1_cofactor_str_param,
+	.alpha_montgomery = &brainpoolp512r1_alpha_montgomery_str_param,
+	.gamma_montgomery = &brainpoolp512r1_gamma_montgomery_str_param,
+	.alpha_edwards = &brainpoolp512r1_alpha_edwards_str_param,
 	.oid = &brainpoolp512r1_oid_str_param,
 	.name = &brainpoolp512r1_name_str_param,
 };
@@ -241,6 +263,13 @@ static const ec_str_params brainpoolp512r1_str_params = {
 #if (CURVES_MAX_Q_BIT_LEN < CURVE_BRAINPOOLP512R1_Q_BITLEN)
 #undef CURVES_MAX_Q_BIT_LEN
 #define CURVES_MAX_Q_BIT_LEN CURVE_BRAINPOOLP512R1_Q_BITLEN
+#endif
+#ifndef CURVES_MAX_CURVE_ORDER_BIT_LEN
+#define CURVES_MAX_CURVE_ORDER_BIT_LEN    0
+#endif
+#if (CURVES_MAX_CURVE_ORDER_BIT_LEN < CURVE_BRAINPOOLP512R1_CURVE_ORDER_BITLEN)
+#undef CURVES_MAX_CURVE_ORDER_BIT_LEN
+#define CURVES_MAX_CURVE_ORDER_BIT_LEN CURVE_BRAINPOOLP512R1_CURVE_ORDER_BITLEN
 #endif
 
 #endif /* __EC_PARAMS_BRAINPOOLP512R1_H__ */

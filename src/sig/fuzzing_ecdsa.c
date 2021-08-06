@@ -44,8 +44,6 @@ int ecdsa_sign_raw(struct ec_sign_context *ctx, const u8 *input, u8 inputlen, u8
 #ifdef USE_SIG_BLINDING
         /* b is the blinding mask */
         nn b;
-	/* scalar_b is the scalar multiplication blinder */
-	nn scalar_b;
 #endif
 	const ec_priv_key *priv_key;
 	prj_pt_src_t G;
@@ -137,7 +135,7 @@ int ecdsa_sign_raw(struct ec_sign_context *ctx, const u8 *input, u8 inputlen, u8
 	/* 4. get a random value k in ]0,q[ */
 	/* NOTE: copy our input nonce if not NULL */
 	if(nonce != NULL){
-		if(noncelen > (u8)(BYTECEIL(q_bit_len))){
+                if(noncelen > (u8)(BYTECEIL(q_bit_len))){
 			ret = -1;
 		}
 		else{
@@ -167,25 +165,15 @@ int ecdsa_sign_raw(struct ec_sign_context *ctx, const u8 *input, u8 inputlen, u8
                 goto err;
         }
         dbg_nn_print("b", &b);
-        /* We use blinding for the scalar multiplication */
-        ret = nn_get_random_mod(&scalar_b, q);
-        if (ret) {
-		nn_uninit(&tmp2);
-		nn_uninit(&e);
-		ret = -1;
-                goto err;
-        }
-        dbg_nn_print("scalar_b", &scalar_b);
 #endif /* USE_SIG_BLINDING */
 
 
 	/* 5. Compute W = (W_x,W_y) = kG */
 #ifdef USE_SIG_BLINDING
-	if(prj_pt_mul_monty_blind(&kG, &k, G, &scalar_b, q)){
+	if(prj_pt_mul_monty_blind(&kG, &k, G)){
 		ret = -1;
 		goto err;
 	}
-	nn_uninit(&scalar_b);
 #else
         prj_pt_mul_monty(&kG, &k, G);
 #endif /* USE_SIG_BLINDING */
@@ -285,9 +273,9 @@ int ecdsa_sign_raw(struct ec_sign_context *ctx, const u8 *input, u8 inputlen, u8
 	VAR_ZEROIFY(hsize);
 
 #ifdef USE_SIG_BLINDING
-	if(nn_is_initialized(&b)){
-	        nn_uninit(&b);
-	}
+        if(nn_is_initialized(&b)){
+                nn_uninit(&b);
+        }
 #endif /* USE_SIG_BLINDING */
 
 	return ret;

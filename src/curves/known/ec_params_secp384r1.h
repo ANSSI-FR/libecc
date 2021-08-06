@@ -107,7 +107,8 @@ static const u8 secp384r1_b[] = {
 
 TO_EC_STR_PARAM(secp384r1_b);
 
-static const u8 secp384r1_npoints[] = {
+#define CURVE_SECP384R1_CURVE_ORDER_BITLEN 384
+static const u8 secp384r1_curve_order[] = {
 	0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
 	0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
 	0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
@@ -116,7 +117,7 @@ static const u8 secp384r1_npoints[] = {
 	0xEC, 0xEC, 0x19, 0x6A, 0xCC, 0xC5, 0x29, 0x73
 };
 
-TO_EC_STR_PARAM(secp384r1_npoints);
+TO_EC_STR_PARAM(secp384r1_curve_order);
 
 static const u8 secp384r1_gx[] = {
 	0xAA, 0x87, 0xCA, 0x22, 0xBE, 0x8B, 0x05, 0x37,
@@ -151,7 +152,7 @@ static const u8 secp384r1_gz[] = {
 
 TO_EC_STR_PARAM(secp384r1_gz);
 
-static const u8 secp384r1_order[] = {
+static const u8 secp384r1_gen_order[] = {
 	0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
 	0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
 	0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
@@ -160,16 +161,34 @@ static const u8 secp384r1_order[] = {
 	0xEC, 0xEC, 0x19, 0x6A, 0xCC, 0xC5, 0x29, 0x73
 };
 
-TO_EC_STR_PARAM(secp384r1_order);
+TO_EC_STR_PARAM(secp384r1_gen_order);
 
 #define CURVE_SECP384R1_Q_BITLEN 384
-static const u8 secp384r1_order_bitlen[] = { 0x01, 0x80 };
+static const u8 secp384r1_gen_order_bitlen[] = { 0x01, 0x80 };
 
-TO_EC_STR_PARAM(secp384r1_order_bitlen);
+TO_EC_STR_PARAM(secp384r1_gen_order_bitlen);
 
 static const u8 secp384r1_cofactor[] = { 0x01 };
 
 TO_EC_STR_PARAM(secp384r1_cofactor);
+
+static const u8 secp384r1_alpha_montgomery[] = {
+	0x00,
+};
+
+TO_EC_STR_PARAM_FIXED_SIZE(secp384r1_alpha_montgomery, 0);
+
+static const u8 secp384r1_gamma_montgomery[] = {
+	0x00,
+};
+
+TO_EC_STR_PARAM_FIXED_SIZE(secp384r1_gamma_montgomery, 0);
+
+static const u8 secp384r1_alpha_edwards[] = {
+	0x00,
+};
+
+TO_EC_STR_PARAM_FIXED_SIZE(secp384r1_alpha_edwards, 0);
 
 static const u8 secp384r1_oid[] = "1.3.132.0.34";
 TO_EC_STR_PARAM(secp384r1_oid);
@@ -188,13 +207,16 @@ static const ec_str_params secp384r1_str_params = {
 	.p_reciprocal = &secp384r1_p_reciprocal_str_param,
 	.a = &secp384r1_a_str_param,
 	.b = &secp384r1_b_str_param,
-	.npoints = &secp384r1_npoints_str_param,
+	.curve_order = &secp384r1_curve_order_str_param,
 	.gx = &secp384r1_gx_str_param,
 	.gy = &secp384r1_gy_str_param,
 	.gz = &secp384r1_gz_str_param,
-	.order = &secp384r1_order_str_param,
-	.order_bitlen = &secp384r1_order_bitlen_str_param,
+	.gen_order = &secp384r1_gen_order_str_param,
+	.gen_order_bitlen = &secp384r1_gen_order_bitlen_str_param,
 	.cofactor = &secp384r1_cofactor_str_param,
+        .alpha_montgomery = &secp384r1_alpha_montgomery_str_param,
+        .gamma_montgomery = &secp384r1_gamma_montgomery_str_param,
+        .alpha_edwards = &secp384r1_alpha_edwards_str_param,
 	.oid = &secp384r1_oid_str_param,
 	.name = &secp384r1_name_str_param,
 };
@@ -215,6 +237,13 @@ static const ec_str_params secp384r1_str_params = {
 #if (CURVES_MAX_Q_BIT_LEN < CURVE_SECP384R1_Q_BITLEN)
 #undef CURVES_MAX_Q_BIT_LEN
 #define CURVES_MAX_Q_BIT_LEN CURVE_SECP384R1_Q_BITLEN
+#endif
+#ifndef CURVES_MAX_CURVE_ORDER_BIT_LEN
+#define CURVES_MAX_CURVE_ORDER_BIT_LEN    0
+#endif
+#if (CURVES_MAX_CURVE_ORDER_BIT_LEN < CURVE_SECP384R1_CURVE_ORDER_BITLEN)
+#undef CURVES_MAX_CURVE_ORDER_BIT_LEN
+#define CURVES_MAX_CURVE_ORDER_BIT_LEN CURVE_SECP384R1_CURVE_ORDER_BITLEN
 #endif
 
 #endif /* __EC_PARAMS_SECP384R1_H__ */

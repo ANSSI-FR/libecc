@@ -2,18 +2,73 @@
  *  Copyright (C) 2017 - This file is part of libecc project
  *
  *  Authors:
- *      Ryad BENADJILA <ryadbenadjila@gmail.com>
- *      Arnaud EBALARD <arnaud.ebalard@ssi.gouv.fr>
- *      Jean-Pierre FLORI <jean-pierre.flori@ssi.gouv.fr>
+ *	Ryad BENADJILA <ryadbenadjila@gmail.com>
+ *	Arnaud EBALARD <arnaud.ebalard@ssi.gouv.fr>
+ *	Jean-Pierre FLORI <jean-pierre.flori@ssi.gouv.fr>
  *
  *  Contributors:
- *      Nicolas VIVET <nicolas.vivet@ssi.gouv.fr>
- *      Karim KHALFALLAH <karim.khalfallah@ssi.gouv.fr>
+ *	Nicolas VIVET <nicolas.vivet@ssi.gouv.fr>
+ *	Karim KHALFALLAH <karim.khalfallah@ssi.gouv.fr>
  *
  *  This software is licensed under a dual BSD and GPL v2 license.
  *  See LICENSE file at the root folder of the project.
  */
 #include "sig_algs.h"
+
+/*
+ * Generic private key generation (generate a scalar in ]0,q[
+ * Common accross many schemes, but might diverge for some.
+ */
+int generic_gen_priv_key(ec_priv_key *priv_key)
+{
+	int ret = -1;
+
+	if(!priv_key_is_initialized(priv_key)){
+		ret = -1;
+		goto err;
+	}
+	/* Get a random value in ]0,q[ where q is the group generator order */
+	ret = nn_get_random_mod(&(priv_key->x), &(priv_key->params->ec_gen_order));
+	if (ret) {
+		ret = -1;
+		goto err;
+	}
+
+	ret = 0;
+err:
+	return ret;
+}
+
+/* Private key generation function per signature scheme */
+int gen_priv_key(ec_priv_key *priv_key)
+{
+	const ec_sig_mapping *sm;
+	int ret = -1;
+	u8 i;
+
+	if(!priv_key_is_initialized(priv_key)){
+		goto err;
+	}
+
+	for (i = 0, sm = &ec_sig_maps[i];
+	     sm->type != UNKNOWN_SIG_ALG; sm = &ec_sig_maps[++i]) {
+		if (sm->type == priv_key->key_type) {
+			/* NOTE: since sm is initalized with a structure
+			 * coming from a const source, we can safely call the callback here, but
+			 * better safe than sorry.
+			 */
+			if(sm->gen_priv_key == NULL){
+				ret = -1;
+				goto err;
+			}
+			ret = sm->gen_priv_key(priv_key);
+			break;
+		}
+	}
+
+err:
+	return ret;
+}
 
 /*
  * Generic function to init a uninitialized public key from an initialized
@@ -27,20 +82,27 @@ int init_pubkey_from_privkey(ec_pub_key *pub_key, ec_priv_key *priv_key)
 	int ret = -1;
 	u8 i;
 
-	priv_key_check_initialized(priv_key);
+	if(!priv_key_is_initialized(priv_key)){
+		goto err;
+	}
 
 	for (i = 0, sm = &ec_sig_maps[i];
 	     sm->type != UNKNOWN_SIG_ALG; sm = &ec_sig_maps[++i]) {
 		if (sm->type == priv_key->key_type) {
 			/* NOTE: since sm is initalized with a structure
-	 		 * coming from a const source, we can safely call the callback here.
-	 		 */
-			sm->init_pub_key(pub_key, priv_key);
-			ret = 0;
+			 * coming from a const source, we can safely call the callback here, but
+			 * better safe than sorry.
+			 */
+			if(sm->init_pub_key == NULL){
+				ret = -1;
+				goto err;
+			}
+			ret = sm->init_pub_key(pub_key, priv_key);
 			break;
 		}
 	}
 
+err:
 	return ret;
 }
 
@@ -78,7 +140,7 @@ const ec_sig_mapping *get_sig_by_type(ec_sig_alg_type sig_type)
 	return ret;
 }
 
-/* Here, we provide a helper that sanity checks the provided signature 
+/* Here, we provide a helper that sanity checks the provided signature
  * mapping against the constant ones.
  */
 int ec_sig_mapping_callbacks_sanity_check(const ec_sig_mapping *sig)
@@ -101,6 +163,9 @@ int ec_sig_mapping_callbacks_sanity_check(const ec_sig_mapping *sig)
 			else if(sm->siglen != sig->siglen){
 				goto err;
 			}
+			else if(sm->gen_priv_key != sig->gen_priv_key){
+				goto err;
+			}
 			else if(sm->init_pub_key != sig->init_pub_key){
 				goto err;
 			}
@@ -113,6 +178,9 @@ int ec_sig_mapping_callbacks_sanity_check(const ec_sig_mapping *sig)
 			else if(sm->sign_finalize != sig->sign_finalize){
 				goto err;
 			}
+			else if(sm->sign != sig->sign){
+				goto err;
+			}
 			else if(sm->verify_init != sig->verify_init){
 				goto err;
 			}
@@ -120,6 +188,9 @@ int ec_sig_mapping_callbacks_sanity_check(const ec_sig_mapping *sig)
 				goto err;
 			}
 			else if(sm->verify_finalize != sig->verify_finalize){
+				goto err;
+			}
+			else if(sm->verify != sig->verify){
 				goto err;
 			}
 			else{
@@ -137,22 +208,28 @@ err:
  */
 int ec_sig_ctx_callbacks_sanity_check(const struct ec_sign_context *sig_ctx)
 {
+	int ret = -1;
+
 	if(sig_ctx == NULL){
+		ret = -1;
 		goto err;
 	}
 	if(sig_ctx->ctx_magic != SIG_SIGN_MAGIC){
+		ret = -1;
 		goto err;
 	}
 	if(hash_mapping_callbacks_sanity_check(sig_ctx->h)){
+		ret = -1;
 		goto err;
 	}
 	if(ec_sig_mapping_callbacks_sanity_check(sig_ctx->sig)){
+		ret = -1;
 		goto err;
 	}
-	
-	return 0;
+
+	ret = 0;
 err:
-	return -1;
+	return ret;
 }
 
 /* Sanity check of a verification context to see if everything seems
@@ -160,22 +237,28 @@ err:
  */
 int ec_verify_ctx_callbacks_sanity_check(const struct ec_verify_context *verify_ctx)
 {
+	int ret = -1;
+
 	if(verify_ctx == NULL){
+		ret = -1;
 		goto err;
 	}
 	if(verify_ctx->ctx_magic != SIG_VERIFY_MAGIC){
+		ret = -1;
 		goto err;
 	}
 	if(hash_mapping_callbacks_sanity_check(verify_ctx->h)){
+		ret = -1;
 		goto err;
 	}
 	if(ec_sig_mapping_callbacks_sanity_check(verify_ctx->sig)){
+		ret = -1;
 		goto err;
 	}
-	
-	return 0;
+
+	ret = 0;
 err:
-	return -1;
+	return ret;
 }
 
 
@@ -219,15 +302,16 @@ int ec_get_sig_len(const ec_params *params, ec_sig_alg_type sig_type,
 /* Generic signature */
 
 /*
- * Internal version of generic signature initialization function. Its purpose
+ * Core version of generic signature initialization function. Its purpose
  * is to initialize given sign context structure 'ctx' based on given key pair,
  * nn random function, signature and hash types. This version allows passing
  * a specific nn random function. It returns 0 on success, -1 on error.
  */
-static int _ec_sign_init(struct ec_sign_context *ctx,
-			 const ec_key_pair *key_pair,
-			 int (*rand) (nn_t out, nn_src_t q),
-			 ec_sig_alg_type sig_type, hash_alg_type hash_type)
+int _ec_sign_init(struct ec_sign_context *ctx,
+		  const ec_key_pair *key_pair,
+		  int (*rand) (nn_t out, nn_src_t q),
+		  ec_sig_alg_type sig_type, hash_alg_type hash_type,
+		  const u8 *adata, u16 adata_len)
 {
 	const ec_sig_mapping *sm;
 	const hash_mapping *hm;
@@ -269,14 +353,14 @@ static int _ec_sign_init(struct ec_sign_context *ctx,
 	}
 
 #ifdef NO_KNOWN_VECTORS
-        /* NOTE: when we do not need self tests for known vectors,
-         * we can be strict about random function handler!
+	/* NOTE: when we do not need self tests for known vectors,
+	 * we can be strict about random function handler!
 	 * We only use our internal method to provide random integers
 	 * (which avoids honest mistakes ...).
 	 *
-         * This also allows us to avoid the corruption of such a pointer in
+	 * This also allows us to avoid the corruption of such a pointer in
 	 * our signature contexts.
-         */
+	 */
 	if(rand){
 		if(rand != nn_get_random_mod){
 			ret = -1;
@@ -299,6 +383,8 @@ static int _ec_sign_init(struct ec_sign_context *ctx,
 	ctx->rand = rand;
 	ctx->h = hm;
 	ctx->sig = sm;
+	ctx->adata = adata;
+	ctx->adata_len = adata_len;
 	ctx->ctx_magic = SIG_SIGN_MAGIC;
 
 	/* NOTE: since sm has been previously initalized with a structure
@@ -320,9 +406,11 @@ static int _ec_sign_init(struct ec_sign_context *ctx,
  * function
  */
 int ec_sign_init(struct ec_sign_context *ctx, const ec_key_pair *key_pair,
-		 ec_sig_alg_type sig_type, hash_alg_type hash_type)
+		 ec_sig_alg_type sig_type, hash_alg_type hash_type,
+		 const u8 *adata, u16 adata_len)
 {
-	return _ec_sign_init(ctx, key_pair, NULL, sig_type, hash_type);
+	return _ec_sign_init(ctx, key_pair, NULL, sig_type, hash_type,
+			     adata, adata_len);
 }
 
 /* Signature update function */
@@ -373,15 +461,18 @@ err:
 	return ret;
 }
 
-int _ec_sign(u8 *sig, u8 siglen, const ec_key_pair *key_pair,
-	     const u8 *m, u32 mlen,
-	     int (*rand) (nn_t out, nn_src_t q),
-	     ec_sig_alg_type sig_type, hash_alg_type hash_type)
+/* Generic signature using the init/update/finalize API */
+int generic_ec_sign(u8 *sig, u8 siglen, const ec_key_pair *key_pair,
+		    const u8 *m, u32 mlen,
+		    int (*rand) (nn_t out, nn_src_t q),
+		    ec_sig_alg_type sig_type, hash_alg_type hash_type,
+		    const u8 *adata, u16 adata_len)
 {
 	struct ec_sign_context ctx;
 	int ret;
 
-	ret = _ec_sign_init(&ctx, key_pair, rand, sig_type, hash_type);
+	ret = _ec_sign_init(&ctx, key_pair, rand, sig_type,
+			    hash_type, adata, adata_len);
 	if (ret) {
 		goto err;
 	}
@@ -398,19 +489,42 @@ int _ec_sign(u8 *sig, u8 siglen, const ec_key_pair *key_pair,
 	return ret;
 }
 
+int _ec_sign(u8 *sig, u8 siglen, const ec_key_pair *key_pair,
+	     const u8 *m, u32 mlen,
+	     int (*rand) (nn_t out, nn_src_t q),
+	     ec_sig_alg_type sig_type, hash_alg_type hash_type,
+	     const u8 *adata, u16 adata_len)
+{
+	const ec_sig_mapping *sm;
+	int ret = -1;
+
+	sm = get_sig_by_type(sig_type);
+	if((sm == NULL) || (sm->sign == NULL)){
+		ret = -1;
+		goto err;
+	}
+
+	ret = sm->sign(sig, siglen, key_pair, m, mlen, rand,
+		       sig_type, hash_type, adata, adata_len);
+err:
+	return ret;
+}
+
 int ec_sign(u8 *sig, u8 siglen, const ec_key_pair *key_pair,
 	    const u8 *m, u32 mlen,
-	    ec_sig_alg_type sig_type, hash_alg_type hash_type)
+	    ec_sig_alg_type sig_type, hash_alg_type hash_type,
+	    const u8 *adata, u16 adata_len)
 {
 	return _ec_sign(sig, siglen, key_pair, m, mlen,
-			NULL, sig_type, hash_type);
+			NULL, sig_type, hash_type, adata, adata_len);
 }
 
 /* Generic signature verification */
 
 int ec_verify_init(struct ec_verify_context *ctx, const ec_pub_key *pub_key,
 		   const u8 *sig, u8 siglen,
-		   ec_sig_alg_type sig_type, hash_alg_type hash_type)
+		   ec_sig_alg_type sig_type, hash_alg_type hash_type,
+		   const u8 *adata, u16 adata_len)
 {
 	const ec_sig_mapping *sm;
 	const hash_mapping *hm;
@@ -458,6 +572,8 @@ int ec_verify_init(struct ec_verify_context *ctx, const ec_pub_key *pub_key,
 	ctx->pub_key = pub_key;
 	ctx->h = hm;
 	ctx->sig = sm;
+	ctx->adata = adata;
+	ctx->adata_len = adata_len;
 	ctx->ctx_magic = SIG_VERIFY_MAGIC;
 
 	/* NOTE: since sm has been previously initalized with a structure
@@ -522,14 +638,16 @@ err:
 	return ret;
 }
 
-int ec_verify(const u8 *sig, u8 siglen, const ec_pub_key *pub_key,
-	      const u8 *m, u32 mlen,
-	      ec_sig_alg_type sig_type, hash_alg_type hash_type)
+int generic_ec_verify(const u8 *sig, u8 siglen, const ec_pub_key *pub_key,
+		      const u8 *m, u32 mlen,
+		      ec_sig_alg_type sig_type, hash_alg_type hash_type,
+		      const u8 *adata, u16 adata_len)
 {
 	int ret;
 	struct ec_verify_context ctx;
 
-	ret = ec_verify_init(&ctx, pub_key, sig, siglen, sig_type, hash_type);
+	ret = ec_verify_init(&ctx, pub_key, sig, siglen, sig_type,
+			     hash_type, adata, adata_len);
 	if (ret) {
 		goto err;
 	}
@@ -545,45 +663,74 @@ int ec_verify(const u8 *sig, u8 siglen, const ec_pub_key *pub_key,
 	return ret;
 }
 
+int ec_verify(const u8 *sig, u8 siglen, const ec_pub_key *pub_key,
+	      const u8 *m, u32 mlen,
+	      ec_sig_alg_type sig_type, hash_alg_type hash_type,
+	      const u8 *adata, u16 adata_len)
+{
+
+	const ec_sig_mapping *sm;
+	int ret = -1;
+
+	sm = get_sig_by_type(sig_type);
+	if((sm == NULL) || (sm->verify == NULL)){
+		ret = -1;
+		goto err;
+	}
+
+	ret = sm->verify(sig, siglen, pub_key, m, mlen, sig_type,
+			 hash_type, adata, adata_len);
+err:
+	return ret;
+}
+
 /*
  * Import a signature with structured data containing information about the EC
  * algorithm type as well as the hash function used to produce it
  */
 int ec_structured_sig_import_from_buf(u8 *sig, u32 siglen,
-                                      const u8 *out_buf, u32 outlen,
-                                      ec_sig_alg_type * sig_type,
-                                      hash_alg_type * hash_type,
-                                      u8 curve_name[MAX_CURVE_NAME_LEN])
+				      const u8 *out_buf, u32 outlen,
+				      ec_sig_alg_type * sig_type,
+				      hash_alg_type * hash_type,
+				      u8 curve_name[MAX_CURVE_NAME_LEN])
 {
-        u32 metadata_len = (3 * sizeof(u8));
+	int ret = -1;
 
-	MUST_HAVE((out_buf != NULL) && (sig_type != NULL) && (hash_type != NULL) && (curve_name != NULL));
-        /* We only deal with signatures of length < 256 */
-        MUST_HAVE(siglen <= EC_MAX_SIGLEN);
+	u32 metadata_len = (3 * sizeof(u8));
+
+	MUST_HAVE((out_buf != NULL) && (sig_type != NULL) &&
+		  (hash_type != NULL) && (curve_name != NULL));
+	/* We only deal with signatures of length < 256 */
+	MUST_HAVE(siglen <= EC_MAX_SIGLEN);
 	if(siglen > 0){
 		MUST_HAVE(sig != NULL);
 	}
 
-        /* We first import the metadata consisting of:
-         *      - One byte = the EC algorithm type
-         *      - One byte = the hash algorithm type
-         *      - One byte = the curve type (FRP256V1, ...)
-         */
-        MUST_HAVE(outlen <= (siglen + metadata_len));
-        if (outlen > (siglen + metadata_len))
-                return -1;
+	/* We first import the metadata consisting of:
+	 *	- One byte = the EC algorithm type
+	 *	- One byte = the hash algorithm type
+	 *	- One byte = the curve type (FRP256V1, ...)
+	 */
+	MUST_HAVE(outlen <= (siglen + metadata_len));
+	if (outlen > (siglen + metadata_len)){
+		ret = -1;
+		goto err;
+	}
 
-        *sig_type = (ec_sig_alg_type)out_buf[0];
-        *hash_type = (hash_alg_type)out_buf[1];
-        if (ec_get_curve_name_by_type((ec_curve_type) out_buf[2],
-                                      curve_name, MAX_CURVE_NAME_LEN)) {
-                return -1;
-        }
+	*sig_type = (ec_sig_alg_type)out_buf[0];
+	*hash_type = (hash_alg_type)out_buf[1];
+	if (ec_get_curve_name_by_type((ec_curve_type) out_buf[2],
+				      curve_name, MAX_CURVE_NAME_LEN)) {
+		ret = -1;
+		goto err;
+	}
 
-        /* Copy the raw signature */
-        local_memcpy(sig, out_buf + metadata_len, siglen);
+	/* Copy the raw signature */
+	local_memcpy(sig, out_buf + metadata_len, siglen);
 
-        return 0;
+	ret = 0;
+err:
+	return ret;
 }
 
 /*
@@ -591,45 +738,203 @@ int ec_structured_sig_import_from_buf(u8 *sig, u32 siglen,
  * algorithm type as well as the hash function used to produce it.
  */
 int ec_structured_sig_export_to_buf(const u8 *sig, u32 siglen,
-                                    u8 *out_buf, u32 outlen,
-                                    ec_sig_alg_type sig_type,
-                                    hash_alg_type hash_type,
-                                    const u8
-                                    curve_name[MAX_CURVE_NAME_LEN])
+				    u8 *out_buf, u32 outlen,
+				    ec_sig_alg_type sig_type,
+				    hash_alg_type hash_type,
+				    const u8
+				    curve_name[MAX_CURVE_NAME_LEN])
 {
-        u32 metadata_len = (3 * sizeof(u8));
-        u8 curve_name_len;
-        ec_curve_type curve_type;
+	u32 metadata_len = (3 * sizeof(u8));
+	u8 curve_name_len;
+	ec_curve_type curve_type;
+	int ret = -1;
 
 	MUST_HAVE((out_buf != NULL) && (curve_name != NULL));
-        /* We only deal with signatures of length < 256 */
-        MUST_HAVE(siglen <= EC_MAX_SIGLEN);
+	/* We only deal with signatures of length < 256 */
+	MUST_HAVE(siglen <= EC_MAX_SIGLEN);
 	if(siglen > 0){
 		MUST_HAVE(sig != NULL);
 	}
 
-        /* We first export the metadata consisting of:
-         *      - One byte = the EC algorithm type
-         *      - One byte = the hash algorithm type
-         *      - One byte = the curve type (FRP256V1, ...)
-         *
-         */
-        MUST_HAVE(outlen >= (siglen + metadata_len));
-        if (outlen < (siglen + metadata_len)) {
-                return -1;
-        }
+	/* We first export the metadata consisting of:
+	 *	- One byte = the EC algorithm type
+	 *	- One byte = the hash algorithm type
+	 *	- One byte = the curve type (FRP256V1, ...)
+	 *
+	 */
+	MUST_HAVE(outlen >= (siglen + metadata_len));
+	if (outlen < (siglen + metadata_len)) {
+		ret = -1;
+		goto err;
+	}
 
-        out_buf[0] = (u8)sig_type;
-        out_buf[1] = (u8)hash_type;
-        curve_name_len = (u8)local_strlen((const char *)curve_name) + 1;
-        curve_type = ec_get_curve_type_by_name(curve_name, curve_name_len);
-        out_buf[2] = (u8)curve_type;
-        if (out_buf[2] == UNKNOWN_CURVE) {
-                return -1;
-        }
+	out_buf[0] = (u8)sig_type;
+	out_buf[1] = (u8)hash_type;
+	curve_name_len = (u8)local_strlen((const char *)curve_name) + 1;
+	curve_type = ec_get_curve_type_by_name(curve_name, curve_name_len);
+	out_buf[2] = (u8)curve_type;
+	if (out_buf[2] == UNKNOWN_CURVE) {
+		ret = -1;
+		goto err;
+	}
 
-        /* Copy the raw signature */
-        local_memcpy(out_buf + metadata_len, sig, siglen);
+	/* Copy the raw signature */
+	local_memcpy(out_buf + metadata_len, sig, siglen);
 
-        return 0;
+	ret = 0;
+err:
+	return ret;
+}
+
+
+/* Signature finalization function */
+int unsupported_sign_init(struct ec_sign_context * ctx)
+{
+	/* Quirk to avoid unused variables */
+	FORCE_USED_VAR(ctx);
+
+	/* Return an error in any case here */
+	return -1;
+}
+
+int unsupported_sign_update(struct ec_sign_context * ctx,
+		    const u8 *chunk, u32 chunklen)
+{
+	/* Quirk to avoid unused variables */
+	FORCE_USED_VAR(ctx);
+	FORCE_USED_VAR(chunk);
+	FORCE_USED_VAR(chunklen);
+
+	/* Return an error in any case here */
+	return -1;
+}
+
+int unsupported_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
+{
+	/* Quirk to avoid unused variables */
+	FORCE_USED_VAR(ctx);
+	FORCE_USED_VAR(sig);
+	FORCE_USED_VAR(siglen);
+
+	/* Return an error in any case here */
+	return -1;
+}
+
+int unsupported_verify_init(struct ec_verify_context * ctx,
+		    const u8 *sig, u8 siglen)
+{
+	/* Quirk to avoid unused variables */
+	FORCE_USED_VAR(ctx);
+	FORCE_USED_VAR(sig);
+	FORCE_USED_VAR(siglen);
+
+	/* Return an error in any case here */
+	return -1;
+}
+
+int unsupported_verify_update(struct ec_verify_context * ctx,
+		      const u8 *chunk, u32 chunklen)
+{
+	/* Quirk to avoid unused variables */
+	FORCE_USED_VAR(ctx);
+	FORCE_USED_VAR(chunk);
+	FORCE_USED_VAR(chunklen);
+
+	/* Return an error in any case here */
+	return -1;
+}
+
+int unsupported_verify_finalize(struct ec_verify_context * ctx)
+{
+	/* Quirk to avoid unused variables */
+	FORCE_USED_VAR(ctx);
+
+	/* Return an error in any case here */
+	return -1;
+}
+
+/* This function returns 1 if the init/update/finalize mode
+ * is supported by the signature algorithm, 0 otherwise.
+ */
+int is_sign_streaming_mode_supported(ec_sig_alg_type sig_type)
+{
+	int ret = 0;
+	const ec_sig_mapping *sig = get_sig_by_type(sig_type);
+
+	if(sig == NULL){
+		ret = 0;
+		goto err;
+	}
+	if((sig->sign_init == unsupported_sign_init) ||
+	   (sig->sign_update == unsupported_sign_update) ||
+	   (sig->sign_finalize == unsupported_sign_finalize))
+	{
+		ret = 0;
+		goto err;
+	}
+
+	ret = 1;
+err:
+	return ret;
+}
+
+/* This function returns 1 if the init/update/finalize mode
+ * is supported by the verification algorithm, 0 otherwise.
+ */
+int is_verify_streaming_mode_supported(ec_sig_alg_type sig_type)
+{
+	int ret = 0;
+	const ec_sig_mapping *sig = get_sig_by_type(sig_type);
+
+	if(sig == NULL){
+		ret = 0;
+		goto err;
+	}
+	if((sig->verify_init == unsupported_verify_init) ||
+	   (sig->verify_update == unsupported_verify_update) ||
+	   (sig->verify_finalize == unsupported_verify_finalize))
+	{
+		ret = 0;
+		goto err;
+	}
+
+	ret = 1;
+err:
+	return ret;
+}
+
+/* Tells if the signature scheme is deterministic or not,
+ * e.g. if random nonces are used to produce signatures.
+ */
+int is_sign_deterministic(ec_sig_alg_type sig_type)
+{
+	int ret = 0;
+	const ec_sig_mapping *sig = get_sig_by_type(sig_type);
+
+	if (sig == NULL){
+		ret = 0;
+		goto err;
+	}
+
+	switch(sig_type) {
+#if defined(WITH_SIG_EDDSA25519)
+	case EDDSA25519:
+	case EDDSA25519CTX:
+	case EDDSA25519PH:
+		ret = 1;
+		break;
+#endif
+#if defined(WITH_SIG_EDDSA448)
+	case EDDSA448:
+	case EDDSA448PH:
+		ret = 1;
+		break;
+#endif
+	default:
+		ret = 0;
+		break;
+	}
+
+err:
+	return ret;
 }

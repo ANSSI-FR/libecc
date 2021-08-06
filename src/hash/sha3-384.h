@@ -43,6 +43,10 @@
 #define MAX_BLOCK_SIZE SHA3_384_BLOCK_SIZE
 #endif
 
+#define SHA3_384_HASH_MAGIC ((word_t)(0x2233223273935643ULL))
+#define SHA3_384_HASH_CHECK_INITIALIZED(A) \
+        MUST_HAVE((((void *)(A)) != NULL) && ((A)->magic == SHA3_384_HASH_MAGIC))
+
 typedef sha3_context sha3_384_context;
 
 void sha3_384_init(sha3_384_context *ctx);

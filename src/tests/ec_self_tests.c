@@ -13,7 +13,6 @@
  *  This software is licensed under a dual BSD and GPL v2 license.
  *  See LICENSE file at the root folder of the project.
  */
-
 #include "../external_deps/print.h"
 #include "../utils/utils.h"
 #include "../libsig.h"
@@ -32,7 +31,7 @@ unsigned char cryptofuzz_longjmp_triggered;
                 ext_printf("ASSERT error caught through cryptofuzz_jmpbuf\n");                  \
                 exit(-1);                                                                       \
         }                                                                                       \
-} while(0);                                                                                     
+} while(0);
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -282,7 +281,20 @@ int main(int argc, char *argv[])
 		for(j = 0; j < hash_filters_num; j++){
 			for(k = 0; k < curve_filters_num; k++){
 				if((ret = perform_tests(tests_to_do, sign_filters[i], hash_filters[j], curve_filters[k]))){
-					ext_printf("Test for %s/%s/%s failed!\n", sign_filters[i], hash_filters[j], curve_filters[k]);
+					const char *curr_sign_filters = sign_filters[i];
+					const char *curr_hash_filters = hash_filters[j];
+					const char *curr_curve_filters = curve_filters[k];
+					const char *all = "all";
+					if(curr_sign_filters == NULL){
+						curr_sign_filters = all;
+					}
+					if(curr_hash_filters == NULL){
+						curr_hash_filters = all;
+					}
+					if(curr_curve_filters == NULL){
+						curr_curve_filters = all;
+					}
+					ext_printf("Test for sign=%s/hash=%s/curve=%s failed!\n", curr_sign_filters, curr_hash_filters, curr_curve_filters);
 					return ret;
 				}
 			}

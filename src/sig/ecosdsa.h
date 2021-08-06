@@ -45,7 +45,7 @@
 #define EC_MAX_SIGLEN ECOSDSA_MAX_SIGLEN
 #endif
 
-void ecosdsa_init_pub_key(ec_pub_key *out_pub, ec_priv_key *in_priv);
+int ecosdsa_init_pub_key(ec_pub_key *out_pub, const ec_priv_key *in_priv);
 
 u8 ecosdsa_siglen(u16 p_bit_len, u16 q_bit_len, u8 hsize, u8 blocksize);
 

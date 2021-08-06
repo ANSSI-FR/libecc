@@ -2,18 +2,17 @@
  *  Copyright (C) 2017 - This file is part of libecc project
  *
  *  Authors:
- *      Ryad BENADJILA <ryadbenadjila@gmail.com>
- *      Arnaud EBALARD <arnaud.ebalard@ssi.gouv.fr>
- *      Jean-Pierre FLORI <jean-pierre.flori@ssi.gouv.fr>
+ *	Ryad BENADJILA <ryadbenadjila@gmail.com>
+ *	Arnaud EBALARD <arnaud.ebalard@ssi.gouv.fr>
+ *	Jean-Pierre FLORI <jean-pierre.flori@ssi.gouv.fr>
  *
  *  Contributors:
- *      Nicolas VIVET <nicolas.vivet@ssi.gouv.fr>
- *      Karim KHALFALLAH <karim.khalfallah@ssi.gouv.fr>
+ *	Nicolas VIVET <nicolas.vivet@ssi.gouv.fr>
+ *	Karim KHALFALLAH <karim.khalfallah@ssi.gouv.fr>
  *
  *  This software is licensed under a dual BSD and GPL v2 license.
  *  See LICENSE file at the root folder of the project.
  */
-
 
 #include "../libsig.h"
 
@@ -24,16 +23,17 @@
 
 sigjmp_buf cryptofuzz_jmpbuf;
 unsigned char cryptofuzz_longjmp_triggered = 0;
-#define cryptofuzz_save() do {                                                                  \
-        if(sigsetjmp(cryptofuzz_jmpbuf, 1) && (cryptofuzz_longjmp_triggered == 0)){             \
-                exit(-1);                                                                       \
-        }                                                                                       \
-        if(cryptofuzz_longjmp_triggered == 1){                                                  \
-                ext_printf("ASSERT error caught through cryptofuzz_jmpbuf\n");                  \
-                exit(-1);                                                                       \
-        }                                                                                       \
-} while(0);                                                                                     
+#define cryptofuzz_save() do {									\
+	if(sigsetjmp(cryptofuzz_jmpbuf, 1) && (cryptofuzz_longjmp_triggered == 0)){		\
+		exit(-1);									\
+	}											\
+	if(cryptofuzz_longjmp_triggered == 1){							\
+		ext_printf("ASSERT error caught through cryptofuzz_jmpbuf\n");			\
+		exit(-1);									\
+	}											\
+} while(0);
 #endif
+
 
 #ifdef WITH_STDLIB
 #include <string.h>
@@ -41,7 +41,7 @@ unsigned char cryptofuzz_longjmp_triggered = 0;
 #include <stdio.h>
 #endif
 
-#define HDR_MAGIC        0x34215609
+#define HDR_MAGIC	 0x34215609
 
 typedef enum {
 	IMAGE_TYPE0 = 0,
@@ -433,12 +433,12 @@ static int store_sig(const char *in_fname, const char *out_fname,
 	fclose(out_file);
 	return 0;
  err:
-        if(in_file != NULL){
+	if(in_file != NULL){
 		fclose(in_file);
-        }
-        if(out_file != NULL){
+	}
+	if(out_file != NULL){
 		fclose(out_file);
-        }
+	}
 	return -1;
 }
 
@@ -534,6 +534,42 @@ static int generate_metadata_hdr(metadata_hdr * hdr, const char *hdr_type,
 	return -1;
 }
 
+/* Warn the user that the provided ancillary data won't be used
+ * if the algorithm does not need them.
+ */
+static void check_ancillary_data(const char *adata, ec_sig_alg_type sig_type, const char *sig_name)
+{
+	u8 check = 0;
+
+	if(adata == NULL){
+		return;
+	}
+
+	MUST_HAVE(sig_type != UNKNOWN_SIG_ALG);
+
+#if defined(WITH_SIG_EDDSA25519)
+	if(sig_type == EDDSA25519CTX){
+		check = 1;
+	}
+#endif
+#if defined(WITH_SIG_EDDSA448)
+	if(sig_type == EDDSA448){
+		check = 1;
+	}
+#endif
+#if defined(WITH_SIG_SM2)
+	if(sig_type == SM2){
+		check = 1;
+	}
+#endif
+	if(check == 0){
+		printf("Warning: you have provided optional ancillary data "\
+		       "with a signature algorithm %s that does not need it! "\
+		       "This data is ignored.\n", sig_name);
+	}
+	return;
+}
+
 /*
  * Sign data from file and append signature
  */
@@ -541,7 +577,7 @@ static int sign_bin_file(const char *ec_name, const char *ec_sig_name,
 			 const char *hash_algorithm, const char *in_fname,
 			 const char *in_key_fname,
 			 const char *out_fname, const char *hdr_type,
-			 const char *version)
+			 const char *version, const char *adata, u16 adata_len)
 {
 	u8 sig[EC_MAX_SIGLEN];
 	u8 buf[MAX_BUF_LEN];
@@ -572,6 +608,8 @@ static int sign_bin_file(const char *ec_name, const char *ec_sig_name,
 	     &hash_type)) {
 		goto err;
 	}
+	/* Check if ancillary data will be used */
+	check_ancillary_data(adata, sig_type, ec_sig_name);
 	/* Import the parameters */
 	import_params(&params, ec_str_p);
 
@@ -625,7 +663,7 @@ static int sign_bin_file(const char *ec_name, const char *ec_sig_name,
 	 * Initialize signature context and start signature computation
 	 * with generated metadata header.
 	 */
-	ret = ec_sign_init(&sig_ctx, &key_pair, sig_type, hash_type);
+	ret = ec_sign_init(&sig_ctx, &key_pair, sig_type, hash_type, (const u8*)adata, adata_len);
 	if (ret) {
 		printf("Error: error when signing\n");
 		goto err;
@@ -737,7 +775,7 @@ static int dump_hdr_info(const metadata_hdr * hdr)
 {
 	/* Dump the header */
 	printf("Metadata header info:\n");
-	printf("    magic   = 0x%08x\n", hdr->magic);
+	printf("    magic   = 0x%08lx\n", hdr->magic);
 	switch (hdr->type) {
 	case IMAGE_TYPE0:
 		printf("    type    = IMAGE_TYPE0\n");
@@ -752,12 +790,12 @@ static int dump_hdr_info(const metadata_hdr * hdr)
 		printf("    type    = IMAGE_TYPE3\n");
 		break;
 	default:
-		printf("    type %u unknown!\n", hdr->type);
+		printf("    type %lu unknown!\n", hdr->type);
 		break;
 	}
-	printf("    version = 0x%08x\n", hdr->version);
-	printf("    len	    = 0x%08x\n", hdr->len);
-	printf("    siglen  = 0x%08x\n", hdr->siglen);
+	printf("    version = 0x%08lx\n", hdr->version);
+	printf("    len	    = 0x%08lx\n", hdr->len);
+	printf("    siglen  = 0x%08lx\n", hdr->siglen);
 
 	return 0;
 }
@@ -768,7 +806,7 @@ static int dump_hdr_info(const metadata_hdr * hdr)
 static int verify_bin_file(const char *ec_name, const char *ec_sig_name,
 			   const char *hash_algorithm,
 			   const char *in_fname,
-			   const char *in_key_fname, const char *in_sig_fname)
+			   const char *in_key_fname, const char *in_sig_fname, const char *adata, u16 adata_len)
 {
 	u8 st_sig[EC_STRUCTURED_SIG_EXPORT_SIZE(EC_MAX_SIGLEN)];
 	u8 stored_curve_name[MAX_CURVE_NAME_LEN];
@@ -802,6 +840,8 @@ static int verify_bin_file(const char *ec_name, const char *ec_sig_name,
 			     hash_algorithm, &hash_type)) {
 		goto err;
 	}
+	/* Check if ancillary data will be used */
+	check_ancillary_data(adata, sig_type, ec_sig_name);
 	/* Import the parameters */
 	import_params(&params, ec_str_p);
 
@@ -861,7 +901,7 @@ static int verify_bin_file(const char *ec_name, const char *ec_sig_name,
 
 		/* Sanity checks on the header we get */
 		if (hdr.magic != HDR_MAGIC) {
-			printf("Error: got magic 0x%08x instead of 0x%08x "
+			printf("Error: got magic 0x%08lx instead of 0x%08x "
 			       "from metadata header\n", hdr.magic, HDR_MAGIC);
 			goto err;
 		}
@@ -870,14 +910,14 @@ static int verify_bin_file(const char *ec_name, const char *ec_sig_name,
 		MUST_HAVE(raw_data_len > (sizeof(hdr) + st_siglen));
 		exp_len = raw_data_len - sizeof(hdr) - st_siglen;
 		if (hdr.len != exp_len) {
-			printf("Error: got raw size of %u instead of %lu from "
+			printf("Error: got raw size of %lu instead of %lu from "
 			       "metadata header\n", hdr.len,
 			       (unsigned long)exp_len);
 			goto err;
 		}
 
 		if (hdr.siglen != st_siglen) {
-			printf("Error: got siglen %u instead of %d from "
+			printf("Error: got siglen %lu instead of %d from "
 			       "metadata header\n", hdr.siglen, siglen);
 			goto err;
 		}
@@ -906,7 +946,6 @@ static int verify_bin_file(const char *ec_name, const char *ec_sig_name,
 			fclose(in_file);
 			goto err;
 		}
-
 		/* Import the signature from the structured signature buffer */
 		ret = ec_structured_sig_import_from_buf(sig, siglen,
 							st_sig, st_siglen,
@@ -982,7 +1021,7 @@ static int verify_bin_file(const char *ec_name, const char *ec_sig_name,
 	 * ... and read file content chunk by chunk to compute signature
 	 */
 	ret = ec_verify_init(&verif_ctx, &pub_key, sig, siglen,
-			     sig_type, hash_type);
+			     sig_type, hash_type, (const u8*)adata, adata_len);
 	if (ret) {
 		goto err;
 	}
@@ -1053,10 +1092,6 @@ static int ec_scalar_mult(const char *ec_name,
 	nn d;
 	/* Point to import */
 	prj_pt Q;
-#ifdef USE_SIG_BLINDING
-	/* Scalar when we use blinding */
-        nn scalar_b;
-#endif
 
 	MUST_HAVE(ec_name != NULL);
 	MUST_HAVE(scalar_file != NULL);
@@ -1073,7 +1108,7 @@ static int ec_scalar_mult(const char *ec_name,
 	/* Import the parameters */
 	import_params(&curve_params, ec_str_p);
 
-	/* Import the scalar in the local buffer from the file */	
+	/* Import the scalar in the local buffer from the file */
 	/* Let's first get file size */
 	ret = get_file_size(scalar_file, &buf_len);
 	if (ret) {
@@ -1127,21 +1162,15 @@ static int ec_scalar_mult(const char *ec_name,
 	if(prj_pt_import_from_buf(&Q, buf, (u16)buf_len, &(curve_params.ec_curve))){
 		printf("Error: error when importing the projective point from %s\n", point_file);
 		goto err;
-	}	
+	}
 
 #ifdef USE_SIG_BLINDING
-        /* NB: we use a blind scalar multiplication here since we do not want our
-         * private d to leak ...
-         */
-        nn_init(&scalar_b, 0);
-        if (nn_get_random_mod(&scalar_b, &(curve_params.ec_gen_order))) {
-                goto err;
-        }
-        prj_pt_mul_monty_blind(&Q, &d, &Q, &scalar_b, &(curve_params.ec_gen_order));
-        /* Clear blinding scalar */
-        nn_uninit(&scalar_b);
+	/* NB: we use a blind scalar multiplication here since we do not want our
+	 * private d to leak ...
+	 */
+	prj_pt_mul_monty_blind(&Q, &d, &Q);
 #else
-        prj_pt_mul_monty(&Q, &d, &Q);
+	prj_pt_mul_monty(&Q, &d, &Q);
 #endif
 	/* Get the unique representation of the point */
 	prj_pt_unique(&Q, &Q);
@@ -1179,9 +1208,9 @@ static int ec_scalar_mult(const char *ec_name,
 	}
 
 	fclose(out_file);
-        /* Uninit local variables */
+	/* Uninit local variables */
 	nn_uninit(&d);
-        prj_pt_uninit(&Q);
+	prj_pt_uninit(&Q);
 
 	return 0;
 
@@ -1255,7 +1284,7 @@ int main(int argc, char *argv[])
 		 * arg2 = algorithm type ("ECDSA", "ECKCDSA", ...)
 		 * arg3 = file name prefix
 		 */
-		if (argc != 5) {
+		if (argc != 5){
 			printf("Bad args number for %s %s:\n", argv[0],
 			       argv[1]);
 			printf("\targ1 = curve name: ");
@@ -1267,6 +1296,8 @@ int main(int argc, char *argv[])
 			printf("\n");
 
 			printf("\targ3 = file name prefix\n");
+			printf("\n");
+
 			return -1;
 		}
 		if(generate_and_export_key_pair(argv[2], argv[3], argv[4])){
@@ -1283,8 +1314,9 @@ int main(int argc, char *argv[])
 		 * arg4 = input file to sign
 		 * arg5 = input file containing the private key
 		 * arg6 = output file containing the signature
+		 * arg7 (optional) = ancillary data to be used
 		 */
-		if (argc != 8) {
+		if ((argc != 8) && (argc != 9)) {
 			printf("Bad args number for %s %s:\n", argv[0],
 			       argv[1]);
 			printf("\targ1 = curve name: ");
@@ -1302,10 +1334,17 @@ int main(int argc, char *argv[])
 			printf("\targ4 = input file to sign\n");
 			printf("\targ5 = input file containing the private key (in raw binary format)\n");
 			printf("\targ6 = output file containing the signature\n");
+			printf("\t<arg7 (optional) = ancillary data to be used>\n");
 			return -1;
 		}
+		const char *adata = NULL;
+		u16 adata_len = 0;
+		if(argc == 9){
+			adata = argv[8];
+			adata_len = (u16)local_strlen(adata);
+		}
 		if(sign_bin_file(argv[2], argv[3], argv[4], argv[5], argv[6],
-			      argv[7], NULL, NULL)){
+			      argv[7], NULL, NULL, adata, adata_len)){
 			return -1;
 		}
 	}
@@ -1318,8 +1357,9 @@ int main(int argc, char *argv[])
 		 * arg = input file to verify
 		 * arg5 = input file with the public key
 		 * arg6 = input file containing the signature
+		 * arg7 (optional) = ancillary data to be used
 		 */
-		if (argc != 8) {
+		if ((argc != 8) && (argc != 9)) {
 			printf("Bad args number for %s %s:\n", argv[0],
 			       argv[1]);
 			printf("\targ1 = curve name: ");
@@ -1336,10 +1376,16 @@ int main(int argc, char *argv[])
 
 			printf("\targ4 = input file to verify\n");
 			printf("\targ5 = input file containing the public key (in raw binary format)\n");
-			printf("\targ6 = input file containing the signature\n");
+			printf("\t<arg7 (optional) = ancillary data to be used>\n");
 			return -1;
 		}
-		if (verify_bin_file(argv[2], argv[3], argv[4], argv[5], argv[6], argv[7])) {
+		const char *adata = NULL;
+		u16 adata_len = 0;
+		if(argc == 9){
+			adata = argv[8];
+			adata_len = (u16)local_strlen(adata);
+		}
+		if (verify_bin_file(argv[2], argv[3], argv[4], argv[5], argv[6], argv[7], adata, adata_len)) {
 			printf("Signature check of %s failed\n", argv[5]);
 			return -1;
 		} else {
@@ -1358,8 +1404,9 @@ int main(int argc, char *argv[])
 		 * arg6 = output file containing the appended signature
 		 * arg7 = metadata header type
 		 * arg8 = version of the metadata header
+		 * arg9 (optional) = ancillary data to be used
 		 */
-		if (argc != 10) {
+		if ((argc != 10) && (argc != 11)) {
 			printf("Bad args number for %s %s:\n", argv[0],
 			       argv[1]);
 			printf("\targ1 = curve name: ");
@@ -1379,10 +1426,17 @@ int main(int argc, char *argv[])
 			printf("\targ6 = output file containing the appended signature\n");
 			printf("\targ7 = metadata header type (IMAGE_TYPE0, IMAGE_TYPE1, ...)\n");
 			printf("\targ8 = version of the metadata header\n");
+			printf("\t<arg9 (optional) = ancillary data to be used>\n");
 			return -1;
 		}
+		const char *adata = NULL;
+		u16 adata_len = 0;
+		if(argc == 11){
+			adata = argv[10];
+			adata_len = (u16)local_strlen(adata);
+		}
 		if(sign_bin_file(argv[2], argv[3], argv[4], argv[5], argv[6],
-			      argv[7], argv[8], argv[9])){
+			      argv[7], argv[8], argv[9], adata, adata_len)){
 			return -1;
 		}
 	}
@@ -1392,10 +1446,11 @@ int main(int argc, char *argv[])
 		 * arg1 = curve name ("frp256v1", ...)
 		 * arg2 = signature algorithm type ("ECDSA", "ECKCDSA", ...)
 		 * arg3 = hash algorithm type ("SHA256", "SHA512", ...)
-		 * arg3 = input file to verify
-		 * arg4 = input file with the public key
+		 * arg4 = input file to verify
+		 * arg5 = input file containing the public key (in raw binary format)
+		 * arg6 (optional) = ancillary data to be used
 		 */
-		if (argc != 7) {
+		if ((argc != 7) && (argc != 8)) {
 			printf("Bad args number for %s %s:\n", argv[0],
 			       argv[1]);
 			printf("\targ1 = curve name: ");
@@ -1412,9 +1467,16 @@ int main(int argc, char *argv[])
 
 			printf("\targ4 = input file to verify\n");
 			printf("\targ5 = input file containing the public key (in raw binary format)\n");
+			printf("\t<arg6 (optional) = ancillary data to be used>\n");
 			return -1;
 		}
-		if (verify_bin_file(argv[2], argv[3], argv[4], argv[5], argv[6], NULL)) {
+		const char *adata = NULL;
+		u16 adata_len = 0;
+		if(argc == 8){
+			adata = argv[7];
+			adata_len = (u16)local_strlen(adata);
+		}
+		if (verify_bin_file(argv[2], argv[3], argv[4], argv[5], argv[6], NULL, adata, adata_len)) {
 			printf("Signature check of %s failed\n", argv[5]);
 			return -1;
 		} else {

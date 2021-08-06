@@ -99,14 +99,15 @@ static const u8 GOST_256bits_curve_b[] = {
 
 TO_EC_STR_PARAM(GOST_256bits_curve_b);
 
-static const u8 GOST_256bits_curve_npoints[] = {
+#define CURVE_GOST256_CURVE_ORDER_BITLEN 256
+static const u8 GOST_256bits_curve_order[] = {
 	0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
 	0x50, 0xFE, 0x8A, 0x18, 0x92, 0x97, 0x61, 0x54,
 	0xC5, 0x9C, 0xFC, 0x19, 0x3A, 0xCC, 0xF5, 0xB3
 };
 
-TO_EC_STR_PARAM(GOST_256bits_curve_npoints);
+TO_EC_STR_PARAM(GOST_256bits_curve_order);
 
 static const u8 GOST_256bits_curve_gx[] = {
 	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -135,23 +136,41 @@ static const u8 GOST_256bits_curve_gz[] = {
 
 TO_EC_STR_PARAM(GOST_256bits_curve_gz);
 
-static const u8 GOST_256bits_curve_order[] = {
+static const u8 GOST_256bits_curve_gen_order[] = {
 	0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
 	0x50, 0xFE, 0x8A, 0x18, 0x92, 0x97, 0x61, 0x54,
 	0xC5, 0x9C, 0xFC, 0x19, 0x3A, 0xCC, 0xF5, 0xB3
 };
 
-TO_EC_STR_PARAM(GOST_256bits_curve_order);
+TO_EC_STR_PARAM(GOST_256bits_curve_gen_order);
 
 #define CURVE_GOST256_Q_BITLEN 256
-static const u8 GOST_256bits_curve_order_bitlen[] = { 0x01, 0x00 };
+static const u8 GOST_256bits_curve_gen_order_bitlen[] = { 0x01, 0x00 };
 
-TO_EC_STR_PARAM(GOST_256bits_curve_order_bitlen);
+TO_EC_STR_PARAM(GOST_256bits_curve_gen_order_bitlen);
 
 static const u8 GOST_256bits_curve_cofactor[] = { 0x01 };
 
 TO_EC_STR_PARAM(GOST_256bits_curve_cofactor);
+
+static const u8 GOST_256bits_curve_alpha_montgomery[] = {
+	0x00,
+};
+
+TO_EC_STR_PARAM_FIXED_SIZE(GOST_256bits_curve_alpha_montgomery, 0);
+
+static const u8 GOST_256bits_curve_gamma_montgomery[] = {
+	0x00,
+};
+
+TO_EC_STR_PARAM_FIXED_SIZE(GOST_256bits_curve_gamma_montgomery, 0);
+
+static const u8 GOST_256bits_curve_alpha_edwards[] = {
+	0x00,
+};
+
+TO_EC_STR_PARAM_FIXED_SIZE(GOST_256bits_curve_alpha_edwards, 0);
 
 static const u8 GOST_256bits_curve_oid[] = "unknown";
 TO_EC_STR_PARAM(GOST_256bits_curve_oid);
@@ -170,13 +189,16 @@ static const ec_str_params GOST_256bits_curve_str_params = {
 	.p_reciprocal = &GOST_256bits_curve_p_reciprocal_str_param,
 	.a = &GOST_256bits_curve_a_str_param,
 	.b = &GOST_256bits_curve_b_str_param,
-	.npoints = &GOST_256bits_curve_npoints_str_param,
+	.curve_order = &GOST_256bits_curve_order_str_param,
 	.gx = &GOST_256bits_curve_gx_str_param,
 	.gy = &GOST_256bits_curve_gy_str_param,
 	.gz = &GOST_256bits_curve_gz_str_param,
-	.order = &GOST_256bits_curve_order_str_param,
-	.order_bitlen = &GOST_256bits_curve_order_bitlen_str_param,
+	.gen_order = &GOST_256bits_curve_gen_order_str_param,
+	.gen_order_bitlen = &GOST_256bits_curve_gen_order_bitlen_str_param,
 	.cofactor = &GOST_256bits_curve_cofactor_str_param,
+	.alpha_montgomery = &GOST_256bits_curve_alpha_montgomery_str_param,
+	.gamma_montgomery = &GOST_256bits_curve_gamma_montgomery_str_param,
+	.alpha_edwards = &GOST_256bits_curve_alpha_edwards_str_param,
 	.oid = &GOST_256bits_curve_oid_str_param,
 	.name = &GOST_256bits_curve_name_str_param,
 };

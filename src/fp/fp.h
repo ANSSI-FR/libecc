@@ -88,6 +88,7 @@ void fp_uninit(fp_t A);
 void fp_set_nn(fp_t out, nn_src_t in);
 void fp_zero(fp_t out);
 void fp_one(fp_t out);
+void fp_set_word_value(fp_t out, word_t val);
 int fp_cmp(fp_src_t in1, fp_src_t in2);
 int fp_iszero(fp_src_t in);
 void fp_copy(fp_t out, fp_src_t in);

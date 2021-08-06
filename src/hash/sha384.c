@@ -26,7 +26,8 @@ static void sha384_process(sha384_context *ctx,
 	u64 W[80];
 	unsigned int i;
 
-	MUST_HAVE((ctx != NULL) && (data != NULL));
+	MUST_HAVE(data != NULL);
+	SHA384_HASH_CHECK_INITIALIZED(ctx);
 
 	/* Init our inner variables */
 	a = ctx->sha384_state[0];
@@ -73,6 +74,9 @@ void sha384_init(sha384_context *ctx)
 	ctx->sha384_state[5] = (u64)(0x8EB44A8768581511);
 	ctx->sha384_state[6] = (u64)(0xDB0C2E0D64F98FA7);
 	ctx->sha384_state[7] = (u64)(0x47B5481DBEFA4FA4);
+
+	/* Tell that we are initialized */
+	ctx->magic = SHA384_HASH_MAGIC;
 }
 
 /* Update hash function */
@@ -83,7 +87,8 @@ void sha384_update(sha384_context *ctx, const u8 *input, u32 ilen)
 	const u8 *data_ptr = input;
 	u32 remain_ilen = ilen;
 
-	MUST_HAVE((ctx != NULL) && (input != NULL));
+	MUST_HAVE(input != NULL);
+	SHA384_HASH_CHECK_INITIALIZED(ctx);
 
 	/* Nothing to process, return */
 	if (ilen == 0) {
@@ -122,7 +127,8 @@ void sha384_final(sha384_context *ctx, u8 output[SHA384_DIGEST_SIZE])
 	unsigned int block_present = 0;
 	u8 last_padded_block[2 * SHA384_BLOCK_SIZE];
 
-	MUST_HAVE((ctx != NULL) && (output != NULL));
+	MUST_HAVE(output != NULL);
+	SHA384_HASH_CHECK_INITIALIZED(ctx);
 
 	/* Fill in our last block with zeroes */
 	local_memset(last_padded_block, 0, sizeof(last_padded_block));
@@ -161,6 +167,9 @@ void sha384_final(sha384_context *ctx, u8 output[SHA384_DIGEST_SIZE])
 	PUT_UINT64_BE(ctx->sha384_state[3], output, 24);
 	PUT_UINT64_BE(ctx->sha384_state[4], output, 32);
 	PUT_UINT64_BE(ctx->sha384_state[5], output, 40);
+
+	/* Tell that we are uninitialized */
+	ctx->magic = 0;
 }
 
 void sha384_scattered(const u8 **inputs, const u32 *ilens,

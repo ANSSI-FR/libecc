@@ -44,6 +44,10 @@
 #define MAX_BLOCK_SIZE SHA256_BLOCK_SIZE
 #endif
 
+#define SHA256_HASH_MAGIC ((word_t)(0x11299a2b32098412ULL))
+#define SHA256_HASH_CHECK_INITIALIZED(A) \
+	MUST_HAVE((((void *)(A)) != NULL) && ((A)->magic == SHA256_HASH_MAGIC))
+
 typedef struct {
 	/* Number of bytes processed */
 	u64 sha256_total;
@@ -51,6 +55,8 @@ typedef struct {
 	u32 sha256_state[SHA256_STATE_SIZE];
 	/* Internal buffer to handle updates in a block */
 	u8 sha256_buffer[SHA256_BLOCK_SIZE];
+	/* Initialization magic value */
+	word_t magic;
 } sha256_context;
 
 void sha256_init(sha256_context *ctx);

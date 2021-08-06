@@ -66,10 +66,23 @@ void ec_priv_key_import_from_buf(ec_priv_key *priv_key,
 int ec_priv_key_export_to_buf(const ec_priv_key *priv_key, u8 *priv_key_buf,
 			      u8 priv_key_buf_len)
 {
+	int ret = -1;
+
 	priv_key_check_initialized(priv_key);
+
+	/* Check that there is enough room to export our private key without
+	 * losing information.
+	 */
+	if((8 * (u32)priv_key_buf_len) < (u32)nn_bitlen(&(priv_key->x))){
+		ret = -1;
+		goto err;
+	}
+	/* Export our private key */
 	nn_export_to_buf(priv_key_buf, priv_key_buf_len, &(priv_key->x));
 
-	return 0;
+	ret = 0;
+err:
+	return ret;
 }
 
 void pub_key_check_initialized(const ec_pub_key *A)
@@ -107,7 +120,7 @@ int ec_pub_key_import_from_buf(ec_pub_key *pub_key, const ec_params *params,
 			       const u8 *pub_key_buf, u8 pub_key_buf_len,
 			       ec_sig_alg_type ec_key_alg)
 {
-	int ret;
+	int ret = -1;
 
 	MUST_HAVE((pub_key != NULL) && (params != NULL));
 
@@ -116,7 +129,8 @@ int ec_pub_key_import_from_buf(ec_pub_key *pub_key, const ec_params *params,
 				     pub_key_buf, pub_key_buf_len,
 				     (ec_shortw_crv_src_t)&(params->ec_curve));
 	if (ret < 0) {
-		return -1;
+		ret = -1;
+		goto err;
 	}
 
 	/* Set key type and pointer to EC params */
@@ -124,7 +138,9 @@ int ec_pub_key_import_from_buf(ec_pub_key *pub_key, const ec_params *params,
 	pub_key->params = (const ec_params *)params;
 	pub_key->magic = PUB_KEY_MAGIC;
 
-	return 0;
+	ret = 0;
+err:
+	return ret;
 }
 
 /*
@@ -138,7 +154,7 @@ int ec_pub_key_import_from_aff_buf(ec_pub_key *pub_key, const ec_params *params,
 			       const u8 *pub_key_buf, u8 pub_key_buf_len,
 			       ec_sig_alg_type ec_key_alg)
 {
-	int ret;
+	int ret = -1;
 
 	MUST_HAVE((pub_key != NULL) && (params != NULL));
 
@@ -147,7 +163,8 @@ int ec_pub_key_import_from_aff_buf(ec_pub_key *pub_key, const ec_params *params,
 				     pub_key_buf, pub_key_buf_len,
 				     (ec_shortw_crv_src_t)&(params->ec_curve));
 	if (ret < 0) {
-		return -1;
+		ret = -1;
+		goto err;
 	}
 
 	/* Set key type and pointer to EC params */
@@ -155,7 +172,9 @@ int ec_pub_key_import_from_aff_buf(ec_pub_key *pub_key, const ec_params *params,
 	pub_key->params = (const ec_params *)params;
 	pub_key->magic = PUB_KEY_MAGIC;
 
-	return 0;
+	ret = 0;
+err:
+	return ret;
 }
 
 /* Export a public key to a projective point buffer */
@@ -241,7 +260,7 @@ int ec_structured_priv_key_import_from_buf(ec_priv_key *priv_key,
 {
 	u8 metadata_len = (3 * sizeof(u8));
 	u8 crv_name_len;
-	int ret;
+	int ret = -1;
 
 	/* We first pull the metadata, consisting of:
 	 *   - One byte = the key type (public or private)
@@ -294,6 +313,7 @@ int ec_structured_priv_key_export_to_buf(const ec_priv_key *priv_key,
 	const u8 *curve_name;
 	u8 curve_name_len;
 	ec_curve_type curve_type;
+	int ret = -1;
 
 	priv_key_check_initialized(priv_key);
 
@@ -321,12 +341,15 @@ int ec_structured_priv_key_export_to_buf(const ec_priv_key *priv_key,
 
 	/* Abort if this is an unknown curve ... */
 	if ((ec_curve_type) priv_key_buf[2] == UNKNOWN_CURVE) {
-		return -1;
+		ret = -1;
+		goto err;
 	}
 
 	/* Push the raw private key buffer */
-	return ec_priv_key_export_to_buf(priv_key, priv_key_buf + metadata_len,
+	ret = ec_priv_key_export_to_buf(priv_key, priv_key_buf + metadata_len,
 					 priv_key_buf_len - metadata_len);
+err:
+	return ret;
 }
 
 /*
@@ -341,7 +364,7 @@ int ec_structured_pub_key_import_from_buf(ec_pub_key *pub_key,
 {
 	u8 metadata_len = (3 * sizeof(u8));
 	u8 crv_name_len;
-	int ret;
+	int ret = -1;
 
 	/*
 	 * We first pull the metadata, consisting of:
@@ -393,6 +416,7 @@ int ec_structured_pub_key_export_to_buf(const ec_pub_key *pub_key,
 	const u8 *curve_name;
 	u8 curve_name_len;
 	ec_curve_type curve_type;
+	int ret = -1;
 
 	pub_key_check_initialized(pub_key);
 
@@ -420,12 +444,15 @@ int ec_structured_pub_key_export_to_buf(const ec_pub_key *pub_key,
 
 	/* Abort if this is an unknown curve ... */
 	if ((ec_curve_type) pub_key_buf[2] == UNKNOWN_CURVE) {
-		return -1;
+		ret = -1;
+		goto err;
 	}
 
 	/* Push the raw pub key buffer */
-	return ec_pub_key_export_to_buf(pub_key, pub_key_buf + metadata_len,
+	ret = ec_pub_key_export_to_buf(pub_key, pub_key_buf + metadata_len,
 					pub_key_buf_len - metadata_len);
+err:
+	return ret;
 }
 
 /*
@@ -440,7 +467,7 @@ int ec_structured_key_pair_import_from_priv_key_buf(ec_key_pair *kp,
 {
 	u8 metadata_len = (3 * sizeof(u8));
 	u8 crv_name_len;
-	int ret;
+	int ret = -1;
 
 	/* We first pull the metadata, consisting on:
 	 *   - One byte = the key type (public or private)
@@ -494,14 +521,15 @@ int ec_structured_key_pair_import_from_buf(ec_key_pair *kp,
 					   u8 pub_key_buf_len,
 					   ec_sig_alg_type ec_key_alg)
 {
-	int ret;
+	int ret = -1;
 
 	ret = ec_structured_pub_key_import_from_buf(&kp->pub_key, params,
 						    pub_key_buf,
 						    pub_key_buf_len,
 						    ec_key_alg);
 	if (ret) {
-		return -1;
+		ret = -1;
+		goto err;
 	}
 
 	ret = ec_structured_priv_key_import_from_buf(&kp->priv_key, params,
@@ -509,10 +537,13 @@ int ec_structured_key_pair_import_from_buf(ec_key_pair *kp,
 						     priv_key_buf_len,
 						     ec_key_alg);
 	if (ret) {
-		return -1;
+		ret = -1;
+		goto err;
 	}
 
-	return 0;
+	ret = 0;
+err:
+	return ret;
 }
 
 /*
@@ -527,20 +558,25 @@ int ec_key_pair_gen(ec_key_pair *kp, const ec_params *params,
 	MUST_HAVE(kp != NULL);
 	MUST_HAVE(params != NULL);
 
-	/* Get a random value in ]0,q[ */
-	ret = nn_get_random_mod(&(kp->priv_key.x), &(params->ec_gen_order));
-	if (ret) {
-		goto err;
-	}
-
 	/* Set key type and pointer to EC params for private key */
 	kp->priv_key.key_type = ec_key_alg;
 	kp->priv_key.params = (const ec_params *)params;
 	kp->priv_key.magic = PRIV_KEY_MAGIC;
 
+	/* Call our private key generation function */
+	ret = gen_priv_key(&(kp->priv_key));
+	if(ret){
+		ret = -1;
+		goto err;
+	}
+
 	/* Generate associated public key. */
 	ret = init_pubkey_from_privkey(&(kp->pub_key), &(kp->priv_key));
 
  err:
+	if(ret){
+		/* If we had an error, uninit private key */
+		kp->priv_key.magic = 0;
+	}
 	return ret;
 }

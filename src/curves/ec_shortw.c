@@ -18,9 +18,14 @@
 #define EC_SHORTW_CRV_MAGIC ((word_t)(0x9c7c46a1a04c6720ULL))
 
 /*
- * Check pointed short Weierstrass curve structure as already been
+ * Check pointed short Weierstrass curve structure has already been
  * initialized.
  */
+int ec_shortw_crv_is_initialized(ec_shortw_crv_src_t crv)
+{
+	return !!((crv != NULL) && (crv->magic == EC_SHORTW_CRV_MAGIC));
+}
+
 void ec_shortw_crv_check_initialized(ec_shortw_crv_src_t crv)
 {
 	MUST_HAVE((crv != NULL) && (crv->magic == EC_SHORTW_CRV_MAGIC));
@@ -32,6 +37,8 @@ void ec_shortw_crv_check_initialized(ec_shortw_crv_src_t crv)
  */
 void ec_shortw_crv_init(ec_shortw_crv_t crv, fp_src_t a, fp_src_t b, nn_src_t order)
 {
+	fp tmp, tmp2;
+
 	MUST_HAVE(crv != NULL);
 
 	fp_check_initialized(a);
@@ -39,6 +46,21 @@ void ec_shortw_crv_init(ec_shortw_crv_t crv, fp_src_t a, fp_src_t b, nn_src_t or
 	MUST_HAVE(a->ctx == b->ctx);
 
 	nn_check_initialized(order);
+
+	/* The discriminant (4 a^3 + 27 b^2) must be non zero */
+	fp_init(&tmp, a->ctx);
+	fp_init(&tmp2, a->ctx);
+	fp_sqr(&tmp, a);
+	fp_mul(&tmp, &tmp, a);
+	fp_set_word_value(&tmp2, WORD(4));
+	fp_mul(&tmp, &tmp, &tmp2);
+
+	fp_set_word_value(&tmp2, WORD(27));
+	fp_mul(&tmp2, &tmp2, b);
+	fp_mul(&tmp2, &tmp2, b);
+
+	fp_add(&tmp, &tmp, &tmp2);
+	MUST_HAVE(!fp_iszero(&tmp));
 
 	fp_init(&(crv->a), a->ctx);
 	fp_init(&(crv->b), b->ctx);
@@ -62,4 +84,15 @@ void ec_shortw_crv_init(ec_shortw_crv_t crv, fp_src_t a, fp_src_t b, nn_src_t or
 #endif
 
 	crv->magic = EC_SHORTW_CRV_MAGIC;
+
+	fp_uninit(&tmp);
+	fp_uninit(&tmp2);
+}
+
+/* Uninitialize curve */
+void ec_shortw_crv_uninit(ec_shortw_crv_t crv)
+{
+	ec_shortw_crv_check_initialized(crv);
+
+	crv->magic = WORD(0);
 }

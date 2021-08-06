@@ -19,5 +19,6 @@
 
 int nn_modinv(nn_t out, nn_src_t x, nn_src_t m);
 int nn_modinv_2exp(nn_t out, nn_src_t in, bitcnt_t exp);
+int nn_modinv_word(nn_t out, word_t w, nn_src_t m);
 
 #endif /* __NN_MODINV_H__ */

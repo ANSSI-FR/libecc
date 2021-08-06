@@ -21,16 +21,26 @@
 void sha3_512_init(sha3_512_context *ctx)
 {
 	_sha3_init(ctx, SHA3_512_DIGEST_SIZE);
+
+	/* Tell that we are initialized */
+	ctx->magic = SHA3_512_HASH_MAGIC;
 }
 
 void sha3_512_update(sha3_512_context *ctx, const u8 *input, u32 ilen)
 {
+	SHA3_512_HASH_CHECK_INITIALIZED(ctx);
+
 	_sha3_update((sha3_context *)ctx, input, ilen);
 }
 
 void sha3_512_final(sha3_512_context *ctx, u8 output[SHA3_512_DIGEST_SIZE])
 {
+	SHA3_512_HASH_CHECK_INITIALIZED(ctx);
+
 	_sha3_finalize((sha3_context *)ctx, output);
+
+	/* Tell that we are uninitialized */
+	ctx->magic = 0;
 }
 
 void sha3_512_scattered(const u8 **inputs, const u32 *ilens,

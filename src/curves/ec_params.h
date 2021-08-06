@@ -55,9 +55,6 @@ typedef struct {
 	/* Curve */
 	ec_shortw_crv ec_curve;
 
-	/* Number of points on curve */
-	nn ec_curve_points;
-
 	/*
 	 * Generator G defining our group, in projective
 	 * coordinates.
@@ -71,11 +68,20 @@ typedef struct {
 	/* Curve cofactor */
 	nn ec_gen_cofactor;
 
+	/* Optional transfer coefficients with Montgomery curves */
+	fp ec_alpha_montgomery;
+	fp ec_gamma_montgomery;
+	/* Optional transfer coefficient with Edwards curves */
+	fp ec_alpha_edwards;
+
 	/* Object Identifier for the curve */
 	u8 curve_oid[MAX_CURVE_OID_LEN];
 
 	/* Short name for the curve */
 	u8 curve_name[MAX_CURVE_NAME_LEN];
+
+	/* Type of the curve */
+	ec_curve_type curve_type;
 } ec_params;
 
 void import_params(ec_params *out_params, const ec_str_params *in_str_params);

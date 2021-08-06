@@ -34,6 +34,48 @@
  * for corner cases tests and fuzzing.
  */
 
+/*
+ * NOTE: ISO/IEC 14888-3 standard seems to diverge from the existing implementations
+ * of ECRDSA when treating the message hash, and from the examples of certificates provided
+ * in RFC 7091 and draft-deremin-rfc4491-bis. While in ISO/IEC 14888-3 it is explicitely asked
+ * to proceed with the hash of the message as big endian, the RFCs derived from the Russian
+ * standard expect the hash value to be treated as little endian when importing it as an integer
+ * (this discrepancy is exhibited and confirmed by test vectors present in ISO/IEC 14888-3, and
+ * by X.509 certificates present in the RFCs). This seems (to be confirmed) to be a discrepancy of
+ * ISO/IEC 14888-3 algorithm description that must be fixed there.
+ *
+ * In order to be conservative, libecc uses the Russian standard behavior as expected to be in line with
+ * other implemetations, but keeps the ISO/IEC 14888-3 behavior if forced/asked by the user using
+ * the USE_ISO14888_3_ECRDSA toggle. This allows to keep backward compatibility with previous versions of the
+ * library if needed.
+ *
+ */
+#ifndef USE_ISO14888_3_ECRDSA
+/* Reverses the endiannes of a buffer in place */
+static inline int _reverse_endianness(u8 *buf, u16 buf_size)
+{
+        u32 i;
+        u8 tmp;
+        int ret = -1;
+
+        if(buf == NULL){
+                ret = -1;
+                goto err;
+        }
+        if(buf_size > 1){
+                for(i = 0; i < (buf_size / 2); i++){
+                        tmp = buf[i];
+                        buf[i] = buf[buf_size - 1 - i];
+                        buf[buf_size - 1 - i] = tmp;
+                }
+        }
+
+        ret = 0;
+err:
+        return ret;
+}
+#endif
+
 #define ECRDSA_SIGN_MAGIC ((word_t)(0xcc97bbc8ada8973cULL))
 #define ECRDSA_SIGN_CHECK_INITIALIZED(A) \
 	MUST_HAVE((((const void *)(A)) != NULL) && \
@@ -47,8 +89,6 @@ int ecrdsa_sign_raw(struct ec_sign_context *ctx, const u8 *input, u8 inputlen, u
 #ifdef USE_SIG_BLINDING
         /* b is the blinding mask */
         nn b, binv;
-        /* scalar_b is the scalar multiplication blinder */
-        nn scalar_b;
 #endif /* USE_SIG_BLINDING */
         /* NOTE: hash here is not really a hash ... */
         u8 h_buf[BIT_LEN_WORDS(NN_MAX_BIT_LEN) * (WORDSIZE / 8)];
@@ -57,7 +97,7 @@ int ecrdsa_sign_raw(struct ec_sign_context *ctx, const u8 *input, u8 inputlen, u
 	aff_pt W;
 	nn_src_t q, x;
 	u8 hsize, r_len, s_len;
-	int ret;
+	int ret = -1;
 
 	/*
 	 * First, verify context has been initialized and private
@@ -130,22 +170,15 @@ int ecrdsa_sign_raw(struct ec_sign_context *ctx, const u8 *input, u8 inputlen, u
                 goto err;
         }
         dbg_nn_print("b", &b);
-        /* We use blinding for the scalar multiplication */
-        ret = nn_get_random_mod(&scalar_b, q);
-        if (ret) {
-                goto err;
-        }
-        dbg_nn_print("scalar_b", &scalar_b);
 #endif /* USE_SIG_BLINDING */
 
 	/* 3. Compute W = kG = (Wx, Wy) */
 #ifdef USE_SIG_BLINDING
         /* We use blinding for the scalar multiplication */
-        if(prj_pt_mul_monty_blind(&kG, &k, G, &scalar_b, q)){
+        if(prj_pt_mul_monty_blind(&kG, &k, G)){
 		ret = -1;
 		goto err;
 	}
-	nn_uninit(&scalar_b);
 #else
         prj_pt_mul_monty(&kG, &k, G);
 #endif /* USE_SIG_BLINDING */
@@ -178,6 +211,15 @@ int ecrdsa_sign_raw(struct ec_sign_context *ctx, const u8 *input, u8 inputlen, u
         local_memset(h_buf, 0, sizeof(h_buf));
         local_memcpy(h_buf, input, hsize);
 	dbg_buf_print("H(m)", h_buf, hsize);
+        /* NOTE: this handles a discrepancy between ISO/IEC 14888-3 and
+         * Russian standard based RFCs.
+         */
+#ifndef USE_ISO14888_3_ECRDSA
+        if(_reverse_endianness(h_buf, hsize)){
+                ret = -1;
+                goto err;
+        }
+#endif
 
 	nn_init_from_buf(&tmp, h_buf, hsize);
 	local_memset(h_buf, 0, hsize);
@@ -244,10 +286,10 @@ int ecrdsa_sign_raw(struct ec_sign_context *ctx, const u8 *input, u8 inputlen, u
 
 #ifdef USE_SIG_BLINDING
         if(nn_is_initialized(&b)){
-                nn_zero(&b);
+                nn_uninit(&b);
         }
         if(nn_is_initialized(&binv)){
-                nn_zero(&binv);
+                nn_uninit(&binv);
         }
 #endif /* USE_SIG_BLINDING */
 
@@ -302,6 +344,15 @@ int ecrdsa_verify_raw(struct ec_verify_context *ctx, const u8 *input, u8 inputle
         local_memset(h_buf, 0, sizeof(h_buf));
         local_memcpy(h_buf, input, hsize);
 	dbg_buf_print("H(m)", h_buf, hsize);
+        /* NOTE: this handles a discrepancy between ISO/IEC 14888-3 and
+         * Russian standard based RFCs.
+         */
+#ifndef USE_ISO14888_3_ECRDSA
+        if(_reverse_endianness(h_buf, hsize)){
+                ret = -1;
+                goto err;
+        }
+#endif
 
 	/* 3. Compute e = OS2I(h)^-1 mod q */
 	nn_init_from_buf(&tmp, h_buf, hsize);
