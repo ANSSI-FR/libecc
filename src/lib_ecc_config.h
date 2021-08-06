@@ -53,6 +53,7 @@
 #define WITH_CURVE_WEI25519
 #define WITH_CURVE_WEI448
 #define WITH_CURVE_GOST_R3410_2012_256_PARAMSETA
+#define WITH_CURVE_SECP256K1
 /* ADD curves define here */
 /* XXX: Do not remove the comment above, as it is
  * used by external tools as a placeholder to add or
