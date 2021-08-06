@@ -64,6 +64,20 @@ variant. Hence, when using EdDSA one will have to either ensure that the usage c
 such attacks, that the platform implements countermeasures (e.g. using secure MCUs, etc.) or that
 other means allow to detect/mitigate such attacks (e.g. on the compilation toolchain side).
 
+Regarding the specific case of ECRDSA (the Russian standard), libecc implements by default the
+[RFC 7091](https://datatracker.ietf.org/doc/html/rfc7091) and [draft-deremin-rfc4491-bis](https://datatracker.ietf.org/doc/html/draft-deremin-rfc4491-bis)
+versions to comply with the standard test vectors (provided in the form of X.509 certificates).
+This version of the algorithm **differs** from the ISO/IEC 14888-3 description and test vectors,
+the main difference coming from the way the hash of the message to be signed/verified is processed:
+in the RFCs, the little endian representation of the hash is taken as big number while in ISO/IEC the big endian
+representation is used. This seems (to be confirmed) to be a discrepancy of ISO/IEC 14888-3 algorithm description
+that must be fixed there. In order to allow users to still be able to reproduce the ISO/IEC behavior, we provide
+a compilation toggle that will force this mode `USE_ISO14888_3_ECRDSA=1`:
+
+<pre>
+	$ USE_ISO14888_3_ECRDSA=1 make
+</pre>
+
 Advanced usages of this library also include the possible implementation
 of elliptic curve based Diffie--Hellman protocols as well as any algorithm
 on top of prime fields based elliptic curves (or prime fields, or rings
