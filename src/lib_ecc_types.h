@@ -160,6 +160,9 @@ typedef enum {
 #ifdef WITH_CURVE_SM2P256V1
 	SM2P256V1 = 17,
 #endif
+#ifdef WITH_CURVE_GOST_R3410_2012_256_PARAMSETA
+	GOST_R3410_2012_256_PARAMSETA = 18,
+#endif
 /* ADD curves type here */
 /* XXX: Do not remove the comment above, as it is
  * used by external tools as a placeholder to add or

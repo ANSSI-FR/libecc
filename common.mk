@@ -221,4 +221,9 @@ ifeq ($(USE_SANITIZERS),1)
 CFLAGS += -fsanitize=undefined -fsanitize=address
 endif
 
-
+# Do we want to use the ISO14888-3 version of the
+# ECRDSA algorithm with discrepancies from the Russian
+# RFC references?
+ifeq ($(USE_ISO14888_3_ECRDSA),1)
+CFLAGS += -DUSE_ISO14888_3_ECRDSA
+endif

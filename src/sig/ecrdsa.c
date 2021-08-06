@@ -27,8 +27,52 @@
 #endif
 #include "../utils/dbg_sig.h"
 
+
+/*
+ * NOTE: ISO/IEC 14888-3 standard seems to diverge from the existing implementations
+ * of ECRDSA when treating the message hash, and from the examples of certificates provided
+ * in RFC 7091 and draft-deremin-rfc4491-bis. While in ISO/IEC 14888-3 it is explicitely asked
+ * to proceed with the hash of the message as big endian, the RFCs derived from the Russian
+ * standard expect the hash value to be treated as little endian when importing it as an integer
+ * (this discrepancy is exhibited and confirmed by test vectors present in ISO/IEC 14888-3, and
+ * by X.509 certificates present in the RFCs). This seems (to be confirmed) to be a discrepancy of
+ * ISO/IEC 14888-3 algorithm description that must be fixed there.
+ *
+ * In order to be conservative, libecc uses the Russian standard behavior as expected to be in line with
+ * other implemetations, but keeps the ISO/IEC 14888-3 behavior if forced/asked by the user using
+ * the USE_ISO14888_3_ECRDSA toggle. This allows to keep backward compatibility with previous versions of the
+ * library if needed.
+ *
+ */
+#ifndef USE_ISO14888_3_ECRDSA
+/* Reverses the endiannes of a buffer in place */
+static inline int _reverse_endianness(u8 *buf, u16 buf_size)
+{
+	u32 i;
+	u8 tmp;
+	int ret = -1;
+
+	if(buf == NULL){
+		ret = -1;
+		goto err;
+	}
+	if(buf_size > 1){
+		for(i = 0; i < (buf_size / 2); i++){
+			tmp = buf[i];
+			buf[i] = buf[buf_size - 1 - i];
+			buf[buf_size - 1 - i] = tmp;
+		}
+	}
+
+	ret = 0;
+err:
+	return ret;
+}
+#endif
+
 int ecrdsa_init_pub_key(ec_pub_key *out_pub, const ec_priv_key *in_priv)
 {
+	int ret = -1;
 	prj_pt_src_t G;
 
 	MUST_HAVE(out_pub != NULL);
@@ -43,6 +87,7 @@ int ecrdsa_init_pub_key(ec_pub_key *out_pub, const ec_priv_key *in_priv)
 		/* This should not happen and means that our
 		 * private key is not compliant!
 		 */
+		ret = -1;
 		goto err;
 	}
 
@@ -50,6 +95,7 @@ int ecrdsa_init_pub_key(ec_pub_key *out_pub, const ec_priv_key *in_priv)
 	G = &(in_priv->params->ec_gen);
 	/* Use blinding when computing point scalar multiplication */
 	if(prj_pt_mul_monty_blind(&(out_pub->y), &(in_priv->x), G)){
+		ret = -1;
 		goto err;
 	}
 
@@ -57,9 +103,9 @@ int ecrdsa_init_pub_key(ec_pub_key *out_pub, const ec_priv_key *in_priv)
 	out_pub->params = in_priv->params;
 	out_pub->magic = PUB_KEY_MAGIC;
 
-	return 0;
+	ret = 0;
 err:
-	return -1;
+	return ret;
 }
 
 u8 ecrdsa_siglen(u16 p_bit_len, u16 q_bit_len, u8 hsize, u8 blocksize)
@@ -90,6 +136,9 @@ u8 ecrdsa_siglen(u16 p_bit_len, u16 q_bit_len, u8 hsize, u8 blocksize)
  *|   F	 4. Compute r = W_x mod q
  *|   F	 5. If r is 0, restart the process at step 2.
  *|   F	 6. Compute e = OS2I(h) mod q. If e is 0, set e to 1.
+ *|         NOTE: here, ISO/IEC 14888-3 and RFCs differ in the way e treated.
+ *|         e = OS2I(h) for ISO/IEC 14888-3, or e = OS2I(reversed(h)) when endianness of h
+ *|         is reversed for RFCs.
  *|   F	 7. Compute s = (rx + ke) mod q
  *|   F	 8. If s is 0, restart the process at step 2.
  *|   F 11. Return (r,s)
@@ -103,6 +152,8 @@ u8 ecrdsa_siglen(u16 p_bit_len, u16 q_bit_len, u8 hsize, u8 blocksize)
 
 int _ecrdsa_sign_init(struct ec_sign_context *ctx)
 {
+	int ret = -1;
+
 	/* First, verify context has been initialized */
 	SIG_SIGN_CHECK_INITIALIZED(ctx);
 
@@ -110,7 +161,8 @@ int _ecrdsa_sign_init(struct ec_sign_context *ctx)
 	key_pair_check_initialized_and_type(ctx->key_pair, ECRDSA);
 	if ((!(ctx->h)) || (ctx->h->digest_size > MAX_DIGEST_SIZE) ||
 	    (ctx->h->block_size > MAX_BLOCK_SIZE)) {
-		return -1;
+		ret = -1;
+		goto err;
 	}
 
 	/*
@@ -119,17 +171,21 @@ int _ecrdsa_sign_init(struct ec_sign_context *ctx)
 	 */
 	/* Since we call a callback, sanity check our mapping */
 	if(hash_mapping_callbacks_sanity_check(ctx->h)){
-		return -1;
+		ret = -1;
+		goto err;
 	}
 	ctx->h->hfunc_init(&(ctx->sign_data.ecrdsa.h_ctx));
 	ctx->sign_data.ecrdsa.magic = ECRDSA_SIGN_MAGIC;
 
-	return 0;
+	ret = 0;
+err:
+	return ret;
 }
 
 int _ecrdsa_sign_update(struct ec_sign_context *ctx,
 			const u8 *chunk, u32 chunklen)
 {
+	int ret = -1;
 	/*
 	 * First, verify context has been initialized and private
 	 * part too. This guarantees the context is an EC-RDSA
@@ -141,11 +197,14 @@ int _ecrdsa_sign_update(struct ec_sign_context *ctx,
 
 	/* Since we call a callback, sanity check our mapping */
 	if(hash_mapping_callbacks_sanity_check(ctx->h)){
-		return -1;
+		ret = -1;
+		goto err;
 	}
 	ctx->h->hfunc_update(&(ctx->sign_data.ecrdsa.h_ctx), chunk, chunklen);
 
-	return 0;
+	ret = 0;
+err:
+	return ret;
 }
 
 int _ecrdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
@@ -163,7 +222,7 @@ int _ecrdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	aff_pt W;
 	nn_src_t q, x;
 	u8 hsize, r_len, s_len;
-	int ret;
+	int ret = -1;
 
 	/*
 	 * First, verify context has been initialized and private
@@ -241,6 +300,7 @@ int _ecrdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	 * a random value b in ]0,q[ */
 	ret = nn_get_random_mod(&b, q);
 	if (ret) {
+		ret = -1;
 		goto err;
 	}
 	dbg_nn_print("b", &b);
@@ -283,6 +343,15 @@ int _ecrdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	}
 	ctx->h->hfunc_finalize(&(ctx->sign_data.ecrdsa.h_ctx), h_buf);
 	dbg_buf_print("H(m)", h_buf, hsize);
+	/* NOTE: this handles a discrepancy between ISO/IEC 14888-3 and
+	 * Russian standard based RFCs.
+	 */
+#ifndef USE_ISO14888_3_ECRDSA
+	if(_reverse_endianness(h_buf, hsize)){
+		ret = -1;
+		goto err;
+	}
+#endif
 	nn_init_from_buf(&tmp, h_buf, hsize);
 	local_memset(h_buf, 0, hsize);
 	nn_mod(&e, &tmp, q);
@@ -377,6 +446,9 @@ int _ecrdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
  *|  UF 1. Check that r and s are both in ]0,q[
  *|   F 2. Compute h = H(m)
  *|   F 3. Compute e = OS2I(h)^-1 mod q
+ *|         NOTE: here, ISO/IEC 14888-3 and RFCs differ in the way e treated.
+ *|         e = OS2I(h) for ISO/IEC 14888-3, or e = OS2I(reversed(h)) when endianness of h
+ *|         is reversed for RFCs.
  *|   F 4. Compute u = es mod q
  *|   F 5. Compute v = -er mod q
  *|   F 6. Compute W' = uG + vY = (W'_x, W'_y)
@@ -392,7 +464,7 @@ int _ecrdsa_verify_init(struct ec_verify_context *ctx,
 	u8 r_len, s_len;
 	nn_src_t q;
 	nn s, r;
-	int ret;
+	int ret = -1;
 
 	/* First, verify context has been initialized */
 	SIG_VERIFY_CHECK_INITIALIZED(ctx);
@@ -454,6 +526,8 @@ int _ecrdsa_verify_init(struct ec_verify_context *ctx,
 int _ecrdsa_verify_update(struct ec_verify_context *ctx,
 			  const u8 *chunk, u32 chunklen)
 {
+	int ret = -1;
+
 	/*
 	 * First, verify context has been initialized and public
 	 * part too. This guarantees the context is an EC-RDSA
@@ -466,12 +540,15 @@ int _ecrdsa_verify_update(struct ec_verify_context *ctx,
 	/* 2. Compute h = H(m) */
 	/* Since we call a callback, sanity check our mapping */
 	if(hash_mapping_callbacks_sanity_check(ctx->h)){
-		return -1;
+		ret = -1;
+		goto err;
 	}
 	ctx->h->hfunc_update(&(ctx->verify_data.ecrdsa.h_ctx), chunk,
 			     chunklen);
 
-	return 0;
+	ret = 0;
+err:
+	return ret;
 }
 
 int _ecrdsa_verify_finalize(struct ec_verify_context *ctx)
@@ -484,7 +561,7 @@ int _ecrdsa_verify_finalize(struct ec_verify_context *ctx)
 	u8 h_buf[MAX_DIGEST_SIZE];
 	nn *r, *s;
 	u8 hsize;
-	int ret;
+	int ret = -1;
 
 	/*
 	 * First, verify context has been initialized and public
@@ -515,6 +592,15 @@ int _ecrdsa_verify_finalize(struct ec_verify_context *ctx)
 	}
 	ctx->h->hfunc_finalize(&(ctx->verify_data.ecrdsa.h_ctx), h_buf);
 	dbg_buf_print("H(m)", h_buf, hsize);
+	/* NOTE: this handles a discrepancy between ISO/IEC 14888-3 and
+	 * Russian standard based RFCs.
+	 */
+#ifndef USE_ISO14888_3_ECRDSA
+	if(_reverse_endianness(h_buf, hsize)){
+		ret = -1;
+		goto err;
+	}
+#endif
 
 	/* 3. Compute e = OS2I(h)^-1 mod q */
 	nn_init_from_buf(&tmp, h_buf, hsize);
