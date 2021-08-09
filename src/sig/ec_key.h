@@ -138,7 +138,7 @@ typedef struct {
 #define EC_PUB_KEY_EXPORT_SIZE(pub_key)                                 \
 	(3 * BYTECEIL((pub_key)->params->ec_curve.a.ctx->p_bitlen))
 
-#define EC_STRUCTURED_PUB_KEY_MAX_EXPORT_SIZE	(EC_PUB_KEY_MAX_SIZE + 4)
+#define EC_STRUCTURED_PUB_KEY_MAX_EXPORT_SIZE	(EC_PUB_KEY_MAX_SIZE + 3)
 #if (EC_STRUCTURED_PUB_KEY_MAX_EXPORT_SIZE > 255)
 #error "All structured pub keys size are expected to fit on an u8."
 #endif
