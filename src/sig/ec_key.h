@@ -58,10 +58,31 @@ typedef struct {
 	word_t magic;
 } ec_priv_key;
 
+/* NOTE1: in the specific case of EdDSA, the hash size dictates the size of the
+ * private keys. Although EdDSA only uses specific hash algorithms, we are being
+ * conservative here by taking the maximum digest size (hence accepting losing some space
+ * wen storing the private key for more simplicity).
+ *
+ * NOTE2: we use MAX_DIGEST_SIZE as the basis for EdDSA private key size instead of
+ * (MAX_DIGEST_SIZE / 2) because we store the EdDSA private key in its *derived* formed,
+ * meaning that it is twice the size of a regular standardized private key.
+ *
+ */
+#if defined(WITH_SIG_EDDSA25519) || defined(WITH_SIG_EDDSA448)
+
 #define EC_PRIV_KEY_MAX_SIZE	(LOCAL_MAX(MAX_DIGEST_SIZE, LOCAL_MAX(BYTECEIL(CURVES_MAX_Q_BIT_LEN), BYTECEIL(CURVES_MAX_P_BIT_LEN))))
 
 #define EC_PRIV_KEY_EXPORT_SIZE(priv_key)			\
 	((u8)(LOCAL_MAX(MAX_DIGEST_SIZE, LOCAL_MAX(BYTECEIL((priv_key)->params->ec_gen_order_bitlen), BYTECEIL((priv_key)->params->ec_fp.p_bitlen)))))
+
+#else /* !(defined(WITH_SIG_EDDSA25519) || defined(WITH_SIG_EDDSA448)) */
+
+#define EC_PRIV_KEY_MAX_SIZE	(LOCAL_MAX(BYTECEIL(CURVES_MAX_Q_BIT_LEN), BYTECEIL(CURVES_MAX_P_BIT_LEN)))
+
+#define EC_PRIV_KEY_EXPORT_SIZE(priv_key)			\
+	((u8)(LOCAL_MAX(BYTECEIL((priv_key)->params->ec_gen_order_bitlen), BYTECEIL((priv_key)->params->ec_fp.p_bitlen))))
+
+#endif /* defined(WITH_SIG_EDDSA25519) || defined(WITH_SIG_EDDSA448) */
 
 #define EC_STRUCTURED_PRIV_KEY_MAX_EXPORT_SIZE	(EC_PRIV_KEY_MAX_SIZE + 3)
 #if (EC_STRUCTURED_PRIV_KEY_MAX_EXPORT_SIZE > 255)
