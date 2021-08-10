@@ -806,12 +806,17 @@ int prj_pt_mul_monty_blind(prj_pt_t out, nn_src_t m, prj_pt_src_t in)
         /* First compute the order x cofactor */
         nn b;
 	nn_src_t q;
-        int ret;
+        int ret = -1;
+
+	prj_pt_check_initialized(in);
 
 	q = &(in->crv->order);
 
+	nn_init(&b, 0);
+
         ret = nn_get_random_mod(&b, q);
         if (ret) {
+		ret = -1;
                 goto err;
         }
 
@@ -825,15 +830,11 @@ int prj_pt_mul_monty_blind(prj_pt_t out, nn_src_t m, prj_pt_src_t in)
         /* Perform the scalar multiplication */
 	prj_pt_mul_ltr_monty(out, &b, in);
 
-        /* Zero the mask to avoid information leak */
-        nn_zero(&b);
-        nn_uninit(&b);
-
-        return 0;
+        ret = 0;
 err:
         /* Zero the mask to avoid information leak */
         nn_zero(&b);
         nn_uninit(&b);
 
-        return -1;
+        return ret;
 }
