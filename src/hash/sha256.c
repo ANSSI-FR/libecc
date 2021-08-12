@@ -63,6 +63,8 @@ static void sha256_process(sha256_context *ctx,
 /* Init hash function */
 void sha256_init(sha256_context *ctx)
 {
+	MUST_HAVE(ctx != NULL);
+
 	ctx->sha256_total = 0;
 	ctx->sha256_state[0] = 0x6A09E667;
 	ctx->sha256_state[1] = 0xBB67AE85;
