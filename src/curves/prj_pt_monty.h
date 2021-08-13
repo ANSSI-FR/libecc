@@ -28,4 +28,6 @@ void prj_pt_mul_monty(prj_pt_t out, nn_src_t m, prj_pt_src_t in);
 
 int prj_pt_mul_monty_blind(prj_pt_t out, nn_src_t m, prj_pt_src_t in);
 
+int check_prj_pt_order(prj_pt_src_t in_shortw, nn_src_t in_isorder);
+
 #endif /* __PRJ_PT_MONTY_H__ */

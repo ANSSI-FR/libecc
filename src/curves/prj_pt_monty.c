@@ -838,3 +838,31 @@ err:
 
         return ret;
 }
+
+/*
+ * Check if an integer is (a multiple of) a projective point order.
+ */
+int check_prj_pt_order(prj_pt_src_t in_shortw, nn_src_t in_isorder)
+{
+	int ret = -1;
+	prj_pt res;
+
+	/* First sanity checks */
+	prj_pt_check_initialized(in_shortw);
+	nn_check_initialized(in_isorder);
+
+	/* Then, perform the scalar multiplication */
+	prj_pt_mul_monty(&res, in_isorder, in_shortw);
+
+	/* Check if we have the point at infinity */
+	if(!prj_pt_iszero(&res)){
+		ret = -1;
+		goto err;
+	}
+
+	ret = 0;
+err:
+	prj_pt_uninit(&res);
+
+	return ret;
+}
