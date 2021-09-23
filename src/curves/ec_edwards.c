@@ -20,52 +20,60 @@
 /*
  * Check pointed Edwards curve structure has already been
  * initialized.
+ *
+ * Returns 0 on success, -1 on error.
  */
-int ec_edwards_crv_is_initialized(ec_edwards_crv_src_t crv)
+int ec_edwards_crv_check_initialized(ec_edwards_crv_src_t crv)
 {
-	return !!((crv != NULL) && (crv->magic == EC_EDWARDS_CRV_MAGIC));
-}
+	int ret;
 
-void ec_edwards_crv_check_initialized(ec_edwards_crv_src_t crv)
-{
-	MUST_HAVE((crv != NULL) && (crv->magic == EC_EDWARDS_CRV_MAGIC));
+	MUST_HAVE((crv != NULL) && (crv->magic == EC_EDWARDS_CRV_MAGIC), ret, err);
+	ret = 0;
+
+err:
+	return ret;
 }
 
 /*
  * Initialize pointed Edwards curve structure using given a and d
  * Fp elements representing curve equation (a x^2 + y^2 = 1 + d x^2 y^2) parameters.
+ *
+ * Returns 0 on success, -1 on error.
  */
-void ec_edwards_crv_init(ec_edwards_crv_t crv, fp_src_t a, fp_src_t d, nn_src_t order)
+int ec_edwards_crv_init(ec_edwards_crv_t crv, fp_src_t a, fp_src_t d, nn_src_t order)
 {
-	MUST_HAVE(crv != NULL);
+	int ret, iszero, cmp;
 
-	fp_check_initialized(a);
-	fp_check_initialized(d);
-	MUST_HAVE(a->ctx == d->ctx);
+	ret = nn_check_initialized(order); EG(ret, err);
+	ret = fp_check_initialized(a); EG(ret, err);
+	ret = fp_check_initialized(d); EG(ret, err);
+	MUST_HAVE(a->ctx == d->ctx, ret, err);
+	MUST_HAVE(crv != NULL, ret, err);
 
 	/* a and d in Fp, must be distinct and non zero */
-	MUST_HAVE(!fp_iszero(a));
-	MUST_HAVE(!fp_iszero(d));
-	MUST_HAVE(fp_cmp(a, d) != 0);
+	MUST_HAVE(!fp_iszero(a, &iszero) && !iszero, ret, err);
+	MUST_HAVE(!fp_iszero(d, &iszero) && !iszero, ret, err);
+	MUST_HAVE(!fp_cmp(a, d, &cmp) && cmp, ret, err);
 
-	nn_check_initialized(order);
-
-	fp_init(&(crv->a), a->ctx);
-	fp_init(&(crv->d), d->ctx);
-
-	fp_copy(&(crv->a), a);
-	fp_copy(&(crv->d), d);
-
-	nn_copy(&(crv->order), order);
+	ret = fp_init(&(crv->a), a->ctx); EG(ret, err);
+	ret = fp_init(&(crv->d), d->ctx); EG(ret, err);
+	ret = fp_copy(&(crv->a), a); EG(ret, err);
+	ret = fp_copy(&(crv->d), d); EG(ret, err);
+	ret = nn_copy(&(crv->order), order); EG(ret, err);
 
 	crv->magic = EC_EDWARDS_CRV_MAGIC;
+
+err:
+	return ret;
 }
 
 
 /* Uninitialize curve */
 void ec_edwards_crv_uninit(ec_edwards_crv_t crv)
 {
-        ec_edwards_crv_check_initialized(crv);
+	if ((crv != NULL) && (crv->magic == EC_EDWARDS_CRV_MAGIC)) {
+		crv->magic = WORD(0);
+	}
 
-	crv->magic = WORD(0);
+	return;
 }
