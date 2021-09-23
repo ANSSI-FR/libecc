@@ -19,42 +19,55 @@
 #include "fp_mul_redc1.h"
 #include "fp_montgomery.h"
 
-void fp_add_monty(fp_t out, fp_src_t in1, fp_src_t in2)
+/* Compute out = in1 + in2 mod p. Returns 0 on success, -1 on error. */
+int fp_add_monty(fp_t out, fp_src_t in1, fp_src_t in2)
 {
-	fp_add(out, in1, in2);
+	return fp_add(out, in1, in2);
 }
 
-void fp_sub_monty(fp_t out, fp_src_t in1, fp_src_t in2)
+/* Compute out = in1 - in2 mod p. Returns 0 on success, -1 on error. */
+int fp_sub_monty(fp_t out, fp_src_t in1, fp_src_t in2)
 {
-	fp_sub(out, in1, in2);
+	return fp_sub(out, in1, in2);
 }
 
-void fp_mul_monty(fp_t out, fp_src_t in1, fp_src_t in2)
+/* Compute out = in1 * in2 mod p. Returns 0 on success, -1 on error. */
+int fp_mul_monty(fp_t out, fp_src_t in1, fp_src_t in2)
 {
-	fp_mul_redc1(out, in1, in2);
+	return fp_mul_redc1(out, in1, in2);
 }
 
-void fp_sqr_monty(fp_t out, fp_src_t in)
+/* Compute out = in * in mod p. Returns 0 on success, -1 on error. */
+int fp_sqr_monty(fp_t out, fp_src_t in)
 {
-	fp_sqr_redc1(out, in);
+	return fp_sqr_redc1(out, in);
 }
 
-void fp_div_monty(fp_t out, fp_src_t in1, fp_src_t in2)
+/*
+ * Compute out such that in1 = out * in2 mod p. Returns 0 on success,
+ * -1 on error. out must be initialized by the caler.
+ *
+ */
+int fp_div_monty(fp_t out, fp_src_t in1, fp_src_t in2)
 {
+	int ret, iszero;
 	fp tmp;
+	tmp.magic = 0;
 
-	fp_check_initialized(in1);
-	fp_check_initialized(in2);
-	fp_check_initialized(out);
+	ret = fp_check_initialized(in1); EG(ret, err);
+	ret = fp_check_initialized(in2); EG(ret, err);
+	ret = fp_check_initialized(out); EG(ret, err);
+	ret = fp_init(&tmp, out->ctx); EG(ret, err);
 
-	fp_init(&tmp, out->ctx);
+	MUST_HAVE((out->ctx == in1->ctx), ret, err);
+	MUST_HAVE((out->ctx == in2->ctx), ret, err);
+	(void)iszero; /* silence warning when macro results in nothing */
+	MUST_HAVE(!fp_iszero(in2, &iszero) && (!iszero), ret, err);
 
-	MUST_HAVE(out->ctx == in1->ctx);
-	MUST_HAVE(out->ctx == in2->ctx);
-	MUST_HAVE(!fp_iszero(in2));
+	ret = fp_div(&tmp, in1, in2); EG(ret, err);
+	ret = fp_redcify(out, &tmp);
 
-	fp_div(&tmp, in1, in2);
-	fp_redcify(out, &tmp);
-
+err:
 	fp_uninit(&tmp);
+	return ret;
 }
