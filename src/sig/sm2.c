@@ -36,52 +36,43 @@
  */
 int sm2_gen_priv_key(ec_priv_key *priv_key)
 {
-	int ret = -1;
+	int ret;
 	nn tmp;
+	tmp.magic = 0;
 
-	if(!priv_key_is_initialized(priv_key)){
-		ret = -1;
-		goto err;
-	}
+	ret = priv_key_check_initialized_and_type(priv_key, SM2); EG(ret, err);
+
 	/* Get a random value in ]0,q-1[ where q is the group generator order */
-	nn_init(&tmp, 0);
-	nn_dec(&tmp,  &(priv_key->params->ec_gen_order));
+	ret = nn_init(&tmp, 0); EG(ret, err);
+	ret = nn_dec(&tmp,  &(priv_key->params->ec_gen_order)); EG(ret, err);
 	ret = nn_get_random_mod(&(priv_key->x), &tmp);
- 	if (ret) {
-		ret = -1;
-		goto err;
-	}
 
-	ret = 0;
 err:
-	if(nn_is_initialized(&tmp)){
-		nn_uninit(&tmp);
-	}
+	nn_uninit(&tmp);
+
 	return ret;
 }
 
 int sm2_init_pub_key(ec_pub_key *out_pub, const ec_priv_key *in_priv)
 {
 	prj_pt_src_t G;
-	int ret = -1;
+	int ret, cmp;
 	nn tmp;
+	tmp.magic = 0;
 
-	MUST_HAVE(out_pub != NULL);
+	MUST_HAVE(out_pub != NULL, ret, err);
 
-	priv_key_check_initialized_and_type(in_priv, SM2);
+	ret = priv_key_check_initialized_and_type(in_priv, SM2); EG(ret, err);
 
 	/*
 	 * We verify that the private key is valid, i.e. in
 	 * ]0, q-1[. This excluded q-1 is an oddity but is what the
 	 * ISO14888-3:2018 has.
 	 */
-	nn_init(&tmp, 0);
-	nn_dec(&tmp, &in_priv->params->ec_gen_order);
+	ret = nn_init(&tmp, 0); EG(ret, err);
+	ret = nn_dec(&tmp, &in_priv->params->ec_gen_order); EG(ret, err);
 	/* If x >= (q - 1), this is an error */
-	if(nn_cmp(&(in_priv->x), &tmp) >= 0){
-		ret = -1;
-		goto err;
-	}
+	MUST_HAVE(!nn_cmp(&(in_priv->x), &tmp, &cmp) && (cmp < 0), ret, err);
 
 	/* Y = xG */
 	G = &(in_priv->params->ec_gen);
@@ -90,29 +81,32 @@ int sm2_init_pub_key(ec_pub_key *out_pub, const ec_priv_key *in_priv)
 	local_memset(out_pub, 0, sizeof(ec_pub_key));
 
 	/* Use blinding with scalar_b when computing point scalar multiplication */
-	ret = prj_pt_mul_monty_blind(&(out_pub->y), &(in_priv->x), G);
-	if (ret) {
-		ret = -1;
-		goto err;
-	}
+	ret = prj_pt_mul_monty_blind(&(out_pub->y), &(in_priv->x), G); EG(ret, err);
 
 	out_pub->key_type = SM2;
 	out_pub->params = in_priv->params;
 	out_pub->magic = PUB_KEY_MAGIC;
 
-	ret = 0;
 err:
 	nn_uninit(&tmp);
+
 	return ret;
 }
 
-u8 sm2_siglen(u16 p_bit_len, u16 q_bit_len, u8 hsize, u8 blocksize)
+int sm2_siglen(u16 p_bit_len, u16 q_bit_len, u8 hsize, u8 blocksize, u8 *siglen)
 {
+	int ret;
+
+	MUST_HAVE(siglen != NULL, ret, err);
 	MUST_HAVE((p_bit_len <= CURVES_MAX_P_BIT_LEN) &&
 		  (q_bit_len <= CURVES_MAX_Q_BIT_LEN) &&
-		  (hsize <= MAX_DIGEST_SIZE) && (blocksize <= MAX_BLOCK_SIZE));
+		  (hsize <= MAX_DIGEST_SIZE) && (blocksize <= MAX_BLOCK_SIZE), ret, err);
 
-	return (u8)SM2_SIGLEN(q_bit_len);
+	(*siglen) = (u8)SM2_SIGLEN(q_bit_len);
+	ret = 0;
+
+err:
+	return ret;
 }
 
 /*
@@ -151,24 +145,18 @@ static int sm2_compute_Z(u8 *Z, u16 *Zlen, const u8 *id, u16 id_len,
 	fp_src_t a, b;
 	int ret;
 
-	MUST_HAVE((Z != NULL) && (Zlen != NULL));
-	MUST_HAVE((id != NULL) && (pub_key != NULL));
+	MUST_HAVE((Z != NULL) && (Zlen != NULL), ret, err);
+	MUST_HAVE((id != NULL) && (pub_key != NULL), ret, err);
 	/* Maximum size is Entlen on 16 bits in *bits*, i.e. 8192 bytes */
-	MUST_HAVE(id_len <= SM2_MAX_ID_LEN);
-	pub_key_check_initialized_and_type(pub_key, SM2);
+	MUST_HAVE(id_len <= SM2_MAX_ID_LEN, ret, err);
+	ret = pub_key_check_initialized_and_type(pub_key, SM2); EG(ret, err);
 
-	hm = get_hash_by_type(hash_type);
-	if (hm == NULL) {
-		ret = -1;
-		goto err;
-	}
+	ret = get_hash_by_type(hash_type, &hm); EG(ret, err);
+	MUST_HAVE(hm != NULL, ret, err);
 
 	/* Zlen must be large enough to receive digest */
 	hsize = hm->digest_size;
-	if ((*Zlen) < hsize) {
-		ret = -1;
-		goto err;
-	}
+	MUST_HAVE((*Zlen) >= hsize, ret, err);
 
 	/* Make things more readable */
 	G = &(pub_key->params->ec_gen);
@@ -179,44 +167,43 @@ static int sm2_compute_Z(u8 *Z, u16 *Zlen, const u8 *id, u16 id_len,
 	a = &(pub_key->params->ec_curve.a);
 	b = &(pub_key->params->ec_curve.b);
 
-	hm->hfunc_init(&hctx);
+	ret = hm->hfunc_init(&hctx); EG(ret, err);
 
 	/* ENTL */
 	buf[0] = (entlen >> 8) & 0xff;
 	buf[1] = entlen & 0xff;
-	hm->hfunc_update(&hctx, buf, 2);
+	ret = hm->hfunc_update(&hctx, buf, 2); EG(ret, err);
 
 	/* ID */
-	hm->hfunc_update(&hctx, id, id_len);
+	ret = hm->hfunc_update(&hctx, id, id_len); EG(ret, err);
 
 	/* FE2BS(p, a) */
-	fp_export_to_buf(buf, p_len, a);
-	hm->hfunc_update(&hctx, buf, p_len);
+	ret = fp_export_to_buf(buf, p_len, a); EG(ret, err);
+	ret = hm->hfunc_update(&hctx, buf, p_len); EG(ret, err);
 
 	/* FE2BS(p, b) */
-	fp_export_to_buf(buf, p_len, b);
-	hm->hfunc_update(&hctx, buf, p_len);
+	ret = fp_export_to_buf(buf, p_len, b); EG(ret, err);
+	ret = hm->hfunc_update(&hctx, buf, p_len); EG(ret, err);
 
 	/* FE2BS(p, Gx) || FE2BS(p, Gy) */
-	prj_pt_export_to_aff_buf(G, buf, 2 * p_len);
-	hm->hfunc_update(&hctx, buf, 2 * p_len);
+	ret = prj_pt_export_to_aff_buf(G, buf, 2 * p_len); EG(ret, err);
+	ret = hm->hfunc_update(&hctx, buf, 2 * p_len); EG(ret, err);
 
 	/* FE2BS(p, Yx) || FE2BS(p, Yy) */
-	prj_pt_export_to_aff_buf(Y, buf, 2 * p_len);
-	hm->hfunc_update(&hctx, buf, 2 * p_len);
+	ret = prj_pt_export_to_aff_buf(Y, buf, 2 * p_len); EG(ret, err);
+	ret = hm->hfunc_update(&hctx, buf, 2 * p_len); EG(ret, err);
 
 	/* Let's now finalize hash computation */
-	hm->hfunc_finalize(&hctx, Z);
+	ret = hm->hfunc_finalize(&hctx, Z); EG(ret, err);
 	dbg_buf_print("Z", Z, hsize);
 
 	local_memset(buf, 0, sizeof(buf));
 	local_memset(&hctx, 0, sizeof(hctx));
 
 	*Zlen = hsize;
-	ret = 0;
 
 err:
-	if(ret){
+	if (ret && (Zlen != NULL)){
 		*Zlen = 0;
 	}
 	return ret;
@@ -252,81 +239,67 @@ err:
  */
 
 #define SM2_SIGN_MAGIC ((word_t)(0x324300884035dae8ULL))
-#define SM2_SIGN_CHECK_INITIALIZED(A) \
-	MUST_HAVE((((void *)(A)) != NULL) && ((A)->magic == SM2_SIGN_MAGIC))
+#define SM2_SIGN_CHECK_INITIALIZED(A, ret, err) \
+	MUST_HAVE((((void *)(A)) != NULL) && ((A)->magic == SM2_SIGN_MAGIC), ret, err)
 
 int _sm2_sign_init(struct ec_sign_context *ctx)
 {
-	int ret = -1;
+	int ret;
 	u8 Z[Z_INPUT_MAX_LEN];
 	u16 Zlen;
 
 	/* First, verify context has been initialized */
-	SIG_SIGN_CHECK_INITIALIZED(ctx);
+	ret = sig_sign_check_initialized(ctx); EG(ret, err);
 
 	/* Additional sanity checks on input params from context */
-	key_pair_check_initialized_and_type(ctx->key_pair, SM2);
-	if ((!(ctx->h)) || (ctx->h->digest_size > MAX_DIGEST_SIZE) ||
-	    (ctx->h->block_size > MAX_BLOCK_SIZE)) {
-		ret = -1;
-		goto err;
-	}
+	ret = key_pair_check_initialized_and_type(ctx->key_pair, SM2); EG(ret, err);
+	MUST_HAVE((ctx->h != NULL) && (ctx->h->digest_size <= MAX_DIGEST_SIZE) &&
+		  (ctx->h->block_size <= MAX_BLOCK_SIZE), ret, err);
 
 	/*
 	 * Initialize hash context stored in our private part of context
 	 * and record data init has been done
 	 */
 	/* Since we call a callback, sanity check our mapping */
-	if (hash_mapping_callbacks_sanity_check(ctx->h)) {
-		ret = -1;
-		goto err;
-	}
-	ctx->h->hfunc_init(&(ctx->sign_data.sm2.h_ctx));
+	ret = hash_mapping_callbacks_sanity_check(ctx->h); EG(ret, err);
+	ret = ctx->h->hfunc_init(&(ctx->sign_data.sm2.h_ctx)); EG(ret, err);
 
 	/* Compute Z from the ID */
 	local_memset(Z, 0, sizeof(Z));
 	Zlen = sizeof(Z);
-	if(sm2_compute_Z(Z, &Zlen, ctx->adata, ctx->adata_len, &(ctx->key_pair->pub_key), ctx->h->type)){
-		ret = -1;
-		goto err;
-	}
+	ret = sm2_compute_Z(Z, &Zlen, ctx->adata, ctx->adata_len,
+			    &(ctx->key_pair->pub_key), ctx->h->type); EG(ret, err);
+
 	/* Update the hash function with Z */
 	/* Since we call a callback, sanity check our mapping */
-	if (hash_mapping_callbacks_sanity_check(ctx->h)) {
-		ret = -1;
-		goto err;
-	}
-	ctx->h->hfunc_update(&(ctx->sign_data.sm2.h_ctx), Z, Zlen);
+	ret = hash_mapping_callbacks_sanity_check(ctx->h); EG(ret, err);
+	ret = ctx->h->hfunc_update(&(ctx->sign_data.sm2.h_ctx), Z, Zlen); EG(ret, err);
 
 	ctx->sign_data.sm2.magic = SM2_SIGN_MAGIC;
-	ret = 0;
 
 err:
 	VAR_ZEROIFY(Zlen);
+
 	return ret;
 }
 
 int _sm2_sign_update(struct ec_sign_context *ctx,
 		       const u8 *chunk, u32 chunklen)
 {
-	int ret = -1;
+	int ret;
 
 	/*
 	 * First, verify context has been initialized and private part too.
 	 * This guarantees the context is an SM2 signature one and we do not
 	 * update() or finalize() before init().
 	 */
-	SIG_SIGN_CHECK_INITIALIZED(ctx);
-	SM2_SIGN_CHECK_INITIALIZED(&(ctx->sign_data.sm2));
+	ret = sig_sign_check_initialized(ctx); EG(ret, err);
+	SM2_SIGN_CHECK_INITIALIZED(&(ctx->sign_data.sm2), ret, err);
 
 	/* 1. Compute h = H(m) */
 	/* Since we call a callback, sanity check our mapping */
-	if (hash_mapping_callbacks_sanity_check(ctx->h)) {
-		ret = -1;
-		goto err;
-	}
-	ctx->h->hfunc_update(&(ctx->sign_data.sm2.h_ctx), chunk, chunklen);
-	ret = 0;
+	ret = hash_mapping_callbacks_sanity_check(ctx->h); EG(ret, err);
+	ret = ctx->h->hfunc_update(&(ctx->sign_data.sm2.h_ctx), chunk, chunklen);
 
 err:
 	return ret;
@@ -334,10 +307,6 @@ err:
 
 int _sm2_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 {
-	nn k, r, s, tmp, tmp2, tmp3;
-#ifdef USE_SIG_BLINDING
-	nn b;        /* blinding mask */
-#endif
 	const ec_priv_key *priv_key;
 	u8 hash[MAX_DIGEST_SIZE];
 	bitcnt_t q_bit_len;
@@ -346,15 +315,23 @@ int _sm2_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	nn_src_t q, x;
 	prj_pt kG;
 	aff_pt W;
-	int ret = -1;
+	int ret, iszero, cmp;
+	nn k, r, s, tmp, tmp2, tmp3;
+#ifdef USE_SIG_BLINDING
+	nn b;        /* blinding mask */
+	b.magic = 0;
+#endif
+
+	kG.magic = W.magic = 0;
+	k.magic = r.magic = s.magic = tmp.magic = tmp2.magic = tmp3.magic = 0;
 
 	/*
 	 * First, verify context has been initialized and private part too.
 	 * This guarantees the context is an SM2 signature one and we do not
 	 * update() or finalize() before init().
 	 */
-	SIG_SIGN_CHECK_INITIALIZED(ctx);
-	SM2_SIGN_CHECK_INITIALIZED(&(ctx->sign_data.sm2));
+	ret = sig_sign_check_initialized(ctx); EG(ret, err);
+	SM2_SIGN_CHECK_INITIALIZED(&(ctx->sign_data.sm2), ret, err);
 
 	/* Zero init out point */
 	local_memset(&kG, 0, sizeof(prj_pt));
@@ -375,21 +352,14 @@ int _sm2_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	dbg_pub_key_print("Y", &(ctx->key_pair->pub_key));
 
 	/* Check given signature buffer length has the expected size */
-	if (siglen != SM2_SIGLEN(q_bit_len)) {
-		ret = -1;
-		goto err;
-	}
+	MUST_HAVE(siglen == SM2_SIGLEN(q_bit_len), ret, err);
 
 	local_memset(hash, 0, hsize);
 	/* Since we call a callback, sanity check our mapping */
-	ret = hash_mapping_callbacks_sanity_check(ctx->h);
-	if (ret) {
-		ret = -1;
-		goto err;
-	}
+	ret = hash_mapping_callbacks_sanity_check(ctx->h); EG(ret, err);
 
 	/* 2. Compute H = h(M1) */
-	ctx->h->hfunc_finalize(&(ctx->sign_data.sm2.h_ctx), hash);
+	ret = ctx->h->hfunc_finalize(&(ctx->sign_data.sm2.h_ctx), hash); EG(ret, err);
 	dbg_buf_print("h", hash, hsize);
 
  restart:
@@ -401,50 +371,40 @@ int _sm2_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	 * This allows us to avoid the corruption of such a pointer.
 	 */
 	/* Sanity check on the handler before calling it */
-	if(ctx->rand != nn_get_random_mod){
-		ret = -1;
-		goto err;
-	}
+	MUST_HAVE(ctx->rand == nn_get_random_mod, ret, err);
 #endif
-	ret = ctx->rand(&k, q);
-	if (ret) {
-		ret = -1;
-		goto err;
-	}
+	ret = ctx->rand(&k, q); EG(ret, err);
 	dbg_nn_print("k", &k);
 
 	/* 4. Compute W = (W_x,W_y) = kG */
 #ifdef USE_SIG_BLINDING
-	if (prj_pt_mul_monty_blind(&kG, &k, G)) {
-		ret = -1;
-		goto err;
-	}
+	ret = prj_pt_mul_monty_blind(&kG, &k, G); EG(ret, err);
 #else
-	prj_pt_mul_monty(&kG, &k, G);
+	ret = prj_pt_mul_monty(&kG, &k, G); EG(ret, err);
 #endif /* USE_SIG_BLINDING */
-	prj_pt_to_aff(&W, &kG);
-	prj_pt_uninit(&kG);
+	ret = prj_pt_to_aff(&W, &kG); EG(ret, err);
 
 	dbg_nn_print("W_x", &(W.x.fp_val));
 	dbg_nn_print("W_y", &(W.y.fp_val));
 
 	/* 5. Compute r = (OS2I(H) + Wx) mod q */
-	nn_init_from_buf(&tmp, hash, hsize);
+	ret = nn_init_from_buf(&tmp, hash, hsize); EG(ret, err);
 	local_memset(hash, 0, hsize);
 	dbg_nn_print("OS2I(H)", &tmp);
-	nn_add(&tmp2, &tmp, &(W.x.fp_val));
-	aff_pt_uninit(&W);
-	nn_mod(&r, &tmp2, q);
+	ret = nn_add(&tmp2, &tmp, &(W.x.fp_val)); EG(ret, err);
+	ret = nn_mod(&r, &tmp2, q); EG(ret, err);
 	dbg_nn_print("r", &r);
 
 	/* 6. If r is 0, restart the process at step 3. */
-	if (nn_iszero(&r)) {
+	ret = nn_iszero(&r, &iszero); EG(ret, err);
+	if (iszero) {
 		goto restart;
 	}
 
 	/* 7. If r + k is q, restart the process at step 3. */
-	nn_add(&tmp, &r, q);
-	if (nn_cmp(&tmp, q) == 0) {
+	ret = nn_add(&tmp, &r, q); EG(ret, err);
+	ret = nn_cmp(&tmp, q, &cmp); EG(ret, err);
+	if (cmp == 0) {
 		goto restart;
 	}
 
@@ -454,51 +414,50 @@ int _sm2_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	 * With blinding enabled, the computation above is performed in the
 	 * following way s = ((b*(1 + x))^(-1) * (kb - (br)x)) mod q
 	 */
-	ret = nn_get_random_mod(&b, q);
-	if (ret) {
-		ret = -1;
-		goto err;
-	}
+	ret = nn_get_random_mod(&b, q); EG(ret, err);
 	dbg_nn_print("b", &b);
-	nn_inc(&tmp2, x);
-	nn_mul_mod(&tmp2, &tmp2, &b, q);
-	nn_modinv(&tmp, &tmp2, q); /* tmp = (b*(1 + x))^(-1) */
+	ret = nn_inc(&tmp2, x); EG(ret, err);
+	ret = nn_mul_mod(&tmp2, &tmp2, &b, q); EG(ret, err);
+	ret = nn_modinv(&tmp, &tmp2, q); EG(ret, err); /* tmp = (b*(1 + x))^(-1) */
 	dbg_nn_print("(b*(1 + x))^(-1)", &tmp);
-	nn_mul_mod(&tmp3, &r, &b, q); /* rb */
-	nn_mul_mod(&k, &k, &b, q); /* kb */
-	nn_mul_mod(&tmp3, &tmp3, x, q); /* (rb)x mod q */
-	nn_mod_sub(&tmp2, &k, &tmp3, q); /* tmp2 = (kb - (rb)x) mod q */
-	nn_uninit(&b);
-	nn_mul_mod(&s, &tmp, &tmp2, q);
+	ret = nn_mul_mod(&tmp3, &r, &b, q); EG(ret, err); /* rb */
+	ret = nn_mul_mod(&k, &k, &b, q); EG(ret, err); /* kb */
+	ret = nn_mul_mod(&tmp3, &tmp3, x, q); EG(ret, err); /* (rb)x mod q */
+	ret = nn_mod_sub(&tmp2, &k, &tmp3, q); EG(ret, err); /* tmp2 = (kb - (rb)x) mod q */
+	ret = nn_mul_mod(&s, &tmp, &tmp2, q); EG(ret, err);
 	dbg_nn_print("s", &s);
 #else
-	nn_inc(&tmp2, x);
-	nn_modinv(&tmp, &tmp2, q); /* tmp = (1 + x)^(-1) */
+	ret = nn_inc(&tmp2, x); EG(ret, err);
+	ret = nn_modinv(&tmp, &tmp2, q); EG(ret, err); /* tmp = (1 + x)^(-1) */
 	dbg_nn_print("(1 + x)^(-1)", &tmp);
-	nn_mul_mod(&tmp3, &r, x, q); /* rx mod q */
-	nn_mod_sub(&tmp2, &k, &tmp3, q); /* tmp2 = (k - rx) mod q */
-	nn_mul_mod(&s, &tmp, &tmp2, q);
+	ret = nn_mul_mod(&tmp3, &r, x, q); EG(ret, err); /* rx mod q */
+	ret = nn_mod_sub(&tmp2, &k, &tmp3, q); EG(ret, err); /* tmp2 = (k - rx) mod q */
+	ret = nn_mul_mod(&s, &tmp, &tmp2, q); EG(ret, err);
 	dbg_nn_print("s", &s);
 #endif
 
 	/* 9. If s is 0, restart the process at step 3. */
-	if (nn_iszero(&s)) {
+	ret = nn_iszero(&s, &iszero); EG(ret, err);
+	if (iszero) {
 		goto restart;
 	}
 
 	/* 10. Export r and s */
-	nn_export_to_buf(sig, q_len, &r);
-	nn_export_to_buf(sig + q_len, q_len, &s);
+	ret = nn_export_to_buf(sig, q_len, &r); EG(ret, err);
+	ret = nn_export_to_buf(sig + q_len, q_len, &s);
 
+err:
+	prj_pt_uninit(&kG);
+	aff_pt_uninit(&W);
 	nn_uninit(&k);
 	nn_uninit(&r);
 	nn_uninit(&s);
 	nn_uninit(&tmp);
 	nn_uninit(&tmp2);
 	nn_uninit(&tmp3);
-
- err:
-
+#ifdef USE_SIG_BLINDING
+	nn_uninit(&b);
+#endif
 	/*
 	 * We can now clear data part of the context. This will clear
 	 * magic and avoid further reuse of the whole context.
@@ -546,8 +505,8 @@ int _sm2_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
  */
 
 #define SM2_VERIFY_MAGIC ((word_t)(0x9177c61e777f9f22ULL))
-#define SM2_VERIFY_CHECK_INITIALIZED(A) \
-	MUST_HAVE((((void *)(A)) != NULL) && ((A)->magic == SM2_VERIFY_MAGIC))
+#define SM2_VERIFY_CHECK_INITIALIZED(A, ret, err) \
+	MUST_HAVE((((void *)(A)) != NULL) && ((A)->magic == SM2_VERIFY_MAGIC), ret, err)
 
 int _sm2_verify_init(struct ec_verify_context *ctx,
 		       const u8 *sig, u8 siglen)
@@ -555,21 +514,18 @@ int _sm2_verify_init(struct ec_verify_context *ctx,
 	bitcnt_t q_bit_len;
 	u8 q_len;
 	nn_src_t q;
-	nn *r, *s;
-	int ret = -1;
+	nn *r = NULL, *s = NULL;
+	int ret, iszero1, iszero2, cmp1, cmp2;
 	u8 Z[Z_INPUT_MAX_LEN];
 	u16 Zlen;
 
 	/* First, verify context has been initialized */
-	SIG_VERIFY_CHECK_INITIALIZED(ctx);
+	ret = sig_verify_check_initialized(ctx); EG(ret, err);
 
 	/* Do some sanity checks on input params */
-	pub_key_check_initialized_and_type(ctx->pub_key, SM2);
-	if ((!(ctx->h)) || (ctx->h->digest_size > MAX_DIGEST_SIZE) ||
-	    (ctx->h->block_size > MAX_BLOCK_SIZE)) {
-		ret = -1;
-		goto err;
-	}
+	ret = pub_key_check_initialized_and_type(ctx->pub_key, SM2); EG(ret, err);
+	MUST_HAVE((ctx->h != NULL) && (ctx->h->digest_size <= MAX_DIGEST_SIZE) &&
+		  (ctx->h->block_size <= MAX_BLOCK_SIZE), ret, err);
 
 	/* Make things more readable */
 	q = &(ctx->pub_key->params->ec_gen_order);
@@ -579,52 +535,41 @@ int _sm2_verify_init(struct ec_verify_context *ctx,
 	s = &(ctx->verify_data.sm2.s);
 
 	/* Check given signature length is the expected one */
-	if (siglen != SM2_SIGLEN(q_bit_len)) {
-		ret = -1;
-		goto err;
-	}
+	MUST_HAVE(siglen == SM2_SIGLEN(q_bit_len), ret, err);
 
 	/* Import r and s values from signature buffer */
-	nn_init_from_buf(r, sig, q_len);
-	nn_init_from_buf(s, sig + q_len, q_len);
+	ret = nn_init_from_buf(r, sig, q_len); EG(ret, err);
+	ret = nn_init_from_buf(s, sig + q_len, q_len); EG(ret, err);
 	dbg_nn_print("r", r);
 	dbg_nn_print("s", s);
 
 	/* 1. Reject the signature if r or s is 0 or >= q. */
-	if (nn_iszero(r) || (nn_cmp(r, q) >= 0) ||
-	    nn_iszero(s) || (nn_cmp(s, q) >= 0)) {
-		nn_uninit(r);
-		nn_uninit(s);
+	ret = nn_iszero(r, &iszero1); EG(ret, err);
+	ret = nn_iszero(s, &iszero2); EG(ret, err);
+	ret = nn_cmp(r, q, &cmp1); EG(ret, err);
+	ret = nn_cmp(s, q, &cmp2); EG(ret, err);
+	if (iszero1 || (cmp1 >= 0) ||
+	    iszero2 || (cmp2 >= 0)) {
 		ret = -1;
 		goto err;
 	}
 
 	/* Initialize the remaining of verify context. */
 	/* Since we call a callback, sanity check our mapping */
-	if (hash_mapping_callbacks_sanity_check(ctx->h)) {
-		ret = -1;
-		goto err;
-	}
-	ctx->h->hfunc_init(&(ctx->verify_data.sm2.h_ctx));
+	ret = hash_mapping_callbacks_sanity_check(ctx->h); EG(ret, err);
+	ret = ctx->h->hfunc_init(&(ctx->verify_data.sm2.h_ctx)); EG(ret, err);
 
 	/* Compute Z from the ID */
 	local_memset(Z, 0, sizeof(Z));
 	Zlen = sizeof(Z);
-	if(sm2_compute_Z(Z, &Zlen, ctx->adata, ctx->adata_len, ctx->pub_key, ctx->h->type)){
-		ret = -1;
-		goto err;
-	}
+	ret = sm2_compute_Z(Z, &Zlen, ctx->adata, ctx->adata_len, ctx->pub_key, ctx->h->type); EG(ret, err);
+
 	/* Update the hash function with Z */
 	/* Since we call a callback, sanity check our mapping */
-	if (hash_mapping_callbacks_sanity_check(ctx->h)) {
-		ret = -1;
-		goto err;
-	}
-	ctx->h->hfunc_update(&(ctx->verify_data.sm2.h_ctx), Z, Zlen);
+	ret = hash_mapping_callbacks_sanity_check(ctx->h); EG(ret, err);
+	ret = ctx->h->hfunc_update(&(ctx->verify_data.sm2.h_ctx), Z, Zlen); EG(ret, err);
 
 	ctx->verify_data.sm2.magic = SM2_VERIFY_MAGIC;
-
-	ret = 0;
 
  err:
 	VAR_ZEROIFY(q_len);
@@ -641,21 +586,23 @@ int _sm2_verify_init(struct ec_verify_context *ctx,
 int _sm2_verify_update(struct ec_verify_context *ctx,
 			 const u8 *chunk, u32 chunklen)
 {
+	int ret;
+
 	/*
 	 * First, verify context has been initialized and public part too. This
 	 * guarantees the context is a SM2 verification one and we do not
 	 * update() or finalize() before init().
 	 */
-	SIG_VERIFY_CHECK_INITIALIZED(ctx);
-	SM2_VERIFY_CHECK_INITIALIZED(&(ctx->verify_data.sm2));
+	ret = sig_verify_check_initialized(ctx); EG(ret, err);
+	SM2_VERIFY_CHECK_INITIALIZED(&(ctx->verify_data.sm2), ret, err);
 
 	/* 2. Compute h = H(M1) w/ M1 = Z || M */
 	/* Since we call a callback, sanity check our mapping */
-	if (hash_mapping_callbacks_sanity_check(ctx->h)) {
-		return -1;
-	}
-	ctx->h->hfunc_update(&(ctx->verify_data.sm2.h_ctx), chunk, chunklen);
-	return 0;
+	ret = hash_mapping_callbacks_sanity_check(ctx->h); EG(ret, err);
+	ret = ctx->h->hfunc_update(&(ctx->verify_data.sm2.h_ctx), chunk, chunklen);
+
+err:
+	return ret;
 }
 
 int _sm2_verify_finalize(struct ec_verify_context *ctx)
@@ -669,15 +616,18 @@ int _sm2_verify_finalize(struct ec_verify_context *ctx)
 	nn *s, *r;
 	nn t;
 	u8 hsize;
-	int ret;
+	int ret, iszero, cmp;
+
+	e.magic = tmp.magic = r_prime.magic = t.magic = 0;
+	sG.magic = tY.magic = W_prime.magic = W_prime_aff.magic = 0;
 
 	/*
 	 * First, verify context has been initialized and public
 	 * part too. This guarantees the context is an SM2
 	 * verification one and we do not finalize() before init().
 	 */
-	SIG_VERIFY_CHECK_INITIALIZED(ctx);
-	SM2_VERIFY_CHECK_INITIALIZED(&(ctx->verify_data.sm2));
+	ret = sig_verify_check_initialized(ctx); EG(ret, err);
+	SM2_VERIFY_CHECK_INITIALIZED(&(ctx->verify_data.sm2), ret, err);
 
 	/* Zero init points */
 	local_memset(&sG, 0, sizeof(prj_pt));
@@ -693,61 +643,57 @@ int _sm2_verify_finalize(struct ec_verify_context *ctx)
 
 	/* 2. Compute h = H(M1) w/ M1 = Z || M */
 	/* Since we call a callback, sanity check our mapping */
-	if (hash_mapping_callbacks_sanity_check(ctx->h)) {
-		ret = -1;
-		goto err;
-	}
-	ctx->h->hfunc_finalize(&(ctx->verify_data.sm2.h_ctx), hash);
+	ret = hash_mapping_callbacks_sanity_check(ctx->h); EG(ret, err);
+	ret = ctx->h->hfunc_finalize(&(ctx->verify_data.sm2.h_ctx), hash); EG(ret, err);
 	dbg_buf_print("h = H(m)", hash, hsize);
 
 	/* 3. Compute t = r + s mod q */
-	nn_mod_add(&t, r, s, q);
+	ret = nn_mod_add(&t, r, s, q); EG(ret, err);
 
 	/* 4. Reject signature if t is 0 */
-	if (nn_iszero(&t)) {
-		ret = -1;
-		goto err;
-	}
+	ret = nn_iszero(&t, &iszero); EG(ret, err);
+	MUST_HAVE(!iszero, ret, err);
 
 	/* 5. Compute e = OS2I(h) mod q */
-	nn_init_from_buf(&tmp, hash, hsize);
+	ret = nn_init_from_buf(&tmp, hash, hsize); EG(ret, err);
 	local_memset(hash, 0, hsize);
 	dbg_nn_print("h imported as nn", &tmp);
-	nn_mod(&e, &tmp, q);
-	nn_uninit(&tmp);
+	ret = nn_mod(&e, &tmp, q); EG(ret, err);
 	dbg_nn_print("e", &e);
 
 	/* 6. Compute W' = sG + tY */
-	prj_pt_mul_monty(&sG, s, G);
-	prj_pt_mul_monty(&tY, &t, Y);
-	prj_pt_add_monty(&W_prime, &sG, &tY);
-	prj_pt_uninit(&sG);
-	prj_pt_uninit(&tY);
-	nn_uninit(&t);
+	ret = prj_pt_mul_monty(&sG, s, G); EG(ret, err);
+	ret = prj_pt_mul_monty(&tY, &t, Y); EG(ret, err);
+	ret = prj_pt_add_monty(&W_prime, &sG, &tY); EG(ret, err);
 
 	/* 7. If W' is the point at infinity, reject the signature. */
-	if (prj_pt_iszero(&W_prime)) {
-		ret = -1;
-		goto err;
-	}
+	ret = prj_pt_iszero(&W_prime, &iszero); EG(ret, err);
+	MUST_HAVE(!iszero, ret, err);
 
 	/* 8. Compute r' = (e + W'_x) mod q */
-	prj_pt_to_aff(&W_prime_aff, &W_prime);
+	ret = prj_pt_to_aff(&W_prime_aff, &W_prime); EG(ret, err);
 	dbg_nn_print("W'_x", &(W_prime_aff.x.fp_val));
 	dbg_nn_print("W'_y", &(W_prime_aff.y.fp_val));
 
 	/* First, reduce W'_x mod q */
-	nn_mod(&r_prime, &(W_prime_aff.x.fp_val), q);
+	ret = nn_mod(&r_prime, &(W_prime_aff.x.fp_val), q); EG(ret, err);
 	/* Then compute r' = (e + W'_x) mod q */
-	nn_mod_add(&r_prime, &e, &r_prime, q);
+	ret = nn_mod_add(&r_prime, &e, &r_prime, q); EG(ret, err);
+
+	/* 9. Accept the signature if and only if r equals r' */
+	ret = nn_cmp(&r_prime, r, &cmp); EG(ret, err);
+	ret = (cmp != 0) ? -1 : 0;
+
+ err:
+	nn_uninit(&e);
+	nn_uninit(&tmp);
+	nn_uninit(&r_prime);
+	nn_uninit(&t);
+	prj_pt_uninit(&sG);
+	prj_pt_uninit(&tY);
 	prj_pt_uninit(&W_prime);
 	aff_pt_uninit(&W_prime_aff);
 
-	/* 9. Accept the signature if and only if r equals r' */
-	ret = (nn_cmp(&r_prime, r) != 0) ? -1 : 0;
-	nn_uninit(&r_prime);
-
- err:
 	/*
 	 * We can now clear data part of the context. This will clear
 	 * magic and avoid further reuse of the whole context.

@@ -53,7 +53,7 @@ int sm2_gen_priv_key(ec_priv_key *priv_key);
 
 int sm2_init_pub_key(ec_pub_key *out_pub, const ec_priv_key *in_priv);
 
-u8 sm2_siglen(u16 p_bit_len, u16 q_bit_len, u8 hsize, u8 blocksize);
+int sm2_siglen(u16 p_bit_len, u16 q_bit_len, u8 hsize, u8 blocksize, u8 *siglen);
 
 int _sm2_sign_init(struct ec_sign_context *ctx);
 
