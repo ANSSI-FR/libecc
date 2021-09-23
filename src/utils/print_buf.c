@@ -16,9 +16,16 @@ void buf_print(const char *msg, const u8 *buf, u16 buflen)
 {
 	u32 i;
 
+	if (buf == NULL) {
+		goto err;
+	}
+
 	ext_printf("%s: ", msg);
-	for(i = 0; i < (u32)buflen; i++){
+	for (i = 0; i < (u32)buflen; i++) {
 		ext_printf("%02x", buf[i]);
 	}
 	ext_printf("\n");
+
+err:
+	return;
 }
