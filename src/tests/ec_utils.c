@@ -79,7 +79,7 @@ static int export_private_key(FILE * file, const char *name,
 	size_t written;
 
 	priv_key_check_initialized(priv_key);
-	MUST_HAVE(file != NULL);
+	MUST_HAVE(file != NULL, ret, err);
 
 	/* Serialize the private key to a buffer */
 	ret = ec_structured_priv_key_export_to_buf(priv_key, priv_key_buf,
@@ -93,7 +93,7 @@ static int export_private_key(FILE * file, const char *name,
 	/* Export the private key to the file */
 	switch (file_type) {
 	case DOTH:
-		MUST_HAVE(name != NULL);
+		MUST_HAVE(name != NULL, ret, err);
 		fprintf(file, "const char %s[] = { ", name);
 		for (i = 0; i < export_buf_size; i++) {
 			fprintf(file, "0x%02x", priv_key_buf[i]);
@@ -131,7 +131,7 @@ static int export_public_key(FILE * file, const char *name,
 	size_t written;
 
 	pub_key_check_initialized(pub_key);
-	MUST_HAVE(file != NULL);
+	MUST_HAVE(file != NULL, ret, err);
 
 	/* Serialize the public key to a buffer */
 	export_buf_size = EC_STRUCTURED_PUB_KEY_EXPORT_SIZE(pub_key);
@@ -146,7 +146,7 @@ static int export_public_key(FILE * file, const char *name,
 	/* Export the public key to the file */
 	switch (file_type) {
 	case DOTH:
-		MUST_HAVE(name != NULL);
+		MUST_HAVE(name != NULL, ret, err);
 		fprintf(file, "const char %s[] = { ", name);
 		for (i = 0; i < export_buf_size; i++) {
 			fprintf(file, "0x%02x", pub_key_buf[i]);
@@ -185,8 +185,8 @@ static int string_to_params(const char *ec_name, const char *ec_sig_name,
 
 	if (sig_type != NULL) {
 		/* Get sig type from signature alg name */
-		sm = get_sig_by_name(ec_sig_name);
-		if (!sm) {
+		int ret = get_sig_by_name(ec_sig_name, &sm);
+		if ((ret) || (!sm)) {
 			printf("Error: signature type %s is unknown!\n",
 			       ec_sig_name);
 			goto err;
@@ -201,9 +201,9 @@ static int string_to_params(const char *ec_name, const char *ec_sig_name,
 			/* Sanity check */
 			goto err;
 		}
-		curve_params = ec_get_curve_params_by_name((const u8 *)ec_name,
-							   (u8)curve_name_len);
-		if (!curve_params) {
+		int ret = ec_get_curve_params_by_name((const u8 *)ec_name,
+							   (u8)curve_name_len, &curve_params);
+		if ((ret) || (!curve_params)) {
 			printf("Error: EC curve %s is unknown!\n", ec_name);
 			goto err;
 		}
@@ -212,8 +212,8 @@ static int string_to_params(const char *ec_name, const char *ec_sig_name,
 
 	if (hash_type != NULL) {
 		/* Get hash type from hash alg name */
-		hm = get_hash_by_name(hash_name);
-		if (!hm) {
+		int ret = get_hash_by_name(hash_name, &hm);
+		if ((ret) || (!hm)) {
 			printf("Error: hash function %s is unknown!\n",
 			       hash_name);
 			goto err;
@@ -243,9 +243,9 @@ static int generate_and_export_key_pair(const char *ec_name,
 	FILE *file;
 	int ret;
 
-	MUST_HAVE(ec_name != NULL);
-	MUST_HAVE(fname_prefix != NULL);
-	MUST_HAVE(ec_sig_name != NULL);
+	MUST_HAVE(ec_name != NULL, ret, err);
+	MUST_HAVE(fname_prefix != NULL, ret, err);
+	MUST_HAVE(ec_sig_name != NULL, ret, err);
 
 	/* Get parameters from pretty names */
 	ret = string_to_params(ec_name, ec_sig_name, &sig_type, &ec_str_p,
@@ -255,16 +255,16 @@ static int generate_and_export_key_pair(const char *ec_name,
 	}
 
 	/* Import the parameters */
-	import_params(&params, ec_str_p);
+	ret = import_params(&params, ec_str_p); EG(ret, err);
 
 	/* Generate the key pair */
-	ec_key_pair_gen(&kp, &params, sig_type);
+	ret = ec_key_pair_gen(&kp, &params, sig_type); EG(ret, err);
 
 	/* Get the unique affine equivalent representation of the projective point for the public key.
 	 * This avoids ambiguity when exporting the point, and is mostly here
 	 * for compatibility with external libraries.
 	 */
-	prj_pt_unique(&(kp.pub_key.y), &(kp.pub_key.y));
+	ret = prj_pt_unique(&(kp.pub_key.y), &(kp.pub_key.y)); EG(ret, err);
 
 	/*************************/
 
@@ -359,7 +359,7 @@ static int store_sig(const char *in_fname, const char *out_fname,
 	size_t read, written;
 	int ret;
 
-	MUST_HAVE(EC_STRUCTURED_SIG_EXPORT_SIZE(siglen) <= sizeof(buf));
+	MUST_HAVE(EC_STRUCTURED_SIG_EXPORT_SIZE(siglen) <= sizeof(buf), ret, err);
 
 	/* Import the data from the input file */
 	in_file = fopen(in_fname, "r");
@@ -537,37 +537,41 @@ static int generate_metadata_hdr(metadata_hdr * hdr, const char *hdr_type,
 /* Warn the user that the provided ancillary data won't be used
  * if the algorithm does not need them.
  */
-static void check_ancillary_data(const char *adata, ec_sig_alg_type sig_type, const char *sig_name)
+static int check_ancillary_data(const char *adata, ec_sig_alg_type sig_type, const char *sig_name, int *check)
 {
-	u8 check = 0;
+	int ret;
 
-	if(adata == NULL){
-		return;
-	}
+	MUST_HAVE(check != NULL, ret, err);
+	MUST_HAVE(adata != NULL, ret, err);
+	MUST_HAVE(sig_type != UNKNOWN_SIG_ALG, ret, err);
 
-	MUST_HAVE(sig_type != UNKNOWN_SIG_ALG);
+	(*check) = 0;
 
 #if defined(WITH_SIG_EDDSA25519)
 	if(sig_type == EDDSA25519CTX){
-		check = 1;
+		(*check) = 1;
 	}
 #endif
 #if defined(WITH_SIG_EDDSA448)
 	if(sig_type == EDDSA448){
-		check = 1;
+		(*check) = 1;
 	}
 #endif
 #if defined(WITH_SIG_SM2)
 	if(sig_type == SM2){
-		check = 1;
+		(*check) = 1;
 	}
 #endif
-	if(check == 0){
+	if((*check) == 0){
 		printf("Warning: you have provided optional ancillary data "\
 		       "with a signature algorithm %s that does not need it! "\
 		       "This data is ignored.\n", sig_name);
 	}
-	return;
+
+	ret = 0;
+
+err:
+	return ret;
 }
 
 /*
@@ -587,7 +591,7 @@ static int sign_bin_file(const char *ec_name, const char *ec_sig_name,
 	FILE *in_key_file;
 	const ec_str_params *ec_str_p;
 	ec_params params;
-	int ret;
+	int ret, check;
 	ec_sig_alg_type sig_type;
 	hash_alg_type hash_type;
 	u8 priv_key_buf[EC_STRUCTURED_PRIV_KEY_MAX_EXPORT_SIZE];
@@ -599,7 +603,7 @@ static int sign_bin_file(const char *ec_name, const char *ec_sig_name,
 
 	struct ec_sign_context sig_ctx;
 
-	MUST_HAVE(ec_name != NULL);
+	MUST_HAVE(ec_name != NULL, ret, err);
 
 	/************************************/
 	/* Get parameters from pretty names */
@@ -609,9 +613,9 @@ static int sign_bin_file(const char *ec_name, const char *ec_sig_name,
 		goto err;
 	}
 	/* Check if ancillary data will be used */
-	check_ancillary_data(adata, sig_type, ec_sig_name);
+	ret = check_ancillary_data(adata, sig_type, ec_sig_name, &check); EG(ret, err);
 	/* Import the parameters */
-	import_params(&params, ec_str_p);
+	ret = import_params(&params, ec_str_p); EG(ret, err);
 
 	/************************************/
 	/* Import the private key from the file */
@@ -830,9 +834,9 @@ static int verify_bin_file(const char *ec_name, const char *ec_sig_name,
 	metadata_hdr hdr;
 	size_t exp_len;
 	FILE *in_file;
-	int ret, eof;
+	int ret, eof, check;
 
-	MUST_HAVE(ec_name != NULL);
+	MUST_HAVE(ec_name != NULL, ret, err);
 
 	/************************************/
 	/* Get parameters from pretty names */
@@ -841,9 +845,9 @@ static int verify_bin_file(const char *ec_name, const char *ec_sig_name,
 		goto err;
 	}
 	/* Check if ancillary data will be used */
-	check_ancillary_data(adata, sig_type, ec_sig_name);
+	ret = check_ancillary_data(adata, sig_type, ec_sig_name, &check); EG(ret, err);
 	/* Import the parameters */
-	import_params(&params, ec_str_p);
+	ret = import_params(&params, ec_str_p); EG(ret, err);
 
 	ret = ec_get_sig_len(&params, sig_type, hash_type, &siglen);
 	if (ret) {
@@ -907,7 +911,7 @@ static int verify_bin_file(const char *ec_name, const char *ec_sig_name,
 		}
 
 		st_siglen = EC_STRUCTURED_SIG_EXPORT_SIZE(siglen);
-		MUST_HAVE(raw_data_len > (sizeof(hdr) + st_siglen));
+		MUST_HAVE(raw_data_len > (sizeof(hdr) + st_siglen), ret, err);
 		exp_len = raw_data_len - sizeof(hdr) - st_siglen;
 		if (hdr.len != exp_len) {
 			printf("Error: got raw size of %lu instead of %lu from "
@@ -1093,10 +1097,10 @@ static int ec_scalar_mult(const char *ec_name,
 	/* Point to import */
 	prj_pt Q;
 
-	MUST_HAVE(ec_name != NULL);
-	MUST_HAVE(scalar_file != NULL);
-	MUST_HAVE(point_file != NULL);
-	MUST_HAVE(outfile_name != NULL);
+	MUST_HAVE(ec_name != NULL, ret, err);
+	MUST_HAVE(scalar_file != NULL, ret, err);
+	MUST_HAVE(point_file != NULL, ret, err);
+	MUST_HAVE(outfile_name != NULL, ret, err);
 
 	/* Get parameters from pretty names */
 	ret = string_to_params(ec_name, NULL, NULL, &ec_str_p,
@@ -1106,7 +1110,7 @@ static int ec_scalar_mult(const char *ec_name,
 	}
 
 	/* Import the parameters */
-	import_params(&curve_params, ec_str_p);
+	ret = import_params(&curve_params, ec_str_p); EG(ret, err);
 
 	/* Import the scalar in the local buffer from the file */
 	/* Let's first get file size */
@@ -1132,7 +1136,7 @@ static int ec_scalar_mult(const char *ec_name,
 	}
 	fclose(in_file);
 	/* Import the scalar */
-	nn_init_from_buf(&d, buf, (u16)buf_len);
+	ret = nn_init_from_buf(&d, buf, (u16)buf_len); EG(ret, err);
 
 	/* Import the point in the local buffer from the file */
 	/* Let's first get file size */
@@ -1168,12 +1172,12 @@ static int ec_scalar_mult(const char *ec_name,
 	/* NB: we use a blind scalar multiplication here since we do not want our
 	 * private d to leak ...
 	 */
-	prj_pt_mul_monty_blind(&Q, &d, &Q);
+	ret = prj_pt_mul_monty_blind(&Q, &d, &Q); EG(ret, err);
 #else
-	prj_pt_mul_monty(&Q, &d, &Q);
+	ret = prj_pt_mul_monty(&Q, &d, &Q); EG(ret, err);
 #endif
 	/* Get the unique representation of the point */
-	prj_pt_unique(&Q, &Q);
+	ret = prj_pt_unique(&Q, &Q); EG(ret, err);
 
 	/* Export the projective point in the local buffer */
 	coord_len = 3 * BYTECEIL((Q.crv)->a.ctx->p_bitlen);

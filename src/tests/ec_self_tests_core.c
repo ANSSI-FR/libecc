@@ -177,7 +177,7 @@ static int ec_import_export_test(const ec_test_case *c)
 {
 	ec_key_pair kp;
 	ec_params params;
-	int ret;
+	int ret, check;
 
 	/* Import EC params from test case */
 	import_params(&params, c->ec_str_p);
@@ -227,7 +227,8 @@ static int ec_import_export_test(const ec_test_case *c)
 		u8 sig_tmp2[EC_MAX_SIGLEN];
 		local_memset(sig_tmp2, 0, sizeof(sig_tmp2));
 		/* If the algorithm supports streaming mode, test it against direct mode */
-		if(is_sign_streaming_mode_supported(c->sig_type)){
+		ret = is_sign_streaming_mode_supported(c->sig_type, &check); EG(ret, err);
+		if(check){
 			if(siglen > sizeof(sig_tmp1)){
 				ret = -1;
 				goto err;
@@ -251,7 +252,8 @@ static int ec_import_export_test(const ec_test_case *c)
 				goto err;
 			}
 			/* Verify signature equality only in case of deterministic signatures */
-			if(is_sign_deterministic(c->sig_type)){
+			ret = is_sign_deterministic(c->sig_type, &check); EG(ret, err);
+			if(check){
 				if(!are_equal(sig, sig_tmp1, siglen)){
 					ext_printf("Error when signing: streaming and non streaming modes results differ "\
 						   "for deterministic signature scheme!\n");
@@ -274,8 +276,10 @@ static int ec_import_export_test(const ec_test_case *c)
 			goto err;
 		}
 		/* If the algorithm supports streaming mode, test it against direct mode */
-		if(is_verify_streaming_mode_supported(c->sig_type)){
-			if(is_sign_streaming_mode_supported(c->sig_type)){
+		ret = is_verify_streaming_mode_supported(c->sig_type, &check); EG(ret, err);
+		if(check){
+			ret = is_sign_streaming_mode_supported(c->sig_type, &check); EG(ret, err);
+			if(check){
 				ret = generic_ec_verify(sig_tmp2, siglen, &(kp.pub_key), msg, msglen,
 					c->sig_type, c->hash_type, c->adata, c->adata_len);
 			}
@@ -287,7 +291,8 @@ static int ec_import_export_test(const ec_test_case *c)
 				ext_printf("Error when verifying signature generic_ec_verify\n");
 				goto err;
 			}
-			if(is_sign_streaming_mode_supported(c->sig_type)){
+			ret = is_sign_streaming_mode_supported(c->sig_type, &check); EG(ret, err);
+			if(check){
 				ret = random_split_ec_verify(sig_tmp1, siglen, &(kp.pub_key), msg, msglen,
 					c->sig_type, c->hash_type, c->adata, c->adata_len);
 			}
@@ -337,7 +342,7 @@ static int ec_import_export_test(const ec_test_case *c)
 			u32 ilens[2] = { msglen , 0 };
 			sig_ctx.h->hfunc_scattered(input, ilens, digest);
 			digestlen = sig_ctx.h->digest_size;
-			MUST_HAVE(digestlen <= sizeof(digest));
+			MUST_HAVE(digestlen <= sizeof(digest), ret, err);
 			/* Raw signing of data */
 #if defined(WITH_SIG_ECDSA)
 			if(c->sig_type == ECDSA){
@@ -412,14 +417,15 @@ static int ec_test_sign(u8 *sig, u8 siglen, ec_key_pair *kp,
 	/* If the algorithm supports streaming, we check that both the streaming and
 	 * non streaming modes produce the same result.
 	 */
-	int ret = -1;
+	int ret = -1, check;
 	ret = _ec_sign(sig, siglen, kp, (const u8 *)(c->msg), c->msglen,
 				c->nn_random, c->sig_type, c->hash_type, c->adata, c->adata_len);
 	if(ret){
 		ret = -1;
 		goto err;
 	}
-	if(is_sign_streaming_mode_supported(c->sig_type)){
+	ret = is_sign_streaming_mode_supported(c->sig_type, &check); EG(ret, err);
+	if(check){
 		u8 sig_tmp[EC_MAX_SIGLEN];
 		if(siglen > sizeof(sig_tmp)){
 			ret = -1;
@@ -459,7 +465,7 @@ static int ec_test_verify(u8 *sig, u8 siglen, const ec_pub_key *pub_key,
 	/* If the algorithm supports streaming, we check that both the streaming and
 	 * non streaming modes produce the same result.
 	 */
-	int ret = -1;
+	int ret = -1, check;
 
 	ret = ec_verify(sig, siglen, pub_key, (const u8 *)(c->msg), c->msglen,
 				 c->sig_type, c->hash_type, c->adata, c->adata_len);
@@ -467,7 +473,8 @@ static int ec_test_verify(u8 *sig, u8 siglen, const ec_pub_key *pub_key,
 		ret = -1;
 		goto err;
 	}
-	if(is_verify_streaming_mode_supported(c->sig_type)){
+	ret = is_verify_streaming_mode_supported(c->sig_type, &check); EG(ret, err);
+	if(check){
 		ret = generic_ec_verify(sig, siglen, pub_key, (const u8 *)(c->msg), c->msglen,
 				 c->sig_type, c->hash_type, c->adata, c->adata_len);
 		if(ret){
@@ -503,7 +510,7 @@ static int ec_sig_known_vector_tests_one(const ec_test_case *c)
 	u8 siglen;
 	int ret;
 
-	MUST_HAVE(c != NULL);
+	MUST_HAVE(c != NULL, ret, err);
 
 	import_params(&params, c->ec_str_p);
 
@@ -599,7 +606,7 @@ static int ec_sig_known_vector_tests_one(const ec_test_case *c)
 		u32 ilens[2] = { c->msglen , 0 };
 		sig_ctx.h->hfunc_scattered(input, ilens, digest);
 		digestlen = sig_ctx.h->digest_size;
-		MUST_HAVE(digestlen <= sizeof(digest));
+		MUST_HAVE(digestlen <= sizeof(digest), ret, err);
 		/* Import the fixed nonce */
 		u8 nonce[BIT_LEN_WORDS(NN_MAX_BIT_LEN) * (WORDSIZE / 8)] = { 0 };
 		nn n_nonce;
@@ -616,7 +623,7 @@ static int ec_sig_known_vector_tests_one(const ec_test_case *c)
 			goto err;
 		}
 		u8 noncelen = (u8)(BYTECEIL(q_bit_len));
-		MUST_HAVE(noncelen <= sizeof(nonce));
+		MUST_HAVE(noncelen <= sizeof(nonce), ret, err);
 		/* Raw signing of data */
 #if defined(WITH_SIG_ECDSA)
 		if(c->sig_type == ECDSA){
@@ -692,7 +699,9 @@ static int ec_sig_known_vector_tests_one(const ec_test_case *c)
 
  err:
 	if (ret) {
-		ret = (int)encode_error_value(c, failed_test);
+		u32 ret_;
+		ret = encode_error_value(c, failed_test, &ret_); EG(ret, err);
+		ret = (int)ret_;
 	}
 
 	return ret;
@@ -716,7 +725,8 @@ int perform_known_test_vectors_test(const char *sig, const char *hash, const cha
 		}
 		/* Filter out */
 		if(sig != NULL){
-			const ec_sig_mapping *sig_map = get_sig_by_type(cur_test->sig_type);
+			const ec_sig_mapping *sig_map;
+			ret = get_sig_by_type(cur_test->sig_type, &sig_map); EG(ret, err);
 			if(sig_map == NULL){
 				continue;
 			}
@@ -725,7 +735,8 @@ int perform_known_test_vectors_test(const char *sig, const char *hash, const cha
 			}
 		}
 		if(hash != NULL){
-			const hash_mapping *hash_map = get_hash_by_type(cur_test->hash_type);
+			const hash_mapping *hash_map;
+			ret = get_hash_by_type(cur_test->hash_type, &hash_map); EG(ret, err);
 			if(hash_map == NULL){
 				continue;
 			}
