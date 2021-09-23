@@ -18,16 +18,17 @@
 
 #include "sha224.h"
 
-/* SHA-2 core processing */
-static void sha224_process(sha224_context *ctx,
+/* SHA-2 core processing. Returns 0 on success, -1 on error. */
+static int sha224_process(sha224_context *ctx,
 			   const u8 data[SHA224_BLOCK_SIZE])
 {
 	u32 a, b, c, d, e, f, g, h;
 	u32 W[64];
 	unsigned int i;
+	int ret;
 
-	MUST_HAVE(data != NULL);
-	SHA224_HASH_CHECK_INITIALIZED(ctx);
+	MUST_HAVE(data != NULL, ret, err);
+	SHA224_HASH_CHECK_INITIALIZED(ctx, ret, err);
 
 	/* Init our inner variables */
 	a = ctx->sha224_state[0];
@@ -58,12 +59,19 @@ static void sha224_process(sha224_context *ctx,
 	ctx->sha224_state[5] += f;
 	ctx->sha224_state[6] += g;
 	ctx->sha224_state[7] += h;
+
+	ret = 0;
+
+err:
+	return ret;
 }
 
-/* Init hash function */
-void sha224_init(sha224_context *ctx)
+/* Init hash function. Returns 0 on success, -1 on error. */
+int sha224_init(sha224_context *ctx)
 {
-	MUST_HAVE(ctx != NULL);
+	int ret;
+
+	MUST_HAVE(ctx != NULL, ret, err);
 
 	ctx->sha224_total = 0;
 	ctx->sha224_state[0] = 0xC1059ED8;
@@ -78,22 +86,28 @@ void sha224_init(sha224_context *ctx)
 	/* Tell that we are initialized */
 	ctx->magic = SHA224_HASH_MAGIC;
 
+	ret = 0;
+
+err:
+	return ret;
 }
 
-/* Update hash function */
-void sha224_update(sha224_context *ctx, const u8 *input, u32 ilen)
+/* Update hash function. Returns 0 on success, -1 on error. */
+int sha224_update(sha224_context *ctx, const u8 *input, u32 ilen)
 {
 	const u8 *data_ptr = input;
 	u32 remain_ilen = ilen;
 	u16 fill;
 	u8 left;
+	int ret;
 
-	MUST_HAVE(input != NULL);
-	SHA224_HASH_CHECK_INITIALIZED(ctx);
+	MUST_HAVE(input != NULL, ret, err);
+	SHA224_HASH_CHECK_INITIALIZED(ctx, ret, err);
 
 	/* Nothing to process, return */
 	if (ilen == 0) {
-		return;
+		ret = 0;
+		goto err;
 	}
 
 	/* Get what's left in our local buffer */
@@ -105,14 +119,14 @@ void sha224_update(sha224_context *ctx, const u8 *input, u32 ilen)
 	if ((left > 0) && (remain_ilen >= fill)) {
 		/* Copy data at the end of the buffer */
 		local_memcpy(ctx->sha224_buffer + left, data_ptr, fill);
-		sha224_process(ctx, ctx->sha224_buffer);
+		ret = sha224_process(ctx, ctx->sha224_buffer); EG(ret, err);
 		data_ptr += fill;
 		remain_ilen -= fill;
 		left = 0;
 	}
 
 	while (remain_ilen >= SHA224_BLOCK_SIZE) {
-		sha224_process(ctx, data_ptr);
+		ret = sha224_process(ctx, data_ptr); EG(ret, err);
 		data_ptr += SHA224_BLOCK_SIZE;
 		remain_ilen -= SHA224_BLOCK_SIZE;
 	}
@@ -120,16 +134,22 @@ void sha224_update(sha224_context *ctx, const u8 *input, u32 ilen)
 	if (remain_ilen > 0) {
 		local_memcpy(ctx->sha224_buffer + left, data_ptr, remain_ilen);
 	}
+
+	ret = 0;
+
+err:
+	return ret;
 }
 
-/* Finalize */
-void sha224_final(sha224_context *ctx, u8 output[SHA224_DIGEST_SIZE])
+/* Finalize. Returns 0 on success, -1 on error.*/
+int sha224_final(sha224_context *ctx, u8 output[SHA224_DIGEST_SIZE])
 {
 	unsigned int block_present = 0;
 	u8 last_padded_block[2 * SHA224_BLOCK_SIZE];
+	int ret;
 
-	MUST_HAVE(output != NULL);
-	SHA224_HASH_CHECK_INITIALIZED(ctx);
+	MUST_HAVE(output != NULL, ret, err);
+	SHA224_HASH_CHECK_INITIALIZED(ctx, ret, err);
 
 	/* Fill in our last block with zeroes */
 	local_memset(last_padded_block, 0, sizeof(last_padded_block));
@@ -150,13 +170,13 @@ void sha224_final(sha224_context *ctx, u8 output[SHA224_DIGEST_SIZE])
 		/* We need an additional block */
 		PUT_UINT64_BE(8 * ctx->sha224_total, last_padded_block,
 			      (2 * SHA224_BLOCK_SIZE) - sizeof(u64));
-		sha224_process(ctx, last_padded_block);
-		sha224_process(ctx, last_padded_block + SHA224_BLOCK_SIZE);
+		ret = sha224_process(ctx, last_padded_block); EG(ret, err);
+		ret = sha224_process(ctx, last_padded_block + SHA224_BLOCK_SIZE); EG(ret, err);
 	} else {
 		/* We do not need an additional block */
 		PUT_UINT64_BE(8 * ctx->sha224_total, last_padded_block,
 			      SHA224_BLOCK_SIZE - sizeof(u64));
-		sha224_process(ctx, last_padded_block);
+		ret = sha224_process(ctx, last_padded_block); EG(ret, err);
 	}
 
 	/* Output the hash result */
@@ -170,31 +190,53 @@ void sha224_final(sha224_context *ctx, u8 output[SHA224_DIGEST_SIZE])
 
 	/* Tell that we are uninitialized */
 	ctx->magic = 0;
+
+	ret = 0;
+
+err:
+	return ret;
 }
 
-void sha224_scattered(const u8 **inputs, const u32 *ilens,
+/*
+ * Scattered version performing init/update/finalize on a vector of buffers
+ * 'inputs' with the length of each buffer passed via 'ilens'. The function
+ * loops on pointers in 'inputs' until it finds a NULL pointer. The function
+ * returns 0 on success, -1 on error.
+ */
+int sha224_scattered(const u8 **inputs, const u32 *ilens,
 		      u8 output[SHA224_DIGEST_SIZE])
 {
 	sha224_context ctx;
-	int pos = 0;
+	int ret, pos = 0;
 
-	sha224_init(&ctx);
+	ret = sha224_init(&ctx); EG(ret, err);
 
 	while (inputs[pos] != NULL) {
-		sha224_update(&ctx, inputs[pos], ilens[pos]);
+		ret = sha224_update(&ctx, inputs[pos], ilens[pos]); EG(ret, err);
 		pos += 1;
 	}
 
-	sha224_final(&ctx, output);
+	ret = sha224_final(&ctx, output); EG(ret, err);
+
+err:
+	return ret;
 }
 
-void sha224(const u8 *input, u32 ilen, u8 output[SHA224_DIGEST_SIZE])
+/*
+ * Single call version performing init/update/final on given input.
+ * Returns 0 on success, -1 on error.
+ */
+int sha224(const u8 *input, u32 ilen, u8 output[SHA224_DIGEST_SIZE])
 {
 	sha224_context ctx;
+	int ret;
 
-	sha224_init(&ctx);
-	sha224_update(&ctx, input, ilen);
-	sha224_final(&ctx, output);
+	ret = sha224_init(&ctx); EG(ret, err);
+	ret = sha224_update(&ctx, input, ilen); EG(ret, err);
+	ret = sha224_final(&ctx, output); EG(ret, err);
+
+err:
+	return ret;
 }
 
 #else /* WITH_HASH_SHA224 */
