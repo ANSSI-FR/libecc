@@ -16,7 +16,7 @@
 /* We include the NN layer API header */
 #include "libarith.h"
 
-int miller_rabin(nn_src_t n, const unsigned int t);
+int miller_rabin(nn_src_t n, const unsigned int t, int *res);
 
 /* Miller-Rabin primality test.
  * See "Handbook of Applied Cryptography", alorithm 4.24:
@@ -42,138 +42,171 @@ int miller_rabin(nn_src_t n, const unsigned int t);
  * answering "maybe prime", but is always right when answering
  * "composite".
  */
-int miller_rabin(nn_src_t n, const unsigned int t)
+int miller_rabin(nn_src_t n, const unsigned int t, int *res)
 {
-	int ret = 0;
+	int ret, iszero, cmp, isodd, cmp1, cmp2;
 	unsigned int i;
 	bitcnt_t k;
 	/* Temporary NN variables */
 	nn s, q, r, d, a, y, j, one, two, tmp;
+	s.magic = q.magic = r.magic = d.magic = a.magic = y.magic = j.magic = 0;
+	one.magic = two.magic = tmp.magic = 0;
+
+	MUST_HAVE(res != NULL, ret, err);
+	(*res) = 0;
 
 	/* Initialize our local NN variables */
-	nn_init(&s, 0);
-	nn_init(&q, 0);
-	nn_init(&r, 0);
-	nn_init(&d, 0);
-	nn_init(&a, 0);
-	nn_init(&y, 0);
-	nn_init(&j, 0);
-	nn_init(&one, 0);
-	nn_init(&two, 0);
-	nn_init(&tmp, 0);
+	ret = nn_init(&s, 0); EG(ret, err);
+	ret = nn_init(&q, 0); EG(ret, err);
+	ret = nn_init(&r, 0); EG(ret, err);
+	ret = nn_init(&d, 0); EG(ret, err);
+	ret = nn_init(&a, 0); EG(ret, err);
+	ret = nn_init(&y, 0); EG(ret, err);
+	ret = nn_init(&j, 0); EG(ret, err);
+	ret = nn_init(&one, 0); EG(ret, err);
+	ret = nn_init(&two, 0); EG(ret, err);
+	ret = nn_init(&tmp, 0); EG(ret, err);
 
 	/* Security parameter t must be >= 1 */
-	MUST_HAVE(t >= 1);
+	MUST_HAVE(t >= 1, ret, err);
 
 	/* one = 1 */
-	nn_one(&one);
+	ret = nn_one(&one); EG(ret, err);
 	/* two = 2 */
-	nn_set_word_value(&two, WORD(2));
+	ret = nn_set_word_value(&two, WORD(2)); EG(ret, err);
 
 	/* If n = 0, this is not a prime */
-	if (nn_iszero(n)) {
+	ret = nn_iszero(n, &iszero); EG(ret, err);
+	if (iszero) {
 		ret = 0;
-		goto out;
+		(*res) = 0;
+		goto err;
 	}
 	/* If n = 1, this is not a prime */
-	if (nn_cmp(n, &one) == 0) {
+	ret = nn_cmp(n, &one, &cmp); EG(ret, err);
+	if (cmp == 0) {
 		ret = 0;
-		goto out;
+		(*res) = 0;
+		goto err;
 	}
 	/* If n = 2, this is a prime number */
-	if (nn_cmp(n, &two) == 0) {
-		ret = 1;
-		goto out;
+	ret = nn_cmp(n, &two, &cmp); EG(ret, err);
+	if (cmp == 0) {
+		ret = 0;
+		(*res) = 1;
+		goto err;
 	}
 	/* If n = 3, this is a prime number */
-	nn_copy(&tmp, n);
-	nn_dec(&tmp, &tmp);
-	if (nn_cmp(&tmp, &two) == 0) {
-		ret = 1;
-		goto out;
+	ret = nn_copy(&tmp, n); EG(ret, err);
+	ret = nn_dec(&tmp, &tmp); EG(ret, err);
+	ret = nn_cmp(&tmp, &two, &cmp); EG(ret, err);
+	if (cmp == 0) {
+		ret = 0;
+		(*res) = 1;
+		goto err;
 	}
 
 	/* If n >= 4 is even, this is not a prime */
-	if (!nn_isodd(n)) {
+	ret = nn_isodd(n, &isodd); EG(ret, err);
+	if (!isodd) {
 		ret = 0;
-		goto out;
+		(*res) = 0;
+		goto err;
 	}
 
 	/* n − 1 = 2^s x r, repeatedly try to divide n-1 by 2 */
 	/* s = 0 and r = n-1 */
-	nn_zero(&s);
-	nn_copy(&r, n);
-	nn_dec(&r, &r);
+	ret = nn_zero(&s); EG(ret, err);
+	ret = nn_copy(&r, n); EG(ret, err);
+	ret = nn_dec(&r, &r); EG(ret, err);
 	while (1) {
-		nn_divrem(&q, &d, &r, &two);
-		nn_inc(&s, &s);
-		nn_copy(&r, &q);
+		ret = nn_divrem(&q, &d, &r, &two); EG(ret, err);
+		ret = nn_inc(&s, &s); EG(ret, err);
+		ret = nn_copy(&r, &q); EG(ret, err);
 		/* If r is odd, we have finished our division */
-		if (nn_isodd(&r)) {
+		ret = nn_isodd(&r, &isodd); EG(ret, err);
+		if (isodd) {
 			break;
 		}
 	}
 	/* 2. For i from 1 to t do the following: */
 	for (i = 1; i <= t; i++) {
 		/* 2.1 Choose a random integer a, 2 ≤ a ≤ n − 2 */
-		nn_copy(&tmp, n);
-		nn_dec(&tmp, &tmp);
-		nn_zero(&a);
-		while (nn_cmp(&a, &two) < 0) {
+		ret = nn_copy(&tmp, n); EG(ret, err);
+		ret = nn_dec(&tmp, &tmp); EG(ret, err);
+		ret = nn_zero(&a); EG(ret, err);
+		ret = nn_cmp(&a, &two, &cmp); EG(ret, err);
+		while (cmp < 0) {
 			nn_get_random_mod(&a, &tmp);
+			ret = nn_cmp(&a, &two, &cmp); EG(ret, err);
 		}
 		/* A very loose (and NOT robust) implementation of
 		 * modular exponentiation with square and multiply
 		 * to compute y = a**r (n)
 		 * WARNING: NOT to be used in production code!
 		 */
-		nn_one(&y);
-		for (k = 0; k < nn_bitlen(&r); k++) {
-			if (nn_getbit(&r, k)) {
+		ret = nn_one(&y); EG(ret, err);
+		bitcnt_t blen;
+		ret = nn_bitlen(&r, &blen); EG(ret, err);
+		for (k = 0; k < blen; k++) {
+			u8 bit;
+			ret = nn_getbit(&r, k, &bit); EG(ret, err);
+			if (bit) {
 				/* Warning: the multiplication is not modular, we
 				 * have to take care of our size here!
 				 */
 				MUST_HAVE(NN_MAX_BIT_LEN >=
-					  (WORD_BITS * (y.wlen + a.wlen)));
-				nn_mul(&y, &y, &a);
-				nn_mod(&y, &y, n);
+					  (WORD_BITS * (y.wlen + a.wlen)), ret, err);
+				ret = nn_mul(&y, &y, &a); EG(ret, err);
+				ret = nn_mod(&y, &y, n); EG(ret, err);
 			}
-			MUST_HAVE(NN_MAX_BIT_LEN >= (2 * WORD_BITS * a.wlen));
-			nn_sqr(&a, &a);
-			nn_mod(&a, &a, n);
+			MUST_HAVE(NN_MAX_BIT_LEN >= (2 * WORD_BITS * a.wlen), ret, err);
+			ret = nn_sqr(&a, &a); EG(ret, err);
+			ret = nn_mod(&a, &a, n); EG(ret, err);
 		}
 		/* 2.3 If y != 1 and y != n − 1 then do the following
 		 * Note: tmp still contains n - 1 here.
 		 */
-		if ((nn_cmp(&y, &one) != 0) && (nn_cmp(&y, &tmp) != 0)) {
+		ret = nn_cmp(&y, &one, &cmp1); EG(ret, err);
+		ret = nn_cmp(&y, &tmp, &cmp2); EG(ret, err);
+		if ((cmp1 != 0) && (cmp2 != 0)) {
 			/* j←1. */
-			nn_one(&j);
+			ret = nn_one(&j); EG(ret, err);
 			/*  While j ≤ s − 1 and y != n − 1 do the following: */
-			while ((nn_cmp(&j, &s) < 0) && (nn_cmp(&y, &tmp) != 0)) {
+			ret = nn_cmp(&j, &s, &cmp1); EG(ret, err);
+			ret = nn_cmp(&y, &tmp, &cmp2); EG(ret, err);
+			while ((cmp1 < 0) && (cmp2 != 0)) {
 				/* Compute y←y2 mod n. */
 				MUST_HAVE(NN_MAX_BIT_LEN >=
-					  (2 * WORD_BITS * y.wlen));
-				nn_sqr(&y, &y);
-				nn_mod(&y, &y, n);
+					  (2 * WORD_BITS * y.wlen), ret, err);
+				ret = nn_sqr(&y, &y); EG(ret, err);
+				ret = nn_mod(&y, &y, n); EG(ret, err);
 				/* If y = 1 then return(“composite”). */
-				if (nn_cmp(&y, &one) == 0) {
+				ret = nn_cmp(&y, &one, &cmp); EG(ret, err);
+				if (cmp == 0) {
 					ret = 0;
-					goto out;
+					(*res) = 0;
+					goto err;
 				}
 				/* j←j + 1. */
-				nn_inc(&j, &j);
+				ret = nn_inc(&j, &j); EG(ret, err);
+				ret = nn_cmp(&j, &s, &cmp1); EG(ret, err);
+				ret = nn_cmp(&y, &tmp, &cmp2); EG(ret, err);
 			}
 			/* If y != n − 1 then return (“composite”). */
-			if (nn_cmp(&y, &tmp) != 0) {
+			ret = nn_cmp(&y, &tmp, &cmp); EG(ret, err);
+			if (cmp != 0) {
 				ret = 0;
-				goto out;
+				(*res) = 0;
+				goto err;
 			}
 		}
 		/* 3. Return(“maybe prime”). */
-		ret = 1;
+		ret = 0;
+		(*res) = 1;
 	}
 
- out:
+ err:
 	nn_uninit(&s);
 	nn_uninit(&q);
 	nn_uninit(&r);

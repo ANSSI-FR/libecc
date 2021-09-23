@@ -33,35 +33,42 @@
  * use the Tonelli-Shanks algorithm implemented in the Fp source example
  * (fp_square_residue.c).
  */
-void get_random_point_on_curve(ec_params *curve_params, prj_pt *out_point);
-void get_random_point_on_curve(ec_params *curve_params, prj_pt *out_point)
+int get_random_point_on_curve(ec_params *curve_params, prj_pt *out_point);
+int get_random_point_on_curve(ec_params *curve_params, prj_pt *out_point)
 {
 	nn nn_tmp;
+	int ret, is_oncurve;
+
 	/* Inside our internal representation, curve_params->ec_curve
 	 * contains the curve coefficients a and b.
 	 * curve_params->ec_fp is the Fp context of the curve.
 	 */
 	fp x, y, fp_tmp1, fp_tmp2;
 	fp_ctx_src_t ctx;
+
+	nn_tmp.magic = 0;
+	x.magic = y.magic = fp_tmp1.magic = fp_tmp2.magic = 0;
+
 	/* Initialize our x value with the curve Fp context */
 	ctx = &(curve_params->ec_fp);
-	fp_init(&x, ctx);
-	fp_init(&y, ctx);
-	fp_init(&fp_tmp1, ctx);
-	fp_init(&fp_tmp2, ctx);
 
-	nn_init(&nn_tmp, 0);
-	nn_set_word_value(&nn_tmp, WORD(3));
+	ret = fp_init(&x, ctx); EG(ret, err);
+	ret = fp_init(&y, ctx); EG(ret, err);
+	ret = fp_init(&fp_tmp1, ctx); EG(ret, err);
+	ret = fp_init(&fp_tmp2, ctx); EG(ret, err);
+
+	ret = nn_init(&nn_tmp, 0); EG(ret, err);
+	ret = nn_set_word_value(&nn_tmp, WORD(3)); EG(ret, err);
 	while (1) {
 		/* Get a random Fp */
-		fp_get_random(&x, ctx);
-		fp_copy(&fp_tmp1, &x);
-		fp_copy(&fp_tmp2, &x);
+		ret = fp_get_random(&x, ctx); EG(ret, err);
+		ret = fp_copy(&fp_tmp1, &x); EG(ret, err);
+		ret = fp_copy(&fp_tmp2, &x); EG(ret, err);
 		/* Compute x^3 + ax + b */
-		fp_pow(&fp_tmp1, &fp_tmp1, &nn_tmp);
-		fp_mul(&fp_tmp2, &fp_tmp2, &(curve_params->ec_curve.a));
-		fp_add(&fp_tmp1, &fp_tmp1, &fp_tmp2);
-		fp_add(&fp_tmp1, &fp_tmp1, &(curve_params->ec_curve.b));
+		ret = fp_pow(&fp_tmp1, &fp_tmp1, &nn_tmp); EG(ret, err);
+		ret = fp_mul(&fp_tmp2, &fp_tmp2, &(curve_params->ec_curve.a)); EG(ret, err);
+		ret = fp_add(&fp_tmp1, &fp_tmp1, &fp_tmp2); EG(ret, err);
+		ret = fp_add(&fp_tmp1, &fp_tmp1, &(curve_params->ec_curve.b)); EG(ret, err);
 		/*
 		 * Get any of the two square roots, corresponding to (x, y)
 		 * and (x, -y) both on the curve. If no square root exist,
@@ -69,7 +76,8 @@ void get_random_point_on_curve(ec_params *curve_params, prj_pt *out_point)
 		 */
 		if (fp_sqrt(&y, &fp_tmp2, &fp_tmp1) == 0) {
 			/* Check that we indeed satisfy the curve equation */
-			if (!is_on_shortw_curve(&x, &y, &(curve_params->ec_curve))) {
+			ret = is_on_shortw_curve(&x, &y, &(curve_params->ec_curve), &is_oncurve); EG(ret, err);
+			if (!is_oncurve) {
 				/* This should not happen ... */
 				ext_printf("Error: Tonelli-Shanks found a bad "
 					   "solution to curve equation ...\n");
@@ -79,15 +87,18 @@ void get_random_point_on_curve(ec_params *curve_params, prj_pt *out_point)
 		}
 	}
 	/* Now initialize our point with the coordinates (x, y, 1) */
-	fp_one(&fp_tmp1);
-	prj_pt_init_from_coords(out_point, &(curve_params->ec_curve), &x, &y,
-				&fp_tmp1);
+	ret = fp_one(&fp_tmp1); EG(ret, err);
+	ret = prj_pt_init_from_coords(out_point, &(curve_params->ec_curve), &x, &y,
+				&fp_tmp1); EG(ret, err);
 
+err:
 	fp_uninit(&x);
 	fp_uninit(&y);
 	fp_uninit(&fp_tmp1);
 	fp_uninit(&fp_tmp2);
 	nn_uninit(&nn_tmp);
+
+	return ret;
 }
 
 #define PERF_SCALAR_MUL 40
@@ -96,7 +107,7 @@ int check_curve(const u8 *curve_name)
 {
 	unsigned int i;
 	u64 t1, t2;
-	int ret = 0;
+	int ret, cmp, is_oncurve, isone, iszero;
 
 	nn nn_k;
 	/* libecc internal structure holding the curve parameters */
@@ -106,28 +117,35 @@ int check_curve(const u8 *curve_name)
 	prj_pt TMP;
 	aff_pt T;
 
+	nn_k.magic = 0;
+	A.magic = B.magic = C.magic = D.magic = 0;
+	TMP.magic = T.magic = 0;
+
 	/* Importing a specific curve parameters from the constant static
 	 * buffers describing it:
 	 * It is possible to import a curves parameters by its name.
 	 */
-	const ec_str_params *the_curve_const_parameters =
-		ec_get_curve_params_by_name(curve_name,
+	const ec_str_params *the_curve_const_parameters;
+
+	ret = ec_get_curve_params_by_name(curve_name,
 					    (u8)local_strnlen((const char *)
 							      curve_name,
 							      MAX_CURVE_NAME_LEN)
-					    + 1);
+					    + 1, &the_curve_const_parameters); EG(ret, err);
+
+
 	/* Get out if getting the parameters went wrong */
 	if (the_curve_const_parameters == NULL) {
 		ext_printf("Error: error when importing curve %s "
 			   "parameters ...\n", curve_name);
 		ret = -1;
-		goto out;
+		goto err;
 	}
 	/* Now map the curve parameters to our libecc internal representation */
-	import_params(&curve_params, the_curve_const_parameters);
+	ret = import_params(&curve_params, the_curve_const_parameters); EG(ret, err);
 	/* Get two random points on the curve */
-	get_random_point_on_curve(&curve_params, &A);
-	get_random_point_on_curve(&curve_params, &B);
+	ret = get_random_point_on_curve(&curve_params, &A); EG(ret, err);
+	ret = get_random_point_on_curve(&curve_params, &B); EG(ret, err);
 
 	/*
 	 * Let's add the two points with our Montgomery and non Montgomery
@@ -136,58 +154,64 @@ int check_curve(const u8 *curve_name)
 	 * C = A + B with regular point addition
 	 * D = A + B with Montgomery point addition
 	 */
-	prj_pt_add(&C, &A, &B);
-	prj_pt_add_monty(&D, &A, &B);
-	if (prj_pt_cmp(&C, &D) != 0) {
+	ret = prj_pt_add(&C, &A, &B); EG(ret, err);
+	ret = prj_pt_add_monty(&D, &A, &B); EG(ret, err);
+	ret = prj_pt_cmp(&C, &D, &cmp); EG(ret, err);
+	if (cmp != 0) {
 		ext_printf("Error: A+B differs with Montgomery and "
 			   "non Montgomery add methods ...\n");
 		ret = -1;
-		goto out;
+		goto err;
 	}
 	/*
 	 * Check that the resulting additive point C = A+B is indeed on the
 	 * curve.
 	 */
-	prj_pt_to_aff(&T, &C);
-	if (!prj_pt_is_on_curve(&C)) {
+	ret = prj_pt_to_aff(&T, &C); EG(ret, err);
+	ret = prj_pt_is_on_curve(&C, &is_oncurve); EG(ret, err);
+	if (!is_oncurve) {
 		ext_printf("Error: C = A+B is not on the %s curve!\n",
 			   curve_params.curve_name);
 		ret = -1;
-		goto out;
+		goto err;
 	}
-	if (!aff_pt_is_on_curve(&T)) {
+	ret = aff_pt_is_on_curve(&T, &is_oncurve); EG(ret, err);
+	if (!is_oncurve) {
 		ext_printf("Error: C = A+B is not on the %s curve!\n",
 			   curve_params.curve_name);
 		ret = -1;
-		goto out;
+		goto err;
 	}
 	/* Same check with doubling
 	 * C = 2A = A+A with regular point doubling
 	 * D = 2A = A+A  with Montgomery point doubling
 	 */
-	prj_pt_dbl(&C, &A);
-	prj_pt_dbl_monty(&D, &A);
-	if (prj_pt_cmp(&C, &D) != 0) {
+	ret = prj_pt_dbl(&C, &A); EG(ret, err);
+	ret = prj_pt_dbl_monty(&D, &A); EG(ret, err);
+	ret = prj_pt_cmp(&C, &D, &cmp); EG(ret, err);
+	if (cmp != 0) {
 		ext_printf("Error: 2A differs with Montgomery and "
 			   "non Montgomery add methods ...\n");
 		ret = -1;
-		goto out;
+		goto err;
 	}
 	/* Check that the resulting point C = 2A is indeed on the curve.
 	 *
 	 */
-	prj_pt_to_aff(&T, &C);
-	if (!prj_pt_is_on_curve(&C)) {
+	ret = prj_pt_to_aff(&T, &C); EG(ret, err);
+	ret = prj_pt_is_on_curve(&C, &is_oncurve); EG(ret, err);
+	if (!is_oncurve) {
 		ext_printf("Error: C = A+B is not on the %s curve!\n",
 			   curve_params.curve_name);
 		ret = -1;
-		goto out;
+		goto err;
 	}
-	if (!aff_pt_is_on_curve(&T)) {
+	ret = aff_pt_is_on_curve(&T, &is_oncurve); EG(ret, err);
+	if (!is_oncurve) {
 		ext_printf("Error: C = A+B is not on the %s curve!\n",
 			   curve_params.curve_name);
 		ret = -1;
-		goto out;
+		goto err;
 	}
 	/*
 	 * If the cofactor of the curve is 1, this means that the order of the
@@ -198,56 +222,65 @@ int check_curve(const u8 *curve_name)
 	 * non Montgomery methods to check this on our point A, B, C = A + B
 	 * and D = 2A.
 	 */
-	prj_pt_add_monty(&C, &A, &B);
-	prj_pt_dbl_monty(&D, &A);
-	if (nn_isone(&(curve_params.ec_gen_cofactor))) {
-		prj_pt_mul(&TMP, &(curve_params.ec_gen_order), &A);
-		if (!prj_pt_iszero(&TMP)) {
+	ret = prj_pt_add_monty(&C, &A, &B); EG(ret, err);
+	ret = prj_pt_dbl_monty(&D, &A); EG(ret, err);
+	ret = nn_isone(&(curve_params.ec_gen_cofactor), &isone); EG(ret, err);
+	if (isone) {
+		ret = prj_pt_mul(&TMP, &(curve_params.ec_gen_order), &A); EG(ret, err);
+		ret = prj_pt_iszero(&TMP, &iszero); EG(ret, err);
+		if (!iszero) {
 			ext_printf("Error: qA is not 0! (regular mul)\n");
 			ret = -1;
-			goto out;
+			goto err;
 		}
-		prj_pt_mul_monty(&TMP, &(curve_params.ec_gen_order), &A);
-		if (!prj_pt_iszero(&TMP)) {
+		ret = prj_pt_mul_monty(&TMP, &(curve_params.ec_gen_order), &A); EG(ret, err);
+		ret = prj_pt_iszero(&TMP, &iszero); EG(ret, err);
+		if (!iszero) {
 			ext_printf("Error: qA is not 0! (Montgomery mul)\n");
 			ret = -1;
-			goto out;
+			goto err;
 		}
-		prj_pt_mul(&TMP, &(curve_params.ec_gen_order), &B);
-		if (!prj_pt_iszero(&TMP)) {
+		ret = prj_pt_mul(&TMP, &(curve_params.ec_gen_order), &B); EG(ret, err);
+		ret = prj_pt_iszero(&TMP, &iszero); EG(ret, err);
+		if (!iszero) {
 			ext_printf("Error: qB is not 0! (regular mul)\n");
 			ret = -1;
-			goto out;
+			goto err;
 		}
-		prj_pt_mul_monty(&TMP, &(curve_params.ec_gen_order), &B);
-		if (!prj_pt_iszero(&TMP)) {
+		ret = prj_pt_mul_monty(&TMP, &(curve_params.ec_gen_order), &B); EG(ret, err);
+		ret = prj_pt_iszero(&TMP, &iszero); EG(ret, err);
+		if (!iszero) {
 			ext_printf("Error: qB is not 0! (Montgomery mul)\n");
 			ret = -1;
-			goto out;
+			goto err;
 		}
-		prj_pt_mul(&TMP, &(curve_params.ec_gen_order), &C);
-		if (!prj_pt_iszero(&TMP)) {
+		ret = prj_pt_mul(&TMP, &(curve_params.ec_gen_order), &C); EG(ret, err);
+		ret = prj_pt_iszero(&TMP, &iszero); EG(ret, err);
+		if (!iszero) {
 			ext_printf("Error: qC is not 0! (regular mul)\n");
 			ret = -1;
-			goto out;
+			goto err;
 		}
-		prj_pt_mul_monty(&TMP, &(curve_params.ec_gen_order), &C);
-		if (!prj_pt_iszero(&TMP)) {
+		ret = prj_pt_mul_monty(&TMP, &(curve_params.ec_gen_order), &C); EG(ret, err);
+		ret = prj_pt_iszero(&TMP, &iszero); EG(ret, err);
+		if (!iszero) {
 			ext_printf("Error: qC is not 0! (Montgomery mul)\n");
 			ret = -1;
-			goto out;
+			goto err;
 		}
-		prj_pt_mul(&TMP, &(curve_params.ec_gen_order), &D);
-		if (!prj_pt_iszero(&TMP)) {
+		ret = prj_pt_mul(&TMP, &(curve_params.ec_gen_order), &D); EG(ret, err);
+		ret = prj_pt_iszero(&TMP, &iszero); EG(ret, err);
+		if (!iszero) {
 			ext_printf("Error: qD is not 0! (regular mul)\n");
 			ret = -1;
-			goto out;
+			goto err;
 		}
-		prj_pt_mul_monty(&TMP, &(curve_params.ec_gen_order), &D);
-		if (!prj_pt_iszero(&TMP)) {
+		ret = prj_pt_mul_monty(&TMP, &(curve_params.ec_gen_order), &D); EG(ret, err);
+		ret = prj_pt_iszero(&TMP, &iszero); EG(ret, err);
+		if (!iszero) {
 			ext_printf("Error: qD is not 0! (Montgomery mul)\n");
 			ret = -1;
-			goto out;
+			goto err;
 		}
 	}
 	/* Now let's show that even though they give the same results, our
@@ -256,37 +289,39 @@ int check_curve(const u8 *curve_name)
 	 * where k is chose random at each iteration. We also check that kA
 	 * is indeed on the curve.
 	 */
-	nn_init(&nn_k, 0);
+	ret = nn_init(&nn_k, 0); EG(ret, err);
 	if (get_ms_time(&t1)) {
 		ext_printf("Error: cannot get time with get_ms_time\n");
 		ret = -1;
-		goto out;
+		goto err;
 	}
 	for (i = 0; i < PERF_SCALAR_MUL; i++) {
 		/* k = random mod (q) */
-		nn_get_random_mod(&nn_k, &(curve_params.ec_gen_order));
+		ret = nn_get_random_mod(&nn_k, &(curve_params.ec_gen_order)); EG(ret, err);
 		/* Compute kA with regular add/double formulas */
-		prj_pt_mul(&TMP, &nn_k, &A);
-		prj_pt_to_aff(&T, &TMP);
-		if (!prj_pt_is_on_curve(&TMP)) {
+		ret = prj_pt_mul(&TMP, &nn_k, &A); EG(ret, err);
+		ret = prj_pt_to_aff(&T, &TMP); EG(ret, err);
+		ret = prj_pt_is_on_curve(&TMP, &is_oncurve); EG(ret, err);
+		if (!is_oncurve) {
 			ext_printf("Error: kA is not on the %s curve!\n",
 				   curve_params.curve_name);
 			nn_print("k=", &nn_k);
 			ret = -1;
-			goto out;
+			goto err;
 		}
-		if (!aff_pt_is_on_curve(&T)) {
+		ret = aff_pt_is_on_curve(&T, &is_oncurve); EG(ret, err);
+		if (!is_oncurve) {
 			ext_printf("Error: kA is not on the %s curve!\n",
 				   curve_params.curve_name);
 			nn_print("k=", &nn_k);
 			ret = -1;
-			goto out;
+			goto err;
 		}
 	}
 	if (get_ms_time(&t2)) {
 		ext_printf("Error: cannot get time with get_ms_time\n");
 		ret = -1;
-		goto out;
+		goto err;
 	}
 	ext_printf("  [*] Regular EC scalar multiplication took %f seconds "
 		   "on average\n",
@@ -294,38 +329,41 @@ int check_curve(const u8 *curve_name)
 	if (get_ms_time(&t1)) {
 		ext_printf("Error: cannot get time with get_ms_time\n");
 		ret = -1;
-		goto out;
+		goto err;
 	}
 	for (i = 0; i < PERF_SCALAR_MUL; i++) {
 		/* k = random mod (q) */
-		nn_get_random_mod(&nn_k, &(curve_params.ec_gen_order));
+		ret = nn_get_random_mod(&nn_k, &(curve_params.ec_gen_order)); EG(ret, err);
 		/* Compute kA with Montgomery add/double formulas */
-		prj_pt_mul_monty(&TMP, &nn_k, &A);
-		prj_pt_to_aff(&T, &TMP);
-		if (!prj_pt_is_on_curve(&TMP)) {
+		ret = prj_pt_mul_monty(&TMP, &nn_k, &A); EG(ret, err);
+		ret = prj_pt_to_aff(&T, &TMP); EG(ret, err);
+		ret = prj_pt_is_on_curve(&TMP, &is_oncurve); EG(ret, err);
+		if (!is_oncurve) {
 			ext_printf("Error: kA is not on the %s curve!\n",
 				   curve_params.curve_name);
 			nn_print("k=", &nn_k);
 			ret = -1;
-			goto out;
+			goto err;
 		}
-		if (!aff_pt_is_on_curve(&T)) {
+		ret = aff_pt_is_on_curve(&T, &is_oncurve); EG(ret, err);
+		if (!is_oncurve) {
 			ext_printf("Error: kA is not on the %s curve!\n",
 				   curve_params.curve_name);
 			nn_print("k=", &nn_k);
 			ret = -1;
-			goto out;
+			goto err;
 		}
 	}
 	if (get_ms_time(&t2)) {
 		ext_printf("Error: cannot get time with get_ms_time\n");
 		ret = -1;
-		goto out;
+		goto err;
 	}
 	ext_printf("  [*] Montgomery EC scalar multiplication took %f seconds "
 		   "on average\n",
 		   (double)(t2 - t1) / (double)(PERF_SCALAR_MUL * 1000ULL));
 
+err:
 	prj_pt_uninit(&A);
 	prj_pt_uninit(&B);
 	prj_pt_uninit(&C);
@@ -333,7 +371,7 @@ int check_curve(const u8 *curve_name)
 	prj_pt_uninit(&TMP);
 	aff_pt_uninit(&T);
 	nn_uninit(&nn_k);
- out:
+
 	return ret;
 }
 
@@ -352,7 +390,7 @@ unsigned char cryptofuzz_longjmp_triggered;
                 ext_printf("ASSERT error caught through cryptofuzz_jmpbuf\n");                  \
                 exit(-1);                                                                       \
         }                                                                                       \
-} while(0);                                                                                     
+} while(0);
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>

@@ -81,9 +81,9 @@ int ECDH_helper(const u8 *curve_name, const u8 *role)
 	 * of the function.
 	 */
 	static nn d_Alice, d_Bob;
-	nn_t d;
+	nn_t d = NULL;
 	static fp x_Alice, x_Bob;
-	fp_t x;
+	fp_t x = NULL;
 	const char *x_str;
 	/* Pointers to the communication buffers */
 	u8 *our_public_buffer, *other_public_buffer;
@@ -91,6 +91,8 @@ int ECDH_helper(const u8 *curve_name, const u8 *role)
 	const ec_str_params *the_curve_const_parameters;
 	/* libecc internal structure holding the curve parameters */
 	ec_params curve_params;
+
+	Q.magic = 0;
 
 	/****** Alice => Bob *********************************************************/
 	if (are_equal
@@ -113,31 +115,30 @@ int ECDH_helper(const u8 *curve_name, const u8 *role)
 		/* Unknown role, get out */
 		ext_printf("  Error: unknown role %s for ECDH\n", role);
 		ret = -1;
-		goto out;
+		goto err;
 	}
 
 	/* Importing specific curve parameters from the constant static
 	 * buffers describing it:
 	 * It is possible to import a curve set of parameters by its name.
 	 */
-	the_curve_const_parameters =
-		ec_get_curve_params_by_name(curve_name,
+	ret =	ec_get_curve_params_by_name(curve_name,
 					    (u8)local_strnlen((const char *)
 							      curve_name,
 							      MAX_CURVE_NAME_LEN)
-					    + 1);
+					    + 1, &the_curve_const_parameters); EG(ret, err);
 	/* Get out if getting the parameters went wrong */
 	if (the_curve_const_parameters == NULL) {
 		ext_printf("  Error: error when importing curve %s "
 			   "parameters ...\n", curve_name);
 		ret = -1;
-		goto out;
+		goto err;
 	}
 	/* Now map the curve parameters to our libecc internal representation */
-	import_params(&curve_params, the_curve_const_parameters);
+	ret = import_params(&curve_params, the_curve_const_parameters); EG(ret, err);
 
 	/* Initialize our projective point with the curve parameters */
-	prj_pt_init(&Q, &(curve_params.ec_curve));
+	ret = prj_pt_init(&Q, &(curve_params.ec_curve)); EG(ret, err);
 	if (!are_equal(our_public_buffer, zero, sizeof(zero))) {
 		/* We have already generated and sent our parameters, skip to
 		 * the state where we wait for the other party to generate and
@@ -150,61 +151,64 @@ int ECDH_helper(const u8 *curve_name, const u8 *role)
 	 * curve generator.
 	 * d = random mod (q) where q is the order of the generator G.
 	 */
-	nn_init(d, 0);
-	if (nn_get_random_mod(d, &(curve_params.ec_gen_order))) {
-		ret = -1;
-		goto out;
-	}
+	ret = nn_init(d, 0); EG(ret, err);
+	ret = nn_get_random_mod(d, &(curve_params.ec_gen_order)); EG(ret, err);
+
 	/* Q = dG */
-	prj_pt_mul_monty(&Q, d, &(curve_params.ec_gen));
+	ret = prj_pt_mul_monty(&Q, d, &(curve_params.ec_gen)); EG(ret, err);
 
 	/* Now send the public value Q to the other party, get the other party
 	 * public value and compute the shared secret.
 	 * Our export size is exactly 2 coordinates in Fp (affine point representation),
 	 * so this should be 2 times the size of an element in Fp.
 	 */
-	prj_pt_export_to_aff_buf(&Q, our_public_buffer,
-			     2 * BYTECEIL(curve_params.ec_fp.p_bitlen));
+	ret = prj_pt_export_to_aff_buf(&Q, our_public_buffer,
+			     2 * BYTECEIL(curve_params.ec_fp.p_bitlen)); EG(ret, err);
 
  generate_shared_secret:
 	/* Now (non blocking) wait for the other party to send us its public value */
 	if (are_equal(other_public_buffer, zero, sizeof(zero))) {
 		/* Other party has not sent its public value yet! */
 		ret = 0;
-		goto out;
+		goto err;
 	}
 	/* If our private value d is not initialized, this means that we have already
 	 * done the job of computing the shared secret!
 	 */
-	if (!nn_is_initialized(d)) {
+	if (nn_check_initialized(d)) {
 		ret = 1;
-		goto out;
+		goto err;
 	}
 	/* Import the shared value as a projective point from an affine point buffer
 	 */
-	prj_pt_import_from_aff_buf(&Q, other_public_buffer,
+	ret = prj_pt_import_from_aff_buf(&Q, other_public_buffer,
 			       2 * BYTECEIL(curve_params.ec_fp.p_bitlen),
-			       &(curve_params.ec_curve));
+			       &(curve_params.ec_curve)); EG(ret, err);
 	/* Compute the shared value = first coordinate of dQ */
-	prj_pt_mul_monty(&Q, d, &Q);
+	ret = prj_pt_mul_monty(&Q, d, &Q); EG(ret, err);
 	/* Move to the unique representation */
 	/* Compute the affine coordinates to get the unique (x, y) representation
 	 * (projective points are equivalent by a z scalar)
 	 */
-	prj_pt_unique(&Q, &Q);
+	ret = prj_pt_unique(&Q, &Q); EG(ret, err);
 	ext_printf("  ECDH shared secret computed by %s:\n", role);
 	/* The shared secret 'x' is the first coordinate of Q */
-	fp_init(x, &(curve_params.ec_fp));
-	fp_copy(x, &(Q.X));
+	ret = fp_init(x, &(curve_params.ec_fp)); EG(ret, err);
+	ret = fp_copy(x, &(Q.X)); EG(ret, err);
 	fp_print(x_str, x);
+
 	ret = 1;
 
 	/* Uninit local variables */
 	prj_pt_uninit(&Q);
-	fp_uninit(x);
-	nn_uninit(d);
+	if(x != NULL){
+		fp_uninit(x);
+	}
+	if(d != NULL){
+		nn_uninit(d);
+	}
 
- out:
+err:
 	return ret;
 }
 
@@ -223,7 +227,7 @@ unsigned char cryptofuzz_longjmp_triggered;
                 ext_printf("ASSERT error caught through cryptofuzz_jmpbuf\n");                  \
                 exit(-1);                                                                       \
         }                                                                                       \
-} while(0);                                                                                     
+} while(0);
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>

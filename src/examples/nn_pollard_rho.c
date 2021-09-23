@@ -35,7 +35,7 @@
 /* Declare our Miller-Rabin test implemented
  * in another module.
  */
-int miller_rabin(nn_src_t n, const unsigned int t);
+int miller_rabin(nn_src_t n, const unsigned int t, int *check);
 
 int pollar_rho(nn_t d, nn_src_t n, const word_t c);
 /* Pollard's rho main function, as described in
@@ -57,57 +57,64 @@ int pollar_rho(nn_t d, nn_src_t n, const word_t c);
  */
 int pollar_rho(nn_t d, nn_src_t n, const word_t c)
 {
-	int ret;
+	int ret, cmp, cmp1, cmp2;
 	/* Temporary a and b variables */
 	nn a, b, tmp, one, c_bignum;
-	/* Initialize variables */
-	nn_init(&a, 0);
-	nn_init(&b, 0);
-	nn_init(&tmp, 0);
-	nn_init(&one, 0);
-	nn_init(&c_bignum, 0);
-	nn_init(d, 0);
+	a.magic = b.magic = tmp.magic = one.magic = c_bignum.magic = 0;
 
-	MUST_HAVE(c > 0);
+	/* Initialize variables */
+	ret = nn_init(&a, 0); EG(ret, err);
+	ret = nn_init(&b, 0); EG(ret, err);
+	ret = nn_init(&tmp, 0); EG(ret, err);
+	ret = nn_init(&one, 0); EG(ret, err);
+	ret = nn_init(&c_bignum, 0); EG(ret, err);
+	ret = nn_init(d, 0); EG(ret, err);
+
+	MUST_HAVE(c > 0, ret, err);
 
 	/* Zeroize the output */
-	nn_zero(d);
-	nn_one(&one);
+	ret = nn_zero(d); EG(ret, err);
+	ret = nn_one(&one); EG(ret, err);
 	/* 1. Set a←2, b←2. */
-	nn_set_word_value(&a, WORD(2));
-	nn_set_word_value(&b, WORD(2));
-	nn_set_word_value(&c_bignum, c);
+	ret = nn_set_word_value(&a, WORD(2)); EG(ret, err);
+	ret = nn_set_word_value(&b, WORD(2)); EG(ret, err);
+	ret = nn_set_word_value(&c_bignum, c); EG(ret, err);
 
 	/* For i = 1, 2, . . . do the following: */
 	while (1) {
 		/* 2.1 Compute a←a^2 + c mod n */
-		nn_sqr(&a, &a);
-		nn_add(&a, &a, &c_bignum);
-		nn_mod(&a, &a, n);
+		ret = nn_sqr(&a, &a); EG(ret, err);
+		ret = nn_add(&a, &a, &c_bignum); EG(ret, err);
+		ret = nn_mod(&a, &a, n); EG(ret, err);
 		/* 2.1 Compute b←b^2 + c mod n twice in a row */
-		nn_sqr(&b, &b);
-		nn_add(&b, &b, &c_bignum);
-		nn_mod(&b, &b, n);
-		nn_sqr(&b, &b);
-		nn_add(&b, &b, &c_bignum);
-		nn_mod(&b, &b, n);
+		ret = nn_sqr(&b, &b); EG(ret, err);
+		ret = nn_add(&b, &b, &c_bignum); EG(ret, err);
+		ret = nn_mod(&b, &b, n); EG(ret, err);
+		ret = nn_sqr(&b, &b); EG(ret, err);
+		ret = nn_add(&b, &b, &c_bignum); EG(ret, err);
+		ret = nn_mod(&b, &b, n); EG(ret, err);
 		/* 2.2 Compute d = gcd(a − b, n) */
-		if (nn_cmp(&a, &b) >= 0) {
-			nn_sub(&tmp, &a, &b);
+		ret = nn_cmp(&a, &b, &cmp); EG(ret, err);
+		if (cmp >= 0) {
+			ret = nn_sub(&tmp, &a, &b); EG(ret, err);
 		} else {
-			nn_sub(&tmp, &b, &a);
+			ret = nn_sub(&tmp, &b, &a); EG(ret, err);
 		}
-		nn_gcd(d, &tmp, n);
-		if ((nn_cmp(d, n) < 0) && (nn_cmp(d, &one) > 0)) {
+		int sign;
+		ret = nn_gcd(d, &tmp, n, &sign); EG(ret, err);
+		ret = nn_cmp(d, n, &cmp1); EG(ret, err);
+		ret = nn_cmp(d, &one, &cmp2); EG(ret, err);
+		if ((cmp1 < 0) && (cmp2 > 0)) {
 			ret = 0;
-			goto out;
+			goto err;
 		}
-		if (nn_cmp(d, n) == 0) {
+		ret = nn_cmp(d, n, &cmp); EG(ret, err);
+		if (cmp == 0) {
 			ret = -1;
-			goto out;
+			goto err;
 		}
 	}
- out:
+ err:
 	/* Uninitialize local variables */
 	nn_uninit(&a);
 	nn_uninit(&b);
@@ -118,31 +125,38 @@ int pollar_rho(nn_t d, nn_src_t n, const word_t c)
 	return ret;
 }
 
-void find_divisors(nn_src_t in);
+int find_divisors(nn_src_t in);
 /* Maximum number of divisors we support */
 #define MAX_DIVISORS 10
 /* Function to find prime divisors of the NN input */
-void find_divisors(nn_src_t in)
+int find_divisors(nn_src_t in)
 {
-	int n_divisors_found, i, found, ret;
+	int n_divisors_found, i, found, ret, check, cmp;
 	nn n;
 	nn divisors[MAX_DIVISORS];
 	word_t c;
+
+	n.magic = 0;
+	for(i = 0; i < MAX_DIVISORS; i++){
+		divisors[i].magic = 0;
+	}
 
 	ext_printf("=================\n");
 	nn_print("Finding factors of:", in);
 
 	/* First, check primality of the input */
-	if (miller_rabin(in, 10)) {
+	ret = miller_rabin(in, 10, &check); EG(ret, err);
+	if (check) {
 		ext_printf("The number is probably prime, leaving ...\n");
-		return;
+		ret = -1;
+		goto err;
 	}
 	ext_printf("The number is composite, performing Pollard's rho\n");
 
-	nn_init(&n, 0);
-	nn_copy(&n, in);
+	ret = nn_init(&n, 0); EG(ret, err);
+	ret = nn_copy(&n, in); EG(ret, err);
 	for (i = 0; i < MAX_DIVISORS; i++) {
-		nn_init(&(divisors[i]), 0);
+		ret = nn_init(&(divisors[i]), 0); EG(ret, err);
 	}
 
 	n_divisors_found = 0;
@@ -155,9 +169,8 @@ void find_divisors(nn_src_t in)
 		}
 		found = 0;
 		for (i = 0; i < n_divisors_found; i++) {
-			if (nn_cmp
-			    (&(divisors[n_divisors_found]),
-			     &(divisors[i])) == 0) {
+			ret = nn_cmp(&(divisors[n_divisors_found]), &(divisors[i]), &cmp); EG(ret, err);
+			if (cmp == 0) {
 				found = 1;
 			}
 		}
@@ -171,19 +184,20 @@ void find_divisors(nn_src_t in)
 			 * Now we can launch the algorithm again on n / d
 			 * to find new divisors. If n / d is prime, we are done!
 			 */
-			nn_divrem(&q, &r, &n, &(divisors[n_divisors_found]));
+			ret = nn_divrem(&q, &r, &n, &(divisors[n_divisors_found])); EG(ret, err);
 			/*
 			 * Check n / d primality with Miller-Rabin (security
 			 * parameter of 10)
 			 */
-			if (miller_rabin(&q, 10) == 1) {
+			ret = miller_rabin(&q, 10, &check); EG(ret, err);
+			if (check == 1) {
 				nn_print("Last divisor is prime:", &q);
 				nn_uninit(&q);
 				nn_uninit(&r);
 				break;
 			}
 			nn_print("Now performing Pollard's rho on:", &q);
-			nn_copy(&n, &q);
+			ret = nn_copy(&n, &q); EG(ret, err);
 			nn_uninit(&q);
 			nn_uninit(&r);
 			c = 0;
@@ -195,13 +209,15 @@ void find_divisors(nn_src_t in)
 			}
 		}
 	}
+	ret = 0;
 
+err:
 	ext_printf("=================\n");
 	nn_uninit(&n);
 	for (i = 0; i < MAX_DIVISORS; i++) {
 		nn_uninit(&(divisors[i]));
 	}
-	return;
+	return ret;
 }
 
 #ifdef NN_EXAMPLE
@@ -219,7 +235,7 @@ unsigned char cryptofuzz_longjmp_triggered;
                 ext_printf("ASSERT error caught through cryptofuzz_jmpbuf\n");                  \
                 exit(-1);                                                                       \
         }                                                                                       \
-} while(0);                                                                                     
+} while(0);
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -236,6 +252,8 @@ int main()
 #endif
 
 	nn n;
+	int ret;
+	n.magic = 0;
 
 	/* Fermat F5 = 2^32 + 1 = 641 x 6700417 */
 	const unsigned char fermat_F5[] = { 0x01, 0x00, 0x00, 0x00, 0x01 };
@@ -243,20 +261,22 @@ int main()
 	const unsigned char fermat_F6[] =
 		{ 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01 };
 
-	nn_init(&n, 0);
+	ret = nn_init(&n, 0); EG(ret, err);
 	/* Execute factorization on F5 */
-	nn_init_from_buf(&n, fermat_F5, sizeof(fermat_F5));
-	find_divisors(&n);
+	ret = nn_init_from_buf(&n, fermat_F5, sizeof(fermat_F5)); EG(ret, err);
+	ret = find_divisors(&n); EG(ret, err);
 	/* Execute factorization on F6 */
-	nn_init_from_buf(&n, fermat_F6, sizeof(fermat_F6));
-	find_divisors(&n);
+	ret = nn_init_from_buf(&n, fermat_F6, sizeof(fermat_F6)); EG(ret, err);
+	ret = find_divisors(&n); EG(ret, err);
 	/* Execute factorization on a random 80 bits number */
-	nn_one(&n);
+	ret = nn_one(&n); EG(ret, err);
 	/* Compute 2**80 = 0x1 << 80 */
-	nn_lshift(&n, &n, 80);
-	nn_get_random_mod(&n, &n);
-	find_divisors(&n);
+	ret = nn_lshift(&n, &n, 80); EG(ret, err);
+	ret = nn_get_random_mod(&n, &n); EG(ret, err);
+	ret = find_divisors(&n); EG(ret, err);
 
 	return 0;
+err:
+	return -1;
 }
 #endif
