@@ -46,17 +46,17 @@
 #endif
 
 #define SHA512_HASH_MAGIC ((word_t)(0x5539012b32097312ULL))
-#define SHA512_HASH_CHECK_INITIALIZED(A) \
-	MUST_HAVE((((void *)(A)) != NULL) && ((A)->magic == SHA512_HASH_MAGIC))
+#define SHA512_HASH_CHECK_INITIALIZED(A, ret, err) \
+	MUST_HAVE((((void *)(A)) != NULL) && ((A)->magic == SHA512_HASH_MAGIC), ret, err)
 
 typedef sha512_core_context sha512_context;
 
-void sha512_init(sha512_context *ctx);
-void sha512_update(sha512_context *ctx, const u8 *input, u32 ilen);
-void sha512_final(sha512_context *ctx, u8 output[SHA512_DIGEST_SIZE]);
-void sha512_scattered(const u8 **inputs, const u32 *ilens,
-		      u8 output[SHA512_DIGEST_SIZE]);
-void sha512(const u8 *input, u32 ilen, u8 output[SHA512_DIGEST_SIZE]);
+int sha512_init(sha512_context *ctx);
+int sha512_update(sha512_context *ctx, const u8 *input, u32 ilen);
+int sha512_final(sha512_context *ctx, u8 output[SHA512_DIGEST_SIZE]);
+int sha512_scattered(const u8 **inputs, const u32 *ilens,
+		     u8 output[SHA512_DIGEST_SIZE]);
+int sha512(const u8 *input, u32 ilen, u8 output[SHA512_DIGEST_SIZE]);
 
 #endif /* __SHA512_H__ */
 #endif /* WITH_HASH_SHA512 */

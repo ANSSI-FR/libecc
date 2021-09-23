@@ -18,10 +18,12 @@
 
 #include "sha512.h"
 
-/* Init hash function */
-void sha512_init(sha512_context *ctx)
+/* Init hash function. Returns 0 on success, -1 on error. */
+int sha512_init(sha512_context *ctx)
 {
-	MUST_HAVE(ctx != NULL);
+	int ret;
+
+	MUST_HAVE(!(ctx == NULL), ret, err);
 
 	ctx->sha512_total[0] = ctx->sha512_total[1] = 0;
 	ctx->sha512_state[0] = (u64)(0x6A09E667F3BCC908);
@@ -35,54 +37,81 @@ void sha512_init(sha512_context *ctx)
 
 	/* Tell that we are initialized */
 	ctx->magic = SHA512_HASH_MAGIC;
+	ret = 0;
+
+err:
+	return ret;
 }
 
-/* Update hash function */
-void sha512_update(sha512_context *ctx, const u8 *input, u32 ilen)
+/* Update hash function. Returns 0 on success, -1 on error. */
+int sha512_update(sha512_context *ctx, const u8 *input, u32 ilen)
 {
-	SHA512_HASH_CHECK_INITIALIZED(ctx);
+	int ret;
 
-	sha512_core_update(ctx, input, ilen);
+	SHA512_HASH_CHECK_INITIALIZED(ctx, ret, err);
 
-	return;
+	ret = sha512_core_update(ctx, input, ilen);
+
+err:
+	return ret;
 }
 
-/* Finalize */
-void sha512_final(sha512_context *ctx, u8 output[SHA512_DIGEST_SIZE])
+/*
+ * Finalize hash function. Returns 0 on success, -1 on error. */
+int sha512_final(sha512_context *ctx, u8 output[SHA512_DIGEST_SIZE])
 {
-	SHA512_HASH_CHECK_INITIALIZED(ctx);
+	int ret;
 
-	sha512_core_final(ctx, output, SHA512_DIGEST_SIZE);
+	SHA512_HASH_CHECK_INITIALIZED(ctx, ret, err);
+
+	ret = sha512_core_final(ctx, output, SHA512_DIGEST_SIZE); EG(ret, err);
 
 	/* Tell that we are uninitialized */
 	ctx->magic = 0;
+	ret = 0;
 
-	return;
+err:
+	return ret;
 }
 
-void sha512_scattered(const u8 **inputs, const u32 *ilens,
+/*
+ * Scattered version performing init/update/finalize on a vector of buffers
+ * 'inputs' with the length of each buffer passed via 'ilens'. The function
+ * loops on pointers in 'inputs' until it finds a NULL pointer. The function
+ * returns 0 on success, -1 on error.
+ */
+int sha512_scattered(const u8 **inputs, const u32 *ilens,
 		      u8 output[SHA512_DIGEST_SIZE])
 {
 	sha512_context ctx;
 	int pos = 0;
+	int ret;
 
-	sha512_init(&ctx);
+	ret = sha512_init(&ctx); EG(ret, err);
 
 	while (inputs[pos] != NULL) {
-		sha512_update(&ctx, inputs[pos], ilens[pos]);
+		ret = sha512_update(&ctx, inputs[pos], ilens[pos]); EG(ret, err);
 		pos += 1;
 	}
 
-	sha512_final(&ctx, output);
+	ret = sha512_final(&ctx, output);
+
+err:
+	return ret;
 }
 
-void sha512(const u8 *input, u32 ilen, u8 output[SHA512_DIGEST_SIZE])
+/* init/update/finalize on a single buffer 'input' of length 'ilen'. */
+int sha512(const u8 *input, u32 ilen, u8 output[SHA512_DIGEST_SIZE])
 {
 	sha512_context ctx;
+	int ret;
 
-	sha512_init(&ctx);
-	sha512_update(&ctx, input, ilen);
-	sha512_final(&ctx, output);
+	ret = sha512_init(&ctx); EG(ret, err);
+	ret = sha512_update(&ctx, input, ilen); EG(ret, err);
+	ret = sha512_final(&ctx, output);
+
+err:
+	return ret;
 }
 
 #else /* WITH_HASH_SHA512 */
