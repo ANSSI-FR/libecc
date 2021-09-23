@@ -17,6 +17,6 @@
 #define __FP_POW_H__
 #include "fp.h"
 
-void fp_pow(fp_t out, fp_src_t base, nn_src_t exp);
+int fp_pow(fp_t out, fp_src_t base, nn_src_t exp);
 
 #endif /* __FP_POW_H__ */
