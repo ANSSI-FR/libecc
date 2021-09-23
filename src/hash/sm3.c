@@ -80,14 +80,15 @@ static const u32 SM3_Tj_high = 0x7a879d8a;
 #define SM3_P_1(X) (((u32)X) ^ SM3_ROTL((X), 15) ^ SM3_ROTL((X), 23))
 
 /* SM3 Iterative Compression Process */
-static void sm3_process(sm3_context *ctx, const u8 data[SM3_BLOCK_SIZE])
+static int sm3_process(sm3_context *ctx, const u8 data[SM3_BLOCK_SIZE])
 {
 	u32 A, B, C, D, E, F, G, H;
 	u32 SS1, SS2, TT1, TT2;
 	u32 W[68 + 64];
 	unsigned int j;
+	int ret;
 
-	SM3_HASH_CHECK_INITIALIZED(ctx);
+	SM3_HASH_CHECK_INITIALIZED(ctx, ret, err);
 
 	/* Message Expansion Function ME */
 
@@ -178,12 +179,19 @@ static void sm3_process(sm3_context *ctx, const u8 data[SM3_BLOCK_SIZE])
 	ctx->sm3_state[5] ^= F;
 	ctx->sm3_state[6] ^= G;
 	ctx->sm3_state[7] ^= H;
+
+	ret = 0;
+
+err:
+	return ret;
 }
 
 /* Init hash function. Initialize state to SM3 defined IV. */
-void sm3_init(sm3_context *ctx)
+int sm3_init(sm3_context *ctx)
 {
-	MUST_HAVE(ctx != NULL);
+	int ret;
+
+	MUST_HAVE(ctx != NULL, ret, err);
 
 	ctx->sm3_total = 0;
 	ctx->sm3_state[0] = 0x7380166F;
@@ -197,22 +205,29 @@ void sm3_init(sm3_context *ctx)
 
 	/* Tell that we are initialized */
 	ctx->magic = SM3_HASH_MAGIC;
+
+	ret = 0;
+
+err:
+	return ret;
 }
 
 /* Update hash function */
-void sm3_update(sm3_context *ctx, const u8 *input, u32 ilen)
+int sm3_update(sm3_context *ctx, const u8 *input, u32 ilen)
 {
 	const u8 *data_ptr = input;
 	u32 remain_ilen = ilen;
 	u16 fill;
 	u8 left;
+	int ret;
 
-	MUST_HAVE(input != NULL);
-	SM3_HASH_CHECK_INITIALIZED(ctx);
+	MUST_HAVE(input != NULL, ret, err);
+	SM3_HASH_CHECK_INITIALIZED(ctx, ret, err);
 
 	/* Nothing to process, return */
 	if (ilen == 0) {
-		return;
+		ret = 0;
+		goto err;
 	}
 
 	/* Get what's left in our local buffer */
@@ -224,14 +239,14 @@ void sm3_update(sm3_context *ctx, const u8 *input, u32 ilen)
 	if ((left > 0) && (remain_ilen >= fill)) {
 		/* Copy data at the end of the buffer */
 		local_memcpy(ctx->sm3_buffer + left, data_ptr, fill);
-		sm3_process(ctx, ctx->sm3_buffer);
+		ret = sm3_process(ctx, ctx->sm3_buffer); EG(ret, err);
 		data_ptr += fill;
 		remain_ilen -= fill;
 		left = 0;
 	}
 
 	while (remain_ilen >= SM3_BLOCK_SIZE) {
-		sm3_process(ctx, data_ptr);
+		ret = sm3_process(ctx, data_ptr); EG(ret, err);
 		data_ptr += SM3_BLOCK_SIZE;
 		remain_ilen -= SM3_BLOCK_SIZE;
 	}
@@ -239,17 +254,22 @@ void sm3_update(sm3_context *ctx, const u8 *input, u32 ilen)
 	if (remain_ilen > 0) {
 		local_memcpy(ctx->sm3_buffer + left, data_ptr, remain_ilen);
 	}
-	return;
+
+	ret = 0;
+
+err:
+	return ret;
 }
 
 /* Finalize */
-void sm3_final(sm3_context *ctx, u8 output[SM3_DIGEST_SIZE])
+int sm3_final(sm3_context *ctx, u8 output[SM3_DIGEST_SIZE])
 {
 	unsigned int block_present = 0;
 	u8 last_padded_block[2 * SM3_BLOCK_SIZE];
+	int ret;
 
-	MUST_HAVE(output != NULL);
-	SM3_HASH_CHECK_INITIALIZED(ctx);
+	MUST_HAVE(output != NULL, ret, err);
+	SM3_HASH_CHECK_INITIALIZED(ctx, ret, err);
 
 	/* Fill in our last block with zeroes */
 	local_memset(last_padded_block, 0, sizeof(last_padded_block));
@@ -270,13 +290,13 @@ void sm3_final(sm3_context *ctx, u8 output[SM3_DIGEST_SIZE])
 		/* We need an additional block */
 		PUT_UINT64_BE(8 * ctx->sm3_total, last_padded_block,
 			      (2 * SM3_BLOCK_SIZE) - sizeof(u64));
-		sm3_process(ctx, last_padded_block);
-		sm3_process(ctx, last_padded_block + SM3_BLOCK_SIZE);
+		ret = sm3_process(ctx, last_padded_block); EG(ret, err);
+		ret = sm3_process(ctx, last_padded_block + SM3_BLOCK_SIZE); EG(ret, err);
 	} else {
 		/* We do not need an additional block */
 		PUT_UINT64_BE(8 * ctx->sm3_total, last_padded_block,
 			      SM3_BLOCK_SIZE - sizeof(u64));
-		sm3_process(ctx, last_padded_block);
+		ret = sm3_process(ctx, last_padded_block); EG(ret, err);
 	}
 
 	/* Output the hash result */
@@ -291,31 +311,43 @@ void sm3_final(sm3_context *ctx, u8 output[SM3_DIGEST_SIZE])
 
 	/* Tell that we are uninitialized */
 	ctx->magic = 0;
+
+	ret = 0;
+
+err:
+	return ret;
 }
 
-void sm3_scattered(const u8 **inputs, const u32 *ilens,
+int sm3_scattered(const u8 **inputs, const u32 *ilens,
 		      u8 output[SM3_DIGEST_SIZE])
 {
 	sm3_context ctx;
-	int pos = 0;
+	int pos = 0, ret;
 
-	sm3_init(&ctx);
+	ret = sm3_init(&ctx); EG(ret, err);
 
 	while (inputs[pos] != NULL) {
-		sm3_update(&ctx, inputs[pos], ilens[pos]);
+		ret = sm3_update(&ctx, inputs[pos], ilens[pos]); EG(ret, err);
 		pos += 1;
 	}
 
-	sm3_final(&ctx, output);
+	ret = sm3_final(&ctx, output);
+
+err:
+	return ret;
 }
 
-void sm3(const u8 *input, u32 ilen, u8 output[SM3_DIGEST_SIZE])
+int sm3(const u8 *input, u32 ilen, u8 output[SM3_DIGEST_SIZE])
 {
 	sm3_context ctx;
+	int ret;
 
-	sm3_init(&ctx);
-	sm3_update(&ctx, input, ilen);
-	sm3_final(&ctx, output);
+	ret = sm3_init(&ctx); EG(ret, err);
+	ret = sm3_update(&ctx, input, ilen); EG(ret, err);
+	ret = sm3_final(&ctx, output);
+
+err:
+	return ret;
 }
 
 #else /* WITH_HASH_SM3 */

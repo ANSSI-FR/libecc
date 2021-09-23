@@ -39,8 +39,8 @@
 #endif
 
 #define SM3_HASH_MAGIC ((word_t)(0x2947510312849204ULL))
-#define SM3_HASH_CHECK_INITIALIZED(A) \
-        MUST_HAVE((((void *)(A)) != NULL) && ((A)->magic == SM3_HASH_MAGIC))
+#define SM3_HASH_CHECK_INITIALIZED(A, ret, err) \
+        MUST_HAVE((((void *)(A)) != NULL) && ((A)->magic == SM3_HASH_MAGIC), ret, err)
 
 typedef struct {
 	/* Number of bytes processed */
@@ -53,12 +53,12 @@ typedef struct {
         word_t magic;
 } sm3_context;
 
-void sm3_init(sm3_context *ctx);
-void sm3_update(sm3_context *ctx, const u8 *input, u32 ilen);
-void sm3_final(sm3_context *ctx, u8 output[SM3_DIGEST_SIZE]);
-void sm3_scattered(const u8 **inputs, const u32 *ilens,
+int sm3_init(sm3_context *ctx);
+int sm3_update(sm3_context *ctx, const u8 *input, u32 ilen);
+int sm3_final(sm3_context *ctx, u8 output[SM3_DIGEST_SIZE]);
+int sm3_scattered(const u8 **inputs, const u32 *ilens,
 		   u8 output[SM3_DIGEST_SIZE]);
-void sm3(const u8 *input, u32 ilen, u8 output[SM3_DIGEST_SIZE]);
+int sm3(const u8 *input, u32 ilen, u8 output[SM3_DIGEST_SIZE]);
 
 #endif /* __SM3_H__ */
 #endif /* WITH_HASH_SM3 */
