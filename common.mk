@@ -218,7 +218,10 @@ endif
 
 # Do we want to use clang or gcc sanitizers?
 ifeq ($(USE_SANITIZERS),1)
-CFLAGS += -fsanitize=undefined -fsanitize=address
+CFLAGS += -fsanitize=undefined -fsanitize=address -fsanitize=leak
+ifneq ($(CLANG),)
+CFLAGS += -fsanitize=integer -fno-sanitize=unsigned-integer-overflow -fno-sanitize=unsigned-shift-base
+endif
 endif
 
 # Do we want to use the ISO14888-3 version of the

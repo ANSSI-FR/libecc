@@ -593,6 +593,7 @@ static int sign_bin_file(const char *ec_name, const char *ec_sig_name,
 	metadata_hdr hdr;
 	size_t read, to_read;
 	int eof;
+	u8 *allocated_buff = NULL;
 
 	struct ec_sign_context sig_ctx;
 
@@ -661,79 +662,160 @@ static int sign_bin_file(const char *ec_name, const char *ec_sig_name,
 		}
 	}
 
-	/*
-	 * Initialize signature context and start signature computation
-	 * with generated metadata header.
-	 */
-	ret = ec_sign_init(&sig_ctx, &key_pair, sig_type, hash_type, (const u8*)adata, adata_len);
-	if (ret) {
-		ret = -1;
-		printf("Error: error when signing\n");
-		goto err;
-	}
+	/* Check if we support streaming */
+	ret = is_sign_streaming_mode_supported(sig_type, &check); EG(ret, err);
+	if(check){
+		/**** We support streaming mode ****/
+		/*
+		 * Initialize signature context and start signature computation
+		 * with generated metadata header.
+		 */
+		ret = ec_sign_init(&sig_ctx, &key_pair, sig_type, hash_type, (const u8*)adata, adata_len);
+		if (ret) {
+			ret = -1;
+			printf("Error: error when signing\n");
+			goto err;
+		}
 
-	/* Structured export case, we prepend the header in the signature */
-	if((hdr_type != NULL) && (version != NULL)){
-		ret = ec_sign_update(&sig_ctx, (const u8 *)&hdr, sizeof(metadata_hdr));
+		/* Structured export case, we prepend the header in the signature */
+		if((hdr_type != NULL) && (version != NULL)){
+			ret = ec_sign_update(&sig_ctx, (const u8 *)&hdr, sizeof(metadata_hdr));
+			if (ret) {
+				ret = -1;
+				printf("Error: error when signing\n");
+				goto err;
+			}
+		}
+
+		/*
+		 * Read file content chunk by chunk up to file length, passing each
+		 * chunk to signature update function
+		 */
+		in_file = fopen(in_fname, "r");
+		if (in_file == NULL) {
+			ret = -1;
+			printf("Error: file %s cannot be opened\n", in_fname);
+			goto err;
+		}
+
+		eof = 0;
+		clearerr(in_file);
+		while (raw_data_len && !eof) {
+			to_read =
+				(raw_data_len <
+				sizeof(buf)) ? raw_data_len : sizeof(buf);
+			read = fread(buf, 1, to_read, in_file);
+			if (read != to_read) {
+				/* Check if this was EOF */
+				ret = feof(in_file);
+				clearerr(in_file);
+				if (ret) {
+					eof = 1;
+				}
+			}
+
+			if (read > raw_data_len) {
+				/* we read more than expected: leave! */
+				break;
+			}
+
+			raw_data_len -= read;
+
+			ret = ec_sign_update(&sig_ctx, buf, (u32)read);
+			if (ret) {
+				break;
+			}
+		}
+
+		if (raw_data_len) {
+			ret = -1;
+			printf("Error: unable to read full file content\n");
+			goto err;
+		}
+
+		/* We can now complete signature generation */
+		ret = ec_sign_finalize(&sig_ctx, sig, siglen);
 		if (ret) {
 			ret = -1;
 			printf("Error: error when signing\n");
 			goto err;
 		}
 	}
-
-	/*
-	 * Read file content chunk by chunk up to file length, passing each
-	 * chunk to signature update function
-	 */
-	in_file = fopen(in_fname, "r");
-	if (in_file == NULL) {
-		ret = -1;
-		printf("Error: file %s cannot be opened\n", in_fname);
-		goto err;
-	}
-
-	eof = 0;
-	clearerr(in_file);
-	while (raw_data_len && !eof) {
-		to_read =
-			(raw_data_len <
-			sizeof(buf)) ? raw_data_len : sizeof(buf);
-		read = fread(buf, 1, to_read, in_file);
-		if (read != to_read) {
-			/* Check if this was EOF */
-			ret = feof(in_file);
-			clearerr(in_file);
-			if (ret) {
-				eof = 1;
+	else{
+		/**** We do not support streaming mode ****/
+		/* Since we don't support streaming mode, we unfortunately have to
+		 * use a dynamic allocation here.
+		 */
+		size_t offset = 0;
+		allocated_buff = malloc(1);
+		if(allocated_buff == NULL){
+			ret = -1;
+			printf("Error: allocation error\n");
+			goto err;
+		}
+		if((hdr_type != NULL) && (version != NULL)){
+			allocated_buff = realloc(allocated_buff, sizeof(hdr));
+			if(allocated_buff == NULL){
+				ret = -1;
+				printf("Error: allocation error\n");
+				goto err;
 			}
+			memcpy(allocated_buff, &hdr, sizeof(hdr));
+			offset += sizeof(hdr);
+		}
+		in_file = fopen(in_fname, "r");
+		if (in_file == NULL) {
+			ret = -1;
+			printf("Error: file %s cannot be opened\n", in_fname);
+			goto err;
 		}
 
-		if (read > raw_data_len) {
-			/* we read more than expected: leave! */
-			break;
+		eof = 0;
+		clearerr(in_file);
+		while (raw_data_len && !eof) {
+			to_read =
+				(raw_data_len <
+				sizeof(buf)) ? raw_data_len : sizeof(buf);
+			read = fread(buf, 1, to_read, in_file);
+			if (read != to_read) {
+				/* Check if this was EOF */
+				ret = feof(in_file);
+				clearerr(in_file);
+				if (ret) {
+					eof = 1;
+				}
+			}
+
+			if (read > raw_data_len) {
+				/* we read more than expected: leave! */
+				break;
+			}
+
+			raw_data_len -= read;
+
+			allocated_buff = realloc(allocated_buff, offset + read);
+			if(allocated_buff == NULL){
+				ret = -1;
+				printf("Error: allocation error\n");
+				goto err;
+			}
+			memcpy(allocated_buff + offset, buf, read);
+			offset += read;
 		}
 
-		raw_data_len -= read;
-
-		ret = ec_sign_update(&sig_ctx, buf, (u32)read);
-		if (ret) {
-			break;
+		if (raw_data_len) {
+			ret = -1;
+			printf("Error: unable to read full file content\n");
+			goto err;
 		}
-	}
 
-	if (raw_data_len) {
-		ret = -1;
-		printf("Error: unable to read full file content\n");
-		goto err;
-	}
-
-	/* We can now complete signature generation */
-	ret = ec_sign_finalize(&sig_ctx, sig, siglen);
-	if (ret) {
-		ret = -1;
-		printf("Error: error when signing\n");
-		goto err;
+		/* Sign */
+		ret = ec_sign(sig, siglen, &key_pair, allocated_buff, (u32)offset, sig_type, hash_type, (const u8*)adata, adata_len);
+		if(ret){
+			ret = -1;
+			printf("Error: error when signing\n");
+			goto err;
+		}
 	}
 
 	/* Structured export case, forge the full structured file
@@ -781,6 +863,9 @@ static int sign_bin_file(const char *ec_name, const char *ec_sig_name,
 	}
 	if(out_file != NULL){
 		fclose(out_file);
+	}
+	if(allocated_buff != NULL){
+		free(allocated_buff);
 	}
 	return ret;
 }
@@ -846,6 +931,7 @@ static int verify_bin_file(const char *ec_name, const char *ec_sig_name,
 	size_t exp_len;
 	FILE *in_file = NULL;
 	int ret, eof, check;
+	u8 *allocated_buff = NULL;
 
 	MUST_HAVE(ec_name != NULL, ret, err);
 
@@ -1047,50 +1133,110 @@ static int verify_bin_file(const char *ec_name, const char *ec_sig_name,
 		exp_len = raw_data_len;
 	}
 
-	/*
-	 * ... and read file content chunk by chunk to compute signature
-	 */
-	ret = ec_verify_init(&verif_ctx, &pub_key, sig, siglen,
-			     sig_type, hash_type, (const u8*)adata, adata_len);
-	if (ret) {
-		ret = -1;
-		goto err;
-	}
+	/* Check if we support streaming */
+	ret = is_verify_streaming_mode_supported(sig_type, &check); EG(ret, err);
+	if(check){
+		/**** We support streaming mode ****/
+		/*
+		 * ... and read file content chunk by chunk to compute signature
+		 */
+		ret = ec_verify_init(&verif_ctx, &pub_key, sig, siglen,
+				     sig_type, hash_type, (const u8*)adata, adata_len);
+		if (ret) {
+			ret = -1;
+			printf("Error: error when verifying ...\n");
+			goto err;
+		}
 
-	eof = 0;
-	clearerr(in_file);
-	while (exp_len && !eof) {
-		to_read = (exp_len < sizeof(buf)) ? exp_len : sizeof(buf);
-		read = fread(buf, 1, to_read, in_file);
-		if (read != to_read) {
-			/* Check if this was EOF */
-			ret = feof(in_file);
-			clearerr(in_file);
-			if (ret) {
-				eof = 1;
+		eof = 0;
+		clearerr(in_file);
+		while (exp_len && !eof) {
+			to_read = (exp_len < sizeof(buf)) ? exp_len : sizeof(buf);
+			read = fread(buf, 1, to_read, in_file);
+			if (read != to_read) {
+				/* Check if this was EOF */
+				ret = feof(in_file);
+				clearerr(in_file);
+				if (ret) {
+					eof = 1;
+				}
+			}
+
+			if (read > exp_len) {
+				/* we read more than expected: leave! */
+				break;
+			}
+
+			exp_len -= read;
+
+			ret = ec_verify_update(&verif_ctx, buf, (u32)read);
+			if(ret){
+				ret = -1;
+				printf("Error: error when verifying ...\n");
+				goto err;
 			}
 		}
+		if (exp_len) {
+			ret = -1;
+			printf("Error: unable to read full file content\n");
+			goto err;
+		}
+		ret = ec_verify_finalize(&verif_ctx);
+		if (ret) {
+			ret = -1;
+			goto err;
+		}
+	}
+	else{
+		/**** We do not support streaming mode ****/
+		/* Since we don't support streaming mode, we unfortunately have to
+		 * use a dynamic allocation here.
+		 */
+		size_t offset = 0;
+		allocated_buff = malloc(1);
 
-		if (read > exp_len) {
-			/* we read more than expected: leave! */
-			break;
+		eof = 0;
+		clearerr(in_file);
+		while (exp_len && !eof) {
+			to_read = (exp_len < sizeof(buf)) ? exp_len : sizeof(buf);
+			read = fread(buf, 1, to_read, in_file);
+			if (read != to_read) {
+				/* Check if this was EOF */
+				ret = feof(in_file);
+				clearerr(in_file);
+				if (ret) {
+					eof = 1;
+				}
+			}
+
+			if (read > exp_len) {
+				/* we read more than expected: leave! */
+				break;
+			}
+
+			exp_len -= read;
+
+			allocated_buff = realloc(allocated_buff, offset + read);
+			if(allocated_buff == NULL){
+				ret = -1;
+				printf("Error: allocation error\n");
+				goto err;
+			}
+			memcpy(allocated_buff + offset, buf, read);
+			offset += read;
+		}
+		if (exp_len) {
+			ret = -1;
+			printf("Error: unable to read full file content\n");
+			goto err;
 		}
 
-		exp_len -= read;
+		ret = ec_verify(sig, siglen, &pub_key, allocated_buff, (u32)offset, sig_type, hash_type, (const u8*)adata, adata_len);
+		if (ret) {
+			ret = -1;
+			goto err;
+		}
 
-		ret = ec_verify_update(&verif_ctx, buf, (u32)read); EG(ret, err);
-	}
-
-	if (exp_len) {
-		ret = -1;
-		printf("Error: unable to read full file content\n");
-		goto err;
-	}
-
-	ret = ec_verify_finalize(&verif_ctx);
-	if (ret) {
-		ret = -1;
-		goto err;
 	}
 
 	ret = 0;
@@ -1104,6 +1250,9 @@ static int verify_bin_file(const char *ec_name, const char *ec_sig_name,
 	}
 	if(in_sig_file != NULL){
 		fclose(in_sig_file);
+	}
+	if(allocated_buff != NULL){
+		free(allocated_buff);
 	}
 	return ret;
 }
@@ -1342,6 +1491,7 @@ int main(int argc, char *argv[])
 			return -1;
 		}
 		if(generate_and_export_key_pair(argv[2], argv[3], argv[4])){
+			printf("gen_key error ...\n");
 			return -1;
 		}
 	}
@@ -1386,6 +1536,7 @@ int main(int argc, char *argv[])
 		}
 		if(sign_bin_file(argv[2], argv[3], argv[4], argv[5], argv[6],
 			      argv[7], NULL, NULL, adata, adata_len)){
+			printf("sign error ...\n");
 			return -1;
 		}
 	}
@@ -1417,6 +1568,7 @@ int main(int argc, char *argv[])
 
 			printf("\targ4 = input file to verify\n");
 			printf("\targ5 = input file containing the public key (in raw binary format)\n");
+			printf("\targ6 = input file containing the signature\n");
 			printf("\t<arg7 (optional) = ancillary data to be used>\n");
 			return -1;
 		}
@@ -1478,6 +1630,7 @@ int main(int argc, char *argv[])
 		}
 		if(sign_bin_file(argv[2], argv[3], argv[4], argv[5], argv[6],
 			      argv[7], argv[8], argv[9], adata, adata_len)){
+			printf("struct_sign error ...\n");
 			return -1;
 		}
 	}
