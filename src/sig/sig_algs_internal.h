@@ -233,7 +233,7 @@ int unsupported_sign_update(struct ec_sign_context * ctx,
 int unsupported_sign_finalize(struct ec_sign_context * ctx,
 		      u8 *sig, u8 siglen);
 
-int is_sign_streaming_mode_supported(ec_sig_alg_type sig_type);
+int is_sign_streaming_mode_supported(ec_sig_alg_type sig_type, int *check);
 
 int unsupported_verify_init(struct ec_verify_context * ctx,
 		    const u8 *sig, u8 siglen);
@@ -241,9 +241,9 @@ int unsupported_verify_update(struct ec_verify_context * ctx,
 		      const u8 *chunk, u32 chunklen);
 int unsupported_verify_finalize(struct ec_verify_context * ctx);
 
-int is_verify_streaming_mode_supported(ec_sig_alg_type sig_type);
+int is_verify_streaming_mode_supported(ec_sig_alg_type sig_type, int *check);
 
-int is_sign_deterministic(ec_sig_alg_type sig_type);
+int is_sign_deterministic(ec_sig_alg_type sig_type, int *check);
 
 /*
  * Each signature algorithm supported by the library and implemented

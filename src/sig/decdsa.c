@@ -38,34 +38,49 @@ int decdsa_init_pub_key(ec_pub_key *out_pub, const ec_priv_key *in_priv)
 	return __ecdsa_init_pub_key(out_pub, in_priv, DECDSA);
 }
 
-u8 decdsa_siglen(u16 p_bit_len, u16 q_bit_len, u8 hsize, u8 blocksize)
+int decdsa_siglen(u16 p_bit_len, u16 q_bit_len, u8 hsize, u8 blocksize, u8 *siglen)
 {
-	return __ecdsa_siglen(p_bit_len, q_bit_len, hsize, blocksize);
+	return __ecdsa_siglen(p_bit_len, q_bit_len, hsize, blocksize, siglen);
 }
 
 int _decdsa_sign_init(struct ec_sign_context *ctx)
 {
+	int ret;
+
 	/* Override our random source with NULL since we want a deterministic
 	 * generation.
 	 */
-	MUST_HAVE(ctx != NULL);
+	MUST_HAVE(ctx != NULL, ret, err);
 	ctx->rand = NULL;
-	return __ecdsa_sign_init(ctx, DECDSA);
+	ret =  __ecdsa_sign_init(ctx, DECDSA);
+
+err:
+	return ret;
 }
 
 int _decdsa_sign_update(struct ec_sign_context *ctx,
 		       const u8 *chunk, u32 chunklen)
 {
-	MUST_HAVE((ctx != NULL) && (ctx->rand == NULL));
+	int ret;
 
-	return __ecdsa_sign_update(ctx, chunk, chunklen, DECDSA);
+	MUST_HAVE((ctx != NULL) && (ctx->rand == NULL), ret, err);
+
+	ret = __ecdsa_sign_update(ctx, chunk, chunklen, DECDSA);
+
+err:
+	return ret;
 }
 
 int _decdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 {
-	MUST_HAVE((ctx != NULL) && (ctx->rand == NULL));
+	int ret;
 
-	return __ecdsa_sign_finalize(ctx, sig, siglen, DECDSA);
+	MUST_HAVE((ctx != NULL) && (ctx->rand == NULL), ret, err);
+
+	ret =  __ecdsa_sign_finalize(ctx, sig, siglen, DECDSA);
+
+err:
+	return ret;
 }
 
 int _decdsa_verify_init(struct ec_verify_context *ctx, const u8 *sig, u8 siglen)
