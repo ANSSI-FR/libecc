@@ -31,17 +31,19 @@
  * It is to be noted that the function uses out->wlen as the
  * upper limit for its work, i.e. bits shifted above out->wlen
  * are lost (the NN size of the output is not modified).
+ *
+ * The function returns 0 on sucess, -1 on error.
  */
-void nn_lshift_fixedlen(nn_t out, nn_src_t in, bitcnt_t cnt)
+int nn_lshift_fixedlen(nn_t out, nn_src_t in, bitcnt_t cnt)
 {
-	u8 lshift, hshift;
-	u8 owlen = out->wlen;
-	u8 iwlen = in->wlen;
-	int ipos, opos, dec;
+	int ipos, opos, dec, ret;
+	bitcnt_t lshift, hshift;
+	u8 owlen, iwlen;
 
-	nn_check_initialized(in);
-	/* Check that the output is initialized, because we trust its wlen */
-	nn_check_initialized(out);
+	ret = nn_check_initialized(in); EG(ret, err);
+	ret = nn_check_initialized(out); EG(ret, err);
+	owlen = out->wlen;
+	iwlen = in->wlen;
 
 	dec = cnt / WORD_BITS;
 	hshift = cnt % WORD_BITS;
@@ -62,6 +64,9 @@ void nn_lshift_fixedlen(nn_t out, nn_src_t in, bitcnt_t cnt)
 
 		out->val[opos] = hipart | lopart;
 	}
+
+err:
+	return ret;
 }
 
 /*
@@ -79,21 +84,26 @@ void nn_lshift_fixedlen(nn_t out, nn_src_t in, bitcnt_t cnt)
  * It is to be noted that the function computes the output bit length
  * depending on the shift count and the input length, i.e. out bit length
  * will be roughly in bit length  plus cnt, maxed to NN_MAX_BIT_LEN.
+ *
+ * The function returns 0 on success, -1 on error.
  */
-void nn_lshift(nn_t out, nn_src_t in, bitcnt_t cnt)
+int nn_lshift(nn_t out, nn_src_t in, bitcnt_t cnt)
 {
-	u8 owlen, iwlen = in->wlen;
-	int ipos, opos, dec;
-	u8 lshift, hshift;
+	bitcnt_t lshift, hshift, blen;
+	int ipos, opos, dec, ret;
+	u8 owlen, iwlen;
 
-	nn_check_initialized(in);
+	ret = nn_check_initialized(in); EG(ret, err);
+	iwlen = in->wlen;
+
 	/* Initialize output if no aliasing is used */
 	if (out != in) {
-		nn_init(out, 0);
+		ret = nn_init(out, 0); EG(ret, err);
 	}
 
 	/* Adapt output length accordingly */
-	owlen = (u8)LOCAL_MIN(BIT_LEN_WORDS(cnt + nn_bitlen(in)),
+	ret = nn_bitlen(in, &blen); EG(ret, err);
+	owlen = (u8)LOCAL_MIN(BIT_LEN_WORDS(cnt + blen),
 			BIT_LEN_WORDS(NN_MAX_BIT_LEN));
 	out->wlen = owlen;
 
@@ -116,6 +126,9 @@ void nn_lshift(nn_t out, nn_src_t in, bitcnt_t cnt)
 
 		out->val[opos] = hipart | lopart;
 	}
+
+err:
+	return ret;
 }
 
 /*
@@ -132,17 +145,19 @@ void nn_lshift(nn_t out, nn_src_t in, bitcnt_t cnt)
  * It is to be noted that the function uses out->wlen as the
  * upper limit for its work, which means zeroes are shifted in while
  * keeping the same NN output size.
+ *
+ * The function returns 0 on success, -1 on error.
  */
-void nn_rshift_fixedlen(nn_t out, nn_src_t in, bitcnt_t cnt)
+int nn_rshift_fixedlen(nn_t out, nn_src_t in, bitcnt_t cnt)
 {
+	int ipos, opos, dec, ret;
 	bitcnt_t lshift, hshift;
-	u8 owlen = out->wlen;
-	u8 iwlen = in->wlen;
-	int ipos, opos, dec;
+	u8 owlen, iwlen;
 
-	nn_check_initialized(in);
-	/* Check that the output is initialized, because we trust its wlen */
-	nn_check_initialized(out);
+	ret = nn_check_initialized(in); EG(ret, err);
+	ret = nn_check_initialized(out); EG(ret, err);
+	owlen = out->wlen;
+	iwlen = in->wlen;
 
 	dec = cnt / WORD_BITS;
 	lshift = cnt % WORD_BITS;
@@ -163,6 +178,9 @@ void nn_rshift_fixedlen(nn_t out, nn_src_t in, bitcnt_t cnt)
 
 		out->val[opos] = hipart | lopart;
 	}
+
+err:
+	return ret;
 }
 
 /*
@@ -179,17 +197,21 @@ void nn_rshift_fixedlen(nn_t out, nn_src_t in, bitcnt_t cnt)
  * It is to be noted that the function adapts the output size to
  * the input size and the shift bit count, i.e. out bit lenth is roughly
  * equal to input bit length minus cnt.
+ *
+ * The function returns 0 on success, -1 on error.
  */
-void nn_rshift(nn_t out, nn_src_t in, bitcnt_t cnt)
+int nn_rshift(nn_t out, nn_src_t in, bitcnt_t cnt)
 {
-	u8 owlen, iwlen = in->wlen;
+	int ipos, opos, dec, ret;
 	bitcnt_t lshift, hshift;
-	int ipos, opos, dec;
+	u8 owlen, iwlen;
+	bitcnt_t blen;
 
-	nn_check_initialized(in);
+	ret = nn_check_initialized(in); EG(ret, err);
+	iwlen = in->wlen;
 	/* Initialize output if no aliasing is used */
 	if (out != in) {
-		nn_init(out, 0);
+		ret = nn_init(out, 0); EG(ret, err);
 	}
 
 	dec = cnt / WORD_BITS;
@@ -197,10 +219,11 @@ void nn_rshift(nn_t out, nn_src_t in, bitcnt_t cnt)
 	hshift = WORD_BITS - lshift;
 
 	/* Adapt output length accordingly */
-	if (cnt > nn_bitlen(in)) {
+	ret = nn_bitlen(in, &blen); EG(ret, err);
+	if (cnt > blen) {
 		owlen = 0;
 	} else {
-		owlen = (u8)BIT_LEN_WORDS(nn_bitlen(in) - cnt);
+		owlen = (u8)BIT_LEN_WORDS(blen - cnt);
 	}
 	/* Adapt output length in out */
 	out->wlen = owlen;
@@ -229,28 +252,36 @@ void nn_rshift(nn_t out, nn_src_t in, bitcnt_t cnt)
 	for (opos = owlen; opos < NN_MAX_WORD_LEN; opos++) {
 		out->val[opos] = 0;
 	}
+
+err:
+	return ret;
 }
 
 /*
  * This function right rotates the input NN value by the value 'cnt' on the
  * bitlen basis. The function does it in the following way; right rotation
  * of x by cnt is "simply": (x >> cnt) ^ (x << (bitlen - cnt))
+ *
+ * The function returns 0 on success, -1 on error.
  */
-void nn_rrot(nn_t out, nn_src_t in, bitcnt_t cnt, bitcnt_t bitlen)
+int nn_rrot(nn_t out, nn_src_t in, bitcnt_t cnt, bitcnt_t bitlen)
 {
 	u8 owlen = (u8)BIT_LEN_WORDS(bitlen);
+	int ret;
 	nn tmp;
+	tmp.magic = 0;
 
-	MUST_HAVE(bitlen <= NN_MAX_BIT_LEN);
-	MUST_HAVE(cnt < bitlen);
-	nn_check_initialized(in);
+	MUST_HAVE(!(bitlen > NN_MAX_BIT_LEN), ret, err);
+	MUST_HAVE(!(cnt >= bitlen), ret, err);
 
-	nn_init(&tmp, 0);
-	nn_lshift(&tmp, in, bitlen - cnt);
-	nn_set_wlen(&tmp, owlen);
-	nn_rshift(out, in, cnt);
-	nn_set_wlen(out, owlen);
-	nn_xor(out, out, &tmp);
+	ret = nn_check_initialized(in); EG(ret, err);
+	ret = nn_init(&tmp, 0); EG(ret, err);
+	ret = nn_lshift(&tmp, in, bitlen - cnt); EG(ret, err);
+	ret = nn_set_wlen(&tmp, owlen); EG(ret, err);
+	ret = nn_rshift(out, in, cnt); EG(ret, err);
+	ret = nn_set_wlen(out, owlen); EG(ret, err);
+	ret = nn_xor(out, out, &tmp); EG(ret, err);
+
 	/* Mask the last word if necessary */
 	if (((bitlen % WORD_BITS) != 0) && (out->wlen > 0)) {
 		/* shift operation below is ok (less than WORD_BITS) */
@@ -258,36 +289,47 @@ void nn_rrot(nn_t out, nn_src_t in, bitcnt_t cnt, bitcnt_t bitlen)
 		out->val[out->wlen - 1] &= mask;
 	}
 
+err:
 	nn_uninit(&tmp);
+
+	return ret;
 }
 
 /*
  * This function left rotates the input NN value by the value 'cnt' on the
  * bitlen basis. The function does it in the following way; Left rotation
  * of x by cnt is "simply": (x << cnt) ^ (x >> (bitlen - cnt))
+ *
+ * The function returns 0 on success, -1 on error.
  */
-void nn_lrot(nn_t out, nn_src_t in, bitcnt_t cnt, bitcnt_t bitlen)
+int nn_lrot(nn_t out, nn_src_t in, bitcnt_t cnt, bitcnt_t bitlen)
 {
 	u8 owlen = (u8)BIT_LEN_WORDS(bitlen);
+	int ret;
 	nn tmp;
+	tmp.magic = 0;
 
-	MUST_HAVE(bitlen <= NN_MAX_BIT_LEN);
-	MUST_HAVE(cnt < bitlen);
-	nn_check_initialized(in);
+	MUST_HAVE(!(bitlen > NN_MAX_BIT_LEN), ret, err);
+	MUST_HAVE(!(cnt >= bitlen), ret, err);
 
-	nn_init(&tmp, 0);
-	nn_lshift(&tmp, in, cnt);
-	nn_set_wlen(&tmp, owlen);
-	nn_rshift(out, in, bitlen - cnt);
-	nn_set_wlen(out, owlen);
-	nn_xor(out, out, &tmp);
+	ret = nn_check_initialized(in); EG(ret, err);
+	ret = nn_init(&tmp, 0); EG(ret, err);
+	ret = nn_lshift(&tmp, in, cnt); EG(ret, err);
+	ret = nn_set_wlen(&tmp, owlen); EG(ret, err);
+	ret = nn_rshift(out, in, bitlen - cnt); EG(ret, err);
+	ret = nn_set_wlen(out, owlen); EG(ret, err);
+	ret = nn_xor(out, out, &tmp); EG(ret, err);
+
 	/* Mask the last word if necessary */
 	if (((bitlen % WORD_BITS) != 0) && (out->wlen > 0)) {
 		word_t mask = ((word_t)(WORD(1) << (bitlen % WORD_BITS))) - 1;
 		out->val[out->wlen - 1] &= mask;
 	}
 
+err:
 	nn_uninit(&tmp);
+
+	return ret;
 }
 
 /*
@@ -296,17 +338,20 @@ void nn_lrot(nn_t out, nn_src_t in, bitcnt_t cnt, bitcnt_t bitlen)
  * C. If aliasing is not used, A will be initialized by the function. Function
  * execution time depends on the word length of larger parameter but not on its
  * particular value.
+ *
+ * The function returns 0 on success, -1 on error.
  */
-void nn_xor(nn_t A, nn_src_t B, nn_src_t C)
+int nn_xor(nn_t A, nn_src_t B, nn_src_t C)
 {
+	int ret;
 	u8 i;
 
-	nn_check_initialized(B);
-	nn_check_initialized(C);
+	ret = nn_check_initialized(B); EG(ret, err);
+	ret = nn_check_initialized(C); EG(ret, err);
 
 	/* Initialize the output if no aliasing is used */
 	if ((A != B) && (A != C)) {
-		nn_init(A, 0);
+		ret = nn_init(A, 0);  EG(ret, err);
 	}
 
 	/* Set output wlen accordingly */
@@ -315,6 +360,9 @@ void nn_xor(nn_t A, nn_src_t B, nn_src_t C)
 	for (i = 0; i < A->wlen; i++) {
 		A->val[i] = B->val[i] ^ C->val[i];
 	}
+
+err:
+	return ret;
 }
 
 /*
@@ -323,17 +371,20 @@ void nn_xor(nn_t A, nn_src_t B, nn_src_t C)
  * C. If aliasing is not used, A will be initialized by the function. Function
  * execution time depends on the word length of larger parameter but not on its
  * particular value.
+ *
+ * The function returns 0 on success, -1 on error.
  */
-void nn_or(nn_t A, nn_src_t B, nn_src_t C)
+int nn_or(nn_t A, nn_src_t B, nn_src_t C)
 {
+	int ret;
 	u8 i;
 
-	nn_check_initialized(B);
-	nn_check_initialized(C);
+	ret = nn_check_initialized(B); EG(ret, err);
+	ret = nn_check_initialized(C); EG(ret, err);
 
 	/* Initialize the output if no aliasing is used */
 	if ((A != B) && (A != C)) {
-		nn_init(A, 0);
+		ret = nn_init(A, 0); EG(ret, err);
 	}
 
 	/* Set output wlen accordingly */
@@ -342,6 +393,9 @@ void nn_or(nn_t A, nn_src_t B, nn_src_t C)
 	for (i = 0; i < A->wlen; i++) {
 		A->val[i] = B->val[i] | C->val[i];
 	}
+
+err:
+	return ret;
 }
 
 /*
@@ -350,17 +404,20 @@ void nn_or(nn_t A, nn_src_t B, nn_src_t C)
  * C. If aliasing is not used, A will be initialized by the function. Function
  * execution time depends on the word length of larger parameter but not on its
  * particular value.
+ *
+ * The function returns 0 on success, -1 on error.
  */
-void nn_and(nn_t A, nn_src_t B, nn_src_t C)
+int nn_and(nn_t A, nn_src_t B, nn_src_t C)
 {
+	int ret;
 	u8 i;
 
-	nn_check_initialized(B);
-	nn_check_initialized(C);
+	ret = nn_check_initialized(B); EG(ret, err);
+	ret = nn_check_initialized(C); EG(ret, err);
 
 	/* Initialize the output if no aliasing is used */
 	if ((A != B) && (A != C)) {
-		nn_init(A, 0);
+		ret = nn_init(A, 0); EG(ret, err);
 	}
 
 	/* Set output wlen accordingly */
@@ -369,22 +426,28 @@ void nn_and(nn_t A, nn_src_t B, nn_src_t C)
 	for (i = 0; i < A->wlen; i++) {
 		A->val[i] = B->val[i] & C->val[i];
 	}
+
+err:
+	return ret;
 }
 
 /*
  * Compute logical NOT of B and put the result in A. B must be initialized.
  * Aliasing is supported. If aliasing is not used, A will be initialized by
  * the function.
+ *
+ * The function returns 0 on success, -1 on error.
  */
-void nn_not(nn_t A, nn_src_t B)
+int nn_not(nn_t A, nn_src_t B)
 {
+	int ret;
 	u8 i;
 
-	nn_check_initialized(B);
+	ret = nn_check_initialized(B); EG(ret, err);
 
 	/* Initialize the output if no aliasing is used */
 	if (A != B) {
-		nn_init(A, 0);
+		ret = nn_init(A, 0); EG(ret, err);
 	}
 
 	/* Set output wlen accordingly */
@@ -393,6 +456,9 @@ void nn_not(nn_t A, nn_src_t B)
 	for (i = 0; i < A->wlen; i++) {
 		A->val[i] = ~(B->val[i]);
 	}
+
+err:
+	return ret;
 }
 
 /* Count leading zeros of a word. This is constant time */
@@ -410,13 +476,18 @@ static u8 wclz(word_t A)
 	return cnt;
 }
 
-/* Count leading zeros of an initialized nn. This is NOT constant time. */
-bitcnt_t nn_clz(nn_src_t in)
+/*
+ * Count leading zeros of an initialized nn. This is NOT constant time. The
+ * function returns 0 on success, -1 on error. On success, the number of
+ * leading zeroes is available in 'lz'. 'lz' is not meaningful on error.
+ */
+int nn_clz(nn_src_t in, bitcnt_t *lz)
 {
 	bitcnt_t cnt = 0;
+	int ret;
 	u8 i;
 
-	nn_check_initialized(in);
+	ret = nn_check_initialized(in); EG(ret, err);
 
 	for (i = in->wlen; i > 0; i--) {
 		if (in->val[i - 1] == 0) {
@@ -426,34 +497,54 @@ bitcnt_t nn_clz(nn_src_t in)
 			break;
 		}
 	}
+	*lz = cnt;
 
-	return cnt;
+err:
+	return ret;
 }
 
-/* Compute bit length of given nn. This is NOT constant-time. */
-bitcnt_t nn_bitlen(nn_src_t in)
+/*
+ * Compute bit length of given nn. This is NOT constant-time.  The
+ * function returns 0 on success, -1 on error. On success, the bit length
+ * of 'in' is available in 'blen'. 'blen' is not meaningful on error.
+ */
+int nn_bitlen(nn_src_t in, bitcnt_t *blen)
 {
+	bitcnt_t _blen = 0;
+	int ret;
 	u8 i;
 
-	nn_check_initialized(in);
+	ret = nn_check_initialized(in); EG(ret, err);
 
 	for (i = in->wlen; i > 0; i--) {
 		if (in->val[i - 1] != 0) {
-			return ((i * WORD_BITS) - wclz(in->val[i - 1]));
+			_blen = ((i * WORD_BITS) - wclz(in->val[i - 1]));
+			break;
 		}
 	}
+	*blen = _blen;
 
-	return 0;
+err:
+	return ret;
 }
 
-u8 nn_getbit(nn_src_t in, bitcnt_t bit)
+/*
+ * On success (return value is 0), the function provides via 'bitval' the value
+ * of the bit at position 'bit' in 'in' nn. 'bitval' in not meaningful error
+ * (when return value is -1).
+ */
+int nn_getbit(nn_src_t in, bitcnt_t bit, u8 *bitval)
 {
 	bitcnt_t widx = bit / WORD_BITS;
 	u8 bidx = bit % WORD_BITS;
+	int ret;
 
-	nn_check_initialized(in);
-	MUST_HAVE(bit < NN_MAX_BIT_LEN);
+	ret = nn_check_initialized(in); EG(ret, err);
+	MUST_HAVE(!(bit >= NN_MAX_BIT_LEN), ret, err);
 
 	/* bidx is less than WORD_BITS so shift operations below are ok */
-	return (u8)((((in->val[widx]) & (WORD(1) << bidx)) >> bidx) & 0x1);
+	*bitval = (u8)((((in->val[widx]) & (WORD(1) << bidx)) >> bidx) & 0x1);
+
+err:
+	return ret;
 }
