@@ -22,9 +22,9 @@
 
 /*
  * Compute out = x^-1 mod m, i.e. out such that (out * x) = 1 mod m
- * out is initialized by the function, i.e. caller need
- * not initialize it; only provide the associated storage space.
- * Done in *constant time* if underlying routines are.
+ * out is initialized by the function, i.e. caller needs not initialize
+ * it; only provide the associated storage space. Done in *constant
+ * time* if underlying routines are.
  *
  * Asserts that m is odd and that x is smaller than m.
  * This second condition is not strictly necessary,
@@ -36,26 +36,32 @@
  * and performs reduction modulo m at each step.
  *
  * This does not normalize out on return.
+ *
+ * 0 is returned on success (everything went ok and x has reciprocal), -1
+ * on error or if x has no reciprocal. On error, out is not meaningful.
+ *
  */
 static int nn_modinv_odd(nn_t out, nn_src_t x, nn_src_t m)
 {
-	int odd, swap, smaller, ret;
+	int isodd, swap, smaller, ret,  cmp, iszero, tmp_isodd;
 	nn a, b, u, tmp, mp1d2;
 	nn_t uu = out;
 	bitcnt_t cnt;
-	nn_init(out, 0);
-	nn_init(&a, m->wlen * WORD_BYTES);
-	nn_init(&b, m->wlen * WORD_BYTES);
-	nn_init(&u, m->wlen * WORD_BYTES);
-	nn_init(&mp1d2, m->wlen * WORD_BYTES);
+	a.magic = b.magic = u.magic = tmp.magic = mp1d2.magic = 0;
+
+	ret = nn_init(out, 0); EG(ret, err);
+	ret = nn_init(&a, m->wlen * WORD_BYTES); EG(ret, err);
+	ret = nn_init(&b, m->wlen * WORD_BYTES); EG(ret, err);
+	ret = nn_init(&u, m->wlen * WORD_BYTES); EG(ret, err);
+	ret = nn_init(&mp1d2, m->wlen * WORD_BYTES); EG(ret, err);
 	/*
 	 * Temporary space needed to only deal with positive stuff.
 	 */
-	nn_init(&tmp, m->wlen * WORD_BYTES);
+	ret = nn_init(&tmp, m->wlen * WORD_BYTES); EG(ret, err);
 
-	MUST_HAVE(nn_isodd(m));
-	MUST_HAVE(nn_cmp(x, m) < 0); /* could be leveraged by using maxlen(x,m) when dealing with a and b */
-	MUST_HAVE(!nn_iszero(x)); /* could rather return 0 */
+	MUST_HAVE(!nn_isodd(m, &isodd) && isodd, ret, err);
+	MUST_HAVE(!nn_cmp(x, m, &cmp) && (cmp < 0), ret, err);
+	MUST_HAVE(!nn_iszero(x, &iszero) && (!iszero), ret, err);
 
 	/*
 	 * Maintain:
@@ -68,26 +74,29 @@ static int nn_modinv_odd(nn_t out, nn_src_t x, nn_src_t m)
 	 * a = x, u = 1
 	 * b = m, uu = 0
 	 */
-	nn_copy(&a, x);
-	nn_set_wlen(&a, m->wlen);
-	nn_copy(&b, m);
-	nn_one(&u);
-	nn_zero(uu);
+	ret = nn_copy(&a, x); EG(ret, err);
+	ret = nn_set_wlen(&a, m->wlen); EG(ret, err);
+	ret = nn_copy(&b, m); EG(ret, err);
+	ret = nn_one(&u); EG(ret, err);
+	ret = nn_zero(uu); EG(ret, err);
+
 	/*
 	 * The lengths of u and uu should not affect constant timeness but it
 	 * does not hurt to set them already.
 	 * They will always be strictly smaller than m.
 	 */
-	nn_set_wlen(&u, m->wlen);
-	nn_set_wlen(uu, m->wlen);
+	ret = nn_set_wlen(&u, m->wlen); EG(ret, err);
+	ret = nn_set_wlen(uu, m->wlen); EG(ret, err);
 
 	/*
 	 * Precompute inverse of 2 mod m:
-	 * 	2^-1 = (m+1)/2
+	 *	2^-1 = (m+1)/2
 	 * computed as (m >> 1) + 1.
 	 */
-	nn_rshift_fixedlen(&mp1d2, m, 1);
-	nn_inc(&mp1d2, &mp1d2); /* no carry can occur here because of previous shift */
+	ret = nn_rshift_fixedlen(&mp1d2, m, 1); EG(ret, err);
+
+	ret = nn_inc(&mp1d2, &mp1d2); EG(ret, err); /* no carry can occur here
+						       because of prev. shift */
 
 	cnt = (a.wlen + b.wlen) * WORD_BITS;
 	while (cnt > 0) {
@@ -109,13 +118,18 @@ static int nn_modinv_odd(nn_t out, nn_src_t x, nn_src_t m)
 		 * a /= 2
 		 */
 
-		MUST_HAVE(nn_isodd(&b));
-		odd = nn_isodd(&a);
-		swap = odd & (nn_cmp(&a, &b) == -1);
-		nn_cnd_swap(swap, &a, &b);
-		nn_cnd_sub(odd, &a, &a, &b);
-		MUST_HAVE(!nn_isodd(&a)); /* a is now even */
-		nn_rshift_fixedlen(&a, &a, 1); /* division by 2 */
+		MUST_HAVE(!nn_isodd(&b, &tmp_isodd) && tmp_isodd, ret, err);
+
+		ret = nn_isodd(&a, &isodd); EG(ret, err);
+		ret = nn_cmp(&a, &b, &cmp); EG(ret, err);
+		swap = isodd & (cmp == -1);
+
+		ret = nn_cnd_swap(swap, &a, &b); EG(ret, err);
+		ret = nn_cnd_sub(isodd, &a, &a, &b); EG(ret, err);
+
+		MUST_HAVE(!nn_isodd(&a, &tmp_isodd) && (!tmp_isodd), ret, err); /* a is now even */
+
+		ret = nn_rshift_fixedlen(&a, &a, 1);  EG(ret, err);/* division by 2 */
 
 		/*
 		 * For u, uu:
@@ -132,21 +146,26 @@ static int nn_modinv_odd(nn_t out, nn_src_t x, nn_src_t m)
 		 * if (u was odd)
 		 *      u += (m+1)/2
 		 */
-		nn_cnd_swap(swap, &u, uu);
-		/* This parameter is used to avoid handling negative numbers. */
-		smaller = (nn_cmp(&u, uu) == -1);
-		/* Computation of 'm - uu' can always be performed. */
-		nn_sub(&tmp, m, uu);
-		/* Selection btw 'm-uu' and '-uu' is made by the following function calls. */
-		nn_cnd_add(odd & smaller, &u, &u, &tmp); /* no carry can occur as 'u+(m-uu) = m-(uu-u) < m' */
-		nn_cnd_sub(odd & !smaller, &u, &u, uu);
-		/* Divide u by 2 */
-		odd = nn_isodd(&u);
-		nn_rshift_fixedlen(&u, &u, 1);
-		nn_cnd_add(odd, &u, &u, &mp1d2); /* no carry can occur as u=1+u' with u'<m-1 and u' even so u'/2+(m+1)/2<(m-1)/2+(m+1)/2=m */
+		ret = nn_cnd_swap(swap, &u, uu); EG(ret, err);
 
-		MUST_HAVE(nn_cmp(&u, m) < 0);
-		MUST_HAVE(nn_cmp(uu, m) < 0);
+		/* This parameter is used to avoid handling negative numbers. */
+		ret = nn_cmp(&u, uu, &cmp); EG(ret, err);
+		smaller = (cmp == -1);
+
+		/* Computation of 'm - uu' can always be performed. */
+		ret = nn_sub(&tmp, m, uu); EG(ret, err);
+
+		/* Selection btw 'm-uu' and '-uu' is made by the following function calls. */
+		ret = nn_cnd_add(isodd & smaller, &u, &u, &tmp); EG(ret, err); /* no carry can occur as 'u+(m-uu) = m-(uu-u) < m' */
+		ret = nn_cnd_sub(isodd & !smaller, &u, &u, uu); EG(ret, err);
+
+		/* Divide u by 2 */
+		ret = nn_isodd(&u, &isodd); EG(ret, err);
+		ret = nn_rshift_fixedlen(&u, &u, 1); EG(ret, err);
+		ret = nn_cnd_add(isodd, &u, &u, &mp1d2); EG(ret, err); /* no carry can occur as u=1+u' with u'<m-1 and u' even so u'/2+(m+1)/2<(m-1)/2+(m+1)/2=m */
+
+		MUST_HAVE(!nn_cmp(&u, m, &cmp) && (cmp < 0), ret, err);
+		MUST_HAVE(!nn_cmp(uu, m, &cmp) && (cmp < 0), ret, err);
 
 		/*
 		 * As long as a > 0, the quantity
@@ -157,13 +176,18 @@ static int nn_modinv_odd(nn_t out, nn_src_t x, nn_src_t m)
 		 * and if b = 1 then also uu = x^{-1} (mod m).
 		 */
 	}
-	MUST_HAVE(nn_iszero(&a));
+
+	MUST_HAVE(!nn_iszero(&a, &iszero) && iszero, ret, err);
 
 	/* Check that gcd is one. */
-	ret = (nn_cmp_word(&b, WORD(1)) == 0);
-	/* If not, set "inverse" to zero. */
-	nn_cnd_sub(ret != 1, uu, uu, uu);
+	ret = nn_cmp_word(&b, WORD(1), &cmp); EG(ret, err);
 
+	/* If not, set "inverse" to zero. */
+	ret = nn_cnd_sub(cmp != 0, uu, uu, uu); EG(ret, err);
+
+	ret = cmp ? -1 : 0;
+
+err:
 	nn_uninit(&a);
 	nn_uninit(&b);
 	nn_uninit(&u);
@@ -179,67 +203,67 @@ static int nn_modinv_odd(nn_t out, nn_src_t x, nn_src_t m)
  * Uses the above constant-time binary xgcd when m is odd
  * and a not constant time plain Euclidean xgcd when m is even.
  *
- * Return 0 if x has no reciprocal modulo m, out is zeroed.
- * Return 1 if x has reciprocal modulo m.
+ * Return -1 on error or if if x has no reciprocal modulo m. out is zeroed.
+ * Return  0 if x has reciprocal modulo m.
  *
  * The function supports aliasing.
  */
 int nn_modinv(nn_t _out, nn_src_t x, nn_src_t m)
 {
-	int sign, ret;
-	nn u, v;
-	/* Out to support aliasing */
-	nn out;
+	int sign, ret, cmp, isodd, isone;
+	nn_t x_mod_m;
+	nn u, v, out; /* Out to support aliasing */
+	out.magic = u.magic = v.magic = 0;
 
-	nn_check_initialized(x);
-	nn_check_initialized(m);
+	ret = nn_check_initialized(x); EG(ret, err);
+	ret = nn_check_initialized(m); EG(ret, err);
 
-	
 	/* Initialize out */
-	nn_init(&out, 0);
-
-	if (nn_isodd(m)) {
-	        if(nn_cmp(x, m) >= 0){
-		        /* If x >= m, (x^-1) mod m = ((x mod m)^-1) mod m
-        		 * Hence, compute x mod m
-	       	  	 */
-			nn x_mod_m;
-			nn_init(&x_mod_m, 0);
-        	        nn_mod(&x_mod_m, x, m);
-			ret = nn_modinv_odd(&out, &x_mod_m, m);
-			nn_uninit(&x_mod_m);
-			nn_copy(_out, &out);
-			return ret;
-        	}
-		else{
-			ret = nn_modinv_odd(&out, x, m);
-			nn_copy(_out, &out);
-			nn_uninit(&out);
-			return ret;
+	ret = nn_init(&out, 0); EG(ret, err);
+	ret = nn_isodd(m, &isodd); EG(ret, err);
+	if (isodd) {
+		ret = nn_cmp(x, m, &cmp); EG(ret, err);
+		if (cmp >= 0) {
+			/*
+			 * If x >= m, (x^-1) mod m = ((x mod m)^-1) mod m
+			 * Hence, compute x mod m. In order to avoid
+			 * additional stack usage, we use 'u' (not
+			 * already useful at that point in the function).
+			 */
+			x_mod_m = &u;
+			ret = nn_init(x_mod_m, 0); EG(ret, err);
+			ret = nn_mod(x_mod_m, x, m); EG(ret, err);
+			ret = nn_modinv_odd(&out, x_mod_m, m); EG(ret, err);
+		} else {
+			ret = nn_modinv_odd(&out, x, m); EG(ret, err);
 		}
+		ret = nn_copy(_out, &out);
+		goto err;
 	}
+
 	/* Now m is even */
-	if (!nn_isodd(x)) {
-		nn_zero(_out);
-		nn_uninit(&out);
-		return 0;
+	ret = nn_isodd(x, &isodd); EG(ret, err);
+	if (!isodd) {
+		ret = -1;
+		goto err;
 	}
 
-	nn_init(&u, 0);
-	nn_init(&v, 0);
-
-	sign = nn_xgcd(&out, &u, &v, x, m);
-	if (!nn_isone(&out)) {
-		ret = 0;
-		nn_zero(&out);
+	ret = nn_init(&u, 0); EG(ret, err);
+	ret = nn_init(&v, 0); EG(ret, err);
+	ret = nn_xgcd(&out, &u, &v, x, m, &sign); EG(ret, err);
+	ret = nn_isone(&out, &isone); EG(ret, err);
+	if (!isone) {
+		ret = -1;
+		goto err;
 	} else {
-		ret = 1;
-		nn_mod(&out, &u, m);
+		ret = nn_mod(&out, &u, m); EG(ret, err);
 		if (sign == -1) {
-			nn_sub(&out, m, &out);
+			ret = nn_sub(&out, m, &out); EG(ret, err);
 		}
 	}
-	nn_copy(_out, &out);
+	ret = nn_copy(_out, &out);
+
+err:
 	nn_uninit(&out);
 	nn_uninit(&u);
 	nn_uninit(&v);
@@ -248,29 +272,33 @@ int nn_modinv(nn_t _out, nn_src_t x, nn_src_t m)
 }
 
 /*
- * Compute (A - B) % 2^(storagebitsizeof(B) + 1).
- * No assumption on A and B such as A >= B.
- * Done in *constant time*.
+ * Compute (A - B) % 2^(storagebitsizeof(B) + 1). No assumption on A and B such
+ * as A >= B. Done in *constant time*. Returns 0 on success, -1 on error.
  */
-static inline void nn_sub_mod_2exp(nn_t A, nn_src_t B)
+static inline int nn_sub_mod_2exp(nn_t A, nn_src_t B)
 {
 	u8 Awlen = A->wlen;
-	nn_set_wlen(A, Awlen + 1);
+	int ret;
+
+	ret = nn_set_wlen(A, Awlen + 1); EG(ret, err);
+
 	/* Make sure A > B */
 	A->val[A->wlen - 1] = WORD(1);
-	nn_sub(A, A, B);
+	ret = nn_sub(A, A, B); EG(ret, err);
+
 	/* The artificial word will be cleared in the following function call */
-	nn_set_wlen(A, Awlen);
+	ret = nn_set_wlen(A, Awlen);
+
+err:
+	return ret;
 }
 
 /*
- * Invert x modulo 2^exp using Hensel lifting.
- * Returns 0 if x is even, and 1 if x is odd.
- * Done in *constant time*.
- *
- * The function supports aliasing.
+ * Invert x modulo 2^exp using Hensel lifting. Returns 0 on success, -1 on
+ * error. On success, x_isodd is 1 if x is odd, 0 if it is even.
+ * Operations are done in *constant time*. The function supports aliasing.
  */
-int nn_modinv_2exp(nn_t _out, nn_src_t x, bitcnt_t exp)
+int nn_modinv_2exp(nn_t _out, nn_src_t x, bitcnt_t exp, int *x_isodd)
 {
 	bitcnt_t cnt;
 	u8 exp_wlen = (u8)BIT_LEN_WORDS(exp);
@@ -278,34 +306,38 @@ int nn_modinv_2exp(nn_t _out, nn_src_t x, bitcnt_t exp)
 	word_t mask = (exp_cnt == 0) ? WORD_MASK : (word_t)((WORD(1) << exp_cnt) - WORD(1));
 	nn tmp_sqr, tmp_mul;
 	/* for aliasing */
+	int isodd, ret;
 	nn out;
+	out.magic = tmp_sqr.magic = tmp_mul.magic = 0;
 
-	nn_check_initialized(x);
-
-	nn_init(&out, 0);
-	nn_init(&tmp_sqr, 0);
-	nn_init(&tmp_mul, 0);
-
-	if (!nn_isodd(x)) {
-		nn_zero(_out);
+	MUST_HAVE(x_isodd != NULL, ret, err);
+	ret = nn_check_initialized(x); EG(ret, err);
+	ret = nn_init(&out, 0); EG(ret, err);
+	ret = nn_init(&tmp_sqr, 0); EG(ret, err);
+	ret = nn_init(&tmp_mul, 0); EG(ret, err);
+	ret = nn_isodd(x, &isodd); EG(ret, err);
+	if (!isodd) {
+		ret = nn_zero(_out); EG(ret, err);
 		nn_uninit(&out);
-		return 0;
+		*x_isodd = 0;
+		goto err;
 	}
 
 	/*
 	 * Inverse modulo 2.
 	 */
 	cnt = 1;
-	nn_one(&out);
+	ret = nn_one(&out); EG(ret, err);
 
 	/*
 	 * Inverse modulo 2^(2^i) <= 2^WORD_BITS.
 	 * Assumes WORD_BITS is a power of two.
 	 */
 	for (; cnt < WORD_MIN(WORD_BITS, exp); cnt <<= 1) {
-		nn_sqr_low(&tmp_sqr, &out, out.wlen);
-		nn_mul_low(&tmp_mul, &tmp_sqr, x, out.wlen);
-		nn_lshift_fixedlen(&out, &out, 1);
+		ret = nn_sqr_low(&tmp_sqr, &out, out.wlen); EG(ret, err);
+		ret = nn_mul_low(&tmp_mul, &tmp_sqr, x, out.wlen); EG(ret, err);
+		ret = nn_lshift_fixedlen(&out, &out, 1); EG(ret, err);
+
 		/*
 		 * Allowing "negative" results for a subtraction modulo
 		 * a power of two would allow to use directly:
@@ -321,29 +353,29 @@ int nn_modinv_2exp(nn_t _out, nn_src_t x, bitcnt_t exp)
 		 * borrow. The result modulo 2^(2^i) is correct whether the
 		 * borrow occurs or not.
 		 */
-		nn_sub_mod_2exp(&out, &tmp_mul);
+		ret = nn_sub_mod_2exp(&out, &tmp_mul); EG(ret, err);
 	}
 
 	/*
 	 * Inverse modulo 2^WORD_BITS < 2^(2^i) < 2^exp.
 	 */
 	for (; cnt < ((exp + 1) >> 1); cnt <<= 1) {
-		nn_set_wlen(&out, (2 * out.wlen));
-		nn_sqr_low(&tmp_sqr, &out, out.wlen);
-		nn_mul_low(&tmp_mul, &tmp_sqr, x, out.wlen);
-		nn_lshift_fixedlen(&out, &out, 1);
-		nn_sub_mod_2exp(&out, &tmp_mul);
+		ret = nn_set_wlen(&out, (2 * out.wlen)); EG(ret, err);
+		ret = nn_sqr_low(&tmp_sqr, &out, out.wlen); EG(ret, err);
+		ret = nn_mul_low(&tmp_mul, &tmp_sqr, x, out.wlen); EG(ret, err);
+		ret = nn_lshift_fixedlen(&out, &out, 1); EG(ret, err);
+		ret = nn_sub_mod_2exp(&out, &tmp_mul); EG(ret, err);
 	}
 
 	/*
 	 * Inverse modulo 2^(2^i + j) >= 2^exp.
 	 */
 	if (exp > WORD_BITS) {
-		nn_set_wlen(&out, exp_wlen);
-		nn_sqr_low(&tmp_sqr, &out, out.wlen);
-		nn_mul_low(&tmp_mul, &tmp_sqr, x, out.wlen);
-		nn_lshift_fixedlen(&out, &out, 1);
-		nn_sub_mod_2exp(&out, &tmp_mul);
+		ret = nn_set_wlen(&out, exp_wlen); EG(ret, err);
+		ret = nn_sqr_low(&tmp_sqr, &out, out.wlen); EG(ret, err);
+		ret = nn_mul_low(&tmp_mul, &tmp_sqr, x, out.wlen); EG(ret, err);
+		ret = nn_lshift_fixedlen(&out, &out, 1); EG(ret, err);
+		ret = nn_sub_mod_2exp(&out, &tmp_mul); EG(ret, err);
 	}
 
 	/*
@@ -353,11 +385,16 @@ int nn_modinv_2exp(nn_t _out, nn_src_t x, bitcnt_t exp)
 		out.val[exp_wlen - 1] &= mask;
 	}
 
-	nn_copy(_out, &out);
+	ret = nn_copy(_out, &out); EG(ret, err);
+
+	*x_isodd = 1;
+
+err:
 	nn_uninit(&out);
 	nn_uninit(&tmp_sqr);
 	nn_uninit(&tmp_mul);
-	return 1;
+
+	return ret;
 }
 
 /*
@@ -369,12 +406,13 @@ int nn_modinv_word(nn_t out, word_t w, nn_src_t m)
 {
 	nn nn_tmp;
 	int ret;
+	nn_tmp.magic = 0;
 
-	nn_init(&nn_tmp, 0);
-	nn_set_word_value(&nn_tmp, w);
-
+	ret = nn_init(&nn_tmp, 0); EG(ret, err);
+	ret = nn_set_word_value(&nn_tmp, w); EG(ret, err);
 	ret = nn_modinv(out, &nn_tmp, m);
 
+err:
 	nn_uninit(&nn_tmp);
 
 	return ret;
