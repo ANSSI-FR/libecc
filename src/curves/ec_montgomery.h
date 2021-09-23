@@ -27,9 +27,8 @@ typedef struct {
 typedef ec_montgomery_crv *ec_montgomery_crv_t;
 typedef const ec_montgomery_crv *ec_montgomery_crv_src_t;
 
-int ec_montgomery_crv_is_initialized(ec_montgomery_crv_src_t crv);
-void ec_montgomery_crv_check_initialized(ec_montgomery_crv_src_t crv);
-void ec_montgomery_crv_init(ec_montgomery_crv_t crv, fp_src_t a, fp_src_t b, nn_src_t order);
+int ec_montgomery_crv_check_initialized(ec_montgomery_crv_src_t crv);
+int ec_montgomery_crv_init(ec_montgomery_crv_t crv, fp_src_t a, fp_src_t b, nn_src_t order);
 void ec_montgomery_crv_uninit(ec_montgomery_crv_t crv);
 
 #endif /* __EC_MONTGOMERY_H__ */
