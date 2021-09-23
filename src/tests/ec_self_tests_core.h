@@ -99,6 +99,8 @@ static const u8 sha3_1600_bit_msg[] = {
 
 static int ecdsa_nn_random_secp224r1_sha3_224_test_vector(nn_t out, nn_src_t q)
 {
+	int ret, cmp;
+
 	/*
 	 * Fixed ephemeral private key for secp224r1 signature
 	 * test vectors from RFC4754
@@ -110,9 +112,13 @@ static int ecdsa_nn_random_secp224r1_sha3_224_test_vector(nn_t out, nn_src_t q)
 		0xd6, 0xe7, 0xae, 0xe0
 	};
 
-	nn_init_from_buf(out, k_buf, sizeof(k_buf));
+	ret = nn_init_from_buf(out, k_buf, sizeof(k_buf)); EG(ret, err);
+	ret = nn_cmp(out, q, &cmp); EG(ret, err);
 
-	return (nn_cmp(out, q) >= 0);
+	ret = (cmp >= 0) ? -1 : 0;
+
+err:
+	return ret;
 }
 
 static const u8 ecdsa_secp224r1_sha3_224_test_vectors_priv_key[] = {
@@ -158,6 +164,8 @@ static const ec_test_case ecdsa_secp224r1_sha3_224_test_case = {
 
 static int ecdsa_nn_random_secp256r1_sha3_256_test_vector(nn_t out, nn_src_t q)
 {
+	int ret, cmp;
+
 	/*
 	 * Fixed ephemeral private key for secp256r1 signature
 	 * test vectors from RFC4754
@@ -169,9 +177,13 @@ static int ecdsa_nn_random_secp256r1_sha3_256_test_vector(nn_t out, nn_src_t q)
 		0x4B, 0xF6, 0x1A, 0xF1, 0xD5, 0xA6, 0xDE, 0xCE
 	};
 
-	nn_init_from_buf(out, k_buf, sizeof(k_buf));
+	ret = nn_init_from_buf(out, k_buf, sizeof(k_buf)); EG(ret, err);
+	ret = nn_cmp(out, q, &cmp); EG(ret, err);
 
-	return (nn_cmp(out, q) >= 0);
+	ret = (cmp >= 0) ? -1 : 0;
+
+err:
+	return ret;
 }
 
 static const u8 ecdsa_secp256r1_sha3_256_test_vectors_priv_key[] = {
@@ -223,6 +235,7 @@ static const ec_test_case ecdsa_secp256r1_sha3_256_test_case = {
 
 static int ecdsa_nn_random_secp256r1_sha3_512_test_vector(nn_t out, nn_src_t q)
 {
+	int ret, cmp;
 	const u8 k_buf[] = {
 		0x9E, 0x56, 0xF5, 0x09, 0x19, 0x67, 0x84, 0xD9,
 		0x63, 0xD1, 0xC0, 0xA4, 0x01, 0x51, 0x0E, 0xE7,
@@ -230,9 +243,13 @@ static int ecdsa_nn_random_secp256r1_sha3_512_test_vector(nn_t out, nn_src_t q)
 		0x4B, 0xF6, 0x1A, 0xF1, 0xD5, 0xA6, 0xDE, 0xCE
 	};
 
-	nn_init_from_buf(out, k_buf, sizeof(k_buf));
+	ret = nn_init_from_buf(out, k_buf, sizeof(k_buf)); EG(ret, err);
+	ret = nn_cmp(out, q, &cmp); EG(ret, err);
 
-	return (nn_cmp(out, q) >= 0);
+	ret = (cmp >= 0) ? -1 : 0;
+
+err:
+	return ret;
 }
 
 static const u8 ecdsa_secp256r1_sha3_512_test_vectors_priv_key[] = {
@@ -279,6 +296,8 @@ static const ec_test_case ecdsa_secp256r1_sha3_512_test_case = {
 
 static int ecdsa_nn_random_secp384r1_sha3_384_test_vector(nn_t out, nn_src_t q)
 {
+	int ret, cmp;
+
 	/*
 	 * Fixed ephemeral private key for secp384r1 signature
 	 * test vectors from RFC4754
@@ -292,9 +311,13 @@ static int ecdsa_nn_random_secp384r1_sha3_384_test_vector(nn_t out, nn_src_t q)
 		0x27, 0x37, 0x62, 0x85, 0xE6, 0x34, 0x14, 0xFA
 	};
 
-	nn_init_from_buf(out, k_buf, sizeof(k_buf));
+	ret = nn_init_from_buf(out, k_buf, sizeof(k_buf)); EG(ret, err);
+	ret = nn_cmp(out, q, &cmp); EG(ret, err);
 
-	return (nn_cmp(out, q) >= 0);
+	ret = (cmp >= 0) ? -1 : 0;
+
+err:
+	return ret;
 }
 
 static const u8 ecdsa_secp384r1_sha3_384_test_vectors_priv_key[] = {
@@ -347,6 +370,8 @@ static const ec_test_case ecdsa_secp384r1_sha3_384_test_case = {
 
 static int ecdsa_nn_random_secp521r1_sha3_512_test_vector(nn_t out, nn_src_t q)
 {
+	int ret, cmp;
+
 	/*
 	 * Fixed ephemeral private key for secp521r1 signature
 	 * test vectors from RFC4754
@@ -363,9 +388,13 @@ static int ecdsa_nn_random_secp521r1_sha3_512_test_vector(nn_t out, nn_src_t q)
 		0x6C, 0x2F
 	};
 
-	nn_init_from_buf(out, k_buf, sizeof(k_buf));
+	ret = nn_init_from_buf(out, k_buf, sizeof(k_buf)); EG(ret, err);
+	ret = nn_cmp(out, q, &cmp); EG(ret, err);
 
-	return (nn_cmp(out, q) >= 0);
+	ret = (cmp >= 0) ? -1 : 0;
+
+err:
+	return ret;
 }
 
 static const u8 ecdsa_secp521r1_sha3_512_test_vectors_priv_key[] = {
@@ -426,15 +455,21 @@ static const ec_test_case ecdsa_secp521r1_sha3_512_test_case = {
 
 static int ecdsa_nn_random_secp192r1_test_vector(nn_t out, nn_src_t q)
 {
+	int ret, cmp;
+
 	const u8 k_buf[] = {
 		0xFA, 0x6D, 0xE2, 0x97, 0x46, 0xBB, 0xEB, 0x7F,
 		0x8B, 0xB1, 0xE7, 0x61, 0xF8, 0x5F, 0x7D, 0xFB,
 		0x29, 0x83, 0x16, 0x9D, 0x82, 0xFA, 0x2F, 0x4E
 	};
 
-	nn_init_from_buf(out, k_buf, sizeof(k_buf));
+	ret = nn_init_from_buf(out, k_buf, sizeof(k_buf)); EG(ret, err);
+	ret = nn_cmp(out, q, &cmp); EG(ret, err);
 
-	return (nn_cmp(out, q) >= 0);
+	ret = (cmp >= 0) ? -1 : 0;
+
+err:
+	return ret;
 }
 
 static const u8 ecdsa_secp192r1_test_vectors_priv_key[] = {
@@ -477,6 +512,8 @@ static const ec_test_case ecdsa_secp192r1_test_case = {
 
 static int ecdsa_nn_random_rfc4754_secp224r1_test_vector(nn_t out, nn_src_t q)
 {
+	int ret, cmp;
+
 	/*
 	 * Fixed ephemeral private key for secp224r1 signature
 	 * test vectors from RFC4754
@@ -488,9 +525,13 @@ static int ecdsa_nn_random_rfc4754_secp224r1_test_vector(nn_t out, nn_src_t q)
 		0xd6, 0xe7, 0xae, 0xe0
 	};
 
-	nn_init_from_buf(out, k_buf, sizeof(k_buf));
+	ret = nn_init_from_buf(out, k_buf, sizeof(k_buf)); EG(ret, err);
+	ret = nn_cmp(out, q, &cmp); EG(ret, err);
 
-	return (nn_cmp(out, q) >= 0);
+	ret = (cmp >= 0) ? -1 : 0;
+
+err:
+	return ret;
 }
 
 static const u8 ecdsa_secp224r1_test_vectors_priv_key[] = {
@@ -535,6 +576,8 @@ static const ec_test_case ecdsa_secp224r1_test_case = {
 
 static int ecdsa_nn_random_rfc4754_secp256r1_test_vector(nn_t out, nn_src_t q)
 {
+	int ret, cmp;
+
 	/*
 	 * Fixed ephemeral private key for secp256r1 signature
 	 * test vectors from RFC4754
@@ -546,9 +589,13 @@ static int ecdsa_nn_random_rfc4754_secp256r1_test_vector(nn_t out, nn_src_t q)
 		0x4B, 0xF6, 0x1A, 0xF1, 0xD5, 0xA6, 0xDE, 0xCE
 	};
 
-	nn_init_from_buf(out, k_buf, sizeof(k_buf));
+	ret = nn_init_from_buf(out, k_buf, sizeof(k_buf)); EG(ret, err);
+	ret = nn_cmp(out, q, &cmp); EG(ret, err);
 
-	return (nn_cmp(out, q) >= 0);
+	ret = (cmp >= 0) ? -1 : 0;
+
+err:
+	return ret;
 }
 
 static const u8 ecdsa_secp256r1_test_vectors_priv_key[] = {
@@ -598,6 +645,8 @@ static const ec_test_case ecdsa_secp256r1_test_case = {
 
 static int ecdsa_nn_random_secp256r1_sha512_test_vector(nn_t out, nn_src_t q)
 {
+	int ret, cmp;
+
 	const u8 k_buf[] = {
 		0x9E, 0x56, 0xF5, 0x09, 0x19, 0x67, 0x84, 0xD9,
 		0x63, 0xD1, 0xC0, 0xA4, 0x01, 0x51, 0x0E, 0xE7,
@@ -605,9 +654,13 @@ static int ecdsa_nn_random_secp256r1_sha512_test_vector(nn_t out, nn_src_t q)
 		0x4B, 0xF6, 0x1A, 0xF1, 0xD5, 0xA6, 0xDE, 0xCE
 	};
 
-	nn_init_from_buf(out, k_buf, sizeof(k_buf));
+	ret = nn_init_from_buf(out, k_buf, sizeof(k_buf)); EG(ret, err);
+	ret = nn_cmp(out, q, &cmp); EG(ret, err);
 
-	return (nn_cmp(out, q) >= 0);
+	ret = (cmp >= 0) ? -1 : 0;
+
+err:
+	return ret;
 }
 
 static const u8 ecdsa_secp256r1_sha512_test_vectors_priv_key[] = {
@@ -652,6 +705,8 @@ static const ec_test_case ecdsa_secp256r1_sha512_test_case = {
 
 static int ecdsa_nn_random_rfc4754_secp384r1_test_vector(nn_t out, nn_src_t q)
 {
+	int ret, cmp;
+
 	/*
 	 * Fixed ephemeral private key for secp384r1 signature
 	 * test vectors from RFC4754
@@ -665,9 +720,13 @@ static int ecdsa_nn_random_rfc4754_secp384r1_test_vector(nn_t out, nn_src_t q)
 		0x27, 0x37, 0x62, 0x85, 0xE6, 0x34, 0x14, 0xFA
 	};
 
-	nn_init_from_buf(out, k_buf, sizeof(k_buf));
+	ret = nn_init_from_buf(out, k_buf, sizeof(k_buf)); EG(ret, err);
+	ret = nn_cmp(out, q, &cmp); EG(ret, err);
 
-	return (nn_cmp(out, q) >= 0);
+	ret = (cmp >= 0) ? -1 : 0;
+
+err:
+	return ret;
 }
 
 static const u8 ecdsa_secp384r1_test_vectors_priv_key[] = {
@@ -718,6 +777,8 @@ static const ec_test_case ecdsa_secp384r1_test_case = {
 
 static int ecdsa_nn_random_secp521r1_test_vector(nn_t out, nn_src_t q)
 {
+	int ret, cmp;
+
 	/*
 	 * Fixed ephemeral private key for secp521r1 signature
 	 * test vectors from RFC4754
@@ -734,9 +795,13 @@ static int ecdsa_nn_random_secp521r1_test_vector(nn_t out, nn_src_t q)
 		0x6C, 0x2F
 	};
 
-	nn_init_from_buf(out, k_buf, sizeof(k_buf));
+	ret = nn_init_from_buf(out, k_buf, sizeof(k_buf)); EG(ret, err);
+	ret = nn_cmp(out, q, &cmp); EG(ret, err);
 
-	return (nn_cmp(out, q) >= 0);
+	ret = (cmp >= 0) ? -1 : 0;
+
+err:
+	return ret;
 }
 
 static const u8 ecdsa_secp521r1_test_vectors_priv_key[] = {
@@ -795,6 +860,8 @@ static const ec_test_case ecdsa_secp521r1_test_case = {
 
 static int ecdsa_nn_random_brainpoolp256r1_test_vector(nn_t out, nn_src_t q)
 {
+	int ret, cmp;
+
 	/*
 	 * Fixed ephemeral private key for brainpoolp256r1 signature
 	 */
@@ -805,9 +872,13 @@ static int ecdsa_nn_random_brainpoolp256r1_test_vector(nn_t out, nn_src_t q)
 		0x4B, 0xF6, 0x1A, 0xF1, 0xD5, 0xA6, 0xDE, 0xCE
 	};
 
-	nn_init_from_buf(out, k_buf, sizeof(k_buf));
+	ret = nn_init_from_buf(out, k_buf, sizeof(k_buf)); EG(ret, err);
+	ret = nn_cmp(out, q, &cmp); EG(ret, err);
 
-	return (nn_cmp(out, q) >= 0);
+	ret = (cmp >= 0) ? -1 : 0;
+
+err:
+	return ret;
 }
 
 static const u8 ecdsa_brainpoolp256r1_test_vectors_priv_key[] = {
@@ -853,6 +924,8 @@ static const ec_test_case ecdsa_brainpoolp256r1_test_case = {
 
 static int ecdsa_nn_random_brainpoolp384r1_test_vector(nn_t out, nn_src_t q)
 {
+	int ret, cmp;
+
 	/*
 	 * Fixed ephemeral private key for brainpoolp384r1 signature
 	 */
@@ -865,9 +938,13 @@ static int ecdsa_nn_random_brainpoolp384r1_test_vector(nn_t out, nn_src_t q)
 		0xd4, 0x53, 0x0a, 0x55, 0xfd, 0x61, 0x51, 0x21
 	};
 
-	nn_init_from_buf(out, k_buf, sizeof(k_buf));
+	ret = nn_init_from_buf(out, k_buf, sizeof(k_buf)); EG(ret, err);
+	ret = nn_cmp(out, q, &cmp); EG(ret, err);
 
-	return (nn_cmp(out, q) >= 0);
+	ret = (cmp >= 0) ? -1 : 0;
+
+err:
+	return ret;
 }
 
 static const u8 ecdsa_brainpoolp384r1_test_vectors_priv_key[] = {
@@ -920,6 +997,8 @@ static const ec_test_case ecdsa_brainpoolp384r1_test_case = {
 
 static int ecdsa_nn_random_brainpoolp512r1_test_vector(nn_t out, nn_src_t q)
 {
+	int ret, cmp;
+
 	/*
 	 * Fixed ephemeral private key for brainpoolp512r1 signature
 	 */
@@ -934,9 +1013,13 @@ static int ecdsa_nn_random_brainpoolp512r1_test_vector(nn_t out, nn_src_t q)
 		0x8A, 0x54, 0x0B, 0x1B, 0x7F, 0x0C, 0x1B, 0x95
 	};
 
-	nn_init_from_buf(out, k_buf, sizeof(k_buf));
+	ret = nn_init_from_buf(out, k_buf, sizeof(k_buf)); EG(ret, err);
+	ret = nn_cmp(out, q, &cmp); EG(ret, err);
 
-	return (nn_cmp(out, q) >= 0);
+	ret = (cmp >= 0) ? -1 : 0;
+
+err:
+	return ret;
 }
 
 static const u8 ecdsa_brainpoolp512r1_test_vectors_priv_key[] = {
@@ -993,6 +1076,8 @@ static const ec_test_case ecdsa_brainpoolp512r1_test_case = {
 
 static int ecdsa_nn_random_frp256v1_test_vector(nn_t out, nn_src_t q)
 {
+	int ret, cmp;
+
 	/*
 	 * Fixed ephemeral private key for frp256v1 signature
 	 */
@@ -1003,9 +1088,13 @@ static int ecdsa_nn_random_frp256v1_test_vector(nn_t out, nn_src_t q)
 		0x4B, 0xF6, 0x1A, 0xF1, 0xD5, 0xA6, 0xDE, 0xCE
 	};
 
-	nn_init_from_buf(out, k_buf, sizeof(k_buf));
+	ret = nn_init_from_buf(out, k_buf, sizeof(k_buf)); EG(ret, err);
+	ret = nn_cmp(out, q, &cmp); EG(ret, err);
 
-	return (nn_cmp(out, q) >= 0);
+	ret = (cmp >= 0) ? -1 : 0;
+
+err:
+	return ret;
 }
 
 static const u8 ecdsa_frp256v1_test_vectors_priv_key[] = {
@@ -1057,6 +1146,8 @@ static const ec_test_case ecdsa_frp256v1_test_case = {
 static int eckcdsa_nn_random_iso14888_3_secp224r1_test_vector(nn_t out,
 							      nn_src_t q)
 {
+	int ret, cmp;
+
 	const u8 k_buf[] = {
 		0x76, 0xA0, 0xAF, 0xC1, 0x86, 0x46, 0xD1, 0xB6,
 		0x20, 0xA0, 0x79, 0xFB, 0x22, 0x38, 0x65, 0xA7,
@@ -1064,9 +1155,13 @@ static int eckcdsa_nn_random_iso14888_3_secp224r1_test_vector(nn_t out,
 		0x78, 0xEA, 0x4C, 0xDA
 	};
 
-	nn_init_from_buf(out, k_buf, sizeof(k_buf));
+	ret = nn_init_from_buf(out, k_buf, sizeof(k_buf)); EG(ret, err);
+	ret = nn_cmp(out, q, &cmp); EG(ret, err);
 
-	return (nn_cmp(out, q) >= 0);
+	ret = (cmp >= 0) ? -1 : 0;
+
+err:
+	return ret;
 }
 
 static const u8 eckcdsa_secp224r1_test_vectors_priv_key[] = {
@@ -1109,9 +1204,10 @@ static const ec_test_case eckcdsa_secp224r1_test_case = {
 /* ECKCDSA secp224r1 w/ SHA-256 test vectors (specific for truncation test) */
 
 static int eckcdsa_nn_random_iso14888_3_secp224r1_sha256_test_vector(nn_t out,
-								     nn_src_t
-								     q)
+								     nn_src_t q)
 {
+	int ret, cmp;
+
 	const u8 k_buf[] = {
 		0xEE, 0xC7, 0x9D, 0x8D, 0x46, 0x48, 0xDF, 0x3A,
 		0x83, 0x2A, 0x66, 0xE3, 0x77, 0x55, 0x37, 0xE0,
@@ -1119,9 +1215,13 @@ static int eckcdsa_nn_random_iso14888_3_secp224r1_sha256_test_vector(nn_t out,
 		0xDB, 0x9D, 0xD4, 0xF7
 	};
 
-	nn_init_from_buf(out, k_buf, sizeof(k_buf));
+	ret = nn_init_from_buf(out, k_buf, sizeof(k_buf)); EG(ret, err);
+	ret = nn_cmp(out, q, &cmp); EG(ret, err);
 
-	return (nn_cmp(out, q) >= 0);
+	ret = (cmp >= 0) ? -1 : 0;
+
+err:
+	return ret;
 }
 
 static const u8 eckcdsa_secp224r1_sha256_test_vectors_priv_key[] = {
@@ -1169,6 +1269,8 @@ static const ec_test_case eckcdsa_secp224r1_sha256_test_case = {
 static int eckcdsa_nn_random_iso14888_3_secp256r1_test_vector(nn_t out,
 							      nn_src_t q)
 {
+	int ret, cmp;
+
 	const u8 k_buf[] = {
 		0x71, 0xB8, 0x8F, 0x39, 0x89, 0x16, 0xDA, 0x9C,
 		0x90, 0xF5, 0x55, 0xF1, 0xB5, 0x73, 0x2B, 0x7D,
@@ -1176,9 +1278,13 @@ static int eckcdsa_nn_random_iso14888_3_secp256r1_test_vector(nn_t out,
 		0xC1, 0x1B, 0xF0, 0x5C, 0xFE, 0x16, 0x59, 0x6A
 	};
 
-	nn_init_from_buf(out, k_buf, sizeof(k_buf));
+	ret = nn_init_from_buf(out, k_buf, sizeof(k_buf)); EG(ret, err);
+	ret = nn_cmp(out, q, &cmp); EG(ret, err);
 
-	return (nn_cmp(out, q) >= 0);
+	ret = (cmp >= 0) ? -1 : 0;
+
+err:
+	return ret;
 }
 
 static const u8 eckcdsa_secp256r1_test_vectors_priv_key[] = {
@@ -1223,6 +1329,8 @@ static const ec_test_case eckcdsa_secp256r1_test_case = {
 
 static int eckcdsa_nn_random_secp384r1_test_vector(nn_t out, nn_src_t q)
 {
+	int ret, cmp;
+
 	const u8 k_buf[] = {
 		0x08, 0x16, 0x2e, 0xf8, 0x24, 0xd2, 0xd5, 0x11,
 		0x4e, 0x08, 0x61, 0xf3, 0x93, 0xb4, 0x6f, 0xb6,
@@ -1232,9 +1340,13 @@ static int eckcdsa_nn_random_secp384r1_test_vector(nn_t out, nn_src_t q)
 		0x37, 0x16, 0x09, 0x3a, 0xf5, 0x97, 0x9a, 0x7e
 	};
 
-	nn_init_from_buf(out, k_buf, sizeof(k_buf));
+	ret = nn_init_from_buf(out, k_buf, sizeof(k_buf)); EG(ret, err);
+	ret = nn_cmp(out, q, &cmp); EG(ret, err);
 
-	return (nn_cmp(out, q) >= 0);
+	ret = (cmp >= 0) ? -1 : 0;
+
+err:
+	return ret;
 }
 
 static const u8 eckcdsa_secp384r1_test_vectors_priv_key[] = {
@@ -1291,6 +1403,8 @@ static const ec_test_case eckcdsa_secp384r1_test_case = {
 
 static int eckcdsa_nn_random_secp256r1_sha512_test_vector(nn_t out, nn_src_t q)
 {
+	int ret, cmp;
+
 	const u8 k_buf[] = {
 		0x9E, 0x56, 0xF5, 0x09, 0x19, 0x67, 0x84, 0xD9,
 		0x63, 0xD1, 0xC0, 0xA4, 0x01, 0x51, 0x0E, 0xE7,
@@ -1298,9 +1412,13 @@ static int eckcdsa_nn_random_secp256r1_sha512_test_vector(nn_t out, nn_src_t q)
 		0x4B, 0xF6, 0x1A, 0xF1, 0xD5, 0xA6, 0xDE, 0xCE
 	};
 
-	nn_init_from_buf(out, k_buf, sizeof(k_buf));
+	ret = nn_init_from_buf(out, k_buf, sizeof(k_buf)); EG(ret, err);
+	ret = nn_cmp(out, q, &cmp); EG(ret, err);
 
-	return (nn_cmp(out, q) >= 0);
+	ret = (cmp >= 0) ? -1 : 0;
+
+err:
+	return ret;
 }
 
 static const u8 eckcdsa_secp256r1_sha512_test_vectors_priv_key[] = {
@@ -1347,6 +1465,8 @@ static const ec_test_case eckcdsa_secp256r1_sha512_test_case = {
 
 static int eckcdsa_nn_random_secp521r1_test_vector(nn_t out, nn_src_t q)
 {
+	int ret, cmp;
+
 	const u8 k_buf[] = {
 		0x01, 0xb6, 0xfa, 0xf4, 0x5f, 0xb8, 0x6f, 0x57,
 		0x9c, 0x4b, 0x54, 0xae, 0xc7, 0xa7, 0xf2, 0x95,
@@ -1359,9 +1479,13 @@ static int eckcdsa_nn_random_secp521r1_test_vector(nn_t out, nn_src_t q)
 		0x9a, 0x1c
 	};
 
-	nn_init_from_buf(out, k_buf, sizeof(k_buf));
+	ret = nn_init_from_buf(out, k_buf, sizeof(k_buf)); EG(ret, err);
+	ret = nn_cmp(out, q, &cmp); EG(ret, err);
 
-	return (nn_cmp(out, q) >= 0);
+	ret = (cmp >= 0) ? -1 : 0;
+
+err:
+	return ret;
 }
 
 static const u8 eckcdsa_secp521r1_test_vectors_priv_key[] = {
@@ -1420,6 +1544,8 @@ static const ec_test_case eckcdsa_secp521r1_test_case = {
 
 static int eckcdsa_nn_random_brainpoolp256r1_test_vector(nn_t out, nn_src_t q)
 {
+	int ret, cmp;
+
 	const u8 k_buf[] = {
 		0x09, 0x8a, 0x5b, 0x7c, 0xfa, 0x31, 0x7b, 0x79,
 		0x6a, 0xf4, 0x46, 0xc4, 0x0e, 0x3e, 0xb5, 0x28,
@@ -1427,9 +1553,13 @@ static int eckcdsa_nn_random_brainpoolp256r1_test_vector(nn_t out, nn_src_t q)
 		0xd9, 0x02, 0xc5, 0x9b, 0x7a, 0x92, 0xfe, 0x9b
 	};
 
-	nn_init_from_buf(out, k_buf, sizeof(k_buf));
+	ret = nn_init_from_buf(out, k_buf, sizeof(k_buf)); EG(ret, err);
+	ret = nn_cmp(out, q, &cmp); EG(ret, err);
 
-	return (nn_cmp(out, q) >= 0);
+	ret = (cmp >= 0) ? -1 : 0;
+
+err:
+	return ret;
 }
 
 static const u8 eckcdsa_brainpoolp256r1_test_vectors_priv_key[] = {
@@ -1475,6 +1605,8 @@ static const ec_test_case eckcdsa_brainpoolp256r1_test_case = {
 
 static int eckcdsa_nn_random_brainpoolp384r1_test_vector(nn_t out, nn_src_t q)
 {
+	int ret, cmp;
+
 	const u8 k_buf[] = {
 		0x07, 0x0f, 0x21, 0xec, 0xa6, 0xef, 0x53, 0xd8,
 		0x81, 0x75, 0x33, 0xe8, 0x9c, 0xb6, 0xb7, 0x4f,
@@ -1484,9 +1616,13 @@ static int eckcdsa_nn_random_brainpoolp384r1_test_vector(nn_t out, nn_src_t q)
 		0x4d, 0x18, 0x5a, 0x8f, 0x01, 0x21, 0x38, 0x5b
 	};
 
-	nn_init_from_buf(out, k_buf, sizeof(k_buf));
+	ret = nn_init_from_buf(out, k_buf, sizeof(k_buf)); EG(ret, err);
+	ret = nn_cmp(out, q, &cmp); EG(ret, err);
 
-	return (nn_cmp(out, q) >= 0);
+	ret = (cmp >= 0) ? -1 : 0;
+
+err:
+	return ret;
 }
 
 static const u8 eckcdsa_brainpoolp384r1_test_vectors_priv_key[] = {
@@ -1538,6 +1674,8 @@ static const ec_test_case eckcdsa_brainpoolp384r1_test_case = {
 
 static int eckcdsa_nn_random_brainpoolp512r1_test_vector(nn_t out, nn_src_t q)
 {
+	int ret, cmp;
+
 	const u8 k_buf[] = {
 		0x46, 0x3d, 0x92, 0x92, 0x3f, 0xe3, 0x37, 0xd8,
 		0xe5, 0xfc, 0x5a, 0xbe, 0x76, 0xf6, 0x3d, 0x9e,
@@ -1549,9 +1687,13 @@ static int eckcdsa_nn_random_brainpoolp512r1_test_vector(nn_t out, nn_src_t q)
 		0x8d, 0x1c, 0xa6, 0xe7, 0x63, 0x4b, 0x37, 0xea
 	};
 
-	nn_init_from_buf(out, k_buf, sizeof(k_buf));
+	ret = nn_init_from_buf(out, k_buf, sizeof(k_buf)); EG(ret, err);
+	ret = nn_cmp(out, q, &cmp); EG(ret, err);
 
-	return (nn_cmp(out, q) >= 0);
+	ret = (cmp >= 0) ? -1 : 0;
+
+err:
+	return ret;
 }
 
 static const u8 eckcdsa_brainpoolp512r1_test_vectors_priv_key[] = {
@@ -1609,6 +1751,8 @@ static const ec_test_case eckcdsa_brainpoolp512r1_test_case = {
 
 static int eckcdsa_nn_random_frp256v1_test_vector(nn_t out, nn_src_t q)
 {
+	int ret, cmp;
+
 	const u8 k_buf[] = {
 		0x71, 0xB8, 0x8F, 0x39, 0x89, 0x16, 0xDA, 0x9C,
 		0x90, 0xF5, 0x55, 0xF1, 0xB5, 0x73, 0x2B, 0x7D,
@@ -1616,9 +1760,13 @@ static int eckcdsa_nn_random_frp256v1_test_vector(nn_t out, nn_src_t q)
 		0xC1, 0x1B, 0xF0, 0x5C, 0xFE, 0x16, 0x59, 0x6A
 	};
 
-	nn_init_from_buf(out, k_buf, sizeof(k_buf));
+	ret = nn_init_from_buf(out, k_buf, sizeof(k_buf)); EG(ret, err);
+	ret = nn_cmp(out, q, &cmp); EG(ret, err);
 
-	return (nn_cmp(out, q) >= 0);
+	ret = (cmp >= 0) ? -1 : 0;
+
+err:
+	return ret;
 }
 
 static const u8 eckcdsa_frp256v1_test_vectors_priv_key[] = {
@@ -1669,6 +1817,8 @@ static const ec_test_case eckcdsa_frp256v1_test_case = {
 
 static int ecsdsa_nn_random_secp224r1_test_vector(nn_t out, nn_src_t q)
 {
+	int ret, cmp;
+
 	const u8 k_buf[] = {
 		0x89, 0x99, 0x80, 0x6e, 0x0f, 0x68, 0x10, 0x9d,
 		0x31, 0x56, 0x1b, 0x41, 0xbf, 0x1a, 0x56, 0x6e,
@@ -1676,9 +1826,13 @@ static int ecsdsa_nn_random_secp224r1_test_vector(nn_t out, nn_src_t q)
 		0x5d, 0x9b, 0x2e, 0x68
 	};
 
-	nn_init_from_buf(out, k_buf, sizeof(k_buf));
+	ret = nn_init_from_buf(out, k_buf, sizeof(k_buf)); EG(ret, err);
+	ret = nn_cmp(out, q, &cmp); EG(ret, err);
 
-	return (nn_cmp(out, q) >= 0);
+	ret = (cmp >= 0) ? -1 : 0;
+
+err:
+	return ret;
 }
 
 static const u8 ecsdsa_secp224r1_test_vectors_priv_key[] = {
@@ -1724,6 +1878,7 @@ static const ec_test_case ecsdsa_secp224r1_test_case = {
 static int ecsdsa_nn_random_iso14888_3_secp256r1_test_vector(nn_t out,
 							     nn_src_t q)
 {
+	int ret, cmp;
 	const u8 k_buf[] = {
 		0xDE, 0x7E, 0x0E, 0x5E, 0x66, 0x3F, 0x24, 0x18,
 		0x34, 0x14, 0xB7, 0xC7, 0x2F, 0x24, 0x54, 0x6B,
@@ -1731,9 +1886,13 @@ static int ecsdsa_nn_random_iso14888_3_secp256r1_test_vector(nn_t out,
 		0xF3, 0xCA, 0x5F, 0xA8, 0x2F, 0x51, 0x92, 0xC8
 	};
 
-	nn_init_from_buf(out, k_buf, sizeof(k_buf));
+	ret = nn_init_from_buf(out, k_buf, sizeof(k_buf)); EG(ret, err);
+	ret = nn_cmp(out, q, &cmp); EG(ret, err);
 
-	return (nn_cmp(out, q) >= 0);
+	ret = (cmp >= 0) ? -1 : 0;
+
+err:
+	return ret;
 }
 
 static const u8 ecsdsa_secp256r1_test_vectors_priv_key[] = {
@@ -1779,6 +1938,7 @@ static const ec_test_case ecsdsa_secp256r1_test_case = {
 static int ecsdsa_nn_random_iso14888_3_secp384r1_test_vector(nn_t out,
 							     nn_src_t q)
 {
+	int ret, cmp;
 	const u8 k_buf[] = {
 		0x8A, 0x29, 0xE7, 0x72, 0x35, 0x7B, 0xBA, 0x6F,
 		0x5C, 0x9E, 0xA7, 0x65, 0xD5, 0x08, 0x2B, 0x9B,
@@ -1788,9 +1948,13 @@ static int ecsdsa_nn_random_iso14888_3_secp384r1_test_vector(nn_t out,
 		0x90, 0x42, 0xF3, 0xAF, 0x04, 0x4B, 0x4D, 0xE8
 	};
 
-	nn_init_from_buf(out, k_buf, sizeof(k_buf));
+	ret = nn_init_from_buf(out, k_buf, sizeof(k_buf)); EG(ret, err);
+	ret = nn_cmp(out, q, &cmp); EG(ret, err);
 
-	return (nn_cmp(out, q) >= 0);
+	ret = (cmp >= 0) ? -1 : 0;
+
+err:
+	return ret;
 }
 
 static const u8 ecsdsa_secp384r1_test_vectors_priv_key[] = {
@@ -1841,6 +2005,8 @@ static const ec_test_case ecsdsa_secp384r1_test_case = {
 
 static int ecsdsa_nn_random_secp521r1_test_vector(nn_t out, nn_src_t q)
 {
+	int ret, cmp;
+
 	/*
 	 * Fixed ephemeral private key for secp521r1 signature
 	 * test vectors from RFC4754
@@ -1857,9 +2023,13 @@ static int ecsdsa_nn_random_secp521r1_test_vector(nn_t out, nn_src_t q)
 		0x07, 0xd4
 	};
 
-	nn_init_from_buf(out, k_buf, sizeof(k_buf));
+	ret = nn_init_from_buf(out, k_buf, sizeof(k_buf)); EG(ret, err);
+	ret = nn_cmp(out, q, &cmp); EG(ret, err);
 
-	return (nn_cmp(out, q) >= 0);
+	ret = (cmp >= 0) ? -1 : 0;
+
+err:
+	return ret;
 }
 
 static const u8 ecsdsa_secp521r1_test_vectors_priv_key[] = {
@@ -1918,6 +2088,8 @@ static const ec_test_case ecsdsa_secp521r1_test_case = {
 
 static int ecsdsa_nn_random_brainpoolp256r1_test_vector(nn_t out, nn_src_t q)
 {
+	int ret, cmp;
+
 	/*
 	 * Fixed ephemeral private key for brainpoolp256r1 signature
 	 */
@@ -1928,9 +2100,13 @@ static int ecsdsa_nn_random_brainpoolp256r1_test_vector(nn_t out, nn_src_t q)
 		0x4d, 0x95, 0xd1, 0x90, 0x6c, 0x8c, 0x61, 0xe4
 	};
 
-	nn_init_from_buf(out, k_buf, sizeof(k_buf));
+	ret = nn_init_from_buf(out, k_buf, sizeof(k_buf)); EG(ret, err);
+	ret = nn_cmp(out, q, &cmp); EG(ret, err);
 
-	return (nn_cmp(out, q) >= 0);
+	ret = (cmp >= 0) ? -1 : 0;
+
+err:
+	return ret;
 }
 
 static const u8 ecsdsa_brainpoolp256r1_test_vectors_priv_key[] = {
@@ -1976,6 +2152,8 @@ static const ec_test_case ecsdsa_brainpoolp256r1_test_case = {
 
 static int ecsdsa_nn_random_brainpoolp384r1_test_vector(nn_t out, nn_src_t q)
 {
+	int ret, cmp;
+
 	/*
 	 * Fixed ephemeral private key for brainpoolp384r1 signature
 	 */
@@ -1988,9 +2166,13 @@ static int ecsdsa_nn_random_brainpoolp384r1_test_vector(nn_t out, nn_src_t q)
 		0xb1, 0xca, 0x1d, 0xa2, 0xfe, 0xa2, 0xab, 0x75
 	};
 
-	nn_init_from_buf(out, k_buf, sizeof(k_buf));
+	ret = nn_init_from_buf(out, k_buf, sizeof(k_buf)); EG(ret, err);
+	ret = nn_cmp(out, q, &cmp); EG(ret, err);
 
-	return (nn_cmp(out, q) >= 0);
+	ret = (cmp >= 0) ? -1 : 0;
+
+err:
+	return ret;
 }
 
 static const u8 ecsdsa_brainpoolp384r1_test_vectors_priv_key[] = {
@@ -2043,6 +2225,8 @@ static const ec_test_case ecsdsa_brainpoolp384r1_test_case = {
 
 static int ecsdsa_nn_random_brainpoolp512r1_test_vector(nn_t out, nn_src_t q)
 {
+	int ret, cmp;
+
 	/*
 	 * Fixed ephemeral private key for brainpoolp512r1 signature
 	 */
@@ -2057,9 +2241,13 @@ static int ecsdsa_nn_random_brainpoolp512r1_test_vector(nn_t out, nn_src_t q)
 		0xdf, 0x6d, 0x26, 0x0e, 0x3a, 0xea, 0xae, 0xbc
 	};
 
-	nn_init_from_buf(out, k_buf, sizeof(k_buf));
+	ret = nn_init_from_buf(out, k_buf, sizeof(k_buf)); EG(ret, err);
+	ret = nn_cmp(out, q, &cmp); EG(ret, err);
 
-	return (nn_cmp(out, q) >= 0);
+	ret = (cmp >= 0) ? -1 : 0;
+
+err:
+	return ret;
 }
 
 static const u8 ecsdsa_brainpoolp512r1_test_vectors_priv_key[] = {
@@ -2117,6 +2305,8 @@ static const ec_test_case ecsdsa_brainpoolp512r1_test_case = {
 
 static int ecsdsa_nn_random_frp256v1_test_vector(nn_t out, nn_src_t q)
 {
+	int ret, cmp;
+
 	/*
 	 * Fixed ephemeral private key for frp256v1 signature
 	 */
@@ -2127,9 +2317,13 @@ static int ecsdsa_nn_random_frp256v1_test_vector(nn_t out, nn_src_t q)
 		0x4B, 0xF6, 0x1A, 0xF1, 0xD5, 0xA6, 0xDE, 0xCE
 	};
 
-	nn_init_from_buf(out, k_buf, sizeof(k_buf));
+	ret = nn_init_from_buf(out, k_buf, sizeof(k_buf)); EG(ret, err);
+	ret = nn_cmp(out, q, &cmp); EG(ret, err);
 
-	return (nn_cmp(out, q) >= 0);
+	ret = (cmp >= 0) ? -1 : 0;
+
+err:
+	return ret;
 }
 
 static const u8 ecsdsa_frp256v1_test_vectors_priv_key[] = {
@@ -2181,6 +2375,8 @@ static const ec_test_case ecsdsa_frp256v1_test_case = {
 
 static int ecosdsa_nn_random_secp224r1_test_vector(nn_t out, nn_src_t q)
 {
+	int ret, cmp;
+
 	const u8 k_buf[] = {
 		0xc1, 0xbe, 0x08, 0xf7, 0xa6, 0xda, 0x95, 0xea,
 		0xda, 0xc9, 0x2b, 0x7a, 0x8d, 0xfa, 0x4b, 0x8c,
@@ -2188,9 +2384,13 @@ static int ecosdsa_nn_random_secp224r1_test_vector(nn_t out, nn_src_t q)
 		0xa7, 0x6a, 0xa4, 0xc5
 	};
 
-	nn_init_from_buf(out, k_buf, sizeof(k_buf));
+	ret = nn_init_from_buf(out, k_buf, sizeof(k_buf)); EG(ret, err);
+	ret = nn_cmp(out, q, &cmp); EG(ret, err);
 
-	return (nn_cmp(out, q) >= 0);
+	ret = (cmp >= 0) ? -1 : 0;
+
+err:
+	return ret;
 }
 
 static const u8 ecosdsa_secp224r1_test_vectors_priv_key[] = {
@@ -2236,6 +2436,7 @@ static const ec_test_case ecosdsa_secp224r1_test_case = {
 static int ecosdsa_nn_random_iso14888_3_secp256r1_test_vector(nn_t out,
 							      nn_src_t q)
 {
+	int ret, cmp;
 	const u8 k_buf[] = {
 		0xDE, 0x7E, 0x0E, 0x5E, 0x66, 0x3F, 0x24, 0x18,
 		0x34, 0x14, 0xB7, 0xC7, 0x2F, 0x24, 0x54, 0x6B,
@@ -2243,9 +2444,13 @@ static int ecosdsa_nn_random_iso14888_3_secp256r1_test_vector(nn_t out,
 		0xF3, 0xCA, 0x5F, 0xA8, 0x2F, 0x51, 0x92, 0xC8
 	};
 
-	nn_init_from_buf(out, k_buf, sizeof(k_buf));
+	ret = nn_init_from_buf(out, k_buf, sizeof(k_buf)); EG(ret, err);
+	ret = nn_cmp(out, q, &cmp); EG(ret, err);
 
-	return (nn_cmp(out, q) >= 0);
+	ret = (cmp >= 0) ? -1 : 0;
+
+err:
+	return ret;
 }
 
 static const u8 ecosdsa_secp256r1_test_vectors_priv_key[] = {
@@ -2290,7 +2495,9 @@ static const ec_test_case ecosdsa_secp256r1_test_case = {
 
 static int ecosdsa_nn_random_iso14888_3_secp384r1_test_vector(nn_t out,
 							      nn_src_t q)
+
 {
+	int ret, cmp;
 	const u8 k_buf[] = {
 		0x8A, 0x29, 0xE7, 0x72, 0x35, 0x7B, 0xBA, 0x6F,
 		0x5C, 0x9E, 0xA7, 0x65, 0xD5, 0x08, 0x2B, 0x9B,
@@ -2300,9 +2507,13 @@ static int ecosdsa_nn_random_iso14888_3_secp384r1_test_vector(nn_t out,
 		0x90, 0x42, 0xF3, 0xAF, 0x04, 0x4B, 0x4D, 0xE8
 	};
 
-	nn_init_from_buf(out, k_buf, sizeof(k_buf));
+	ret = nn_init_from_buf(out, k_buf, sizeof(k_buf)); EG(ret, err);
+	ret = nn_cmp(out, q, &cmp); EG(ret, err);
 
-	return (nn_cmp(out, q) >= 0);
+	ret = (cmp >= 0) ? -1 : 0;
+
+err:
+	return ret;
 }
 
 static const u8 ecosdsa_secp384r1_test_vectors_priv_key[] = {
@@ -2353,6 +2564,8 @@ static const ec_test_case ecosdsa_secp384r1_test_case = {
 
 static int ecosdsa_nn_random_secp521r1_test_vector(nn_t out, nn_src_t q)
 {
+	int ret, cmp;
+
 	/*
 	 * Fixed ephemeral private key for secp521r1 signature
 	 * test vectors from RFC4754
@@ -2369,9 +2582,13 @@ static int ecosdsa_nn_random_secp521r1_test_vector(nn_t out, nn_src_t q)
 		0x3b, 0x05
 	};
 
-	nn_init_from_buf(out, k_buf, sizeof(k_buf));
+	ret = nn_init_from_buf(out, k_buf, sizeof(k_buf)); EG(ret, err);
+	ret = nn_cmp(out, q, &cmp); EG(ret, err);
 
-	return (nn_cmp(out, q) >= 0);
+	ret = (cmp >= 0) ? -1 : 0;
+
+err:
+	return ret;
 }
 
 static const u8 ecosdsa_secp521r1_test_vectors_priv_key[] = {
@@ -2431,6 +2648,8 @@ static const ec_test_case ecosdsa_secp521r1_test_case = {
 
 static int ecosdsa_nn_random_brainpoolp256r1_test_vector(nn_t out, nn_src_t q)
 {
+	int ret, cmp;
+
 	/*
 	 * Fixed ephemeral private key for brainpoolp256r1 signature
 	 */
@@ -2441,9 +2660,13 @@ static int ecosdsa_nn_random_brainpoolp256r1_test_vector(nn_t out, nn_src_t q)
 		0xbe, 0x68, 0x37, 0xd4, 0xd9, 0x9e, 0xa0, 0x49
 	};
 
-	nn_init_from_buf(out, k_buf, sizeof(k_buf));
+	ret = nn_init_from_buf(out, k_buf, sizeof(k_buf)); EG(ret, err);
+	ret = nn_cmp(out, q, &cmp); EG(ret, err);
 
-	return (nn_cmp(out, q) >= 0);
+	ret = (cmp >= 0) ? -1 : 0;
+
+err:
+	return ret;
 }
 
 static const u8 ecosdsa_brainpoolp256r1_test_vectors_priv_key[] = {
@@ -2490,6 +2713,8 @@ static const ec_test_case ecosdsa_brainpoolp256r1_test_case = {
 
 static int ecosdsa_nn_random_brainpoolp384r1_test_vector(nn_t out, nn_src_t q)
 {
+	int ret, cmp;
+
 	/*
 	 * Fixed ephemeral private key for brainpoolp384r1 signature
 	 */
@@ -2502,9 +2727,13 @@ static int ecosdsa_nn_random_brainpoolp384r1_test_vector(nn_t out, nn_src_t q)
 		0x4c, 0xf5, 0x29, 0xa3, 0xd6, 0xe4, 0x60, 0x3e
 	};
 
-	nn_init_from_buf(out, k_buf, sizeof(k_buf));
+	ret = nn_init_from_buf(out, k_buf, sizeof(k_buf)); EG(ret, err);
+	ret = nn_cmp(out, q, &cmp); EG(ret, err);
 
-	return (nn_cmp(out, q) >= 0);
+	ret = (cmp >= 0) ? -1 : 0;
+
+err:
+	return ret;
 }
 
 static const u8 ecosdsa_brainpoolp384r1_test_vectors_priv_key[] = {
@@ -2557,6 +2786,8 @@ static const ec_test_case ecosdsa_brainpoolp384r1_test_case = {
 
 static int ecosdsa_nn_random_brainpoolp512r1_test_vector(nn_t out, nn_src_t q)
 {
+	int ret, cmp;
+
 	/*
 	 * Fixed ephemeral private key for brainpoolp512r1 signature
 	 */
@@ -2571,9 +2802,13 @@ static int ecosdsa_nn_random_brainpoolp512r1_test_vector(nn_t out, nn_src_t q)
 		0x34, 0x3e, 0x7d, 0xf9, 0x0f, 0x0a, 0x4e, 0x38
 	};
 
-	nn_init_from_buf(out, k_buf, sizeof(k_buf));
+	ret = nn_init_from_buf(out, k_buf, sizeof(k_buf)); EG(ret, err);
+	ret = nn_cmp(out, q, &cmp); EG(ret, err);
 
-	return (nn_cmp(out, q) >= 0);
+	ret = (cmp >= 0) ? -1 : 0;
+
+err:
+	return ret;
 }
 
 static const u8 ecosdsa_brainpoolp512r1_test_vectors_priv_key[] = {
@@ -2631,6 +2866,8 @@ static const ec_test_case ecosdsa_brainpoolp512r1_test_case = {
 
 static int ecosdsa_nn_random_frp256v1_test_vector(nn_t out, nn_src_t q)
 {
+	int ret, cmp;
+
 	/*
 	 * Fixed ephemeral private key for frp256v1 signature
 	 */
@@ -2641,9 +2878,13 @@ static int ecosdsa_nn_random_frp256v1_test_vector(nn_t out, nn_src_t q)
 		0x4B, 0xF6, 0x1A, 0xF1, 0xD5, 0xA6, 0xDE, 0xCE
 	};
 
-	nn_init_from_buf(out, k_buf, sizeof(k_buf));
+	ret = nn_init_from_buf(out, k_buf, sizeof(k_buf)); EG(ret, err);
+	ret = nn_cmp(out, q, &cmp); EG(ret, err);
 
-	return (nn_cmp(out, q) >= 0);
+	ret = (cmp >= 0) ? -1 : 0;
+
+err:
+	return ret;
 }
 
 static const u8 ecosdsa_frp256v1_test_vectors_priv_key[] = {
@@ -2695,6 +2936,8 @@ static const ec_test_case ecosdsa_frp256v1_test_case = {
 
 static int ecfsdsa_nn_random_secp224r1_test_vector(nn_t out, nn_src_t q)
 {
+	int ret, cmp;
+
 	const u8 k_buf[] = {
 		0x42, 0xcf, 0xfe, 0x41, 0xf5, 0x01, 0xb4, 0x99,
 		0x45, 0xe3, 0xd1, 0x03, 0xe9, 0x00, 0x48, 0xb9,
@@ -2702,9 +2945,13 @@ static int ecfsdsa_nn_random_secp224r1_test_vector(nn_t out, nn_src_t q)
 		0x79, 0xc7, 0xa4, 0x2e
 	};
 
-	nn_init_from_buf(out, k_buf, sizeof(k_buf));
+	ret = nn_init_from_buf(out, k_buf, sizeof(k_buf)); EG(ret, err);
+	ret = nn_cmp(out, q, &cmp); EG(ret, err);
 
-	return (nn_cmp(out, q) >= 0);
+	ret = (cmp >= 0) ? -1 : 0;
+
+err:
+	return ret;
 }
 
 static const u8 ecfsdsa_secp224r1_test_vectors_priv_key[] = {
@@ -2754,6 +3001,7 @@ static const ec_test_case ecfsdsa_secp224r1_test_case = {
 static int ecfsdsa_nn_random_iso14888_3_secp256r1_test_vector(nn_t out,
 							      nn_src_t q)
 {
+	int ret, cmp;
 	const u8 k_buf[] = {
 		0x89, 0x4D, 0xEA, 0xB4, 0x4D, 0x88, 0x45, 0x0F,
 		0xE8, 0xDA, 0xC6, 0x63, 0xF0, 0xE5, 0x86, 0x50,
@@ -2761,9 +3009,13 @@ static int ecfsdsa_nn_random_iso14888_3_secp256r1_test_vector(nn_t out,
 		0x3C, 0x53, 0xD0, 0xE3, 0x01, 0x09, 0xC2, 0x07
 	};
 
-	nn_init_from_buf(out, k_buf, sizeof(k_buf));
+	ret = nn_init_from_buf(out, k_buf, sizeof(k_buf)); EG(ret, err);
+	ret = nn_cmp(out, q, &cmp); EG(ret, err);
 
-	return (nn_cmp(out, q) >= 0);
+	ret = (cmp >= 0) ? -1 : 0;
+
+err:
+	return ret;
 }
 
 static const u8 ecfsdsa_secp256r1_test_vectors_priv_key[] = {
@@ -2813,6 +3065,7 @@ static const ec_test_case ecfsdsa_secp256r1_test_case = {
 static int ecfsdsa_nn_random_iso14888_3_secp384r1_test_vector(nn_t out,
 							      nn_src_t q)
 {
+	int ret, cmp;
 	const u8 k_buf[] = {
 		0x51, 0xC5, 0xB8, 0xB2, 0xE5, 0x9C, 0xF7, 0x8F,
 		0x54, 0xE7, 0x7C, 0xDB, 0x0B, 0x2E, 0x26, 0x69,
@@ -2822,9 +3075,13 @@ static int ecfsdsa_nn_random_iso14888_3_secp384r1_test_vector(nn_t out,
 		0x58, 0xFA, 0x6E, 0x1C, 0xC5, 0xD9, 0x74, 0x66
 	};
 
-	nn_init_from_buf(out, k_buf, sizeof(k_buf));
+	ret = nn_init_from_buf(out, k_buf, sizeof(k_buf)); EG(ret, err);
+	ret = nn_cmp(out, q, &cmp); EG(ret, err);
 
-	return (nn_cmp(out, q) >= 0);
+	ret = (cmp >= 0) ? -1 : 0;
+
+err:
+	return ret;
 }
 
 static const u8 ecfsdsa_secp384r1_test_vectors_priv_key[] = {
@@ -2882,6 +3139,8 @@ static const ec_test_case ecfsdsa_secp384r1_test_case = {
 
 static int ecfsdsa_nn_random_secp521r1_test_vector(nn_t out, nn_src_t q)
 {
+	int ret, cmp;
+
 	/*
 	 * Fixed ephemeral private key for secp521r1 signature
 	 * test vectors from RFC4754
@@ -2898,9 +3157,13 @@ static int ecfsdsa_nn_random_secp521r1_test_vector(nn_t out, nn_src_t q)
 		0xbf, 0xe5
 	};
 
-	nn_init_from_buf(out, k_buf, sizeof(k_buf));
+	ret = nn_init_from_buf(out, k_buf, sizeof(k_buf)); EG(ret, err);
+	ret = nn_cmp(out, q, &cmp); EG(ret, err);
 
-	return (nn_cmp(out, q) >= 0);
+	ret = (cmp >= 0) ? -1 : 0;
+
+err:
+	return ret;
 }
 
 static const u8 ecfsdsa_secp521r1_test_vectors_priv_key[] = {
@@ -2969,6 +3232,8 @@ static const ec_test_case ecfsdsa_secp521r1_test_case = {
 
 static int ecfsdsa_nn_random_brainpoolp256r1_test_vector(nn_t out, nn_src_t q)
 {
+	int ret, cmp;
+
 	/*
 	 * Fixed ephemeral private key for brainpoolp256r1 signature
 	 */
@@ -2979,9 +3244,13 @@ static int ecfsdsa_nn_random_brainpoolp256r1_test_vector(nn_t out, nn_src_t q)
 		0xaf, 0x0e, 0xa5, 0xcb, 0x24, 0x49, 0x19, 0x37
 	};
 
-	nn_init_from_buf(out, k_buf, sizeof(k_buf));
+	ret = nn_init_from_buf(out, k_buf, sizeof(k_buf)); EG(ret, err);
+	ret = nn_cmp(out, q, &cmp); EG(ret, err);
 
-	return (nn_cmp(out, q) >= 0);
+	ret = (cmp >= 0) ? -1 : 0;
+
+err:
+	return ret;
 }
 
 static const u8 ecfsdsa_brainpoolp256r1_test_vectors_priv_key[] = {
@@ -3032,6 +3301,8 @@ static const ec_test_case ecfsdsa_brainpoolp256r1_test_case = {
 
 static int ecfsdsa_nn_random_brainpoolp384r1_test_vector(nn_t out, nn_src_t q)
 {
+	int ret, cmp;
+
 	/*
 	 * Fixed ephemeral private key for brainpoolp384r1 signature
 	 */
@@ -3044,9 +3315,13 @@ static int ecfsdsa_nn_random_brainpoolp384r1_test_vector(nn_t out, nn_src_t q)
 		0x38, 0x82, 0x52, 0xce, 0x58, 0x3d, 0xf5, 0x77
 	};
 
-	nn_init_from_buf(out, k_buf, sizeof(k_buf));
+	ret = nn_init_from_buf(out, k_buf, sizeof(k_buf)); EG(ret, err);
+	ret = nn_cmp(out, q, &cmp); EG(ret, err);
 
-	return (nn_cmp(out, q) >= 0);
+	ret = (cmp >= 0) ? -1 : 0;
+
+err:
+	return ret;
 }
 
 static const u8 ecfsdsa_brainpoolp384r1_test_vectors_priv_key[] = {
@@ -3105,6 +3380,8 @@ static const ec_test_case ecfsdsa_brainpoolp384r1_test_case = {
 
 static int ecfsdsa_nn_random_brainpoolp512r1_test_vector(nn_t out, nn_src_t q)
 {
+	int ret, cmp;
+
 	/*
 	 * Fixed ephemeral private key for brainpoolp512r1 signature
 	 */
@@ -3119,9 +3396,13 @@ static int ecfsdsa_nn_random_brainpoolp512r1_test_vector(nn_t out, nn_src_t q)
 		0xf7, 0xc2, 0xf5, 0x07, 0xfe, 0x39, 0x65, 0x52
 	};
 
-	nn_init_from_buf(out, k_buf, sizeof(k_buf));
+	ret = nn_init_from_buf(out, k_buf, sizeof(k_buf)); EG(ret, err);
+	ret = nn_cmp(out, q, &cmp); EG(ret, err);
 
-	return (nn_cmp(out, q) >= 0);
+	ret = (cmp >= 0) ? -1 : 0;
+
+err:
+	return ret;
 }
 
 static const u8 ecfsdsa_brainpoolp512r1_test_vectors_priv_key[] = {
@@ -3187,6 +3468,8 @@ static const ec_test_case ecfsdsa_brainpoolp512r1_test_case = {
 
 static int ecfsdsa_nn_random_frp256v1_test_vector(nn_t out, nn_src_t q)
 {
+	int ret, cmp;
+
 	/*
 	 * Fixed ephemeral private key for frp256v1 signature
 	 */
@@ -3197,9 +3480,13 @@ static int ecfsdsa_nn_random_frp256v1_test_vector(nn_t out, nn_src_t q)
 		0x4B, 0xF6, 0x1A, 0xF1, 0xD5, 0xA6, 0xDE, 0xCE
 	};
 
-	nn_init_from_buf(out, k_buf, sizeof(k_buf));
+	ret = nn_init_from_buf(out, k_buf, sizeof(k_buf)); EG(ret, err);
+	ret = nn_cmp(out, q, &cmp); EG(ret, err);
 
-	return (nn_cmp(out, q) >= 0);
+	ret = (cmp >= 0) ? -1 : 0;
+
+err:
+	return ret;
 }
 
 static const u8 ecfsdsa_frp256v1_test_vectors_priv_key[] = {
@@ -3255,30 +3542,35 @@ static const ec_test_case ecfsdsa_frp256v1_test_case = {
 static int ecgdsa_nn_random_iso14888_3_brainpoolp192r1_test_vector(nn_t out,
 								   nn_src_t q)
 {
+	int ret, cmp;
 	const u8 k_buf[] = {
 		0x5A, 0x96, 0x62, 0x60, 0x96, 0x28, 0x8C, 0xC4,
-		0x69, 0xF1, 0x70, 0x4E, 0xC0, 0x5F, 0x44, 0xD1, 
-		0xEC, 0x18, 0xBD, 0x32, 0xCE, 0xB0, 0x2D, 0x5B, 
+		0x69, 0xF1, 0x70, 0x4E, 0xC0, 0x5F, 0x44, 0xD1,
+		0xEC, 0x18, 0xBD, 0x32, 0xCE, 0xB0, 0x2D, 0x5B,
 	};
 
-	nn_init_from_buf(out, k_buf, sizeof(k_buf));
+	ret = nn_init_from_buf(out, k_buf, sizeof(k_buf)); EG(ret, err);
+	ret = nn_cmp(out, q, &cmp); EG(ret, err);
 
-	return (nn_cmp(out, q) >= 0);
+	ret = (cmp >= 0) ? -1 : 0;
+
+err:
+	return ret;
 }
 
 static const u8 ecgdsa_brainpoolp192r1_test_vectors_priv_key[] = {
 	0x40, 0xF9, 0x5B, 0x49, 0xA3, 0xB1, 0xBF, 0x55,
 	0x31, 0x1A, 0x56, 0xDF, 0xD3, 0xB5, 0x06, 0x1E,
-	0xE1, 0xDF, 0x64, 0x39, 0x84, 0xD4, 0x1E, 0x35, 
+	0xE1, 0xDF, 0x64, 0x39, 0x84, 0xD4, 0x1E, 0x35,
 };
 
 static const u8 ecgdsa_brainpoolp192r1_test_vectors_expected_sig[] = {
 	0xA0, 0x0B, 0x0A, 0xA2, 0x5D, 0xB6, 0xAB, 0x5C,
-	0x21, 0xB8, 0x63, 0x00, 0xD9, 0xBC, 0x99, 0xF5, 
+	0x21, 0xB8, 0x63, 0x00, 0xD9, 0xBC, 0x99, 0xF5,
 	0x6E, 0x9D, 0xD1, 0xB7, 0xF1, 0xDC, 0x47, 0x74,
 	0x63, 0x46, 0x35, 0xEF, 0x81, 0x32, 0x47, 0xD7,
 	0x20, 0x24, 0x5C, 0x94, 0x09, 0xFB, 0x20, 0xA2,
-	0x67, 0xC5, 0x60, 0xC8, 0x8E, 0xB2, 0xB0, 0x7B, 
+	0x67, 0xC5, 0x60, 0xC8, 0x8E, 0xB2, 0xB0, 0x7B,
 };
 
 static const ec_test_case ecgdsa_brainpoolp192r1_test_case = {
@@ -3306,6 +3598,7 @@ static const ec_test_case ecgdsa_brainpoolp192r1_test_case = {
 static int ecgdsa_nn_random_iso14888_3_brainpoolp224r1_test_vector(nn_t out,
 								   nn_src_t q)
 {
+	int ret, cmp;
 	const u8 k_buf[] = {
 		0x5B, 0x60, 0x4F, 0x2C, 0x35, 0xED, 0x04, 0x01,
 		0xFC, 0xA3, 0x1E, 0x88, 0x0C, 0xB5, 0x5C, 0x2A,
@@ -3313,9 +3606,13 @@ static int ecgdsa_nn_random_iso14888_3_brainpoolp224r1_test_vector(nn_t out,
 		0x2F, 0xC0, 0x3C, 0xA9
 	};
 
-	nn_init_from_buf(out, k_buf, sizeof(k_buf));
+	ret = nn_init_from_buf(out, k_buf, sizeof(k_buf)); EG(ret, err);
+	ret = nn_cmp(out, q, &cmp); EG(ret, err);
 
-	return (nn_cmp(out, q) >= 0);
+	ret = (cmp >= 0) ? -1 : 0;
+
+err:
+	return ret;
 }
 
 static const u8 ecgdsa_brainpoolp224r1_test_vectors_priv_key[] = {
@@ -3360,6 +3657,7 @@ static const ec_test_case ecgdsa_brainpoolp224r1_test_case = {
 static int ecgdsa_nn_random_iso14888_3_brainpoolp256r1_test_vector(nn_t out,
 								   nn_src_t q)
 {
+	int ret, cmp;
 	const u8 k_buf[] = {
 		0x0E, 0x64, 0x21, 0x27, 0x2D, 0xDA, 0xB9, 0xC2,
 		0x07, 0xB1, 0x19, 0xBD, 0xD1, 0x0C, 0x03, 0x86,
@@ -3367,9 +3665,13 @@ static int ecgdsa_nn_random_iso14888_3_brainpoolp256r1_test_vector(nn_t out,
 		0x75, 0x13, 0x04, 0x1A, 0xDE, 0x62, 0x86, 0xD9
 	};
 
-	nn_init_from_buf(out, k_buf, sizeof(k_buf));
+	ret = nn_init_from_buf(out, k_buf, sizeof(k_buf)); EG(ret, err);
+	ret = nn_cmp(out, q, &cmp); EG(ret, err);
 
-	return (nn_cmp(out, q) >= 0);
+	ret = (cmp >= 0) ? -1 : 0;
+
+err:
+	return ret;
 }
 
 static const u8 ecgdsa_brainpoolp256r1_test_vectors_priv_key[] = {
@@ -3414,6 +3716,8 @@ static const ec_test_case ecgdsa_brainpoolp256r1_test_case = {
 
 static int ecgdsa_nn_random_brainpoolp384r1_test_vector(nn_t out, nn_src_t q)
 {
+	int ret, cmp;
+
 	const u8 k_buf[] = {
 		0x39, 0x1c, 0x0c, 0xff, 0xe3, 0xaa, 0x7e, 0x95,
 		0x47, 0xd2, 0x3e, 0xe9, 0x70, 0x36, 0x12, 0x55,
@@ -3423,9 +3727,13 @@ static int ecgdsa_nn_random_brainpoolp384r1_test_vector(nn_t out, nn_src_t q)
 		0x0c, 0x3a, 0x74, 0xaa, 0xad, 0x54, 0x57, 0x0a
 	};
 
-	nn_init_from_buf(out, k_buf, sizeof(k_buf));
+	ret = nn_init_from_buf(out, k_buf, sizeof(k_buf)); EG(ret, err);
+	ret = nn_cmp(out, q, &cmp); EG(ret, err);
 
-	return (nn_cmp(out, q) >= 0);
+	ret = (cmp >= 0) ? -1 : 0;
+
+err:
+	return ret;
 }
 
 static const u8 ecgdsa_brainpoolp384r1_test_vectors_priv_key[] = {
@@ -3745,9 +4053,9 @@ static const ec_test_case ecrdsa_rfc4491_bis_1_GOST_512bits_curve_test_case = {
 /* First, ECRDSA test vector on a 256-bit GOST curve */
 
 static int ecrdsa_nn_random_iso14888_3_GOST_256bits_curve_test_vector(nn_t out,
-								      nn_src_t
-								      q)
+								      nn_src_t q)
 {
+	int ret, cmp;
 	const u8 k_buf[] = {
 		0x77, 0x10, 0x5C, 0x9B, 0x20, 0xBC, 0xD3, 0x12,
 		0x28, 0x23, 0xC8, 0xCF, 0x6F, 0xCC, 0x7B, 0x95,
@@ -3755,9 +4063,13 @@ static int ecrdsa_nn_random_iso14888_3_GOST_256bits_curve_test_vector(nn_t out,
 		0x4F, 0xED, 0x92, 0x45, 0x94, 0xDC, 0xEA, 0xB3
 	};
 
-	nn_init_from_buf(out, k_buf, sizeof(k_buf));
+	ret = nn_init_from_buf(out, k_buf, sizeof(k_buf)); EG(ret, err);
+	ret = nn_cmp(out, q, &cmp); EG(ret, err);
 
-	return (nn_cmp(out, q) >= 0);
+	ret = (cmp >= 0) ? -1 : 0;
+
+err:
+	return ret;
 }
 
 static const u8 ecrdsa_GOST_256bits_curve_test_vectors_priv_key[] = {
@@ -3932,9 +4244,9 @@ static const ec_test_case ecrdsa_pygostlib_2_GOST_256bits_curve_test_case = {
 /* Then, ECRDSA test vector on a GOST 512-bit curve */
 
 static int ecrdsa_nn_random_iso14888_3_GOST_512bits_curve_test_vector(nn_t out,
-								      nn_src_t
-								      q)
+								nn_src_t q)
 {
+	int ret, cmp;
 	/*
 	 * Current version of ISO 14888-3:2015 has a bad k value in its
 	 * test vectors. The value of k is higher than q!!!! Instead of
@@ -3966,9 +4278,13 @@ static int ecrdsa_nn_random_iso14888_3_GOST_512bits_curve_test_vector(nn_t out,
 		0xe4, 0x06, 0x23, 0x89, 0x76, 0xf2, 0x8e, 0x85
 	};
 
-	nn_init_from_buf(out, k_buf, sizeof(k_buf));
+	ret = nn_init_from_buf(out, k_buf, sizeof(k_buf)); EG(ret, err);
+	ret = nn_cmp(out, q, &cmp); EG(ret, err);
 
-	return (nn_cmp(out, q) >= 0);
+	ret = (cmp >= 0) ? -1 : 0;
+
+err:
+	return ret;
 }
 
 static const u8 ecrdsa_GOST_512bits_curve_test_vectors_priv_key[] = {
@@ -4723,18 +5039,25 @@ typedef enum {
 	TEST_VERIF_ERROR = 4
 } test_err_kind;
 
-static u32 encode_error_value(const ec_test_case *c, test_err_kind failed_test)
+static int encode_error_value(const ec_test_case *c, test_err_kind failed_test, u32 *err_val)
 {
-	ec_curve_type ctype = ec_get_curve_type_by_name(c->ec_str_p->name->buf,
-					     c->ec_str_p->name->buflen);
+	ec_curve_type ctype;
 	ec_sig_alg_type stype = c->sig_type;
 	hash_alg_type htype = c->hash_type;
 	test_err_kind etype = failed_test;
+	int ret;
 
-	return (((u32)ctype << 24) |
-		((u32)stype << 16) |
-		((u32)htype <<	8) |
-		((u32)etype));
+	ret = ec_get_curve_type_by_name(c->ec_str_p->name->buf,
+					c->ec_str_p->name->buflen, &ctype); EG(ret, err);
+
+	*err_val = (((u32)ctype << 24) |
+		    ((u32)stype << 16) |
+		    ((u32)htype <<  8) |
+		    ((u32)etype));
+	ret = 0;
+
+err:
+	return ret;
 }
 
 int perform_known_test_vectors_test(const char *sig, const char *hash, const char *curve);
