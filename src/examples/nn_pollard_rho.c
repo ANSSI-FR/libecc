@@ -37,7 +37,7 @@
  */
 ATTRIBUTE_WARN_UNUSED_RET int miller_rabin(nn_src_t n, const unsigned int t, int *check);
 
-ATTRIBUTE_WARN_UNUSED_RET int pollar_rho(nn_t d, nn_src_t n, const word_t c);
+ATTRIBUTE_WARN_UNUSED_RET int pollard_rho(nn_t d, nn_src_t n, const word_t c);
 /* Pollard's rho main function, as described in
  * "Handbook of Applied Cryptography".
  *
@@ -55,7 +55,7 @@ ATTRIBUTE_WARN_UNUSED_RET int pollar_rho(nn_t d, nn_src_t n, const word_t c);
  *        2.3 If 1 < d < n then return(d) and terminate with success.
  *        2.4 If d = n then terminate the algorithm with failure (see Note 3.12).
  */
-int pollar_rho(nn_t d, nn_src_t n, const word_t c)
+int pollard_rho(nn_t d, nn_src_t n, const word_t c)
 {
 	int ret, cmp, cmp1, cmp2;
 	/* Temporary a and b variables */
@@ -141,6 +141,8 @@ int find_divisors(nn_src_t in)
 		divisors[i].magic = 0;
 	}
 
+	ret = nn_check_initialized(in); EG(ret, err);
+
 	ext_printf("=================\n");
 	nn_print("Finding factors of:", in);
 
@@ -163,7 +165,7 @@ int find_divisors(nn_src_t in)
 	c = 0;
 	while (1) {
 		c++;
-		ret = pollar_rho(&(divisors[n_divisors_found]), &n, c);
+		ret = pollard_rho(&(divisors[n_divisors_found]), &n, c);
 		if (ret) {
 			continue;
 		}

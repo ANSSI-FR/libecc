@@ -205,6 +205,7 @@ int fp_set_nn(fp_t out, nn_src_t in)
 {
 	int ret, cmp;
 
+	ret = fp_check_initialized(out); EG(ret, err);
 	ret = nn_check_initialized(in); EG(ret, err);
 	ret = nn_copy(&(out->fp_val), in); EG(ret, err);
 	ret = nn_cmp(&(out->fp_val), &(out->ctx->p), &cmp); EG(ret, err);

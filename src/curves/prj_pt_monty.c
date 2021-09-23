@@ -24,369 +24,25 @@
 #include "../fp/fp_montgomery.h"
 #include "../fp/fp_rand.h"
 
-/*
- * If NO_USE_COMPLETE_FORMULAS flag is not defined addition formulas from Algorithm 1
- * of https://joostrenes.nl/publications/complete.pdf are used, otherwise
- * http://www.hyperelliptic.org/EFD/g1p/auto-shortw-projective.html#addition-add-1998-cmo-2
- */
-#ifndef NO_USE_COMPLETE_FORMULAS
-ATTRIBUTE_WARN_UNUSED_RET static int __prj_pt_add_monty(prj_pt_t out, prj_pt_src_t in1,
-			      prj_pt_src_t in2)
-{
-	fp t0, t1, t2, t3, t4, t5;
-	int ret;
-	t0.magic = t1.magic = t2.magic = 0;
-	t3.magic = t4.magic = t5.magic = 0;
-
-	/* Info: initialization check of in1 and in2 done at upper level */
-	MUST_HAVE((in1->crv == in2->crv), ret, err);
-
-	ret = prj_pt_init(out, in1->crv); EG(ret, err);
-
-	ret = fp_init(&t0, out->crv->a.ctx); EG(ret, err);
-	ret = fp_init(&t1, out->crv->a.ctx); EG(ret, err);
-	ret = fp_init(&t2, out->crv->a.ctx); EG(ret, err);
-	ret = fp_init(&t3, out->crv->a.ctx); EG(ret, err);
-	ret = fp_init(&t4, out->crv->a.ctx); EG(ret, err);
-	ret = fp_init(&t5, out->crv->a.ctx); EG(ret, err);
-
-	MUST_HAVE((out->crv == in1->crv), ret, err);
-	MUST_HAVE((out->crv == in2->crv), ret, err);
-
-	ret = fp_mul_monty(&t0, &in1->X, &in2->X); EG(ret, err);
-	ret = fp_mul_monty(&t1, &in1->Y, &in2->Y); EG(ret, err);
-	ret = fp_mul_monty(&t2, &in1->Z, &in2->Z); EG(ret, err);
-	ret = fp_add_monty(&t3, &in1->X, &in1->Y); EG(ret, err);
-	ret = fp_add_monty(&t4, &in2->X, &in2->Y); EG(ret, err);
-
-	ret = fp_mul_monty(&t3, &t3, &t4); EG(ret, err);
-	ret = fp_add_monty(&t4, &t0, &t1); EG(ret, err);
-	ret = fp_sub_monty(&t3, &t3, &t4); EG(ret, err);
-	ret = fp_add_monty(&t4, &in1->X, &in1->Z); EG(ret, err);
-	ret = fp_add_monty(&t5, &in2->X, &in2->Z); EG(ret, err);
-
-	ret = fp_mul_monty(&t4, &t4, &t5); EG(ret, err);
-	ret = fp_add_monty(&t5, &t0, &t2); EG(ret, err);
-	ret = fp_sub_monty(&t4, &t4, &t5); EG(ret, err);
-	ret = fp_add_monty(&t5, &in1->Y, &in1->Z); EG(ret, err);
-	ret = fp_add_monty(&out->X, &in2->Y, &in2->Z); EG(ret, err);
-
-	ret = fp_mul_monty(&t5, &t5, &out->X); EG(ret, err);
-	ret = fp_add_monty(&out->X, &t1, &t2); EG(ret, err);
-	ret = fp_sub_monty(&t5, &t5, &out->X); EG(ret, err);
-	ret = fp_mul_monty(&out->Z, &in1->crv->a_monty, &t4); EG(ret, err);
-	ret = fp_mul_monty(&out->X, &in1->crv->b3_monty, &t2); EG(ret, err);
-
-	ret = fp_add_monty(&out->Z, &out->X, &out->Z); EG(ret, err);
-	ret = fp_sub_monty(&out->X, &t1, &out->Z); EG(ret, err);
-	ret = fp_add_monty(&out->Z, &t1, &out->Z); EG(ret, err);
-	ret = fp_mul_monty(&out->Y, &out->X, &out->Z); EG(ret, err);
-	ret = fp_add_monty(&t1, &t0, &t0); EG(ret, err);
-
-	ret = fp_add_monty(&t1, &t1, &t0); EG(ret, err);
-	ret = fp_mul_monty(&t2, &in1->crv->a_monty, &t2); EG(ret, err);
-	ret = fp_mul_monty(&t4, &in1->crv->b3_monty, &t4); EG(ret, err);
-	ret = fp_add_monty(&t1, &t1, &t2); EG(ret, err);
-	ret = fp_sub_monty(&t2, &t0, &t2); EG(ret, err);
-
-	ret = fp_mul_monty(&t2, &in1->crv->a_monty, &t2); EG(ret, err);
-	ret = fp_add_monty(&t4, &t4, &t2); EG(ret, err);
-	ret = fp_mul_monty(&t0, &t1, &t4); EG(ret, err);
-	ret = fp_add_monty(&out->Y, &out->Y, &t0); EG(ret, err);
-	ret = fp_mul_monty(&t0, &t5, &t4); EG(ret, err);
-
-	ret = fp_mul_monty(&out->X, &t3, &out->X); EG(ret, err);
-	ret = fp_sub_monty(&out->X, &out->X, &t0); EG(ret, err);
-	ret = fp_mul_monty(&t0, &t3, &t1); EG(ret, err);
-	ret = fp_mul_monty(&out->Z, &t5, &out->Z); EG(ret, err);
-	ret = fp_add_monty(&out->Z, &out->Z, &t0);
-
-err:
-	fp_uninit(&t0);
-	fp_uninit(&t1);
-	fp_uninit(&t2);
-	fp_uninit(&t3);
-	fp_uninit(&t4);
-	fp_uninit(&t5);
-
-	return ret;
-}
-#else
-ATTRIBUTE_WARN_UNUSED_RET static int __prj_pt_add_monty(prj_pt_t out, prj_pt_src_t in1,
-			      prj_pt_src_t in2)
-{
-	fp Y1Z2, X1Z2, Z1Z2, u, uu, v, vv, vvv, R, A;
-	int ret, iszero, eq_or_opp;
-	Y1Z2.magic = X1Z2.magic = Z1Z2.magic = u.magic = uu.magic = v.magic = 0;
-	vv.magic = vvv.magic = R.magic = A.magic = 0;
-
-	/* Info: in1 and in2 init check done in upper levels */
-	MUST_HAVE(in1->crv == in2->crv, ret, err);
-	MUST_HAVE(!prj_pt_iszero(in1, &iszero) && !iszero, ret, err);
-	MUST_HAVE(!prj_pt_iszero(in2, &iszero) && !iszero, ret, err);
-
-	/*
-	 * The following test which guarantees in1 and in2 are not
-	 * equal or opposite needs to be rewritten because it
-	 * has a *HUGE* impact on perf (ec_self_tests run on
-	 * all test vectors takes 24 times as long with this
-	 * enabled). The same exists in non monty version.
-	 */
-	FORCE_USED_VAR(eq_or_opp);
-	SHOULD_HAVE(!prj_pt_eq_or_opp(in1, in2, &eq_or_opp) && !eq_or_opp, ret, err);
-
-	ret = prj_pt_init(out, in1->crv); EG(ret, err);
-
-	ret = fp_init(&Y1Z2, out->crv->a.ctx); EG(ret, err);
-	ret = fp_init(&X1Z2, out->crv->a.ctx); EG(ret, err);
-	ret = fp_init(&Z1Z2, out->crv->a.ctx); EG(ret, err);
-	ret = fp_init(&u, out->crv->a.ctx); EG(ret, err);
-	ret = fp_init(&uu, out->crv->a.ctx); EG(ret, err);
-	ret = fp_init(&v, out->crv->a.ctx); EG(ret, err);
-	ret = fp_init(&vv, out->crv->a.ctx); EG(ret, err);
-	ret = fp_init(&vvv, out->crv->a.ctx); EG(ret, err);
-	ret = fp_init(&R, out->crv->a.ctx); EG(ret, err);
-	ret = fp_init(&A, out->crv->a.ctx); EG(ret, err);
-
-	/* Y1Z2 = Y1*Z2 */
-	ret = fp_mul_monty(&Y1Z2, &(in1->Y), &(in2->Z)); EG(ret, err);
-
-	/* X1Z2 = X1*Z2 */
-	ret = fp_mul_monty(&X1Z2, &(in1->X), &(in2->Z)); EG(ret, err);
-
-	/* Z1Z2 = Z1*Z2 */
-	ret = fp_mul_monty(&Z1Z2, &(in1->Z), &(in2->Z)); EG(ret, err);
-
-	/* u = Y2*Z1-Y1Z2 */
-	ret = fp_mul_monty(&u, &(in2->Y), &(in1->Z)); EG(ret, err);
-	ret = fp_sub_monty(&u, &u, &Y1Z2); EG(ret, err);
-
-	/* uu = u² */
-	ret = fp_sqr_monty(&uu, &u); EG(ret, err);
-
-	/* v = X2*Z1-X1Z2 */
-	ret = fp_mul_monty(&v, &(in2->X), &(in1->Z)); EG(ret, err);
-	ret = fp_sub_monty(&v, &v, &X1Z2); EG(ret, err);
-
-	/* vv = v² */
-	ret = fp_sqr_monty(&vv, &v); EG(ret, err);
-
-	/* vvv = v*vv */
-	ret = fp_mul_monty(&vvv, &v, &vv); EG(ret, err);
-
-	/* R = vv*X1Z2 */
-	ret = fp_mul_monty(&R, &vv, &X1Z2); EG(ret, err);
-
-	/* A = uu*Z1Z2-vvv-2*R */
-	ret = fp_mul_monty(&A, &uu, &Z1Z2); EG(ret, err);
-	ret = fp_sub_monty(&A, &A, &vvv); EG(ret, err);
-	ret = fp_sub_monty(&A, &A, &R); EG(ret, err);
-	ret = fp_sub_monty(&A, &A, &R); EG(ret, err);
-
-	/* X3 = v*A */
-	ret = fp_mul_monty(&(out->X), &v, &A); EG(ret, err);
-
-	/* Y3 = u*(R-A)-vvv*Y1Z2 */
-	ret = fp_sub_monty(&R, &R, &A); EG(ret, err);
-	ret = fp_mul_monty(&(out->Y), &u, &R); EG(ret, err);
-	ret = fp_mul_monty(&R, &vvv, &Y1Z2); EG(ret, err);
-	ret = fp_sub_monty(&(out->Y), &(out->Y), &R); EG(ret, err);
-
-	/* Z3 = vvv*Z1Z2 */
-	ret = fp_mul_monty(&(out->Z), &vvv, &Z1Z2);
-
-err:
-	fp_uninit(&Y1Z2);
-	fp_uninit(&X1Z2);
-	fp_uninit(&Z1Z2);
-	fp_uninit(&u);
-	fp_uninit(&uu);
-	fp_uninit(&v);
-	fp_uninit(&vv);
-	fp_uninit(&vvv);
-	fp_uninit(&R);
-	fp_uninit(&A);
-
-	return ret;
-}
-#endif
-
-/*
- * Internal version that handle aliasing of either 'in1' or 'in2' with 'out'.
- * Sanity checks on parameters must be done by caller.
- */
-ATTRIBUTE_WARN_UNUSED_RET static int __prj_pt_add_monty_aliased(prj_pt_t out,
-				      prj_pt_src_t in1, prj_pt_src_t in2)
-{
-	prj_pt out_cpy;
-	int ret;
-	out_cpy.magic = 0;
-
-	ret = prj_pt_init(&out_cpy, out->crv); EG(ret, err);
-	ret = prj_pt_copy(&out_cpy, out); EG(ret, err);
-	ret = __prj_pt_add_monty(&out_cpy, in1, in2); EG(ret, err);
-	ret = prj_pt_copy(out, &out_cpy); EG(ret, err);
-
-err:
-	prj_pt_uninit(&out_cpy);
-	return ret;
-}
-
-/* Aliased version. Returns 0 on success, -1 on error.  */
-ATTRIBUTE_WARN_UNUSED_RET static int _prj_pt_add_monty(prj_pt_t out, prj_pt_src_t in1, prj_pt_src_t in2)
-{
-	int ret;
-
-	if ((out == in1) || (out == in2)) {
-		ret = __prj_pt_add_monty_aliased(out, in1, in2);
-	} else {
-		ret = __prj_pt_add_monty(out, in1, in2);
-	}
-
-	return ret;
-}
-
-/*
- * Public version of the addition to handle the case where the inputs are
- * zero or opposite. Returns 0 on success, -1 on error.
- */
 #ifdef NO_USE_COMPLETE_FORMULAS
-int prj_pt_add_monty(prj_pt_t out, prj_pt_src_t in1, prj_pt_src_t in2)
-{
-	int ret, iszero, eq_or_opp, cmp;
-
-	ret = prj_pt_check_initialized(in1); EG(ret, err);
-	ret = prj_pt_check_initialized(in2); EG(ret, err);
-	ret = prj_pt_iszero(in1, &iszero); EG(ret, err);
-
-	if (iszero) {
-		ret = prj_pt_init(out, in2->crv); EG(ret, err);
-		ret = prj_pt_copy(out, in2); EG(ret, err);
-	} else {
-		ret = prj_pt_iszero(in2, &iszero); EG(ret, err);
-		if (iszero) {
-			ret = prj_pt_init(out, in1->crv); EG(ret, err);
-			ret = prj_pt_copy(out, in1); EG(ret, err);
-		} else {
-			/*
-			 * The following test which guarantees in1 and in2 are not
-			 * equal or opposite needs to be rewritten because it
-			 * has a *HUGE* impact on perf (ec_self_tests run on
-			 * all test vectors takes 24 times as long with this
-			 * enabled). The same exists in non monty version.
-			 */
-			ret = prj_pt_eq_or_opp(in1, in2, &eq_or_opp); EG(ret, err);
-			if (eq_or_opp) {
-				ret = prj_pt_cmp(in1, in2, &cmp); EG(ret, err);
-				if (cmp == 0) {
-					ret = prj_pt_dbl_monty(out, in1); EG(ret, err);
-				} else {
-					ret = prj_pt_init(out, in1->crv); EG(ret, err);
-					ret = prj_pt_zero(out); EG(ret, err);
-				}
-			} else {
-				ret = _prj_pt_add_monty(out, in1, in2); EG(ret, err);
-			}
-		}
-	}
-
-err:
-	return ret;
-}
-
-#else
-int prj_pt_add_monty(prj_pt_t out, prj_pt_src_t in1, prj_pt_src_t in2)
-{
-	int ret;
-
-	ret = prj_pt_check_initialized(in1); EG(ret, err);
-	ret = prj_pt_check_initialized(in2); EG(ret, err);
-	ret = _prj_pt_add_monty(out, in1, in2);
-
-err:
-	return ret;
-}
-#endif
 
 /*
- * If NO_USE_COMPLETE_FORMULAS flag is not defined addition formulas from Algorithm 3
- * of https://joostrenes.nl/publications/complete.pdf are used, otherwise
- * http://www.hyperelliptic.org/EFD/g1p/auto-shortw-projective.html#doubling-dbl-2007-bl
+ * The function is an internal one: no check is performed on parameters,
+ * this MUST be done by the caller:
+ *
+ *  - in is initialized
+ *  - in and out must not be aliased
+ *
+ * The function will initialize 'out'. The function returns 0 on success, -1
+ * on error.
  */
-#ifndef NO_USE_COMPLETE_FORMULAS
-ATTRIBUTE_WARN_UNUSED_RET static int __prj_pt_dbl_monty(prj_pt_t out, prj_pt_src_t in)
-{
-	fp t0, t1, t2, t3;
-	int ret;
-	t0.magic = t1.magic = t2.magic = t3.magic = 0;
-
-	/* Info: initialization check of in done at upper level */
-	ret = prj_pt_init(out, in->crv); EG(ret, err);
-
-	ret = fp_init(&t0, out->crv->a.ctx); EG(ret, err);
-	ret = fp_init(&t1, out->crv->a.ctx); EG(ret, err);
-	ret = fp_init(&t2, out->crv->a.ctx); EG(ret, err);
-	ret = fp_init(&t3, out->crv->a.ctx); EG(ret, err);
-
-	MUST_HAVE(out->crv == in->crv, ret, err);
-
-	ret = fp_mul_monty(&t0, &in->X, &in->X); EG(ret, err);
-	ret = fp_mul_monty(&t1, &in->Y, &in->Y); EG(ret, err);
-	ret = fp_mul_monty(&t2, &in->Z, &in->Z); EG(ret, err);
-	ret = fp_mul_monty(&t3, &in->X, &in->Y); EG(ret, err);
-	ret = fp_add_monty(&t3, &t3, &t3); EG(ret, err);
-
-	ret = fp_mul_monty(&out->Z, &in->X, &in->Z); EG(ret, err);
-	ret = fp_add_monty(&out->Z, &out->Z, &out->Z); EG(ret, err);
-	ret = fp_mul_monty(&out->X, &in->crv->a_monty, &out->Z); EG(ret, err);
-	ret = fp_mul_monty(&out->Y, &in->crv->b3_monty, &t2); EG(ret, err);
-	ret = fp_add_monty(&out->Y, &out->X, &out->Y); EG(ret, err);
-
-	ret = fp_sub_monty(&out->X, &t1, &out->Y); EG(ret, err);
-	ret = fp_add_monty(&out->Y, &t1, &out->Y); EG(ret, err);
-	ret = fp_mul_monty(&out->Y, &out->X, &out->Y); EG(ret, err);
-	ret = fp_mul_monty(&out->X, &t3, &out->X); EG(ret, err);
-	ret = fp_mul_monty(&out->Z, &in->crv->b3_monty, &out->Z); EG(ret, err);
-
-	ret = fp_mul_monty(&t2, &in->crv->a_monty, &t2); EG(ret, err);
-	ret = fp_sub_monty(&t3, &t0, &t2); EG(ret, err);
-	ret = fp_mul_monty(&t3, &in->crv->a_monty, &t3); EG(ret, err);
-	ret = fp_add_monty(&t3, &t3, &out->Z); EG(ret, err);
-	ret = fp_add_monty(&out->Z, &t0, &t0); EG(ret, err);
-
-	ret = fp_add_monty(&t0, &out->Z, &t0); EG(ret, err);
-	ret = fp_add_monty(&t0, &t0, &t2); EG(ret, err);
-	ret = fp_mul_monty(&t0, &t0, &t3); EG(ret, err);
-	ret = fp_add_monty(&out->Y, &out->Y, &t0); EG(ret, err);
-	ret = fp_mul_monty(&t2, &in->Y, &in->Z); EG(ret, err);
-
-	ret = fp_add_monty(&t2, &t2, &t2); EG(ret, err);
-	ret = fp_mul_monty(&t0, &t2, &t3); EG(ret, err);
-	ret = fp_sub_monty(&out->X, &out->X, &t0); EG(ret, err);
-	ret = fp_mul_monty(&out->Z, &t2, &t1); EG(ret, err);
-	ret = fp_add_monty(&out->Z, &out->Z, &out->Z); EG(ret, err);
-
-	ret = fp_add_monty(&out->Z, &out->Z, &out->Z);
-
-err:
-	fp_uninit(&t0);
-	fp_uninit(&t1);
-	fp_uninit(&t2);
-	fp_uninit(&t3);
-
-	return ret;
-}
-#else
-ATTRIBUTE_WARN_UNUSED_RET static int __prj_pt_dbl_monty(prj_pt_t out, prj_pt_src_t in)
+ATTRIBUTE_WARN_UNUSED_RET static int __prj_pt_dbl_monty_no_cf(prj_pt_t out, prj_pt_src_t in)
 {
 	fp XX, ZZ, w, s, ss, sss, R, RR, B, h;
-	int ret, iszero;
+	int ret;
 	XX.magic = ZZ.magic = w.magic = s.magic = 0;
 	ss.magic = sss.magic = R.magic = 0;
 	RR.magic = B.magic = h.magic = 0;
-
-	/* Info: in init check done in upper levels */
-	MUST_HAVE(!prj_pt_iszero(in, &iszero) && !iszero, ret, err);
 
 	ret = prj_pt_init(out, in->crv); EG(ret, err);
 
@@ -466,21 +122,371 @@ err:
 
 	return ret;
 }
+
+/*
+ * The function is an internal one: no check is performed on parameters,
+ * this MUST be done by the caller:
+ *
+ *  - in1 and in2 are initialized
+ *  - in1 and in2 are on the same curve
+ *  - in1/in2 and out must not be aliased
+ *  - in1 and in2 must not be equal, opposite or have identical value
+ *
+ * The function will initialize 'out'. The function returns 0 on success, -1
+ * on error.
+ */
+ATTRIBUTE_WARN_UNUSED_RET static int ___prj_pt_add_monty_no_cf(prj_pt_t out,
+							       prj_pt_src_t in1,
+							       prj_pt_src_t in2)
+{
+	fp Y1Z2, X1Z2, Z1Z2, u, uu, v, vv, vvv, R, A;
+	int ret;
+	Y1Z2.magic = X1Z2.magic = Z1Z2.magic = u.magic = uu.magic = v.magic = 0;
+	vv.magic = vvv.magic = R.magic = A.magic = 0;
+
+	ret = prj_pt_init(out, in1->crv); EG(ret, err);
+
+	ret = fp_init(&Y1Z2, out->crv->a.ctx); EG(ret, err);
+	ret = fp_init(&X1Z2, out->crv->a.ctx); EG(ret, err);
+	ret = fp_init(&Z1Z2, out->crv->a.ctx); EG(ret, err);
+	ret = fp_init(&u, out->crv->a.ctx); EG(ret, err);
+	ret = fp_init(&uu, out->crv->a.ctx); EG(ret, err);
+	ret = fp_init(&v, out->crv->a.ctx); EG(ret, err);
+	ret = fp_init(&vv, out->crv->a.ctx); EG(ret, err);
+	ret = fp_init(&vvv, out->crv->a.ctx); EG(ret, err);
+	ret = fp_init(&R, out->crv->a.ctx); EG(ret, err);
+	ret = fp_init(&A, out->crv->a.ctx); EG(ret, err);
+
+	/* Y1Z2 = Y1*Z2 */
+	ret = fp_mul_monty(&Y1Z2, &(in1->Y), &(in2->Z)); EG(ret, err);
+
+	/* X1Z2 = X1*Z2 */
+	ret = fp_mul_monty(&X1Z2, &(in1->X), &(in2->Z)); EG(ret, err);
+
+	/* Z1Z2 = Z1*Z2 */
+	ret = fp_mul_monty(&Z1Z2, &(in1->Z), &(in2->Z)); EG(ret, err);
+
+	/* u = Y2*Z1-Y1Z2 */
+	ret = fp_mul_monty(&u, &(in2->Y), &(in1->Z)); EG(ret, err);
+	ret = fp_sub_monty(&u, &u, &Y1Z2); EG(ret, err);
+
+	/* uu = u² */
+	ret = fp_sqr_monty(&uu, &u); EG(ret, err);
+
+	/* v = X2*Z1-X1Z2 */
+	ret = fp_mul_monty(&v, &(in2->X), &(in1->Z)); EG(ret, err);
+	ret = fp_sub_monty(&v, &v, &X1Z2); EG(ret, err);
+
+	/* vv = v² */
+	ret = fp_sqr_monty(&vv, &v); EG(ret, err);
+
+	/* vvv = v*vv */
+	ret = fp_mul_monty(&vvv, &v, &vv); EG(ret, err);
+
+	/* R = vv*X1Z2 */
+	ret = fp_mul_monty(&R, &vv, &X1Z2); EG(ret, err);
+
+	/* A = uu*Z1Z2-vvv-2*R */
+	ret = fp_mul_monty(&A, &uu, &Z1Z2); EG(ret, err);
+	ret = fp_sub_monty(&A, &A, &vvv); EG(ret, err);
+	ret = fp_sub_monty(&A, &A, &R); EG(ret, err);
+	ret = fp_sub_monty(&A, &A, &R); EG(ret, err);
+
+	/* X3 = v*A */
+	ret = fp_mul_monty(&(out->X), &v, &A); EG(ret, err);
+
+	/* Y3 = u*(R-A)-vvv*Y1Z2 */
+	ret = fp_sub_monty(&R, &R, &A); EG(ret, err);
+	ret = fp_mul_monty(&(out->Y), &u, &R); EG(ret, err);
+	ret = fp_mul_monty(&R, &vvv, &Y1Z2); EG(ret, err);
+	ret = fp_sub_monty(&(out->Y), &(out->Y), &R); EG(ret, err);
+
+	/* Z3 = vvv*Z1Z2 */
+	ret = fp_mul_monty(&(out->Z), &vvv, &Z1Z2);
+
+err:
+	fp_uninit(&Y1Z2);
+	fp_uninit(&X1Z2);
+	fp_uninit(&Z1Z2);
+	fp_uninit(&u);
+	fp_uninit(&uu);
+	fp_uninit(&v);
+	fp_uninit(&vv);
+	fp_uninit(&vvv);
+	fp_uninit(&R);
+	fp_uninit(&A);
+
+	return ret;
+}
+
+/*
+ * Public version of the addition w/o complete formulas to handle the case
+ * where the inputs are zero or opposite. Returns 0 on success, -1 on error.
+ */
+int __prj_pt_add_monty_no_cf(prj_pt_t out, prj_pt_src_t in1, prj_pt_src_t in2)
+{
+	int ret, iszero, eq_or_opp, cmp;
+
+	ret = prj_pt_check_initialized(in1); EG(ret, err);
+	ret = prj_pt_check_initialized(in2); EG(ret, err);
+	MUST_HAVE(in1->crv == in2->crv, ret, err);
+
+	ret = prj_pt_iszero(in1, &iszero); EG(ret, err);
+	if (iszero) {
+		/* in1 at infinity, output in2 in all cases */
+		ret = prj_pt_init(out, in2->crv); EG(ret, err);
+		ret = prj_pt_copy(out, in2); EG(ret, err);
+	} else {
+		/* in1 not at infinity, output in2 */
+		ret = prj_pt_iszero(in2, &iszero); EG(ret, err);
+		if (iszero) {
+			/* in2 at infinity, output in1 */
+			ret = prj_pt_init(out, in1->crv); EG(ret, err);
+			ret = prj_pt_copy(out, in1); EG(ret, err);
+		} else {
+			/* enither in1, nor in2 at infinity */
+
+			/*
+			 * The following test which guarantees in1 and in2 are not
+			 * equal or opposite needs to be rewritten because it
+			 * has a *HUGE* impact on perf (ec_self_tests run on
+			 * all test vectors takes 24 times as long with this
+			 * enabled). The same exists in non monty version.
+			 */
+			ret = prj_pt_eq_or_opp(in1, in2, &eq_or_opp); EG(ret, err);
+			if (eq_or_opp) {
+				/* in1 and in2 are either equal or opposite */
+				ret = prj_pt_cmp(in1, in2, &cmp); EG(ret, err);
+				if (cmp == 0) {
+					/* in1 == in2 => doubling w/o cf */
+					ret = __prj_pt_dbl_monty_no_cf(out, in1); EG(ret, err);
+				} else {
+					/* in1 == -in2 => output zero (point at infinity) */
+					ret = prj_pt_init(out, in1->crv); EG(ret, err);
+					ret = prj_pt_zero(out); EG(ret, err);
+				}
+			} else {
+				/*
+				 * in1 and in2 are neither 0, nor equal or
+				 * opposite. Use the basic monty addition
+				 * implementation w/o complete formulas.
+				 */
+				ret = ___prj_pt_add_monty_no_cf(out, in1, in2); EG(ret, err);
+			}
+		}
+	}
+
+err:
+	return ret;
+}
+
+
+#else /* NO_USE_COMPLETE_FORMULAS */
+
+
+/*
+ * If NO_USE_COMPLETE_FORMULAS flag is not defined addition formulas from Algorithm 3
+ * of https://joostrenes.nl/publications/complete.pdf are used, otherwise
+ * http://www.hyperelliptic.org/EFD/g1p/auto-shortw-projective.html#doubling-dbl-2007-bl
+ */
+ATTRIBUTE_WARN_UNUSED_RET static int __prj_pt_dbl_monty_cf(prj_pt_t out, prj_pt_src_t in)
+{
+	fp t0, t1, t2, t3;
+	int ret;
+	t0.magic = t1.magic = t2.magic = t3.magic = 0;
+
+	ret = prj_pt_init(out, in->crv); EG(ret, err);
+
+	ret = fp_init(&t0, out->crv->a.ctx); EG(ret, err);
+	ret = fp_init(&t1, out->crv->a.ctx); EG(ret, err);
+	ret = fp_init(&t2, out->crv->a.ctx); EG(ret, err);
+	ret = fp_init(&t3, out->crv->a.ctx); EG(ret, err);
+
+	ret = fp_mul_monty(&t0, &in->X, &in->X); EG(ret, err);
+	ret = fp_mul_monty(&t1, &in->Y, &in->Y); EG(ret, err);
+	ret = fp_mul_monty(&t2, &in->Z, &in->Z); EG(ret, err);
+	ret = fp_mul_monty(&t3, &in->X, &in->Y); EG(ret, err);
+	ret = fp_add_monty(&t3, &t3, &t3); EG(ret, err);
+
+	ret = fp_mul_monty(&out->Z, &in->X, &in->Z); EG(ret, err);
+	ret = fp_add_monty(&out->Z, &out->Z, &out->Z); EG(ret, err);
+	ret = fp_mul_monty(&out->X, &in->crv->a_monty, &out->Z); EG(ret, err);
+	ret = fp_mul_monty(&out->Y, &in->crv->b3_monty, &t2); EG(ret, err);
+	ret = fp_add_monty(&out->Y, &out->X, &out->Y); EG(ret, err);
+
+	ret = fp_sub_monty(&out->X, &t1, &out->Y); EG(ret, err);
+	ret = fp_add_monty(&out->Y, &t1, &out->Y); EG(ret, err);
+	ret = fp_mul_monty(&out->Y, &out->X, &out->Y); EG(ret, err);
+	ret = fp_mul_monty(&out->X, &t3, &out->X); EG(ret, err);
+	ret = fp_mul_monty(&out->Z, &in->crv->b3_monty, &out->Z); EG(ret, err);
+
+	ret = fp_mul_monty(&t2, &in->crv->a_monty, &t2); EG(ret, err);
+	ret = fp_sub_monty(&t3, &t0, &t2); EG(ret, err);
+	ret = fp_mul_monty(&t3, &in->crv->a_monty, &t3); EG(ret, err);
+	ret = fp_add_monty(&t3, &t3, &out->Z); EG(ret, err);
+	ret = fp_add_monty(&out->Z, &t0, &t0); EG(ret, err);
+
+	ret = fp_add_monty(&t0, &out->Z, &t0); EG(ret, err);
+	ret = fp_add_monty(&t0, &t0, &t2); EG(ret, err);
+	ret = fp_mul_monty(&t0, &t0, &t3); EG(ret, err);
+	ret = fp_add_monty(&out->Y, &out->Y, &t0); EG(ret, err);
+	ret = fp_mul_monty(&t2, &in->Y, &in->Z); EG(ret, err);
+
+	ret = fp_add_monty(&t2, &t2, &t2); EG(ret, err);
+	ret = fp_mul_monty(&t0, &t2, &t3); EG(ret, err);
+	ret = fp_sub_monty(&out->X, &out->X, &t0); EG(ret, err);
+	ret = fp_mul_monty(&out->Z, &t2, &t1); EG(ret, err);
+	ret = fp_add_monty(&out->Z, &out->Z, &out->Z); EG(ret, err);
+
+	ret = fp_add_monty(&out->Z, &out->Z, &out->Z);
+
+err:
+	fp_uninit(&t0);
+	fp_uninit(&t1);
+	fp_uninit(&t2);
+	fp_uninit(&t3);
+
+	return ret;
+}
+
+/*
+ * If NO_USE_COMPLETE_FORMULAS flag is not defined addition formulas from Algorithm 1
+ * of https://joostrenes.nl/publications/complete.pdf are used, otherwise
+ * http://www.hyperelliptic.org/EFD/g1p/auto-shortw-projective.html#addition-add-1998-cmo-2
+ */
+
+/*
+ * The function is an internal one: no check is performed on parameters,
+ * this MUST be done by the caller:
+ *
+ *  - in1 and in2 are initialized
+ *  - in1 and in2 are on the same curve
+ *  - in1/in2 and out must not be aliased
+ *  - in1 and in2 must not be equal, opposite or have identical value
+ *
+ * The function will initialize 'out'. The function returns 0 on success, -1
+ * on error.
+ */
+ATTRIBUTE_WARN_UNUSED_RET static int __prj_pt_add_monty_cf(prj_pt_t out,
+							   prj_pt_src_t in1,
+							   prj_pt_src_t in2)
+{
+	fp t0, t1, t2, t3, t4, t5;
+	int ret;
+	t0.magic = t1.magic = t2.magic = 0;
+	t3.magic = t4.magic = t5.magic = 0;
+
+	ret = prj_pt_init(out, in1->crv); EG(ret, err);
+
+	ret = fp_init(&t0, out->crv->a.ctx); EG(ret, err);
+	ret = fp_init(&t1, out->crv->a.ctx); EG(ret, err);
+	ret = fp_init(&t2, out->crv->a.ctx); EG(ret, err);
+	ret = fp_init(&t3, out->crv->a.ctx); EG(ret, err);
+	ret = fp_init(&t4, out->crv->a.ctx); EG(ret, err);
+	ret = fp_init(&t5, out->crv->a.ctx); EG(ret, err);
+
+	ret = fp_mul_monty(&t0, &in1->X, &in2->X); EG(ret, err);
+	ret = fp_mul_monty(&t1, &in1->Y, &in2->Y); EG(ret, err);
+	ret = fp_mul_monty(&t2, &in1->Z, &in2->Z); EG(ret, err);
+	ret = fp_add_monty(&t3, &in1->X, &in1->Y); EG(ret, err);
+	ret = fp_add_monty(&t4, &in2->X, &in2->Y); EG(ret, err);
+
+	ret = fp_mul_monty(&t3, &t3, &t4); EG(ret, err);
+	ret = fp_add_monty(&t4, &t0, &t1); EG(ret, err);
+	ret = fp_sub_monty(&t3, &t3, &t4); EG(ret, err);
+	ret = fp_add_monty(&t4, &in1->X, &in1->Z); EG(ret, err);
+	ret = fp_add_monty(&t5, &in2->X, &in2->Z); EG(ret, err);
+
+	ret = fp_mul_monty(&t4, &t4, &t5); EG(ret, err);
+	ret = fp_add_monty(&t5, &t0, &t2); EG(ret, err);
+	ret = fp_sub_monty(&t4, &t4, &t5); EG(ret, err);
+	ret = fp_add_monty(&t5, &in1->Y, &in1->Z); EG(ret, err);
+	ret = fp_add_monty(&out->X, &in2->Y, &in2->Z); EG(ret, err);
+
+	ret = fp_mul_monty(&t5, &t5, &out->X); EG(ret, err);
+	ret = fp_add_monty(&out->X, &t1, &t2); EG(ret, err);
+	ret = fp_sub_monty(&t5, &t5, &out->X); EG(ret, err);
+	ret = fp_mul_monty(&out->Z, &in1->crv->a_monty, &t4); EG(ret, err);
+	ret = fp_mul_monty(&out->X, &in1->crv->b3_monty, &t2); EG(ret, err);
+
+	ret = fp_add_monty(&out->Z, &out->X, &out->Z); EG(ret, err);
+	ret = fp_sub_monty(&out->X, &t1, &out->Z); EG(ret, err);
+	ret = fp_add_monty(&out->Z, &t1, &out->Z); EG(ret, err);
+	ret = fp_mul_monty(&out->Y, &out->X, &out->Z); EG(ret, err);
+	ret = fp_add_monty(&t1, &t0, &t0); EG(ret, err);
+
+	ret = fp_add_monty(&t1, &t1, &t0); EG(ret, err);
+	ret = fp_mul_monty(&t2, &in1->crv->a_monty, &t2); EG(ret, err);
+	ret = fp_mul_monty(&t4, &in1->crv->b3_monty, &t4); EG(ret, err);
+	ret = fp_add_monty(&t1, &t1, &t2); EG(ret, err);
+	ret = fp_sub_monty(&t2, &t0, &t2); EG(ret, err);
+
+	ret = fp_mul_monty(&t2, &in1->crv->a_monty, &t2); EG(ret, err);
+	ret = fp_add_monty(&t4, &t4, &t2); EG(ret, err);
+	ret = fp_mul_monty(&t0, &t1, &t4); EG(ret, err);
+	ret = fp_add_monty(&out->Y, &out->Y, &t0); EG(ret, err);
+	ret = fp_mul_monty(&t0, &t5, &t4); EG(ret, err);
+
+	ret = fp_mul_monty(&out->X, &t3, &out->X); EG(ret, err);
+	ret = fp_sub_monty(&out->X, &out->X, &t0); EG(ret, err);
+	ret = fp_mul_monty(&t0, &t3, &t1); EG(ret, err);
+	ret = fp_mul_monty(&out->Z, &t5, &out->Z); EG(ret, err);
+	ret = fp_add_monty(&out->Z, &out->Z, &t0);
+
+err:
+	fp_uninit(&t0);
+	fp_uninit(&t1);
+	fp_uninit(&t2);
+	fp_uninit(&t3);
+	fp_uninit(&t4);
+	fp_uninit(&t5);
+
+	return ret;
+}
+#endif  /* NO_USE_COMPLETE_FORMULAS */
+
+/*
+ * Internal function:
+ *
+ *  - not supporting aliasing,
+ *  - requiring caller to check in parameter is initialized
+ *
+ * Based on library configuration, the function either use complete formulas
+ * or not.
+ */
+static int _prj_pt_dbl_monty(prj_pt_t out, prj_pt_src_t in)
+{
+	int ret;
+
+#ifdef NO_USE_COMPLETE_FORMULAS
+	int iszero;
+	ret = prj_pt_iszero(in, &iszero); EG(ret, err);
+	if (iszero) {
+		ret = prj_pt_init(out, in->crv); EG(ret, err);
+		ret = prj_pt_zero(out);
+	} else {
+		ret = __prj_pt_dbl_monty_no_cf(out, in);
+	}
+#else
+	ret = __prj_pt_dbl_monty_cf(out, in); EG(ret, err);
 #endif
+
+err:
+	return ret;
+}
 
 /*
  * Internal version that peform in place doubling of given val,
  * by using a temporary copy. Sanity checks on parameters must
  * be done by caller.
  */
-ATTRIBUTE_WARN_UNUSED_RET static int __prj_pt_dbl_monty_aliased(prj_pt_t val)
+ATTRIBUTE_WARN_UNUSED_RET static int _prj_pt_dbl_monty_aliased(prj_pt_t val)
 {
 	prj_pt out_cpy;
 	int ret;
 	out_cpy.magic = 0;
 
-	ret = prj_pt_init(&out_cpy, val->crv); EG(ret, err);
-	ret = __prj_pt_dbl_monty(&out_cpy, val); EG(ret, err);
+	ret = _prj_pt_dbl_monty(&out_cpy, val); EG(ret, err);
 	ret = prj_pt_copy(val, &out_cpy);
 
 err:
@@ -488,35 +494,22 @@ err:
 	return ret;
 }
 
-/* Aliased version. Returns 0 on success, -1 on error. */
-ATTRIBUTE_WARN_UNUSED_RET static int _prj_pt_dbl_monty(prj_pt_t out, prj_pt_src_t in)
+/*
+ * Public function for projective point doubling. The function handles the init
+ * check of 'in' parameter which must be guaranteed for internal functions.
+ * 'out' parameter need not be initialized and can be aliased with 'in'
+ * parameter.
+ *
+ * The function returns 0 on success, -1 on error.
+ */
+ATTRIBUTE_WARN_UNUSED_RET int prj_pt_dbl_monty(prj_pt_t out, prj_pt_src_t in)
 {
 	int ret;
 
-	if (out == in) {
-		ret = __prj_pt_dbl_monty_aliased(out);
-	} else {
-		ret = __prj_pt_dbl_monty(out, in);
-	}
-
-	return ret;
-}
-
-/*
- * Public version of the doubling to handle the case where the inputs are
- * zero or opposites.
- */
-#ifdef NO_USE_COMPLETE_FORMULAS
-int prj_pt_dbl_monty(prj_pt_t out, prj_pt_src_t in)
-{
-	int ret, iszero;
-
 	ret = prj_pt_check_initialized(in); EG(ret, err);
 
-	ret = prj_pt_iszero(in, &iszero); EG(ret, err);
-	if (iszero) {
-		ret = prj_pt_init(out, in->crv); EG(ret, err);
-		ret = prj_pt_zero(out);
+	if (out == in) {
+		ret = _prj_pt_dbl_monty_aliased(out);
 	} else {
 		ret = _prj_pt_dbl_monty(out, in);
 	}
@@ -524,20 +517,79 @@ int prj_pt_dbl_monty(prj_pt_t out, prj_pt_src_t in)
 err:
 	return ret;
 }
+
+/*
+ * Internal function:
+ *
+ *  - not supporting aliasing,
+ *  - requiring caller to check in1 and in2 parameter
+ *
+ * Based on library configuration, the function either use complete formulas
+ * or not.
+ */
+ATTRIBUTE_WARN_UNUSED_RET static inline int _prj_pt_add_monty(prj_pt_t out,
+							      prj_pt_src_t in1,
+							      prj_pt_src_t in2)
+{
+#ifndef NO_USE_COMPLETE_FORMULAS
+	return __prj_pt_add_monty_cf(out, in1, in2);
 #else
-int prj_pt_dbl_monty(prj_pt_t out, prj_pt_src_t in)
+	return __prj_pt_add_monty_no_cf(out, in1, in2);
+#endif
+}
+
+/*
+ * The function is an internal one that specifically handles aliasing. No check
+ * is performed on parameters, this MUST be done by the caller:
+ *
+ *  - in1 and in2 are initialized
+ *  - in1 and in2 are on the same curve
+ *
+ * The function will initialize 'out'. The function returns 0 on success, -1
+ * on error.
+ */
+ATTRIBUTE_WARN_UNUSED_RET static int _prj_pt_add_monty_aliased(prj_pt_t out,
+								prj_pt_src_t in1,
+								prj_pt_src_t in2)
+{
+	prj_pt out_cpy;
+	int ret;
+	out_cpy.magic = 0;
+
+	ret = _prj_pt_add_monty(&out_cpy, in1, in2); EG(ret, err);
+	ret = prj_pt_copy(out, &out_cpy); EG(ret, err);
+
+err:
+	prj_pt_uninit(&out_cpy);
+	return ret;
+}
+
+/*
+ * Public function for projective point addition. The function handles the
+ * init checks of 'in1' and 'in2' parameters, along with the check they
+ * use the same curve. This must be guaranteed for internal functions.
+ * 'out' parameter need not be initialized and can be aliased with either
+ * 'in1' or 'in2' parameter.
+ *
+ * The function returns 0 on success, -1 on error.
+ */
+int prj_pt_add_monty(prj_pt_t out, prj_pt_src_t in1, prj_pt_src_t in2)
 {
 	int ret;
 
-	ret = prj_pt_check_initialized(in); EG(ret, err);
-	ret = _prj_pt_dbl_monty(out, in);
+	ret = prj_pt_check_initialized(in1); EG(ret, err);
+	ret = prj_pt_check_initialized(in2); EG(ret, err);
+	MUST_HAVE(in1->crv == in2->crv, ret, err);
+
+	if ((out == in1) || (out == in2)) {
+		ret = _prj_pt_add_monty_aliased(out, in1, in2);
+	} else {
+		ret = _prj_pt_add_monty(out, in1, in2);
+	}
 
 err:
 	return ret;
 }
-#endif
-
-
 
 /****** Scalar multiplication algorithms *****/
 

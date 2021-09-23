@@ -325,6 +325,7 @@ int _eckcdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	 */
 	ret = sig_sign_check_initialized(ctx); EG(ret, err);
 	ECKCDSA_SIGN_CHECK_INITIALIZED(&(ctx->sign_data.eckcdsa), ret, err);
+	MUST_HAVE((sig != NULL), ret, err);
 
 	/* Zero init points */
 	ret = local_memset(&kG, 0, sizeof(prj_pt)); EG(ret, err);
@@ -567,11 +568,13 @@ int _eckcdsa_verify_init(struct ec_verify_context *ctx,
 
 	/* First, verify context has been initialized */
 	ret = sig_verify_check_initialized(ctx); EG(ret, err);
+	MUST_HAVE((sig != NULL), ret, err);
 
 	/* Do some sanity checks on input params */
 	ret = pub_key_check_initialized_and_type(ctx->pub_key, ECKCDSA); EG(ret, err);
 	MUST_HAVE((ctx->h != NULL) && (ctx->h->digest_size <= MAX_DIGEST_SIZE) &&
 		  (ctx->h->block_size <= MAX_BLOCK_SIZE), ret, err);
+	MUST_HAVE((sig != NULL), ret, err);
 
 	/* Make things more readable */
 	pub_key = ctx->pub_key;

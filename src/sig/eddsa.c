@@ -206,10 +206,9 @@ ATTRIBUTE_WARN_UNUSED_RET static int eddsa_key_pair_sanity_check(const ec_key_pa
 {
 	int ret;
 
+	MUST_HAVE((key_pair != NULL), ret, err);
 	ret = eddsa_priv_key_sanity_check(&(key_pair->priv_key)); EG(ret, err);
-
 	ret = eddsa_pub_key_sanity_check(&(key_pair->pub_key)); EG(ret, err);
-
 	MUST_HAVE(key_pair->priv_key.key_type == key_pair->pub_key.key_type, ret, err);
 
 err:
@@ -302,14 +301,12 @@ ATTRIBUTE_WARN_UNUSED_RET static int eddsa_get_digest_from_priv_key(u8 *digest, 
 	hash_alg_type hash_type;
 	const hash_mapping *hash;
 
+	MUST_HAVE((digest != NULL) && (digest_size != NULL), ret, err);
 	ret = eddsa_priv_key_sanity_check(in_priv); EG(ret, err);
 
 	MUST_HAVE((hash_type = get_eddsa_hash_type(in_priv->key_type)) != UNKNOWN_HASH_ALG, ret, err);
 	ret = get_hash_by_type(hash_type, &hash); EG(ret, err);
 	MUST_HAVE(hash != NULL, ret, err);
-
-	/* Sanity check */
-	MUST_HAVE((digest != NULL) && (digest_size != NULL), ret, err);
 
 	/* Check real digest size */
 	MUST_HAVE((*digest_size) >= hash->digest_size, ret, err);
@@ -322,25 +319,24 @@ err:
 }
 
 /* Encode an Edwards curve affine point in canonical form */
-ATTRIBUTE_WARN_UNUSED_RET static int eddsa_encode_point(aff_pt_edwards_src_t in, fp_src_t alpha_edwards,
-			      u8 *buf, u16 buflen, ec_sig_alg_type sig_alg)
+ATTRIBUTE_WARN_UNUSED_RET static int eddsa_encode_point(aff_pt_edwards_src_t in,
+							fp_src_t alpha_edwards,
+							u8 *buf, u16 buflen,
+							ec_sig_alg_type sig_alg)
 {
 	nn out_reduced;
 	u8 lsb = 0;
 	int ret;
 	out_reduced.magic = 0;
 
-	ret = nn_init(&out_reduced, 0); EG(ret, err);
-
 	/* Sanity checks */
 	MUST_HAVE(buf != NULL, ret, err);
-
 	ret = aff_pt_edwards_check_initialized(in); EG(ret, err);
-
 	ret = fp_check_initialized(alpha_edwards); EG(ret, err);
 
 	/* Zeroize the buffer */
 	ret = local_memset(buf, 0, buflen); EG(ret, err);
+	ret = nn_init(&out_reduced, 0); EG(ret, err);
 
 	/* Note: we should be reduced modulo Fp for canonical encoding here as
 	 * coordinate elements are in Fp ...
@@ -571,7 +567,7 @@ err:
  * Derive hash from private key.
  */
 ATTRIBUTE_WARN_UNUSED_RET static int eddsa_derive_priv_key_hash(const ec_priv_key *in_priv,
-				      u8 *buf, u16 buflen)
+								u8 *buf, u16 buflen)
 {
 	hash_alg_type hash_type = UNKNOWN_HASH_ALG;
 	const hash_mapping *hash;
@@ -580,6 +576,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int eddsa_derive_priv_key_hash(const ec_priv_ke
 	const u8 *in[2];
 	u32 in_len[2];
 
+	MUST_HAVE(buf != NULL, ret, err);
 	ret = eddsa_priv_key_sanity_check(in_priv); EG(ret, err);
 
 	MUST_HAVE((hash_type = get_eddsa_hash_type(in_priv->key_type)) != UNKNOWN_HASH_ALG, ret, err);
@@ -797,14 +794,12 @@ int eddsa_init_pub_key(ec_pub_key *out_pub, const ec_priv_key *in_priv)
 	s.magic = 0;
 
 	MUST_HAVE(out_pub != NULL, ret, err);
+	ret = eddsa_priv_key_sanity_check(in_priv); EG(ret, err);
 
 	ret = nn_init(&s, 0); EG(ret, err);
 
 	/* Zero init public key to be generated */
 	ret = local_memset(out_pub, 0, sizeof(ec_pub_key)); EG(ret, err);
-
-	/* Check if private key is initialized and everything is OK with it */
-	ret = eddsa_priv_key_sanity_check(in_priv); EG(ret, err);
 
 	/* Get the generator G */
 	G = &(in_priv->params->ec_gen);
@@ -890,8 +885,9 @@ int eddsa_import_pub_key(ec_pub_key *pub_key, const u8 *buf, u16 buflen,
 		ret = -1;
 		goto err;
 	}
-	/* Handle our short Weierstrass curve */
-	MUST_HAVE((pub_key != NULL) && (shortw_curve_params != NULL), ret, err);
+
+	MUST_HAVE((pub_key != NULL) && (shortw_curve_params != NULL) && (buf != NULL), ret, err);
+
 	/* Make things more readable */
 	shortw_curve = &(shortw_curve_params->ec_curve);
 	alpha_montgomery = &(shortw_curve_params->ec_alpha_montgomery);
@@ -969,6 +965,7 @@ int eddsa_export_pub_key(const ec_pub_key *in_pub, u8 *buf, u16 buflen)
 	_Tmp.magic = edwards_curve.magic = 0;
 
 	ret = pub_key_check_initialized(in_pub); EG(ret, err);
+	MUST_HAVE(buf != NULL, ret, err);
 
 	/* Make things more readable */
 	shortw_curve = &(in_pub->params->ec_curve);
@@ -1170,6 +1167,7 @@ int _eddsa_sign_update_pre_hash(struct ec_sign_context *ctx,
 	 */
 	ret = sig_sign_check_initialized(ctx); EG(ret, err);
 	EDDSA_SIGN_CHECK_INITIALIZED(&(ctx->sign_data.eddsa), ret, err);
+	MUST_HAVE(chunk != NULL, ret, err);
 
 	key_type = ctx->key_pair->priv_key.key_type;
 
@@ -1901,6 +1899,7 @@ int _eddsa_verify_init(struct ec_verify_context *ctx, const u8 *sig, u8 siglen)
 
 	/* First, verify context has been initialized */
 	ret = sig_verify_check_initialized(ctx); EG(ret, err);
+	MUST_HAVE(sig != NULL, ret, err);
 
 	/* Zero init our local data */
 	ret = local_memset(&A, 0, sizeof(aff_pt_edwards)); EG(ret, err);

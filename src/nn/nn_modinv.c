@@ -40,8 +40,11 @@
  * 0 is returned on success (everything went ok and x has reciprocal), -1
  * on error or if x has no reciprocal. On error, out is not meaningful.
  *
+ * The function is an internal helper: caller MUST check params have been
+ * initialized, i.e. this is not done by the function.
+ *
  */
-ATTRIBUTE_WARN_UNUSED_RET static int nn_modinv_odd(nn_t out, nn_src_t x, nn_src_t m)
+ATTRIBUTE_WARN_UNUSED_RET static int _nn_modinv_odd(nn_t out, nn_src_t x, nn_src_t m)
 {
 	int isodd, swap, smaller, ret,  cmp, iszero, tmp_isodd;
 	nn a, b, u, tmp, mp1d2;
@@ -203,6 +206,9 @@ err:
  * Uses the above constant-time binary xgcd when m is odd
  * and a not constant time plain Euclidean xgcd when m is even.
  *
+ * _out parameter need not be initialized; this will be done by the function.
+ * x and m must be initialized nn.
+ *
  * Return -1 on error or if if x has no reciprocal modulo m. out is zeroed.
  * Return  0 if x has reciprocal modulo m.
  *
@@ -231,11 +237,10 @@ int nn_modinv(nn_t _out, nn_src_t x, nn_src_t m)
 			 * already useful at that point in the function).
 			 */
 			x_mod_m = &u;
-			ret = nn_init(x_mod_m, 0); EG(ret, err);
 			ret = nn_mod(x_mod_m, x, m); EG(ret, err);
-			ret = nn_modinv_odd(&out, x_mod_m, m); EG(ret, err);
+			ret = _nn_modinv_odd(&out, x_mod_m, m); EG(ret, err);
 		} else {
-			ret = nn_modinv_odd(&out, x, m); EG(ret, err);
+			ret = _nn_modinv_odd(&out, x, m); EG(ret, err);
 		}
 		ret = nn_copy(_out, &out);
 		goto err;
@@ -272,10 +277,12 @@ err:
 }
 
 /*
- * Compute (A - B) % 2^(storagebitsizeof(B) + 1). No assumption on A and B such
- * as A >= B. Done in *constant time*. Returns 0 on success, -1 on error.
+ * Compute (A - B) % 2^(storagebitsizeof(B) + 1). A and B must be initialized nn.
+ * the function is an internal helper and does not verify params have been
+ * initialized; this must be done by the caller. No assumption on A and B values
+ * such as A >= B. Done in *constant time. Returns 0 on success, -1 on error.
  */
-ATTRIBUTE_WARN_UNUSED_RET static inline int nn_sub_mod_2exp(nn_t A, nn_src_t B)
+ATTRIBUTE_WARN_UNUSED_RET static inline int _nn_sub_mod_2exp(nn_t A, nn_src_t B)
 {
 	u8 Awlen = A->wlen;
 	int ret;
@@ -312,6 +319,8 @@ int nn_modinv_2exp(nn_t _out, nn_src_t x, bitcnt_t exp, int *x_isodd)
 
 	MUST_HAVE(x_isodd != NULL, ret, err);
 	ret = nn_check_initialized(x); EG(ret, err);
+	ret = nn_check_initialized(_out); EG(ret, err);
+
 	ret = nn_init(&out, 0); EG(ret, err);
 	ret = nn_init(&tmp_sqr, 0); EG(ret, err);
 	ret = nn_init(&tmp_mul, 0); EG(ret, err);
@@ -353,7 +362,7 @@ int nn_modinv_2exp(nn_t _out, nn_src_t x, bitcnt_t exp, int *x_isodd)
 		 * borrow. The result modulo 2^(2^i) is correct whether the
 		 * borrow occurs or not.
 		 */
-		ret = nn_sub_mod_2exp(&out, &tmp_mul); EG(ret, err);
+		ret = _nn_sub_mod_2exp(&out, &tmp_mul); EG(ret, err);
 	}
 
 	/*
@@ -364,7 +373,7 @@ int nn_modinv_2exp(nn_t _out, nn_src_t x, bitcnt_t exp, int *x_isodd)
 		ret = nn_sqr_low(&tmp_sqr, &out, out.wlen); EG(ret, err);
 		ret = nn_mul_low(&tmp_mul, &tmp_sqr, x, out.wlen); EG(ret, err);
 		ret = nn_lshift_fixedlen(&out, &out, 1); EG(ret, err);
-		ret = nn_sub_mod_2exp(&out, &tmp_mul); EG(ret, err);
+		ret = _nn_sub_mod_2exp(&out, &tmp_mul); EG(ret, err);
 	}
 
 	/*
@@ -375,7 +384,7 @@ int nn_modinv_2exp(nn_t _out, nn_src_t x, bitcnt_t exp, int *x_isodd)
 		ret = nn_sqr_low(&tmp_sqr, &out, out.wlen); EG(ret, err);
 		ret = nn_mul_low(&tmp_mul, &tmp_sqr, x, out.wlen); EG(ret, err);
 		ret = nn_lshift_fixedlen(&out, &out, 1); EG(ret, err);
-		ret = nn_sub_mod_2exp(&out, &tmp_mul); EG(ret, err);
+		ret = _nn_sub_mod_2exp(&out, &tmp_mul); EG(ret, err);
 	}
 
 	/*

@@ -23,12 +23,13 @@ int hmac_init(hmac_context *ctx, const u8 *hmackey, u32 hmackey_len,
 	int ret;
 	const hash_mapping *h;
 
+	MUST_HAVE((ctx != NULL) && (hmackey != NULL), ret, err);
+
 	ret = local_memset(local_hmac_key, 0, sizeof(local_hmac_key)); EG(ret, err);
 	/* Set ipad and opad to appropriate values */
 	ret = local_memset(ipad, 0x36, sizeof(ipad)); EG(ret, err);
 	ret = local_memset(opad, 0x5c, sizeof(opad)); EG(ret, err);
 
-	MUST_HAVE((ctx != NULL) && (hmackey != NULL), ret, err);
 	/* Get the hash mapping of the current asked hash function */
 	ret = get_hash_by_type(hash_type, &(ctx->hash)); EG(ret, err);
 	MUST_HAVE(ctx->hash != NULL, ret, err);
@@ -86,6 +87,7 @@ int hmac_update(hmac_context *ctx, const u8 *input, u32 ilen)
 	const hash_mapping *h;
 
 	HMAC_CHECK_INITIALIZED(ctx, ret, err);
+	MUST_HAVE(input != NULL, ret, err);
 
 	/* Make things more readable */
 	h = ctx->hash;

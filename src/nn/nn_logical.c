@@ -514,6 +514,7 @@ int nn_bitlen(nn_src_t in, bitcnt_t *blen)
 	int ret;
 	u8 i;
 
+	MUST_HAVE((blen != NULL), ret, err);
 	ret = nn_check_initialized(in); EG(ret, err);
 
 	for (i = in->wlen; i > 0; i--) {
@@ -539,6 +540,7 @@ int nn_getbit(nn_src_t in, bitcnt_t bit, u8 *bitval)
 	u8 bidx = bit % WORD_BITS;
 	int ret;
 
+	MUST_HAVE((bitval != NULL), ret, err);
 	ret = nn_check_initialized(in); EG(ret, err);
 	MUST_HAVE(!(bit >= NN_MAX_BIT_LEN), ret, err);
 

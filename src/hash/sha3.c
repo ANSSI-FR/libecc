@@ -78,7 +78,7 @@ int _sha3_finalize(sha3_context *ctx, u8 *output)
 	u8 *state;
 	int ret;
 
-	MUST_HAVE((output != NULL), ret, err);
+	MUST_HAVE((output != NULL) && (ctx != NULL), ret, err);
 	MUST_HAVE(ctx->sha3_digest_size <= sizeof(ctx->sha3_state), ret, err);
 
 	state = (u8*)(ctx->sha3_state);

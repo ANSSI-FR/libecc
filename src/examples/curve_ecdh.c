@@ -95,6 +95,8 @@ int ECDH_helper(const u8 *curve_name, const u8 *role)
 
 	Q.magic = 0;
 
+	MUST_HAVE((curve_name != NULL) && (role != NULL), ret, err);
+
 	/****** Alice => Bob *********************************************************/
 	ret = are_equal(role, Alice, CHECK_SIZE, &check1); EG(ret, err);
 	ret = are_equal(role, Bob, CHECK_SIZE, &check2); EG(ret, err);

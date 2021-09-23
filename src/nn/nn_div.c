@@ -39,7 +39,7 @@
  * The function is an internal helper; it expects initialized nn in1 and
  * in2: it does not verify that.
  */
-ATTRIBUTE_WARN_UNUSED_RET static int nn_cmp_shift(nn_src_t in1, nn_src_t in2, u8 shift, int *cmp)
+ATTRIBUTE_WARN_UNUSED_RET static int _nn_cmp_shift(nn_src_t in1, nn_src_t in2, u8 shift, int *cmp)
 {
 	int ret, mask, tmp;
 	u8 i;
@@ -71,7 +71,7 @@ err:
  * The function is an internal helper; it expects initialized nn out and
  * in: it does not verify that.
  */
-ATTRIBUTE_WARN_UNUSED_RET static int nn_cnd_sub_shift(int cnd, nn_t out, nn_src_t in,
+ATTRIBUTE_WARN_UNUSED_RET static int _nn_cnd_sub_shift(int cnd, nn_t out, nn_src_t in,
 			    u8 shift, word_t *borrow)
 {
 	word_t tmp, borrow1, borrow2, _borrow = WORD(0);
@@ -110,7 +110,7 @@ err:
  * The function is an internal helper; it expects initialized nn out and
  * in: it does not verify that.
  */
-ATTRIBUTE_WARN_UNUSED_RET static int nn_submul_word_shift(nn_t out, nn_src_t in, word_t w, u8 shift,
+ATTRIBUTE_WARN_UNUSED_RET static int _nn_submul_word_shift(nn_t out, nn_src_t in, word_t w, u8 shift,
 				word_t *borrow)
 {
 	word_t _borrow = WORD(0), prod_high, prod_low, tmp;
@@ -200,7 +200,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int _nn_divrem_normalized(nn_t q, nn_t r,
 	MUST_HAVE(!(b->wlen <= 0), ret, err);
 	MUST_HAVE(!(a->wlen <= b->wlen), ret, err);
 	MUST_HAVE(!(!((b->val[b->wlen - 1] >> (WORD_BITS - 1)) == WORD(1))), ret, err);
-	MUST_HAVE(!nn_cmp_shift(a, b, a->wlen - b->wlen, &cmp) && (cmp < 0), ret, err);
+	MUST_HAVE(!_nn_cmp_shift(a, b, a->wlen - b->wlen, &cmp) && (cmp < 0), ret, err);
 
 	/* Handle trivial aliasing for a and r */
 	if (r != a) {
@@ -240,7 +240,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int _nn_divrem_normalized(nn_t q, nn_t r,
 		 * and subtract it from remainder:
 		 * r = r - (b*qstar << B^shift)
 		 */
-		ret = nn_submul_word_shift(r, b, qstar, shift, &borrow); EG(ret, err);
+		ret = _nn_submul_word_shift(r, b, qstar, shift, &borrow); EG(ret, err);
 
 		/* Check the approximate quotient was indeed not too large. */
 		MUST_HAVE(!(r->val[i - 1] < borrow), ret, err);
@@ -250,10 +250,10 @@ ATTRIBUTE_WARN_UNUSED_RET static int _nn_divrem_normalized(nn_t q, nn_t r,
 		 * Check whether the approximate quotient was too small or not.
 		 * At most one multiprecision correction is needed.
 		 */
-		ret = nn_cmp_shift(r, b, shift, &cmp); EG(ret, err);
+		ret = _nn_cmp_shift(r, b, shift, &cmp); EG(ret, err);
 		small = (!!(r->val[i - 1])) | (cmp >= 0);
 		/* Perform conditional multiprecision correction. */
-		ret = nn_cnd_sub_shift(small, r, b, shift, &borrow); EG(ret, err);
+		ret = _nn_cnd_sub_shift(small, r, b, shift, &borrow); EG(ret, err);
 		MUST_HAVE(!(r->val[i - 1] != borrow), ret, err);
 		r->val[i - 1] -= borrow;
 		/*
@@ -268,7 +268,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int _nn_divrem_normalized(nn_t q, nn_t r,
 		 */
 		MUST_HAVE(!(r->val[r->wlen - 1] != WORD(0)), ret, err);
 
-		ret = nn_cmp_shift(r, b, shift, &cmp); EG(ret, err);
+		ret = _nn_cmp_shift(r, b, shift, &cmp); EG(ret, err);
 		MUST_HAVE(!(cmp >= 0), ret, err);
 
 		ret = nn_set_wlen(r, r->wlen - 1); EG(ret, err);
@@ -442,10 +442,10 @@ ATTRIBUTE_WARN_UNUSED_RET static int _nn_divrem_unshifted(nn_t q, nn_t r, nn_src
 		/* And we are done as the quotient is 0 or 1. */
 	} else if (new_wlen > b_wlen) {
 		/* Ensure that most significant part of a is smaller than b. */
-		ret = nn_cmp_shift(&a_shift, b_norm, new_wlen - b_wlen, &cmp); EG(ret, err);
+		ret = _nn_cmp_shift(&a_shift, b_norm, new_wlen - b_wlen, &cmp); EG(ret, err);
 		larger = cmp >= 0;
-		ret = nn_cnd_sub_shift(larger, &a_shift, b_norm, new_wlen - b_wlen, &borrow); EG(ret, err);
-		MUST_HAVE(!nn_cmp_shift(&a_shift, b_norm, new_wlen - b_wlen, &cmp) && (cmp < 0), ret, err);
+		ret = _nn_cnd_sub_shift(larger, &a_shift, b_norm, new_wlen - b_wlen, &borrow); EG(ret, err);
+		MUST_HAVE(!_nn_cmp_shift(&a_shift, b_norm, new_wlen - b_wlen, &cmp) && (cmp < 0), ret, err);
 
 		/*
 		 * Perform division with MSP of a smaller than b. This ensures
@@ -558,8 +558,11 @@ err:
  * Done in constant time.
  */
 
-/* Comparison of two limbs numbers. */
-ATTRIBUTE_WARN_UNUSED_RET static int wcmp_22(word_t a[2], word_t b[2])
+/*
+ * Comparison of two limbs numbers. Internal helper.
+ * Checks left to the caller
+ */
+ATTRIBUTE_WARN_UNUSED_RET static int _wcmp_22(word_t a[2], word_t b[2])
 {
 	int mask, ret = 0;
 	ret += a[1] > b[1];
@@ -570,8 +573,11 @@ ATTRIBUTE_WARN_UNUSED_RET static int wcmp_22(word_t a[2], word_t b[2])
 	return ret;
 }
 
-/* Addition of two limbs numbers with carry returned. */
-ATTRIBUTE_WARN_UNUSED_RET static word_t wadd_22(word_t a[2], word_t b[2])
+/*
+ * Addition of two limbs numbers with carry returned. Internal helper.
+ * Checks left to the caller.
+ */
+ATTRIBUTE_WARN_UNUSED_RET static word_t _wadd_22(word_t a[2], word_t b[2])
 {
 	word_t carry;
 	a[0] += b[0];
@@ -583,8 +589,11 @@ ATTRIBUTE_WARN_UNUSED_RET static word_t wadd_22(word_t a[2], word_t b[2])
 	return carry;
 }
 
-/* Subtraction of two limbs numbers with borrow returned. */
-ATTRIBUTE_WARN_UNUSED_RET static word_t wsub_22(word_t a[2], word_t b[2])
+/*
+ * Subtraction of two limbs numbers with borrow returned. Internal helper.
+ * Checks left to the caller.
+ */
+ATTRIBUTE_WARN_UNUSED_RET static word_t _wsub_22(word_t a[2], word_t b[2])
 {
 	word_t borrow, tmp;
 	tmp = a[0] - b[0];
@@ -624,11 +633,12 @@ ATTRIBUTE_WARN_UNUSED_RET static word_t wsub_22(word_t a[2], word_t b[2])
 
 /*
  * divide two words by a normalized word using schoolbook division on half
- * words. This is only used below in the reciprocal computation.
+ * words. This is only used below in the reciprocal computation. No checks
+ * are performed on inputs. This is expected to be done by the caller.
  *
  * Returns 0 on success, -1 on error.
  */
-ATTRIBUTE_WARN_UNUSED_RET static int word_divrem(word_t *q, word_t *r, word_t ah, word_t al, word_t b)
+ATTRIBUTE_WARN_UNUSED_RET static int _word_divrem(word_t *q, word_t *r, word_t ah, word_t al, word_t b)
 {
 	word_t bh, bl, qh, ql, rm, rhl[2], phl[2];
 	int larger, ret;
@@ -654,14 +664,14 @@ ATTRIBUTE_WARN_UNUSED_RET static int word_divrem(word_t *q, word_t *r, word_t ah
 	phl[0] = WLSHIFT(phl[0], HWORD_BITS);
 
 	for (j = 0; j < 2; j++) {
-		larger = (wcmp_22(phl, rhl) > 0);
+		larger = (_wcmp_22(phl, rhl) > 0);
 		qh -= (word_t) larger;
 		WORD_CND_SUB_22(larger, phl[1], phl[0], bh, bl);
 	}
 
-	ret = wcmp_22(phl, rhl) > 0;
+	ret = _wcmp_22(phl, rhl) > 0;
 	MUST_HAVE(!(ret), ret, err);
-	IGNORE_RET_VAL(wsub_22(rhl, phl));
+	IGNORE_RET_VAL(_wsub_22(rhl, phl));
 	MUST_HAVE((WRSHIFT(rhl[1], HWORD_BITS) == 0), ret, err);
 
 	/* Compute low part of the quotient. */
@@ -672,14 +682,14 @@ ATTRIBUTE_WARN_UNUSED_RET static int word_divrem(word_t *q, word_t *r, word_t ah
 	WORD_MUL(phl[1], phl[0], ql, (b));
 
 	for (j = 0; j < 2; j++) {
-		larger = (wcmp_22(phl, rhl) > 0);
+		larger = (_wcmp_22(phl, rhl) > 0);
 		ql -= (word_t) larger;
 		WORD_CND_SUB_21(larger, phl[1], phl[0], (b));
 	}
 
-	ret = wcmp_22(phl, rhl) > 0;
+	ret = _wcmp_22(phl, rhl) > 0;
 	MUST_HAVE(!(ret), ret, err);
-	IGNORE_RET_VAL(wsub_22(rhl, phl));
+	IGNORE_RET_VAL(_wsub_22(rhl, phl));
 	/* Set outputs. */
 	MUST_HAVE((rhl[1] == WORD(0)), ret, err);
 	MUST_HAVE(!(rhl[0] >= (b)), ret, err);
@@ -707,6 +717,8 @@ int wreciprocal(word_t dh, word_t dl, word_t *reciprocal)
 	word_t q, carry, r[2], t[2];
 	int ret;
 
+	MUST_HAVE((reciprocal != NULL), ret, err);
+
 	if (((word_t)(dh + WORD(1)) == WORD(0)) &&
 	    ((word_t)(dl + WORD(1)) == WORD(0))) {
 		*reciprocal = WORD(0);
@@ -720,8 +732,8 @@ int wreciprocal(word_t dh, word_t dl, word_t *reciprocal)
 	} else {
 		t[1] = ~dh;
 		t[0] = ~dl;
-		ret = word_divrem(&q, r+1, t[1], t[0],
-				  (word_t)(dh + WORD(1)));
+		ret = _word_divrem(&q, r+1, t[1], t[0],
+				   (word_t)(dh + WORD(1)));
 		MUST_HAVE(!ret, ret, err);
 	}
 
@@ -734,13 +746,13 @@ int wreciprocal(word_t dh, word_t dl, word_t *reciprocal)
 	r[0] = WORD(0);
 
 	WORD_MUL(t[1], t[0], q, (word_t)~dl);
-	carry = wadd_22(r, t);
+	carry = _wadd_22(r, t);
 
 	t[0] = dl + WORD(1);
 	t[1] = dh;
-	while (carry || (wcmp_22(r, t) >= 0)) {
+	while (carry || (_wcmp_22(r, t) >= 0)) {
 		q++;
-		carry -= wsub_22(r, t);
+		carry -= _wsub_22(r, t);
 	}
 
 	*reciprocal = q;
@@ -840,7 +852,10 @@ err:
  *
  * r need not be initialized, the function does it for the the caller.
  *
- * This function does not support aliasing. It returns 0 on sucess, -1 on error.
+ * This function does not support aliasing. This is an internal helper, which
+ * expects caller to check parameters.
+ *
+ * It returns 0 on sucess, -1 on error.
  */
 ATTRIBUTE_WARN_UNUSED_RET static int _nn_divrem(nn_t q, nn_t r, nn_src_t a, nn_src_t b)
 {
@@ -890,7 +905,10 @@ err:
 	return ret;
 }
 
-/* Returns 0 on succes, -1 on error. */
+/*
+ * Returns 0 on succes, -1 on error. Internal helper. Checks on params
+ * expected from the caller.
+ */
 ATTRIBUTE_WARN_UNUSED_RET static int __nn_divrem_notrim_alias(nn_t q, nn_t r, nn_src_t a, nn_src_t b)
 {
 	nn a_cpy, b_cpy;
@@ -926,6 +944,7 @@ int nn_divrem_notrim(nn_t q, nn_t r, nn_src_t a, nn_src_t b)
 	/* _nn_divrem initializes q and r */
 	ret = nn_check_initialized(a); EG(ret, err);
 	ret = nn_check_initialized(b); EG(ret, err);
+	MUST_HAVE(((q != NULL) && (r != NULL)), ret, err);
 
 	/*
 	 * Handle aliasing whenever any of the inputs is
@@ -980,7 +999,8 @@ int nn_mod_notrim(nn_t r, nn_src_t a, nn_src_t b)
 
 /*
  * Compute remainder only and normalize it. Not constant time, see
- * documentation of _nn_divrem(). Returns 0 on success, -1 on error.
+ * documentation of _nn_divrem(). r is initialized by the function.
+ * Returns 0 on success, -1 on error.
  */
 int nn_mod(nn_t r, nn_src_t a, nn_src_t b)
 {
@@ -1003,7 +1023,7 @@ int nn_mod(nn_t r, nn_src_t a, nn_src_t b)
 /*
  * Unaliased version of xgcd, and we suppose that a >= b. Badly non-constant
  * time per the algorithm used. The function returns 0 on success, -1 on
- * error. XXX document 'sign'
+ * error. internal helper: expect caller to check parameters.
  */
 ATTRIBUTE_WARN_UNUSED_RET static int _nn_xgcd(nn_t g, nn_t u, nn_t v, nn_src_t a, nn_src_t b,
 		    int *sign)

@@ -217,6 +217,8 @@ int streebog256_scattered(const u8 **inputs, const u32 *ilens,
 	int pos = 0;
 	int ret;
 
+	MUST_HAVE((inputs != NULL) && (ilens != NULL) && (output != NULL), ret, err);
+
 	ret = streebog256_init(&ctx); EG(ret, err);
 
 	while (inputs[pos] != NULL) {
@@ -301,6 +303,8 @@ int streebog512_scattered(const u8 **inputs, const u32 *ilens,
 	streebog512_context ctx;
 	int pos = 0;
 	int ret;
+
+	MUST_HAVE((inputs != NULL) && (ilens != NULL) && (output != NULL), ret, err);
 
 	ret = streebog512_init(&ctx); EG(ret, err);
 

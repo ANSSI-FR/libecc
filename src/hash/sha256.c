@@ -204,6 +204,8 @@ int sha256_scattered(const u8 **inputs, const u32 *ilens,
 	sha256_context ctx;
 	int ret, pos = 0;
 
+	MUST_HAVE((inputs != NULL) && (ilens != NULL) && (output != NULL), ret, err);
+
 	ret = sha256_init(&ctx); EG(ret, err);
 
 	while (inputs[pos] != NULL) {

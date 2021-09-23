@@ -32,16 +32,23 @@
  * Copy file content to buffer. Return 0 on success, i.e. if the request
  * size has been read and copied to buffer and -1 otherwise.
  */
-ATTRIBUTE_WARN_UNUSED_RET static int fimport(unsigned char *buf, u16 buflen, const char *path)
+ATTRIBUTE_WARN_UNUSED_RET static int fimport(unsigned char *buf, u16 buflen,
+					     const char *path)
 {
 	u16 rem = buflen, copied = 0;
 	ssize_t ret;
 	int fd;
 
+	if ((buf == NULL) || (path == NULL)) {
+		ret = -1;
+		goto err;
+	}
+
 	fd = open(path, O_RDONLY);
 	if (fd == -1) {
 		printf("Unable to open input file %s\n", path);
-		return -1;
+		ret = -1;
+		goto err;
 	}
 
 	while (rem) {
@@ -54,12 +61,16 @@ ATTRIBUTE_WARN_UNUSED_RET static int fimport(unsigned char *buf, u16 buflen, con
 		}
 	}
 
-	if(close(fd)){
+	if (close(fd)) {
 		printf("Unable to close input file %s\n", path);
-		return -1;
+		ret = -1;
+		goto err;
 	}
 
-	return (copied == buflen) ? 0 : -1;
+	ret = (copied == buflen) ? 0 : -1;
+
+err:
+	return (int)ret;
 }
 
 int get_random(unsigned char *buf, u16 len)

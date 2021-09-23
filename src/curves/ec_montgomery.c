@@ -40,6 +40,7 @@ int ec_montgomery_crv_init(ec_montgomery_crv_t crv, fp_src_t A, fp_src_t B, nn_s
 
 	MUST_HAVE(crv != NULL, ret, err);
 
+	ret = nn_check_initialized(order); EG(ret, err);
 	ret = fp_check_initialized(A); EG(ret, err);
 	ret = fp_check_initialized(B); EG(ret, err);
 	MUST_HAVE(A->ctx == B->ctx, ret, err);
@@ -55,8 +56,6 @@ int ec_montgomery_crv_init(ec_montgomery_crv_t crv, fp_src_t A, fp_src_t B, nn_s
 	ret = fp_sub(&tmp, A, &tmp); EG(ret, err);
 	MUST_HAVE(!fp_iszero(&tmp, &iszero) && !iszero, ret, err);
 	MUST_HAVE(!fp_iszero(B, &iszero) && !iszero, ret, err);
-
-	ret = nn_check_initialized(order); EG(ret, err);
 
 	ret = fp_init(&(crv->A), A->ctx); EG(ret, err);
 	ret = fp_init(&(crv->B), B->ctx); EG(ret, err);

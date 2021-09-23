@@ -21,6 +21,7 @@ void nn_print(const char *msg, nn_src_t a)
 	int ret, w;
 
 	ret = nn_check_initialized(a); EG(ret, err);
+	MUST_HAVE(msg != NULL, ret, err);
 
 	ext_printf("%s (%d words, i.e. %d bits): 0x", msg, a->wlen,
 		   a->wlen * WORD_BYTES * 8);

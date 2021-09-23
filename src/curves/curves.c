@@ -142,6 +142,7 @@ int ec_get_curve_type_by_name(const u8 *ec_name, u8 ec_name_len,
 	/* No need to bother w/ obvious crap */
 	MUST_HAVE(((ec_name_len > 2) && (ec_name_len <= MAX_CURVE_NAME_LEN)), ret, err);
 	MUST_HAVE(ec_type != NULL, ret, err);
+	MUST_HAVE(ec_name != NULL, ret, err);
 
 	/*
 	 * User has been warned ec_name_len is expected to include final

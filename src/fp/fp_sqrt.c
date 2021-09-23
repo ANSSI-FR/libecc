@@ -32,6 +32,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int legendre(fp_src_t a)
 	pow.magic = one.magic = exp.magic = 0;
 
 	/* Initialize elements */
+	ret = fp_check_initialized(a); EG(ret, err);
 	ret = fp_init(&pow, a->ctx); EG(ret, err);
 	ret = fp_init(&one, a->ctx); EG(ret, err);
 	ret = nn_init(&exp, 0); EG(ret, err);

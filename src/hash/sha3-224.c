@@ -74,6 +74,8 @@ int sha3_224_scattered(const u8 **inputs, const u32 *ilens,
 	sha3_224_context ctx;
 	int ret, pos = 0;
 
+	MUST_HAVE((inputs != NULL) && (ilens != NULL) && (output != NULL), ret, err);
+
 	ret = sha3_224_init(&ctx); EG(ret, err);
 
 	while (inputs[pos] != NULL) {

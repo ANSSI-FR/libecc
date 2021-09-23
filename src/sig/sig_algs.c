@@ -164,10 +164,7 @@ int ec_sig_mapping_callbacks_sanity_check(const ec_sig_mapping *sig)
 	int ret = -1, check;
 	u8 i;
 
-	if (sig == NULL){
-		ret = -1;
-		goto err;
-	}
+	MUST_HAVE((sig != NULL), ret, err);
 
 	/* We just check is our mapping is indeed
 	 * one of the registered mappings.
@@ -396,16 +393,8 @@ int ec_sign_init(struct ec_sign_context *ctx, const ec_key_pair *key_pair,
 		 ec_sig_alg_type sig_type, hash_alg_type hash_type,
 		 const u8 *adata, u16 adata_len)
 {
-	int ret;
-
-	ret = _ec_sign_init(ctx, key_pair, NULL, sig_type, hash_type,
+	return _ec_sign_init(ctx, key_pair, NULL, sig_type, hash_type,
 			     adata, adata_len);
-	if (ret && ctx) {
-		/* Clear the whole context to prevent future reuse */
-		IGNORE_RET_VAL(local_memset(ctx, 0, sizeof(struct ec_sign_context)));
-	}
-
-	return ret;
 }
 
 /*
@@ -714,9 +703,7 @@ int ec_structured_sig_import_from_buf(u8 *sig, u32 siglen,
 		  (hash_type != NULL) && (curve_name != NULL), ret, err);
 	/* We only deal with signatures of length < 256 */
 	MUST_HAVE((siglen <= EC_MAX_SIGLEN), ret, err);
-	if (siglen > 0) {
-		MUST_HAVE(sig != NULL, ret, err);
-	}
+	MUST_HAVE(sig != NULL, ret, err);
 
 	/* We first import the metadata consisting of:
 	 *	- One byte = the EC algorithm type
@@ -758,9 +745,7 @@ int ec_structured_sig_export_to_buf(const u8 *sig, u32 siglen,
 	MUST_HAVE((out_buf != NULL) && (curve_name != NULL), ret, err);
 	/* We only deal with signatures of length < 256 */
 	MUST_HAVE(siglen <= EC_MAX_SIGLEN, ret, err);
-	if (siglen > 0) {
-		MUST_HAVE(sig != NULL, ret, err);
-	}
+	MUST_HAVE(sig != NULL, ret, err);
 
 	/* We first export the metadata consisting of:
 	 *	- One byte = the EC algorithm type

@@ -76,6 +76,7 @@ static int nn_import_from_hexbuf(nn_t out_nn, const char *hbuf, u32 hbuflen)
 	int ret;
 
 	ret = nn_check_initialized(out_nn); EG(ret, err);
+	MUST_HAVE((hbuf != NULL), ret, err);
 	MUST_HAVE(((hbuflen / 2) / WORD_BYTES) == out_nn->wlen, ret, err);
 
 	wlen = (hbuflen + WORD_BYTES - 1) / (2 * WORD_BYTES);
@@ -821,12 +822,17 @@ static char global_parameters[MAX_PARAMS];
 int read_string(int fd, char *buf, unsigned int *buflen);
 int read_string(int fd, char *buf, unsigned int *buflen)
 {
-	unsigned int pos = 0, len = *buflen;
-	ssize_t ret = 0;
+	unsigned int pos = 0, len;
+	int ret;
 	char c;
 
+	MUST_HAVE((buf != NULL) && (buflen != NULL), ret, err);
+
+	len = *buflen;
+
 	if (len < 2) {
-		return -2;
+		ret = -2;
+		goto err;
 	}
 
 	len -= 1;		/* keep some space to terminate the string */
@@ -837,19 +843,22 @@ int read_string(int fd, char *buf, unsigned int *buflen)
 	}
 
 	if (len == 0) {
-		return -2;
+		ret = -2;
+		goto err;
 	}
 
 	if (!ret) {
-		return -1;
+		ret = -1;
+		goto err;
 	}
 
 	/* Terminate the string */
 	buf[pos] = 0;
-
 	*buflen = pos;
+	ret = 0;
 
-	return 0;
+err:
+	return ret;
 }
 
 

@@ -356,8 +356,8 @@ int prj_pt_eq_or_opp(prj_pt_src_t in1, prj_pt_src_t in2, int *eq_or_opp)
 
 	ret = prj_pt_check_initialized(in1); EG(ret, err);
 	ret = prj_pt_check_initialized(in2); EG(ret, err);
-
 	MUST_HAVE((in1->crv == in2->crv), ret, err);
+	MUST_HAVE((eq_or_opp != NULL), ret, err);
 
 	ret = fp_init(&X1, (in1->X).ctx); EG(ret, err);
 	ret = fp_init(&X2, (in2->X).ctx); EG(ret, err);
@@ -429,8 +429,7 @@ int prj_pt_import_from_buf(prj_pt_t pt,
 	u16 coord_len;
 
 	ret = ec_shortw_crv_check_initialized(crv); EG(ret, err);
-
-	MUST_HAVE((pt_buf != NULL), ret, err);
+	MUST_HAVE((pt_buf != NULL) && (pt != NULL), ret, err);
 
 	ctx = crv->a.ctx;
 	coord_len = BYTECEIL(ctx->p_bitlen);
@@ -481,8 +480,7 @@ int prj_pt_import_from_aff_buf(prj_pt_t pt,
 	u16 coord_len;
 
 	ret = ec_shortw_crv_check_initialized(crv); EG(ret, err);
-
-	MUST_HAVE((pt_buf != NULL), ret, err);
+	MUST_HAVE((pt_buf != NULL) && (pt != NULL), ret, err);
 
 	ctx = crv->a.ctx;
 	coord_len = BYTECEIL(ctx->p_bitlen);
@@ -1600,7 +1598,10 @@ err:
  *
  * The function returns 0 on success, -1 on error.
  */
-int aff_pt_edwards_to_prj_pt_shortw(aff_pt_edwards_src_t in_edwards, ec_shortw_crv_src_t shortw_crv, prj_pt_t out_shortw, fp_src_t alpha_edwards)
+int aff_pt_edwards_to_prj_pt_shortw(aff_pt_edwards_src_t in_edwards,
+				    ec_shortw_crv_src_t shortw_crv,
+				    prj_pt_t out_shortw,
+				    fp_src_t alpha_edwards)
 {
 	int ret, iszero, cmp;
 	aff_pt out_shortw_aff;
@@ -1608,6 +1609,7 @@ int aff_pt_edwards_to_prj_pt_shortw(aff_pt_edwards_src_t in_edwards, ec_shortw_c
 	out_shortw_aff.magic = one.magic = 0;
 
 	/* Check the curves compatibility */
+	ret = aff_pt_edwards_check_initialized(in_edwards); EG(ret, err);
 	ret = curve_edwards_shortw_check(in_edwards->crv, shortw_crv, alpha_edwards); EG(ret, err);
 
 	/* Initialize output point with curve */
@@ -1648,13 +1650,17 @@ err:
  *
  * The function returns 0 on success, -1 on error.
  */
-int prj_pt_shortw_to_aff_pt_edwards(prj_pt_src_t in_shortw, ec_edwards_crv_src_t edwards_crv, aff_pt_edwards_t out_edwards, fp_src_t alpha_edwards)
+int prj_pt_shortw_to_aff_pt_edwards(prj_pt_src_t in_shortw,
+				    ec_edwards_crv_src_t edwards_crv,
+				    aff_pt_edwards_t out_edwards,
+				    fp_src_t alpha_edwards)
 {
 	int ret, iszero;
 	aff_pt in_shortw_aff;
 	in_shortw_aff.magic = 0;
 
 	/* Check the curves compatibility */
+	ret = prj_pt_check_initialized(in_shortw); EG(ret, err);
 	ret = curve_edwards_shortw_check(edwards_crv, in_shortw->crv, alpha_edwards); EG(ret, err);
 
 	/* Initialize output point with curve */
@@ -1697,13 +1703,16 @@ err:
  *
  * The function returns 0 on success, -1 on error.
  */
-int aff_pt_montgomery_to_prj_pt_shortw(aff_pt_montgomery_src_t in_montgomery, ec_shortw_crv_src_t shortw_crv, prj_pt_t out_shortw)
+int aff_pt_montgomery_to_prj_pt_shortw(aff_pt_montgomery_src_t in_montgomery,
+				       ec_shortw_crv_src_t shortw_crv,
+				       prj_pt_t out_shortw)
 {
 	int ret;
 	aff_pt out_shortw_aff;
 	out_shortw_aff.magic = 0;
 
 	/* Check the curves compatibility */
+	ret = aff_pt_montgomery_check_initialized(in_montgomery); EG(ret, err);
 	ret = curve_montgomery_shortw_check(in_montgomery->crv, shortw_crv); EG(ret, err);
 
 	/* Initialize output point with curve */
@@ -1732,6 +1741,7 @@ int prj_pt_shortw_to_aff_pt_montgomery(prj_pt_src_t in_shortw, ec_montgomery_crv
 	in_shortw_aff.magic = 0;
 
 	/* Check the curves compatibility */
+	ret = prj_pt_check_initialized(in_shortw); EG(ret, err);
 	ret = curve_montgomery_shortw_check(montgomery_crv, in_shortw->crv); EG(ret, err);
 
 	/* Initialize output point with curve */

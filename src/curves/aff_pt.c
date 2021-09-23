@@ -213,8 +213,8 @@ int ec_shortw_aff_eq_or_opp(aff_pt_src_t in1, aff_pt_src_t in2,
 
 	ret = aff_pt_check_initialized(in1); EG(ret, err);
 	ret = aff_pt_check_initialized(in2); EG(ret, err);
-
 	MUST_HAVE((in1->crv == in2->crv), ret, err);
+	MUST_HAVE((aff_is_eq_or_opp != NULL), ret, err);
 
 	ret = fp_cmp(&(in1->x), &(in2->x), &cmp); EG(ret, err);
 	ret = fp_eq_or_opp(&(in1->y), &(in2->y), &eq_or_opp); EG(ret, err);

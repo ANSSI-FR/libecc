@@ -86,6 +86,8 @@ int sha512_224_scattered(const u8 **inputs, const u32 *ilens,
 	int pos = 0;
 	int ret;
 
+	MUST_HAVE((inputs != NULL) && (ilens != NULL) && (output != NULL), ret, err);
+
 	ret = sha512_224_init(&ctx); EG(ret, err);
 
 	while (inputs[pos] != NULL) {

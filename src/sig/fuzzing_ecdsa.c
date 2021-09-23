@@ -67,6 +67,7 @@ int ecdsa_sign_raw(struct ec_sign_context *ctx, const u8 *input, u8 inputlen, u8
 	 */
 	ret = sig_sign_check_initialized(ctx); EG(ret, err);
 	ECDSA_SIGN_CHECK_INITIALIZED(&(ctx->sign_data.ecdsa), ret, err);
+	MUST_HAVE((input != NULL) && (sig != NULL), ret, err);
 
 	/* Zero init out poiny */
 	ret = local_memset(&kG, 0, sizeof(prj_pt)); EG(ret, err);
@@ -91,7 +92,7 @@ int ecdsa_sign_raw(struct ec_sign_context *ctx, const u8 *input, u8 inputlen, u8
 
 	/* 1. Compute h = H(m) */
 	/* NOTE: here we have raw ECDSA, this is the raw input */
-	MUST_HAVE((input != NULL) && (inputlen <= sizeof(hash)), ret, err);
+	MUST_HAVE((inputlen <= sizeof(hash)), ret, err);
 
 	ret = local_memset(hash, 0, sizeof(hash)); EG(ret, err);
 	ret = local_memcpy(hash, input, hsize); EG(ret, err);
@@ -296,6 +297,7 @@ int ecdsa_verify_raw(struct ec_verify_context *ctx, const u8 *input, u8 inputlen
 	 */
 	ret = sig_verify_check_initialized(ctx); EG(ret, err);
 	ECDSA_VERIFY_CHECK_INITIALIZED(&(ctx->verify_data.ecdsa), ret, err);
+	MUST_HAVE((input != NULL), ret, err);
 
 	/* Zero init points */
 	ret = local_memset(&uG, 0, sizeof(prj_pt)); EG(ret, err);

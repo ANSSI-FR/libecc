@@ -60,7 +60,7 @@ int ec_priv_key_import_from_buf(ec_priv_key *priv_key,
 {
 	int ret;
 
-	MUST_HAVE(!(priv_key == NULL), ret, err);
+	MUST_HAVE((priv_key != NULL), ret, err);
 
 	ret = nn_init_from_buf(&(priv_key->x), priv_key_buf, priv_key_buf_len); EG(ret, err);
 
@@ -107,8 +107,7 @@ int pub_key_check_initialized(const ec_pub_key *A)
 {
 	int ret = 0;
 
-	/* XXX not sure if we should have a must_have here */
-	MUST_HAVE(!((A == NULL) || (A->magic != PUB_KEY_MAGIC)), ret, err);
+	MUST_HAVE(((A != NULL) && (A->magic == PUB_KEY_MAGIC)), ret, err);
 
 err:
 	return ret;
@@ -123,8 +122,8 @@ int pub_key_check_initialized_and_type(const ec_pub_key *A,
 {
 	int ret = 0;
 
-	MUST_HAVE(!((A == NULL) || (A->magic != PUB_KEY_MAGIC) ||
-			(A->key_type != sig_type)), ret, err);
+	MUST_HAVE(((A != NULL) && (A->magic == PUB_KEY_MAGIC) &&
+			(A->key_type == sig_type)), ret, err);
 
 err:
 	return ret;
@@ -143,7 +142,7 @@ int ec_pub_key_import_from_buf(ec_pub_key *pub_key, const ec_params *params,
 {
 	int ret, isone;
 
-	MUST_HAVE(((pub_key != NULL) && (params != NULL)), ret, err);
+	MUST_HAVE(((pub_key != NULL) && (pub_key_buf != NULL) && (params != NULL)), ret, err);
 
 	/* Import the projective point */
 	ret = prj_pt_import_from_buf(&(pub_key->y),
@@ -187,7 +186,7 @@ int ec_pub_key_import_from_aff_buf(ec_pub_key *pub_key, const ec_params *params,
 {
 	int ret, isone;
 
-	MUST_HAVE(!((pub_key == NULL) || (params == NULL)), ret, err);
+	MUST_HAVE(((pub_key != NULL) && (pub_key_buf != NULL) && (params != NULL)), ret, err);
 
 	/* Import the projective point */
 	ret = prj_pt_import_from_aff_buf(&(pub_key->y),
@@ -330,6 +329,7 @@ int ec_structured_priv_key_import_from_buf(ec_priv_key *priv_key,
 	 *   - One byte = the algorithm type (ECDSA, ECKCDSA, ...)
 	 *   - One byte = the curve type (FRP256V1, ...)
 	 */
+	MUST_HAVE((priv_key != NULL), ret, err);
 	MUST_HAVE((priv_key_buf != NULL), ret, err);
 	MUST_HAVE((priv_key_buf_len > metadata_len), ret, err);
 	MUST_HAVE((params != NULL), ret, err);
@@ -534,6 +534,7 @@ int ec_structured_key_pair_import_from_priv_key_buf(ec_key_pair *kp,
 	u32 len;
 	int ret;
 
+	MUST_HAVE((kp != NULL), ret, err);
 	MUST_HAVE((priv_key_buf != NULL), ret, err);
 	MUST_HAVE((priv_key_buf_len > metadata_len), ret, err);
 	MUST_HAVE((params != NULL), ret, err);
@@ -589,6 +590,8 @@ int ec_structured_key_pair_import_from_buf(ec_key_pair *kp,
 {
 	int ret;
 
+	MUST_HAVE((kp != NULL), ret, err);
+
 	ret = ec_structured_pub_key_import_from_buf(&kp->pub_key, params,
 						    pub_key_buf,
 						    pub_key_buf_len,
@@ -611,8 +614,8 @@ int ec_key_pair_gen(ec_key_pair *kp, const ec_params *params,
 {
 	int ret;
 
-	MUST_HAVE(!(kp == NULL), ret, err);
-	MUST_HAVE(!(params == NULL), ret, err);
+	MUST_HAVE((kp != NULL), ret, err);
+	MUST_HAVE((params != NULL), ret, err);
 
 	/* Get a random value in ]0,q[ */
 	ret = nn_get_random_mod(&(kp->priv_key.x), &(params->ec_gen_order)); EG(ret, err);

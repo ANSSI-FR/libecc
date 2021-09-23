@@ -25,6 +25,7 @@ void ec_point_print(const char *msg, prj_pt_src_t prj_pt)
 	int ret, iszero;
 	y_aff.magic = 0;
 
+	MUST_HAVE(msg != NULL, ret, err);
 	ret = prj_pt_iszero(prj_pt, &iszero); EG(ret, err);
 	if (iszero) {
 		ext_printf("%s: infinity\n", msg);
@@ -46,6 +47,7 @@ void ec_montgomery_point_print(const char *msg, aff_pt_montgomery_src_t pt)
 {
 	int ret;
 
+	MUST_HAVE(msg != NULL, ret, err);
 	ret = aff_pt_montgomery_check_initialized(pt); EG(ret, err);
 
 	ext_printf("%s", msg);
@@ -61,6 +63,7 @@ void ec_edwards_point_print(const char *msg, aff_pt_edwards_src_t pt)
 {
 	int ret;
 
+	MUST_HAVE(msg != NULL, ret, err);
 	ret = aff_pt_edwards_check_initialized(pt); EG(ret, err);
 
 	ext_printf("%s", msg);

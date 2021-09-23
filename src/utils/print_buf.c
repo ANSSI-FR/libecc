@@ -16,7 +16,7 @@ void buf_print(const char *msg, const u8 *buf, u16 buflen)
 {
 	u32 i;
 
-	if (buf == NULL) {
+	if ((buf == NULL) || (msg == NULL)) {
 		goto err;
 	}
 

@@ -232,7 +232,7 @@ int aff_pt_edwards_import_from_buf(aff_pt_edwards_t pt,
 	int ret, on_curve;
 
 	ret = ec_edwards_crv_check_initialized(crv); EG(ret, err);
-	MUST_HAVE(pt_buf != NULL, ret, err);
+	MUST_HAVE((pt_buf != NULL) && (pt != NULL), ret, err);
 
 	ctx = crv->a.ctx;
 	coord_len = BYTECEIL(ctx->p_bitlen);
@@ -366,6 +366,7 @@ int curve_edwards_montgomery_check(ec_edwards_crv_src_t e_crv,
 	ec_montgomery_crv check;
 	check.magic = 0;
 
+	ret = ec_montgomery_crv_check_initialized(m_crv); EG(ret, err);
 	ret = curve_edwards_to_montgomery(e_crv, &check, alpha_edwards); EG(ret, err);
 
 	/* Check elements */
@@ -712,6 +713,7 @@ int aff_pt_edwards_to_shortw(aff_pt_edwards_src_t in_edwards,
 	inter_montgomery.magic = inter_montgomery_crv.magic = 0;
 
 	/* First, map from Edwards to Montgomery */
+	ret = aff_pt_edwards_check_initialized(in_edwards); EG(ret, err);
 	ret = curve_edwards_to_montgomery(in_edwards->crv, &inter_montgomery_crv, alpha_edwards); EG(ret, err);
 	ret = aff_pt_edwards_to_montgomery(in_edwards, &inter_montgomery_crv, &inter_montgomery, alpha_edwards); EG(ret, err);
 

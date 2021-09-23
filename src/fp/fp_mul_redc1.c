@@ -16,9 +16,11 @@
 #include "fp_mul_redc1.h"
 
 /*
- * Internal helper performing Montgomery multiplication, without checking input
- * parameters. Those checks are left to the caller. The function returns 0 on
- * success, -1 on error.
+ * Internal helper performing Montgomery multiplication. The function returns
+ * 0 on success, -1 on error.
+ *
+ * CAUTION: the function does not check input parameters. Those checks MUST be
+ * performed by the caller.
  */
 ATTRIBUTE_WARN_UNUSED_RET static inline int _fp_mul_redc1(nn_t out, nn_src_t in1, nn_src_t in2,
 				 fp_ctx_src_t ctx)

@@ -55,11 +55,10 @@ ATTRIBUTE_WARN_UNUSED_RET static int export_private_key(FILE * file, const char 
 			      const ec_priv_key *priv_key,
 			      export_file_type file_type)
 {
-	u8 export_buf_size = EC_STRUCTURED_PRIV_KEY_EXPORT_SIZE(priv_key);
-	u8 priv_key_buf[EC_STRUCTURED_PRIV_KEY_MAX_EXPORT_SIZE];
+	u8 export_buf_size, priv_key_buf[EC_STRUCTURED_PRIV_KEY_MAX_EXPORT_SIZE];
+	size_t written;
 	int ret;
 	u32 i;
-	size_t written;
 
 	MUST_HAVE(file != NULL, ret, err);
 
@@ -71,6 +70,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int export_private_key(FILE * file, const char 
 	}
 
 	/* Serialize the private key to a buffer */
+	export_buf_size = EC_STRUCTURED_PRIV_KEY_EXPORT_SIZE(priv_key);
 	ret = ec_structured_priv_key_export_to_buf(priv_key, priv_key_buf,
 						   export_buf_size);
 	if (ret) {
@@ -378,6 +378,11 @@ ATTRIBUTE_WARN_UNUSED_RET static int store_sig(const char *in_fname, const char 
 	size_t read, written;
 	int ret;
 
+	MUST_HAVE((in_fname != NULL), ret, err);
+	MUST_HAVE((out_fname != NULL), ret, err);
+	MUST_HAVE((sig != NULL), ret, err);
+	MUST_HAVE((curve_name != NULL), ret, err);
+	MUST_HAVE((hdr != NULL), ret, err);
 	MUST_HAVE(EC_STRUCTURED_SIG_EXPORT_SIZE(siglen) <= sizeof(buf), ret, err);
 
 	/* Import the data from the input file */
@@ -466,6 +471,9 @@ ATTRIBUTE_WARN_UNUSED_RET static int get_file_size(const char *in_fname, size_t 
 	long size;
 	int ret;
 
+	MUST_HAVE(outsz != NULL, ret, err);
+	MUST_HAVE(in_fname != NULL, ret, err);
+
 	*outsz = 0;
 
 	in_file = fopen(in_fname, "r");
@@ -513,6 +521,10 @@ ATTRIBUTE_WARN_UNUSED_RET static int generate_metadata_hdr(metadata_hdr * hdr, c
 	unsigned long ver;
 	char *endptr; /* for strtoul() */
 	int ret, check;
+
+	MUST_HAVE((hdr != NULL), ret, err);
+	MUST_HAVE((hdr_type != NULL), ret, err);
+	MUST_HAVE((version != NULL), ret, err);
 
 	/* The magic value */
 	hdr->magic = HDR_MAGIC;
@@ -591,6 +603,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int check_ancillary_data(const char *adata, ec_
 
 	MUST_HAVE(check != NULL, ret, err);
 	MUST_HAVE(adata != NULL, ret, err);
+	MUST_HAVE(sig_name != NULL, ret, err);
 	MUST_HAVE(sig_type != UNKNOWN_SIG_ALG, ret, err);
 
 	(*check) = 0;
@@ -650,10 +663,17 @@ ATTRIBUTE_WARN_UNUSED_RET static int sign_bin_file(const char *ec_name, const ch
 	size_t read, to_read;
 	int eof;
 	u8 *allocated_buff = NULL;
-
 	struct ec_sign_context sig_ctx;
 
 	MUST_HAVE(ec_name != NULL, ret, err);
+	MUST_HAVE(ec_sig_name != NULL, ret, err);
+	MUST_HAVE(hash_algorithm != NULL, ret, err);
+	MUST_HAVE(in_fname != NULL, ret, err);
+	MUST_HAVE(in_key_fname != NULL, ret, err);
+	MUST_HAVE(out_fname != NULL, ret, err);
+	MUST_HAVE(hdr_type != NULL, ret, err);
+	MUST_HAVE(version != NULL, ret, err);
+	MUST_HAVE(adata != NULL, ret, err);
 
 	/************************************/
 	/* Get parameters from pretty names */
@@ -940,6 +960,14 @@ ATTRIBUTE_WARN_UNUSED_RET static int sign_bin_file(const char *ec_name, const ch
 /* Dump metadata header */
 ATTRIBUTE_WARN_UNUSED_RET static int dump_hdr_info(const metadata_hdr * hdr)
 {
+	int ret;
+
+	if (hdr == NULL) {
+		printf("Metadata header pointer is NULL!\n");
+		ret = -1;
+		goto err;
+	}
+
 	/* Dump the header */
 	printf("Metadata header info:\n");
 	printf("    magic   = 0x%08" PRIx32 "\n", hdr->magic);
@@ -963,8 +991,10 @@ ATTRIBUTE_WARN_UNUSED_RET static int dump_hdr_info(const metadata_hdr * hdr)
 	printf("    version = 0x%08" PRIx32 "\n", hdr->version);
 	printf("    len	    = 0x%08" PRIx32 "\n", hdr->len);
 	printf("    siglen  = 0x%08" PRIx32 "\n", hdr->siglen);
+	ret = 0;
 
-	return 0;
+err:
+	return ret;
 }
 
 /*
@@ -1001,6 +1031,12 @@ ATTRIBUTE_WARN_UNUSED_RET static int verify_bin_file(const char *ec_name, const 
 	u8 *allocated_buff = NULL;
 
 	MUST_HAVE(ec_name != NULL, ret, err);
+	MUST_HAVE(ec_sig_name != NULL, ret, err);
+	MUST_HAVE(hash_algorithm != NULL, ret, err);
+	MUST_HAVE(in_fname != NULL, ret, err);
+	MUST_HAVE(in_key_fname != NULL, ret, err);
+	MUST_HAVE(in_sig_fname != NULL, ret, err);
+	MUST_HAVE(adata != NULL, ret, err);
 
 	/************************************/
 	/* Get parameters from pretty names */
@@ -1536,9 +1572,8 @@ static void print_sig_algs(void)
 
 static void print_help(const char *prog_name)
 {
-	printf("%s expects at least one argument\n", prog_name);
+	printf("%s expects at least one argument\n", prog_name ? prog_name : "NULL");
 	printf("\targ1 = 'gen_keys', 'sign', 'verify', 'struct_sign', 'struct_verify' or 'scalar_mult'\n");
-	return;
 }
 
 int main(int argc, char *argv[])

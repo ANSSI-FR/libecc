@@ -204,6 +204,7 @@ int _ecgdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	 */
 	ret = sig_sign_check_initialized(ctx); EG(ret, err);
 	ECGDSA_SIGN_CHECK_INITIALIZED(&(ctx->sign_data.ecgdsa), ret, err);
+	MUST_HAVE((sig != NULL), ret, err);
 
 	/* Zero init points */
 	ret = local_memset(&kG, 0, sizeof(prj_pt)); EG(ret, err);
@@ -429,6 +430,7 @@ int _ecgdsa_verify_init(struct ec_verify_context *ctx,
 	ret = pub_key_check_initialized_and_type(ctx->pub_key, ECGDSA); EG(ret, err);
 	MUST_HAVE((ctx->h != NULL) && (ctx->h->digest_size <= MAX_DIGEST_SIZE) &&
 		(ctx->h->block_size <= MAX_BLOCK_SIZE), ret, err);
+	MUST_HAVE((sig != NULL), ret, err);
 
 	/* Make things more readable */
 	q = &(ctx->pub_key->params->ec_gen_order);

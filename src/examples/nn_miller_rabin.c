@@ -52,6 +52,7 @@ int miller_rabin(nn_src_t n, const unsigned int t, int *res)
 	s.magic = q.magic = r.magic = d.magic = a.magic = y.magic = j.magic = 0;
 	one.magic = two.magic = tmp.magic = 0;
 
+	ret = nn_check_initialized(n);
 	MUST_HAVE(res != NULL, ret, err);
 	(*res) = 0;
 

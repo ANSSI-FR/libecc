@@ -305,6 +305,7 @@ int __ecsdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	 */
 	ret = sig_sign_check_initialized(ctx); EG(ret, err);
 	ECSDSA_SIGN_CHECK_INITIALIZED(&(ctx->sign_data.ecsdsa), ret, err);
+	MUST_HAVE((sig != NULL), ret, err);
 
 	/* Make things more readable */
 	priv_key = &(ctx->key_pair->priv_key);
@@ -460,6 +461,7 @@ int __ecsdsa_verify_init(struct ec_verify_context *ctx,
 	ret = pub_key_check_initialized_and_type(ctx->pub_key, key_type); EG(ret, err);
 	MUST_HAVE((ctx->h != NULL) && (ctx->h->digest_size <= MAX_DIGEST_SIZE) &&
 		  (ctx->h->block_size <= MAX_BLOCK_SIZE), ret, err);
+	MUST_HAVE((sig != NULL), ret, err);
 
 	/* Make things more readable */
 	pub_key = ctx->pub_key;

@@ -29,6 +29,8 @@ ATTRIBUTE_WARN_UNUSED_RET static int ec_gen_import_export_kp(ec_key_pair *kp, co
 	ec_key_pair imported_kp;
 	int ret;
 
+	MUST_HAVE(c != NULL, ret, err);
+
 	/* Generate key pair */
 	ret = ec_key_pair_gen(kp, params, c->sig_type);
 	if (ret) {
@@ -89,6 +91,11 @@ ATTRIBUTE_WARN_UNUSED_RET static int random_split_ec_sign(u8 *sig, u8 siglen, co
 	struct ec_sign_context ctx;
 	int ret;
 	u32 consumed;
+
+	MUST_HAVE(sig != NULL, ret, err);
+	MUST_HAVE(key_pair != NULL, ret, err);
+	MUST_HAVE(m != NULL, ret, err);
+	/* note: adata == NULL is allowed */
 
 	ret = _ec_sign_init(&ctx, key_pair, rand, sig_type, hash_type, adata, adata_len);
 	if (ret) {
@@ -180,6 +187,8 @@ ATTRIBUTE_WARN_UNUSED_RET static int ec_import_export_test(const ec_test_case *c
 	ec_key_pair kp;
 	ec_params params;
 	int ret, check;
+
+	MUST_HAVE(c != NULL, ret, err);
 
 	/* Import EC params from test case */
 	ret = import_params(&params, c->ec_str_p);
@@ -394,6 +403,10 @@ ATTRIBUTE_WARN_UNUSED_RET static int ec_test_sign(u8 *sig, u8 siglen, ec_key_pai
 	 * non streaming modes produce the same result.
 	 */
 	int ret, check;
+
+	MUST_HAVE(sig != NULL, ret, err);
+	MUST_HAVE(c != NULL, ret, err);
+
 	ret = _ec_sign(sig, siglen, kp, (const u8 *)(c->msg), c->msglen,
 				c->nn_random, c->sig_type, c->hash_type, c->adata, c->adata_len); EG(ret, err);
 	ret = is_sign_streaming_mode_supported(c->sig_type, &check); EG(ret, err);
@@ -429,6 +442,9 @@ ATTRIBUTE_WARN_UNUSED_RET static int ec_test_verify(u8 *sig, u8 siglen, const ec
 	 * non streaming modes produce the same result.
 	 */
 	int ret, check;
+
+	MUST_HAVE(sig != NULL, ret, err);
+	MUST_HAVE(c != NULL, ret, err);
 
 	ret = ec_verify(sig, siglen, pub_key, (const u8 *)(c->msg), c->msglen,
 				 c->sig_type, c->hash_type, c->adata, c->adata_len);
@@ -761,10 +777,16 @@ ATTRIBUTE_WARN_UNUSED_RET static int rand_sig_verif_test_one(const ec_sig_mappin
 	char test_name[MAX_CURVE_NAME_LEN + MAX_HASH_ALG_NAME_LEN +
 		       MAX_SIG_ALG_NAME_LEN + 2];
 	const unsigned int tn_size = sizeof(test_name) - 1; /* w/o trailing 0 */
-	const char *crv_name = (const char *)PARAM_BUF_PTR((ec->params)->name);
+	const char *crv_name;
 	ec_test_case t;
 	int ret;
 	u32 len;
+
+	MUST_HAVE(sig != NULL, ret, err);
+	MUST_HAVE(hash != NULL, ret, err);
+	MUST_HAVE(ec != NULL, ret, err);
+
+	crv_name  = (const char *)PARAM_BUF_PTR((ec->params)->name);
 
 	/* Generate the test name */
 	ret = local_memset(test_name, 0, tn_size + 1); EG(ret, err);
@@ -928,6 +950,10 @@ ATTRIBUTE_WARN_UNUSED_RET static int ec_performance_test(const ec_test_case *c,
 	ec_params params;
 	int ret;
 
+	MUST_HAVE(c != NULL, ret, err);
+	MUST_HAVE(n_perf_sign != NULL, ret, err);
+	MUST_HAVE(n_perf_verif != NULL, ret, err);
+
 	/* Import EC params from test case */
 	ret = import_params(&params, c->ec_str_p);
 	if (ret) {
@@ -1051,10 +1077,16 @@ ATTRIBUTE_WARN_UNUSED_RET static int perf_test_one(const ec_sig_mapping *sig, co
 		       MAX_SIG_ALG_NAME_LEN + 2];
 	const unsigned int tn_size = sizeof(test_name) - 1; /* w/o trailing 0 */
 	unsigned int n_perf_sign = 0, n_perf_verif = 0;
-	const char *crv_name = (const char *)PARAM_BUF_PTR((ec->params)->name);
+	const char *crv_name;
 	ec_test_case t;
 	int ret;
 	u32 len;
+
+	MUST_HAVE(sig != NULL, ret, err);
+	MUST_HAVE(hash != NULL, ret, err);
+	MUST_HAVE(ec != NULL, ret, err);
+
+	crv_name = (const char *)PARAM_BUF_PTR((ec->params)->name);
 
 	/* Generate the test name */
 	ret = local_memset(test_name, 0, tn_size + 1); EG(ret, err);

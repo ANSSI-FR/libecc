@@ -20,6 +20,7 @@ void fp_ctx_print(const char *msg, fp_ctx_src_t ctx)
 {
 	int ret;
 
+	MUST_HAVE(msg != NULL, ret, err);
 	ret = fp_ctx_check_initialized(ctx); EG(ret, err);
 
 	ext_printf("%s:\n", msg);
@@ -38,6 +39,7 @@ void fp_print(const char *msg, fp_src_t a)
 {
 	int ret;
 
+	MUST_HAVE(msg != NULL, ret, err);
 	ret = fp_check_initialized(a); EG(ret, err);
 
 	nn_print(msg, &(a->fp_val));
@@ -51,6 +53,7 @@ void fp_print_all(const char *msg, fp_src_t a)
 {
 	int ret;
 
+	MUST_HAVE(msg != NULL, ret, err);
 	ret = fp_check_initialized(a); EG(ret, err);
 
 	ext_printf("%s:\n", msg);

@@ -44,12 +44,11 @@ int ec_shortw_crv_init(ec_shortw_crv_t crv, fp_src_t a, fp_src_t b, nn_src_t ord
 	int ret, iszero;
 	tmp.magic = tmp2.magic = 0;
 
-	MUST_HAVE(a->ctx == b->ctx, ret, err);
-	MUST_HAVE((crv != NULL), ret, err);
-
 	ret = nn_check_initialized(order); EG(ret, err);
 	ret = fp_check_initialized(a); EG(ret, err);
 	ret = fp_check_initialized(b); EG(ret, err);
+	MUST_HAVE(a->ctx == b->ctx, ret, err);
+	MUST_HAVE((crv != NULL), ret, err);
 
 	/* The discriminant (4 a^3 + 27 b^2) must be non zero */
 	ret = fp_init(&tmp, a->ctx); EG(ret, err);

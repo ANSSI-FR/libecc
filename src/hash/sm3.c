@@ -319,10 +319,12 @@ err:
 }
 
 int sm3_scattered(const u8 **inputs, const u32 *ilens,
-		      u8 output[SM3_DIGEST_SIZE])
+		  u8 output[SM3_DIGEST_SIZE])
 {
 	sm3_context ctx;
 	int pos = 0, ret;
+
+	MUST_HAVE((inputs != NULL) && (ilens != NULL) && (output != NULL), ret, err);
 
 	ret = sm3_init(&ctx); EG(ret, err);
 
