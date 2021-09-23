@@ -44,17 +44,17 @@
 #endif
 
 #define SHA3_384_HASH_MAGIC ((word_t)(0x2233223273935643ULL))
-#define SHA3_384_HASH_CHECK_INITIALIZED(A) \
-        MUST_HAVE((((void *)(A)) != NULL) && ((A)->magic == SHA3_384_HASH_MAGIC))
+#define SHA3_384_HASH_CHECK_INITIALIZED(A, ret, err) \
+        MUST_HAVE((((void *)(A)) != NULL) && ((A)->magic == SHA3_384_HASH_MAGIC), ret, err)
 
 typedef sha3_context sha3_384_context;
 
-void sha3_384_init(sha3_384_context *ctx);
-void sha3_384_update(sha3_384_context *ctx, const u8 *input, u32 ilen);
-void sha3_384_final(sha3_384_context *ctx, u8 output[SHA3_384_DIGEST_SIZE]);
-void sha3_384_scattered(const u8 **inputs, const u32 *ilens,
-			u8 output[SHA3_384_DIGEST_SIZE]);
-void sha3_384(const u8 *input, u32 ilen, u8 output[SHA3_384_DIGEST_SIZE]);
+int sha3_384_init(sha3_384_context *ctx);
+int sha3_384_update(sha3_384_context *ctx, const u8 *input, u32 ilen);
+int sha3_384_final(sha3_384_context *ctx, u8 output[SHA3_384_DIGEST_SIZE]);
+int sha3_384_scattered(const u8 **inputs, const u32 *ilens,
+		       u8 output[SHA3_384_DIGEST_SIZE]);
+int sha3_384(const u8 *input, u32 ilen, u8 output[SHA3_384_DIGEST_SIZE]);
 
 #endif /* __SHA3_384_H__ */
 #endif /* WITH_HASH_SHA3_384 */
