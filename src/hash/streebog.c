@@ -27,12 +27,14 @@
 
 /*** Generic functions for both STREEBOG256 and STREEBOG512 ***/
 /* Init */
-static void streebog_init(streebog_context *ctx, u8 digest_size, u8 block_size)
+static int streebog_init(streebog_context *ctx, u8 digest_size, u8 block_size)
 {
-	/* Sanity check */
-	MUST_HAVE((digest_size == 32) || (digest_size == 64));
+	int ret;
 
-	MUST_HAVE(ctx != NULL);
+	/* Sanity check */
+	MUST_HAVE((digest_size == 32) || (digest_size == 64), ret, err);
+
+	MUST_HAVE(ctx != NULL, ret, err);
 
 	/* Zeroize the internal state */
 	local_memset(ctx, 0, sizeof(streebog_context));
@@ -46,20 +48,27 @@ static void streebog_init(streebog_context *ctx, u8 digest_size, u8 block_size)
 	ctx->streebog_block_size = block_size;
 	/* Detect endianness */
 	ctx->streebog_endian = arch_is_big_endian() ? STREEBOG_BIG : STREEBOG_LITTLE;
+
+	ret = 0;
+
+err:
+	return ret;
 }
 
-static void streebog_update(streebog_context *ctx, const u8 *input, u32 ilen)
+static int streebog_update(streebog_context *ctx, const u8 *input, u32 ilen)
 {
 	const u8 *data_ptr = input;
 	u32 remain_ilen = ilen;
 	u16 fill;
 	u8 left;
+	int ret;
 
-	MUST_HAVE((ctx != NULL) && (input != NULL));
+	MUST_HAVE((ctx != NULL) && (input != NULL), ret, err);
 
 	/* Nothing to process, return */
 	if (ilen == 0) {
-		return;
+		ret = 0;
+		goto err;
 	}
 
 	/* Get what's left in our local buffer */
@@ -87,10 +96,13 @@ static void streebog_update(streebog_context *ctx, const u8 *input, u32 ilen)
 		local_memcpy(ctx->streebog_buffer + left, data_ptr, remain_ilen);
 	}
 
-	return;
+	ret = 0;
+
+err:
+	return ret;
 }
 
-static void streebog_final(streebog_context *ctx, u8 *output)
+static int streebog_final(streebog_context *ctx, u8 *output)
 {
 	unsigned int block_present = 0;
 	u8 last_padded_block[STREEBOG_BLOCK_SIZE];
@@ -98,12 +110,13 @@ static void streebog_final(streebog_context *ctx, u8 *output)
 	unsigned int j;
 	u8 digest_size;
 	u8 idx;
+	int ret;
 
-	MUST_HAVE((ctx != NULL) && (output != NULL));
+	MUST_HAVE((ctx != NULL) && (output != NULL), ret, err);
 
 	digest_size = ctx->streebog_digest_size;
 	/* Sanity check */
-	MUST_HAVE((digest_size == 32) || (digest_size == 64));
+	MUST_HAVE((digest_size == 32) || (digest_size == 64), ret, err);
 
 	/* Zero init our Z */
 	local_memset(Z, 0, sizeof(Z));
@@ -144,62 +157,92 @@ static void streebog_final(streebog_context *ctx, u8 *output)
 	STREEBOG_PUT_UINT64(ctx->h[4], output, idx, ctx->streebog_endian); idx += 8;
 	STREEBOG_PUT_UINT64(ctx->h[5], output, idx, ctx->streebog_endian); idx += 8;
 	STREEBOG_PUT_UINT64(ctx->h[6], output, idx, ctx->streebog_endian); idx += 8;
-	STREEBOG_PUT_UINT64(ctx->h[7], output, idx, ctx->streebog_endian); idx += 8;
+	STREEBOG_PUT_UINT64(ctx->h[7], output, idx, ctx->streebog_endian);
+
+	ret = 0;
+
+err:
+	return ret;
 }
 
 #if defined(WITH_HASH_STREEBOG256)
 
 /* Init */
-void streebog256_init(streebog256_context *ctx)
+int streebog256_init(streebog256_context *ctx)
 {
-	streebog_init(ctx, STREEBOG256_DIGEST_SIZE, STREEBOG256_BLOCK_SIZE);
+	int ret;
+
+	ret = streebog_init(ctx, STREEBOG256_DIGEST_SIZE, STREEBOG256_BLOCK_SIZE); EG(ret, err);
 
 	ctx->magic = STREEBOG256_HASH_MAGIC;
+
+err:
+	return ret;
 }
 
 /* Update */
-void streebog256_update(streebog256_context *ctx, const u8 *input, u32 ilen)
+int streebog256_update(streebog256_context *ctx, const u8 *input, u32 ilen)
 {
-	STREEBOG256_HASH_CHECK_INITIALIZED(ctx);
+	int ret;
 
-	streebog_update(ctx, input, ilen);
+	STREEBOG256_HASH_CHECK_INITIALIZED(ctx, ret, err);
+
+	ret = streebog_update(ctx, input, ilen);
+
+err:
+	return ret;
 }
 
 /* Finalize */
-void streebog256_final(streebog256_context *ctx,
+int streebog256_final(streebog256_context *ctx,
 		       u8 output[STREEBOG256_DIGEST_SIZE])
 {
-	STREEBOG256_HASH_CHECK_INITIALIZED(ctx);
+	int ret;
 
-	streebog_final(ctx, output);
+	STREEBOG256_HASH_CHECK_INITIALIZED(ctx, ret, err);
+
+	ret = streebog_final(ctx, output); EG(ret, err);
 
 	/* Uninit our context magic */
 	ctx->magic = 0;
+
+	ret = 0;
+
+err:
+	return ret;
 }
 
-void streebog256_scattered(const u8 **inputs, const u32 *ilens,
+int streebog256_scattered(const u8 **inputs, const u32 *ilens,
 			   u8 output[STREEBOG256_DIGEST_SIZE])
 {
 	streebog256_context ctx;
 	int pos = 0;
+	int ret;
 
-	streebog256_init(&ctx);
+	ret = streebog256_init(&ctx); EG(ret, err);
 
 	while (inputs[pos] != NULL) {
-		streebog256_update(&ctx, inputs[pos], ilens[pos]);
+		ret = streebog256_update(&ctx, inputs[pos], ilens[pos]); EG(ret, err);
 		pos += 1;
 	}
 
-	streebog256_final(&ctx, output);
+	ret = streebog256_final(&ctx, output);
+
+err:
+	return ret;
 }
 
-void streebog256(const u8 *input, u32 ilen, u8 output[STREEBOG256_DIGEST_SIZE])
+int streebog256(const u8 *input, u32 ilen, u8 output[STREEBOG256_DIGEST_SIZE])
 {
+	int ret;
 	streebog256_context ctx;
 
-	streebog256_init(&ctx);
-	streebog256_update(&ctx, input, ilen);
-	streebog256_final(&ctx, output);
+	ret = streebog256_init(&ctx); EG(ret, err);
+	ret = streebog256_update(&ctx, input, ilen); EG(ret, err);
+	ret = streebog256_final(&ctx, output);
+
+err:
+	return ret;
 }
 
 #endif /* defined(WITH_HASH_STREEBOG256) */
@@ -208,56 +251,83 @@ void streebog256(const u8 *input, u32 ilen, u8 output[STREEBOG256_DIGEST_SIZE])
 #if defined(WITH_HASH_STREEBOG512)
 
 /* Init */
-void streebog512_init(streebog512_context *ctx)
+int streebog512_init(streebog512_context *ctx)
 {
-	streebog_init(ctx, STREEBOG512_DIGEST_SIZE, STREEBOG512_BLOCK_SIZE);
+	int ret;
+
+	ret = streebog_init(ctx, STREEBOG512_DIGEST_SIZE, STREEBOG512_BLOCK_SIZE); EG(ret, err);
 
 	ctx->magic = STREEBOG512_HASH_MAGIC;
+
+	ret = 0;
+
+err:
+	return ret;
 }
 
 /* Update */
-void streebog512_update(streebog512_context *ctx, const u8 *input, u32 ilen)
+int streebog512_update(streebog512_context *ctx, const u8 *input, u32 ilen)
 {
-	STREEBOG512_HASH_CHECK_INITIALIZED(ctx);
+	int ret;
 
-	streebog_update(ctx, input, ilen);
+	STREEBOG512_HASH_CHECK_INITIALIZED(ctx, ret, err);
+
+	ret = streebog_update(ctx, input, ilen);
+
+err:
+	return ret;
 }
 
 /* Finalize */
-void streebog512_final(streebog512_context *ctx,
+int streebog512_final(streebog512_context *ctx,
 		       u8 output[STREEBOG512_DIGEST_SIZE])
 {
-	STREEBOG512_HASH_CHECK_INITIALIZED(ctx);
+	int ret;
 
-	streebog_final(ctx, output);
+	STREEBOG512_HASH_CHECK_INITIALIZED(ctx, ret, err);
+
+	ret = streebog_final(ctx, output); EG(ret, err);
 
 	/* Uninit our context magic */
 	ctx->magic = 0;
+
+	ret = 0;
+
+err:
+	return ret;
 }
 
-void streebog512_scattered(const u8 **inputs, const u32 *ilens,
+int streebog512_scattered(const u8 **inputs, const u32 *ilens,
 			   u8 output[STREEBOG512_DIGEST_SIZE])
 {
 	streebog512_context ctx;
 	int pos = 0;
+	int ret;
 
-	streebog512_init(&ctx);
+	ret = streebog512_init(&ctx); EG(ret, err);
 
 	while (inputs[pos] != NULL) {
-		streebog512_update(&ctx, inputs[pos], ilens[pos]);
+		ret = streebog512_update(&ctx, inputs[pos], ilens[pos]); EG(ret, err);
 		pos += 1;
 	}
 
-	streebog512_final(&ctx, output);
+	ret = streebog512_final(&ctx, output);
+
+err:
+	return ret;
 }
 
-void streebog512(const u8 *input, u32 ilen, u8 output[STREEBOG512_DIGEST_SIZE])
+int streebog512(const u8 *input, u32 ilen, u8 output[STREEBOG512_DIGEST_SIZE])
 {
+	int ret;
 	streebog512_context ctx;
 
-	streebog512_init(&ctx);
-	streebog512_update(&ctx, input, ilen);
-	streebog512_final(&ctx, output);
+	ret = streebog512_init(&ctx); EG(ret, err);
+	ret = streebog512_update(&ctx, input, ilen); EG(ret, err);
+	ret = streebog512_final(&ctx, output);
+
+err:
+	return ret;
 }
 
 #endif /* defined(WITH_HASH_STREEBOG512) */

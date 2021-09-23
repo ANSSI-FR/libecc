@@ -39,17 +39,18 @@
 #endif
 
 #define STREEBOG512_HASH_MAGIC ((word_t)(0x3293187509128364ULL))
-#define STREEBOG512_HASH_CHECK_INITIALIZED(A) \
-	MUST_HAVE((((void *)(A)) != NULL) && ((A)->magic == STREEBOG512_HASH_MAGIC))
+#define STREEBOG512_HASH_CHECK_INITIALIZED(A, ret, err) \
+	MUST_HAVE((((void *)(A)) != NULL) && ((A)->magic == STREEBOG512_HASH_MAGIC) && \
+                  ((A)->streebog_digest_size == STREEBOG512_DIGEST_SIZE) && ((A)->streebog_block_size == STREEBOG512_BLOCK_SIZE), ret, err)
 
 typedef streebog_context streebog512_context;
 
-void streebog512_init(streebog512_context *ctx);
-void streebog512_update(streebog512_context *ctx, const u8 *input, u32 ilen);
-void streebog512_final(streebog512_context *ctx, u8 output[STREEBOG512_DIGEST_SIZE]);
-void streebog512_scattered(const u8 **inputs, const u32 *ilens,
+int streebog512_init(streebog512_context *ctx);
+int streebog512_update(streebog512_context *ctx, const u8 *input, u32 ilen);
+int streebog512_final(streebog512_context *ctx, u8 output[STREEBOG512_DIGEST_SIZE]);
+int streebog512_scattered(const u8 **inputs, const u32 *ilens,
 		      u8 output[STREEBOG512_DIGEST_SIZE]);
-void streebog512(const u8 *input, u32 ilen, u8 output[STREEBOG512_DIGEST_SIZE]);
+int streebog512(const u8 *input, u32 ilen, u8 output[STREEBOG512_DIGEST_SIZE]);
 
 #endif /* __STREEBOG512_H__ */
 #endif /* WITH_HASH_STREEBOG512 */
