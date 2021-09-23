@@ -20,6 +20,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <errno.h>
 #endif
 
 #define HDR_MAGIC	 0x34215609
@@ -84,9 +85,7 @@ static int export_private_key(FILE * file, const char *name,
 		fprintf(file, "const char %s[] = { ", name);
 		for (i = 0; i < export_buf_size; i++) {
 			fprintf(file, "0x%02x", priv_key_buf[i]);
-			if (i != export_buf_size) {
-				fprintf(file, ", ");
-			}
+			fprintf(file, ", ");
 		}
 		fprintf(file, "};\n");
 		ret = 0;
@@ -232,7 +231,7 @@ static int generate_and_export_key_pair(const char *ec_name,
 	ec_sig_alg_type sig_type;
 	ec_params params;
 	ec_key_pair kp;
-	FILE *file;
+	FILE *file = NULL;
 	int ret;
 
 	MUST_HAVE(ec_name != NULL, ret, err);
@@ -243,6 +242,8 @@ static int generate_and_export_key_pair(const char *ec_name,
 	ret = string_to_params(ec_name, ec_sig_name, &sig_type, &ec_str_p,
 			       NULL, NULL);
 	if (ret) {
+		ret = -1;
+		printf("Error: error when importing params\n");
 		goto err;
 	}
 
@@ -267,16 +268,19 @@ static int generate_and_export_key_pair(const char *ec_name,
 	local_strncat(fname, "_private_key.bin", fname_len - prefix_len);
 	file = fopen(fname, "w");
 	if (file == NULL) {
+		ret = -1;
 		printf("Error: file %s cannot be opened\n", fname);
 		goto err;
 	}
 
 	ret = export_private_key(file, NULL, &(kp.priv_key), RAWBIN);
-	fclose(file);
 	if (ret) {
+		ret = -1;
 		printf("Error exporting the private key\n");
 		goto err;
 	}
+	ret = fclose(file); EG(ret, err);
+	file = NULL;
 
 	/* Export the private key to the .h file */
 	local_memset(fname, 0, fname_len);
@@ -284,17 +288,20 @@ static int generate_and_export_key_pair(const char *ec_name,
 	local_strncat(fname, "_private_key.h", fname_len - prefix_len);
 	file = fopen(fname, "w");
 	if (file == NULL) {
+		ret = -1;
 		printf("Error: file %s cannot be opened\n", fname);
 		goto err;
 	}
 
 	snprintf(kname, kname_len, "%s_%s_private_key", ec_name, ec_sig_name);
 	ret = export_private_key(file, kname, &(kp.priv_key), DOTH);
-	fclose(file);
 	if (ret) {
+		ret = -1;
 		printf("Error: error exporting the private key\n");
 		goto err;
 	}
+	ret = fclose(file); EG(ret, err);
+	file = NULL;
 
 	/*************************/
 
@@ -304,16 +311,18 @@ static int generate_and_export_key_pair(const char *ec_name,
 	local_strncat(fname, "_public_key.bin", fname_len - prefix_len);
 	file = fopen(fname, "w");
 	if (file == NULL) {
+		ret = -1;
 		printf("Error: file %s cannot be opened\n", fname);
 		goto err;
 	}
-
 	ret = export_public_key(file, NULL, &(kp.pub_key), RAWBIN);
-	fclose(file);
 	if (ret) {
+		ret = -1;
 		printf("Error exporting the public key\n");
 		goto err;
 	}
+	ret = fclose(file); EG(ret, err);
+	file = NULL;
 
 	/* Export the public key to the .h file */
 	local_memset(fname, 0, fname_len);
@@ -321,22 +330,30 @@ static int generate_and_export_key_pair(const char *ec_name,
 	local_strncat(fname, "_public_key.h", fname_len - prefix_len);
 	file = fopen(fname, "w");
 	if (file == NULL) {
+		ret = -1;
 		printf("Error: file %s cannot be opened\n", fname);
 		goto err;
 	}
 
 	snprintf(kname, kname_len, "%s_%s_public_key", ec_name, ec_sig_name);
 	ret = export_public_key(file, kname, &(kp.pub_key), DOTH);
-	fclose(file);
 	if (ret) {
+		ret = -1;
 		printf("Error exporting the public key\n");
 		goto err;
 	}
+	ret = fclose(file); EG(ret, err);
+	file = NULL;
 
-	return 0;
+	ret = 0;
 
 err:
-	return -1;
+	if(file != NULL){
+		if(fclose(file)){
+			ret = -1;
+		}
+	}
+	return ret;
 }
 
 
@@ -356,11 +373,13 @@ static int store_sig(const char *in_fname, const char *out_fname,
 	/* Import the data from the input file */
 	in_file = fopen(in_fname, "r");
 	if (in_file == NULL) {
+		ret = -1;
 		printf("Error: file %s cannot be opened\n", in_fname);
 		goto err;
 	}
 	out_file = fopen(out_fname, "w");
 	if (out_file == NULL) {
+		ret = -1;
 		printf("Error: file %s cannot be opened\n", out_fname);
 		goto err;
 	}
@@ -368,9 +387,7 @@ static int store_sig(const char *in_fname, const char *out_fname,
 		/* Write the metadata header as a prepending information */
 		written = fwrite(hdr, 1, sizeof(metadata_hdr), out_file);
 		if (written != sizeof(metadata_hdr)) {
-			fclose(in_file);
-			fclose(out_file);
-			in_file = out_file = NULL;
+			ret = -1;
 			goto err;
 		}
 	}
@@ -379,11 +396,9 @@ static int store_sig(const char *in_fname, const char *out_fname,
 		read = fread(buf, 1, sizeof(buf), in_file);
 		written = fwrite(buf, 1, read, out_file);
 		if (written != read) {
+			ret = -1;
 			printf("Error: error when writing to %s\n",
 			       out_fname);
-			fclose(in_file);
-			fclose(out_file);
-			in_file = out_file = NULL;
 			goto err;
 		}
 		if (read != sizeof(buf)) {
@@ -391,11 +406,9 @@ static int store_sig(const char *in_fname, const char *out_fname,
 				/* EOF */
 				break;
 			} else {
+				ret = -1;
 				printf("Error: error when reading from %s\n",
 				       in_fname);
-				fclose(in_file);
-				fclose(out_file);
-				in_file = out_file = NULL;
 				goto err;
 			}
 		}
@@ -406,6 +419,7 @@ static int store_sig(const char *in_fname, const char *out_fname,
 	ret = ec_structured_sig_export_to_buf(sig, siglen, buf, sizeof(buf),
 					      sig_type, hash_type, curve_name);
 	if (ret) {
+		ret = -1;
 		printf("Error: error when exporting signature to structured buffer\n");
 		goto err;
 	}
@@ -414,64 +428,72 @@ static int store_sig(const char *in_fname, const char *out_fname,
 		fwrite(buf, 1, EC_STRUCTURED_SIG_EXPORT_SIZE(siglen),
 		       out_file);
 	if (written != EC_STRUCTURED_SIG_EXPORT_SIZE(siglen)) {
+		ret = -1;
 		printf("Error: error when writing to %s\n", out_fname);
-		fclose(in_file);
-		fclose(out_file);
-		in_file = out_file = NULL;
 		goto err;
 	}
 
-	fclose(in_file);
-	fclose(out_file);
-	return 0;
+	ret = 0;
+
  err:
 	if(in_file != NULL){
-		fclose(in_file);
+		if(fclose(in_file)){
+			ret = -1;
+		}
 	}
 	if(out_file != NULL){
-		fclose(out_file);
+		if(fclose(out_file)){
+			ret = -1;
+		}
 	}
-	return -1;
+	return ret;
 }
 
 /* Get the raw size of a file */
 static int get_file_size(const char *in_fname, size_t *outsz)
 {
-	FILE *in_file;
+	FILE *in_file = NULL;
 	long size;
+	int ret;
 
 	*outsz = 0;
 
 	in_file = fopen(in_fname, "r");
 	if (in_file == NULL) {
+		ret = -1;
 		printf("Error: file %s cannot be opened\n", in_fname);
 		goto err;
 	}
 	/* Compute the size of the file */
 	if (fseek(in_file, 0L, SEEK_END)) {
+		ret = -1;
 		printf("Error: file %s cannot be seeked\n", in_fname);
-		goto err_close;
+		goto err;
 	}
 	size = ftell(in_file);
 	if (size < 0) {
+		ret = -1;
 		printf("Error: cannot compute file %s size\n", in_fname);
-		goto err_close;
+		goto err;
 	}
 	/* Check overflow */
-	if ((unsigned long)size > ((u32)~0)) {
+	if ((u64)size > (u64)(0xffffffff)) {
+		ret = -1;
 		printf("Error: file %s size %ld overflow (>= 2^32)\n",
 		       in_fname, size);
-		goto err_close;
+		goto err;
 	}
 
 	*outsz = (u32)size;
-	fclose(in_file);
-	return 0;
+	ret = 0;
 
- err_close:
-	fclose(in_file);
  err:
-	return -1;
+	if(in_file != NULL){
+		if(fclose(in_file)){
+			ret = -1;
+		}
+	}
+	return ret;
 }
 
 /* Generate a proper handler from a given type and other information */
@@ -485,7 +507,16 @@ static int generate_metadata_hdr(metadata_hdr * hdr, const char *hdr_type,
 	hdr->magic = HDR_MAGIC;
 
 	/* The given version */
+#ifdef WITH_STDLIB
+	errno = 0;
+#endif
 	ver = strtoul(version, &endptr, 0);
+#ifdef WITH_STDLIB
+	if(errno){
+		printf("Error: error in strtoul\n");
+		goto err;
+	}
+#endif
 	if (*endptr != '\0') {
 		printf("Error: error getting provided version %s\n", version);
 		goto err;
@@ -640,6 +671,11 @@ static int sign_bin_file(const char *ec_name, const char *ec_sig_name,
 		printf("Error: cannot retrieve file %s size\n", in_fname);
 		goto err;
 	}
+	if(raw_data_len == 0){
+		ret = -1;
+		printf("Error: file %s seems to be empty!\n", in_fname);
+		goto err;
+	}
 	ret = ec_get_sig_len(&params, sig_type, hash_type, &siglen);
 	if (ret) {
 		ret = -1;
@@ -747,14 +783,14 @@ static int sign_bin_file(const char *ec_name, const char *ec_sig_name,
 		 * use a dynamic allocation here.
 		 */
 		size_t offset = 0;
-		allocated_buff = malloc(1);
+		allocated_buff = (u8*)malloc(1);
 		if(allocated_buff == NULL){
 			ret = -1;
 			printf("Error: allocation error\n");
 			goto err;
 		}
 		if((hdr_type != NULL) && (version != NULL)){
-			allocated_buff = realloc(allocated_buff, sizeof(hdr));
+			allocated_buff = (u8*)realloc(allocated_buff, sizeof(hdr));
 			if(allocated_buff == NULL){
 				ret = -1;
 				printf("Error: allocation error\n");
@@ -793,7 +829,7 @@ static int sign_bin_file(const char *ec_name, const char *ec_sig_name,
 
 			raw_data_len -= read;
 
-			allocated_buff = realloc(allocated_buff, offset + read);
+			allocated_buff = (u8*)realloc(allocated_buff, offset + read);
 			if(allocated_buff == NULL){
 				ret = -1;
 				printf("Error: allocation error\n");
@@ -856,13 +892,19 @@ static int sign_bin_file(const char *ec_name, const char *ec_sig_name,
 
  err:
 	if(in_file != NULL){
-		fclose(in_file);
+		if(fclose(in_file)){
+			ret = -1;
+		}
 	}
 	if(in_key_file != NULL){
-		fclose(in_key_file);
+		if(fclose(in_key_file)){
+			ret = -1;
+		}
 	}
 	if(out_file != NULL){
-		fclose(out_file);
+		if(fclose(out_file)){
+			ret = -1;
+		}
 	}
 	if(allocated_buff != NULL){
 		free(allocated_buff);
@@ -977,6 +1019,11 @@ static int verify_bin_file(const char *ec_name, const char *ec_sig_name,
 	if (ret) {
 		ret = -1;
 		printf("Error: cannot retrieve file %s size\n", in_fname);
+		goto err;
+	}
+	if(raw_data_len == 0){
+		ret = -1;
+		printf("Error: file %s seems to be empty!\n", in_fname);
 		goto err;
 	}
 
@@ -1106,7 +1153,7 @@ static int verify_bin_file(const char *ec_name, const char *ec_sig_name,
 			       in_sig_fname);
 			goto err;
 		}
-		if((to_read > EC_MAX_SIGLEN) || (to_read > 255)){
+		if((to_read > EC_MAX_SIGLEN) || (to_read > 255) || (to_read == 0)){
 			/* This is not an expected size, get out */
 			ret = -1;
 			printf("Error: size %d of signature in %s is > max "
@@ -1193,7 +1240,7 @@ static int verify_bin_file(const char *ec_name, const char *ec_sig_name,
 		 * use a dynamic allocation here.
 		 */
 		size_t offset = 0;
-		allocated_buff = malloc(1);
+		allocated_buff = (u8*)malloc(1);
 
 		eof = 0;
 		clearerr(in_file);
@@ -1216,7 +1263,7 @@ static int verify_bin_file(const char *ec_name, const char *ec_sig_name,
 
 			exp_len -= read;
 
-			allocated_buff = realloc(allocated_buff, offset + read);
+			allocated_buff = (u8*)realloc(allocated_buff, offset + read);
 			if(allocated_buff == NULL){
 				ret = -1;
 				printf("Error: allocation error\n");
@@ -1243,13 +1290,19 @@ static int verify_bin_file(const char *ec_name, const char *ec_sig_name,
 
  err:
 	if(in_file != NULL){
-		fclose(in_file);
+		if(fclose(in_file)){
+			ret = -1;
+		}
 	}
 	if(in_key_file != NULL){
-		fclose(in_key_file);
+		if(fclose(in_key_file)){
+			ret = -1;
+		}
 	}
 	if(in_sig_file != NULL){
-		fclose(in_sig_file);
+		if(fclose(in_sig_file)){
+			ret = -1;
+		}
 	}
 	if(allocated_buff != NULL){
 		free(allocated_buff);
@@ -1278,6 +1331,7 @@ static int ec_scalar_mult(const char *ec_name,
 	nn d;
 	/* Point to import */
 	prj_pt Q;
+	d.magic = Q.magic = 0;
 
 	MUST_HAVE(ec_name != NULL, ret, err);
 	MUST_HAVE(scalar_file != NULL, ret, err);
@@ -1294,6 +1348,11 @@ static int ec_scalar_mult(const char *ec_name,
 	/* Import the scalar in the local buffer from the file */
 	/* Let's first get file size */
 	ret = get_file_size(scalar_file, &buf_len);
+	if(buf_len == 0){
+		ret = -1;
+		printf("Error: file %s seems to be empty!\n", scalar_file);
+		goto err;
+	}
 	if (ret) {
 		ret = -1;
 		printf("Error: cannot retrieve file %s size\n", scalar_file);
@@ -1333,6 +1392,8 @@ static int ec_scalar_mult(const char *ec_name,
 		printf("Error: file %s content too large for our local buffers\n", point_file);
 		goto err;
 	}
+	ret = fclose(in_file); EG(ret, err);
+	in_file = NULL;
 	/* Open main file to verify ... */
 	in_file = fopen(point_file, "r");
 	if (in_file == NULL) {
@@ -1346,7 +1407,6 @@ static int ec_scalar_mult(const char *ec_name,
 		printf("Error: error when reading in %s\n", point_file);
 		goto err;
 	}
-	fclose(in_file);
 	/* Import the point */
 	if(prj_pt_import_from_buf(&Q, buf, (u16)buf_len, &(curve_params.ec_curve))){
 		ret = -1;
@@ -1369,15 +1429,11 @@ static int ec_scalar_mult(const char *ec_name,
 	coord_len = 3 * BYTECEIL((Q.crv)->a.ctx->p_bitlen);
 	if(coord_len > sizeof(buf)){
 		ret = -1;
-		nn_uninit(&d);
-		prj_pt_uninit(&Q);
 		printf("Error: error when exporting the point\n");
 		goto err;
 	}
 	if(prj_pt_export_to_buf(&Q, buf, coord_len)){
 		ret = -1;
-		nn_uninit(&d);
-		prj_pt_uninit(&Q);
 		printf("Error: error when exporting the point\n");
 		goto err;
 	}
@@ -1385,8 +1441,6 @@ static int ec_scalar_mult(const char *ec_name,
 	out_file = fopen(outfile_name, "w");
 	if (out_file == NULL) {
 		ret = -1;
-		nn_uninit(&d);
-		prj_pt_uninit(&Q);
 		printf("Error: file %s cannot be opened\n", outfile_name);
 		goto err;
 	}
@@ -1394,24 +1448,26 @@ static int ec_scalar_mult(const char *ec_name,
 	/* Write in the file */
 	if(fwrite(buf, 1, coord_len, out_file) != coord_len){
 		ret = -1;
-		nn_uninit(&d);
-		prj_pt_uninit(&Q);
 		printf("Error: error when writing to %s\n", outfile_name);
 		goto err;
 	}
 
+	ret = 0;
+
+err:
 	/* Uninit local variables */
 	nn_uninit(&d);
 	prj_pt_uninit(&Q);
 
-	ret = 0;
-
-err:
 	if(in_file != NULL){
-		fclose(in_file);
+		if(fclose(in_file)){
+			ret = -1;
+		}
 	}
 	if(out_file != NULL){
-		fclose(out_file);
+		if(fclose(out_file)){
+			ret = -1;
+		}
 	}
 	return ret;
 }

@@ -54,7 +54,10 @@ static int fimport(unsigned char *buf, u16 buflen, const char *path)
 		}
 	}
 
-	close(fd);
+	if(close(fd)){
+		printf("Unable to close input file %s\n", path);
+		return -1;
+	}
 
 	return (copied == buflen) ? 0 : -1;
 }

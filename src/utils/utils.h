@@ -49,6 +49,24 @@
  * those conditions explicit.
  */
 
+/* Some helper for printing where we have an issue */
+#if defined(USE_ASSERT_PRINT)
+#include "../external_deps/print.h"
+#define MUST_HAVE_EXT_PRINT do {					\
+	ext_printf("MUST_HAVE error: %s at %d\n", __FILE__,__LINE__);	\
+} while (0)
+#define SHOULD_HAVE_EXT_PRINT do {					\
+	ext_printf("SHOULD_HAVE error: %s at %d\n", __FILE__,__LINE__);	\
+} while (0)
+#define KNOWN_FACT_EXT_PRINT do {					\
+	ext_printf("KNOWN_FACT error: %s at %d\n", __FILE__,__LINE__);	\
+} while (0)
+#else
+#define MUST_HAVE_EXT_PRINT
+#define SHOULD_HAVE_EXT_PRINT
+#define KNOWN_FACT_EXT_PRINT
+#endif
+
 /*
  * We known it is BAD BAD BAD to define macro with goto inside them
  * but this is the best way we found to avoid making the code
@@ -61,32 +79,20 @@
  */
 #define EG(cond,lbl) do { if (cond) { goto lbl ; } } while (0)
 
-/****** AFL and other general purpose fuzzers case *******************/
-#if (defined(__AFL_COMPILER) || defined(FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION)) && !defined(USE_CRYPTOFUZZ)
-/*
- * When we use AFL (American Fuzzy Lop) style fuzzing, we do not want asserts
- * resulting in SIGABRT interpreted as a 'crash', or while(1) interpreted as a
- * 'hang'. Hence we force an exit(-1) to remove all this false positive
- * 'pollution'.
- */
-#ifndef WITH_STDLIB
-#error "AFL Fuzzing needs the STDLIB!"
-#endif
-#include <stdlib.h>
-#define MUST_HAVE(x)
-#define SHOULD_HAVE(x)
-#define KNOWN_FACT(x)
-
 /****** Regular DEBUG and production modes cases  ****************/
-#else /* DEBUG and production modes */
-#if defined(DEBUG)
 
+/****** DEBUG mode ***********************************************/
+#if defined(DEBUG)
+#include <assert.h>
 /*
  * In DEBUG mode, we enforce a regular assert() in MUST_HAVE,
  * SHOULD_HAVE and KNOWN_FACT, i.e. they are all the same.
  */
 
 #define MUST_HAVE(cond, ret, lbl) do {	\
+	if(!(cond)){			\
+		MUST_HAVE_EXT_PRINT;	\
+	}				\
 	assert((cond));			\
 	if (0) { /* silence unused	\
 		    label warning  */	\
@@ -95,19 +101,32 @@
 	}				\
 }  while (0)
 
-#define SHOULD_HAVE(cond, ret, lbl) MUST_HAVE(cond, ret, lbl)
+#define SHOULD_HAVE(cond, ret, lbl) do {\
+	if(!(cond)){			\
+		SHOULD_HAVE_EXT_PRINT;	\
+	}				\
+	assert((cond));			\
+	if (0) { /* silence unused	\
+		    label warning  */	\
+		ret = -1;		\
+		goto lbl;		\
+	}				\
+}  while (0)
 
-#define KNOWN_FACT(cond, ret, lbl) MUST_HAVE(cond, ret, lbl)
+#define KNOWN_FACT(cond, ret, lbl) do {	\
+	if(!(cond)){			\
+		KNOWN_FACT_EXT_PRINT;	\
+	}				\
+	assert((cond));			\
+	if (0) { /* silence unused	\
+		    label warning  */	\
+		ret = -1;		\
+		goto lbl;		\
+	}				\
+}  while (0)
 
-#else /* defined(DEBUG) */
-
-#if defined(USE_ASSERT_PRINT)
-#define MUST_HAVE_EXT_PRINT do {					\
-	ext_printf("MUST_HAVE error: %s at %d\n", __FILE__,__LINE__);	\
-} while (0)
-#else
-#define MUST_HAVE_EXT_PRINT
-#endif
+/****** Production mode ******************************************/
+#else /* !defined(DEBUG) */
 
 /*
  * In regular production mode, SHOULD_HAVE and KNOWN_FACT are void for
@@ -115,7 +134,6 @@
  * tracing the origin of the error when necessary (if USE_ASSERT_PRINT
  * is specified by the user).
  */
-/* Print some information and exit if we are asked to */
 #define MUST_HAVE(cond, ret, lbl) do {		\
 	if (!(cond)) {				\
 		MUST_HAVE_EXT_PRINT;		\
@@ -132,10 +150,16 @@
 	}				 \
 }  while (0)
 
-#define KNOWN_FACT(cond, ret, lbl) SHOULD_HAVE(cond, ret, lbl);
+#define KNOWN_FACT(cond, ret, lbl)  do { \
+	if (0) { /* silence unused	 \
+		    label warning  */	 \
+		ret = -1;		 \
+		goto lbl;		 \
+	}				 \
+}  while (0)
 
+/******************************************************************/
 #endif  /* defined(DEBUG) */
-#endif
 
 #define LOCAL_MAX(x, y) (((x) > (y)) ? (x) : (y))
 #define LOCAL_MIN(x, y) (((x) < (y)) ? (x) : (y))

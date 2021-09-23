@@ -219,9 +219,13 @@ endif
 # Do we want to use clang or gcc sanitizers?
 ifeq ($(USE_SANITIZERS),1)
 CFLAGS += -fsanitize=undefined -fsanitize=address -fsanitize=leak
-ifneq ($(CLANG),)
-CFLAGS += -fsanitize=integer -fno-sanitize=unsigned-integer-overflow -fno-sanitize=unsigned-shift-base
-endif
+  ifneq ($(CLANG),)
+    # Clang version < 12 do not support unsigned-shift-base
+    CLANG_VERSION_GTE_12 := $(shell echo `$(CC) -dumpversion | cut -f1-2 -d.` \>= 12.0 | sed -e 's/\./*100+/g' | bc)
+    ifeq ($(CLANG_VERSION_GTE_12), 1)
+      CFLAGS += -fsanitize=integer -fno-sanitize=unsigned-integer-overflow -fno-sanitize=unsigned-shift-base
+    endif
+  endif
 endif
 
 # Do we want to use the ISO14888-3 version of the
@@ -229,4 +233,19 @@ endif
 # RFC references?
 ifeq ($(USE_ISO14888_3_ECRDSA),1)
 CFLAGS += -DUSE_ISO14888_3_ECRDSA
+endif
+
+# Do we have a C++ compiler instead of a C compiler?
+GPP := $(shell $(CC) -v 2>&1 | grep g++)
+CLANGPP := $(shell echo $(CC) | grep clang++)
+
+# g++ case
+ifneq ($(GPP),)
+CFLAGS := $(patsubst -std=c99, -std=c++2a, $(CFLAGS))
+CFLAGS += -Wno-deprecated
+endif
+# clang++ case
+ifneq ($(CLANGPP),)
+CFLAGS := $(patsubst -std=c99, -std=c++2a, $(CFLAGS))
+CFLAGS += -Wno-deprecated -Wno-c++98-c++11-c++14-c++17-compat-pedantic -Wno-old-style-cast -Wno-zero-as-null-pointer-constant -Wno-c++98-compat-pedantic
 endif

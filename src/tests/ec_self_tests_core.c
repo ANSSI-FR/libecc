@@ -88,7 +88,7 @@ static int random_split_ec_sign(u8 *sig, u8 siglen, const ec_key_pair *key_pair,
 {
 	struct ec_sign_context ctx;
 	int ret;
-	u32 consumed = 0;
+	u32 consumed;
 
 	ret = _ec_sign_init(&ctx, key_pair, rand, sig_type, hash_type, adata, adata_len);
 	if (ret) {
@@ -130,7 +130,7 @@ static int random_split_ec_verify(const u8 *sig, u8 siglen, const ec_pub_key *pu
 {
 	int ret;
 	struct ec_verify_context ctx;
-	u32 consumed = 0;
+	u32 consumed;
 
 	ret = ec_verify_init(&ctx, pub_key, sig, siglen, sig_type, hash_type, adata, adata_len);
 	if (ret) {
@@ -237,11 +237,7 @@ static int ec_import_export_test(const ec_test_case *c)
 		/* If the algorithm supports streaming mode, test it against direct mode */
 		ret = is_sign_streaming_mode_supported(c->sig_type, &check); EG(ret, err);
 		if(check){
-			if(siglen > sizeof(sig_tmp1)){
-				ret = -1;
-				goto err;
-			}
-			if(siglen > sizeof(sig_tmp2)){
+			if(siglen > LOCAL_MAX(sizeof(sig_tmp1), sizeof(sig_tmp2))){
 				ret = -1;
 				goto err;
 			}

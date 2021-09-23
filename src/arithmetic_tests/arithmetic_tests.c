@@ -1141,12 +1141,12 @@ int main(int argc, char *argv[])
 				ADD_TO_BACKTRACE("'n' param: %s\n", rec);
 				break;
 			case 'u':	/* unsigned long int (in base 10) */
-				u_params[i] = strtoull(rec, NULL, 10);
+				u_params[i] = (u64)strtoull(rec, NULL, 10);
 				params[i] = &u_params[i];
 				ADD_TO_BACKTRACE("'u' param: %s\n", rec);
 				break;
 			case 's':	/* signed long int (in base 10) */
-				u_params[i] = strtoll(rec, NULL, 10);
+				u_params[i] = (u64)strtoll(rec, NULL, 10);
 				params[i] = &u_params[i];
 				ADD_TO_BACKTRACE("'s' param: %s\n", rec);
 				break;

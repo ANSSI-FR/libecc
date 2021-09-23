@@ -601,13 +601,13 @@ def test_NN_MODINV(op):
 
     try:
         nn_exp_v = modinv(nn_x, nn_m)
-        exp_r = 1
+        exp_r = 0
     except Exception:
         nn_exp_v = 0
-        exp_r = 0
+        exp_r = -1
 
-    fmt = "%s nnn %s %s %s\n"
-    s = fmt % (op, format_int_string(nn_exp_v, wlen), format_int_string(nn_x, wlen), format_int_string(nn_m, wlen))
+    fmt = "%s nnns %s %s %s %d\n"
+    s = fmt % (op, format_int_string(nn_exp_v, wlen), format_int_string(nn_x, wlen), format_int_string(nn_m, wlen), exp_r)
 
     return [ s ]
 
