@@ -16,6 +16,7 @@
 #! /usr/bin/env python
 
 import random, sys, re, math, socket, os, select, signal
+from datetime import datetime
 
 ### Ctrl-C handler
 def handler(signal, frame):
@@ -143,6 +144,49 @@ def getwlenbitlen(bint, wlen):
         rounded_wlen_bitlen = wlen
     return rounded_wlen_bitlen
 
+def legendre_symbol(a, p):
+    ls = pow(a, (p - 1) // 2, p)
+    return -1 if ls == p - 1 else ls
+
+# Tonelli-Shanks algorithm to find square roots
+# over prime fields
+def mod_sqrt(a, p):
+    # Simple cases
+    if legendre_symbol(a, p) != 1:
+        # No quadratic residue
+        return None
+    elif a == 0:
+        return 0
+    elif p == 2:
+        return a
+    elif p % 4 == 3:
+        return pow(a, (p + 1) // 4, p)
+    s = p - 1
+    e = 0
+    while s % 2 == 0:
+        s = s // 2
+        e += 1
+    n = 2
+    while legendre_symbol(n, p) != -1:
+        n += 1
+    x = pow(a, (s + 1) // 2, p)
+    b = pow(a, s, p)
+    g = pow(n, s, p)
+    r = e
+    while True:
+        t = b
+        m = 0
+        for m in xrange(r):
+            if t == 1:
+                break
+            t = pow(t, 2, p)
+        if m == 0:
+            return x
+        gs = pow(g, 2 ** (r - m - 1), p)
+        g = (gs * gs) % p
+        x = (x * gs) % p
+        b = (b * g) % p
+        r = m
 
 def format_int_string(bint, wlen):
     """
@@ -179,15 +223,16 @@ ntests = int(sys.argv[4])
 nn_logical_tests = ["NN_SHIFT_RIGHT", "NN_SHIFT_LEFT", "NN_ROTATE_RIGHT", "NN_ROTATE_LEFT",
                     "NN_AND", "NN_XOR", "NN_OR", "NN_NOT"]
 nn_addition_tests = ["NN_ADD", "NN_SUB", "NN_INC", "NN_DEC", "NN_MOD_ADD", "NN_MOD_SUB", "NN_MOD_INC", "NN_MOD_DEC"]
-nn_mul_tests = ["NN_MUL", "NN_MUL_REDC1", "NN_COEF_REDC1", "NN_COEF_DIV" ]
+nn_mul_tests = ["NN_MUL", "NN_SQR", "NN_MUL_REDC1", "NN_COEF_REDC1", "NN_COEF_DIV" ]
 nn_div_tests = ["NN_MOD", "NN_DIVREM", "NN_MODINV", "NN_MODINV_2EXP", "NN_XGCD", "NN_GCD"]
 
 nn_tests = nn_logical_tests + nn_addition_tests + nn_mul_tests + nn_div_tests
 
-fp_add_tests = ["FP_ADD", "FP_SUB"]
-fp_mul_tests = ["FP_MUL", "FP_DIV", "FP_MUL_REDC1", "FP_POW"]
+fp_add_tests  = ["FP_ADD", "FP_SUB"]
+fp_mul_tests  = ["FP_MUL", "FP_SQR", "FP_DIV", "FP_MUL_REDC1", "FP_POW"]
+fp_sqrt_tests = ["FP_SQRT"]
 
-fp_tests = fp_add_tests + fp_mul_tests
+fp_tests = fp_add_tests + fp_mul_tests + fp_sqrt_tests
 
 all_tests = nn_tests + fp_tests
 
@@ -448,20 +493,27 @@ test_funcs["NN_MOD_INC"] = test_NN_MOD_INC_DEC
 test_funcs["NN_MOD_DEC"] = test_NN_MOD_INC_DEC
 
 
-def test_NN_MUL(op):
-    """ Generate tests for NN_MUL """
+def test_NN_MUL_SQR(op):
+    """ Generate tests for NN_MUL and NN_SQR """
     # random value for input numbers
     nn_in1 = get_random_bigint(wlen, MAX_INPUT_PARAM_WLEN)
     nn_in2 = get_random_bigint(wlen, MAX_INPUT_PARAM_WLEN)
 
-    out = nn_in1 * nn_in2
+    if (op == "NN_MUL"):
+        out = nn_in1 * nn_in2
 
-    fmt = "%s nnnu %s %s %s\n"
-    s = fmt % (op, format_int_string(out, wlen), format_int_string(nn_in1, wlen), format_int_string(nn_in2, wlen))
+        fmt = "%s nnnu %s %s %s\n"
+        s = fmt % (op, format_int_string(out, wlen), format_int_string(nn_in1, wlen), format_int_string(nn_in2, wlen))
+    else:
+        out = nn_in1 * nn_in1
+
+        fmt = "%s nnu %s %s\n"
+        s = fmt % (op, format_int_string(out, wlen), format_int_string(nn_in1, wlen))
 
     return [ s ]
 
-test_funcs["NN_MUL"] = test_NN_MUL
+test_funcs["NN_MUL"] = test_NN_MUL_SQR
+test_funcs["NN_SQR"] = test_NN_MUL_SQR
 
 def test_NN_MOD(op):
     """ Generate tests for NN_MOD """
@@ -484,8 +536,8 @@ def test_NN_DIVREM(op):
     nn_c = get_random_bigint(wlen, MAX_INPUT_PARAM_WLEN)
     nn_d = 0
     while nn_d == 0:
-        nn_d = get_random_bigint(wlen, MAX_INPUT_PARAM_WLEN)   
-        
+        nn_d = get_random_bigint(wlen, MAX_INPUT_PARAM_WLEN)
+
     nn_exp_q = (nn_c // nn_d)
     nn_exp_r = nn_c % nn_d
 
@@ -510,7 +562,7 @@ def test_NN_XGCD(op):
     else:
         sign = 1
         nn_exp_v = (((2 ** getbitlen(nn_exp_v)) - 1) & (~nn_exp_v)) + 1
-    fmt = "%s nnnnnu %s %s %s %s %s %d\n"
+    fmt = "%s nnnnns %s %s %s %s %s %d\n"
     s = fmt % (op, format_int_string(nn_exp_g, wlen), format_int_string(nn_exp_u, wlen), format_int_string(nn_exp_v, wlen), format_int_string(nn_a, wlen), format_int_string(nn_b, wlen), sign)
 
     return [ s ]
@@ -525,8 +577,15 @@ def test_NN_GCD(op):
 
     (nn_exp_g, nn_exp_u, nn_exp_v) = egcd(nn_a, nn_b)
 
-    fmt = "%s nnn %s %s %s\n"
-    s = fmt % (op, format_int_string(nn_exp_g, wlen), format_int_string(nn_a, wlen), format_int_string(nn_b, wlen))
+    (nn_exp_g, nn_exp_u, nn_exp_v) = egcd(nn_a, nn_b)
+    # Check sign of u and v and adapt output
+    if nn_exp_u < 0:
+        sign = -1
+    else:
+        sign = 1
+
+    fmt = "%s nnns %s %s %s %d\n"
+    s = fmt % (op, format_int_string(nn_exp_g, wlen), format_int_string(nn_a, wlen), format_int_string(nn_b, wlen), sign)
 
     return [ s ]
 
@@ -547,8 +606,8 @@ def test_NN_MODINV(op):
         nn_exp_v = 0
         exp_r = 0
 
-    fmt = "%s nnnu %s %s %s %d\n"
-    s = fmt % (op, format_int_string(nn_exp_v, wlen), format_int_string(nn_x, wlen), format_int_string(nn_m, wlen), exp_r)
+    fmt = "%s nnn %s %s %s\n"
+    s = fmt % (op, format_int_string(nn_exp_v, wlen), format_int_string(nn_x, wlen), format_int_string(nn_m, wlen))
 
     return [ s ]
 
@@ -561,9 +620,12 @@ def test_NN_MODINV_2EXP(op):
     exp = random.randint(1, MAX_INPUT_PARAM_WLEN * wlen)
 
     nn_exp_v = modinv(nn_x, 2**exp)
+    isodd = 1
+    if (nn_x % 2) == 0:
+        isodd = 0
 
-    fmt = "%s nnuu %s %s %d %d\n"
-    s = fmt % (op, format_int_string(nn_exp_v, wlen), format_int_string(nn_x, wlen), exp, 1)
+    fmt = "%s nnus %s %s %d %d\n"
+    s = fmt % (op, format_int_string(nn_exp_v, wlen), format_int_string(nn_x, wlen), exp, isodd)
 
     return [ s ]
 
@@ -578,7 +640,7 @@ def test_NN_MUL_REDC1(op):
     # random value for input numbers modulo our random mod
     nn_in1 = get_random_bigint(wlen, MAX_INPUT_PARAM_WLEN) % nn_mod
     nn_in2 = get_random_bigint(wlen, MAX_INPUT_PARAM_WLEN) % nn_mod
- 
+
     # Montgomery multiplication computes in1 * in2 * r^-1 (mod)
     out = (nn_in1 * nn_in2 * modinv(nn_r, nn_mod)) % nn_mod
 
@@ -599,7 +661,7 @@ def test_NN_COEF_REDC1(op):
         nn_r, nn_r_square, mpinv = compute_monty_coef(nn_mod, 2*getwlenbitlen(nn_mod, wlen))
     else:
         nn_r, nn_r_square, mpinv = compute_monty_coef(nn_mod, getwlenbitlen(nn_mod, wlen))
- 
+
     fmt = "%s nnnu %s %s %s %d\n"
     s = fmt % (op, format_int_string(nn_r, wlen), format_int_string(nn_r_square, wlen), format_int_string(nn_mod, wlen), mpinv)
 
@@ -617,7 +679,7 @@ def test_NN_COEF_DIV(op):
         pshift, nn_pnorm, prec = compute_div_coef(nn_mod, 2*getwlenbitlen(nn_mod, wlen))
     else:
         pshift, nn_pnorm, prec = compute_div_coef(nn_mod, getwlenbitlen(nn_mod, wlen))
- 
+
     fmt = "%s nuun %s %d %d %s\n"
     s = fmt % (op, format_int_string(nn_pnorm, wlen), pshift, prec, format_int_string(nn_mod, wlen))
 
@@ -639,7 +701,7 @@ def format_fp_context(nn_p, wlen):
                fmpinv % pshift, f % nn_pnorm, fmpinv % prec))
 
 def test_FP_ADD_SUB(op):
-    """ Generate tests for FP_ADD_SUB """ 
+    """ Generate tests for FP_ADD_SUB """
     # Get random prime
     #nn_p = random.randint(0, nn_maxval)
     #while not is_probprime(nn_p):
@@ -666,8 +728,8 @@ test_funcs["FP_ADD"] = test_FP_ADD_SUB
 test_funcs["FP_SUB"] = test_FP_ADD_SUB
 
 
-def test_FP_MUL_DIV(op):
-    """ Generate tests for FP_MUL_DIV """ 
+def test_FP_MUL_SQR_DIV(op):
+    """ Generate tests for FP_MUL_SQR_DIV """
     # Get random prime
     #nn_p = random.randint(0, nn_maxval)
     #while not is_probprime(nn_p):
@@ -684,18 +746,26 @@ def test_FP_MUL_DIV(op):
             fp_val2 = get_random_bigint(wlen, MAX_INPUT_PARAM_WLEN) % nn_p
 
     # Compute the result depending on the operation
-    if (op == "FP_MUL"):
-        fp_exp_res = (fp_val1 * fp_val2) % nn_p
+    if (op == "FP_MUL") or (op == "FP_SQR"):
+        if (op == "FP_MUL"):
+            fp_exp_res = (fp_val1 * fp_val2) % nn_p
+        else:
+            fp_exp_res = (fp_val1 * fp_val1) % nn_p
     else:
         fp_exp_res = (fp_val1 * modinv(fp_val2, nn_p)) % nn_p
 
-    fmt = "%s cfff %s %s %s %s\n"
-    s = fmt % (op,format_fp_context(nn_p, wlen), format_int_string(fp_exp_res, wlen), format_int_string(fp_val1, wlen), format_int_string(fp_val2, wlen))
+    if (op == "FP_SQR"):
+        fmt = "%s cff %s %s %s\n"
+        s = fmt % (op,format_fp_context(nn_p, wlen), format_int_string(fp_exp_res, wlen), format_int_string(fp_val1, wlen))
+    else:
+        fmt = "%s cfff %s %s %s %s\n"
+        s = fmt % (op,format_fp_context(nn_p, wlen), format_int_string(fp_exp_res, wlen), format_int_string(fp_val1, wlen), format_int_string(fp_val2, wlen))
 
     return [ s ]
 
-test_funcs["FP_MUL"] = test_FP_MUL_DIV
-test_funcs["FP_DIV"] = test_FP_MUL_DIV
+test_funcs["FP_MUL"] = test_FP_MUL_SQR_DIV
+test_funcs["FP_SQR"] = test_FP_MUL_SQR_DIV
+test_funcs["FP_DIV"] = test_FP_MUL_SQR_DIV
 
 
 def test_FP_MUL_REDC1(op):
@@ -744,6 +814,34 @@ def test_FP_POW(op):
     return [ s ]
 
 test_funcs["FP_POW"] = test_FP_POW
+
+
+def test_FP_SQRT(op):
+    """ Generate tests for FP_SQRT """
+    # Generate a random prime
+    nn_p = get_random_bigint(wlen, MAX_INPUT_PARAM_WLEN) | 1
+    while not is_probprime(nn_p):
+        nn_p = get_random_bigint(wlen, MAX_INPUT_PARAM_WLEN) | 1
+
+    # Get a random big num in Fp
+    fp_val = get_random_bigint(wlen, MAX_INPUT_PARAM_WLEN) % nn_p
+
+    # Compute the first square root
+    fp_sqrt1 = mod_sqrt(fp_val, nn_p)
+    # Compute the other square root
+    if fp_sqrt1 != None:
+        fp_sqrt2 = (-fp_sqrt1) % nn_p
+
+    fmt = "%s cfffs %s %s %s %s %s\n"
+    if fp_sqrt1 != None:
+        s = fmt % (op, format_fp_context(nn_p, wlen), format_int_string(fp_sqrt1, wlen), format_int_string(fp_sqrt2, wlen), format_int_string(fp_val, wlen), 0)
+    else:
+        s = fmt % (op, format_fp_context(nn_p, wlen), format_int_string(0, wlen), format_int_string(0, wlen), format_int_string(fp_val, wlen), -1)
+
+    return [ s ]
+
+test_funcs["FP_SQRT"] = test_FP_SQRT
+
 
 
 def do_test(sockfd, op, n):
@@ -809,6 +907,8 @@ for test in asked_tests:
                 sys.exit()
             else:
                 a.close()
+                # Properly seeding to avoid duplicate random generation
+                random.seed(datetime.now())
                 do_test(b, test, n)
                 sys.exit()
 

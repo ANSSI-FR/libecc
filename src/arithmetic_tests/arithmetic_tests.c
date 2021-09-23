@@ -21,6 +21,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <assert.h>
 
 #ifdef WITH_ASSERT_BACKTRACE
 #include <signal.h>
@@ -66,15 +67,16 @@ static void assert_signal_handler(int sig)
  * have a large enough storage space (i.e. hbuflen / 2) to hold
  * imported number.
  */
-static void nn_import_from_hexbuf(nn_t out_nn, const char *hbuf, u32 hbuflen)
+static int nn_import_from_hexbuf(nn_t out_nn, const char *hbuf, u32 hbuflen)
 {
 	char buf[WORD_BYTES * 2 + 1];
 	const char *start;
 	u32 wlen;
 	u32 k;
+	int ret;
 
-	nn_check_initialized(out_nn);
-	MUST_HAVE(((hbuflen / 2) / WORD_BYTES) == out_nn->wlen);
+	ret = nn_check_initialized(out_nn); EG(ret, err);
+	MUST_HAVE(((hbuflen / 2) / WORD_BYTES) == out_nn->wlen, ret, err);
 
 	wlen = (hbuflen + WORD_BYTES - 1) / (2 * WORD_BYTES);
 	for (k = wlen; k > 0; k--) {
@@ -93,6 +95,9 @@ static void nn_import_from_hexbuf(nn_t out_nn, const char *hbuf, u32 hbuflen)
 	for (k = NN_MAX_WORD_LEN; k > wlen; k--) {
 		out_nn->val[k - 1] = 0;
 	}
+
+err:
+	return ret;
 }
 
 #define DISPATCH_TABLE_MAGIC "FEEDBABE"
@@ -312,14 +317,16 @@ struct dispatch_table {
 #define NN_T_GENERIC_IN(num) ((nn_t)params[num])
 #define UINT_GENERIC_IN(num) ((u64)*((u64*)params[num]))
 #define WORD_T_GENERIC_IN(num) ((word_t)*((word_t*)params[num]))
+#define INT_GENERIC_IN(num) ((int)*((int*)params[num]))
 
 #define FP_T_GENERIC_OUT(num) (&fp_out##num)
 #define NN_T_GENERIC_OUT(num) (&nn_out##num)
 #define WORD_T_GENERIC_OUT(num) (&(word_out[num]))
+#define INT_GENERIC_OUT(num) (&(int_out[num]))
 
 #define CHECK_FUN_RET there_is_output = 1; fun_out_value = (word_t)
 
-#define CHECK_FUN_NO_RET
+#define CHECK_FUN_NO_RET there_is_output = 0; fun_out_value = (int)
 
 /* Number of pre-allocated */
 #define NUM_PRE_ALLOCATED_NN 6
@@ -329,15 +336,15 @@ struct dispatch_table {
 #define GENERIC_TEST_NN_DECL_INIT_MAX(name, n) GENERIC_TEST_NN_DECL_INIT6(name, n)
 #define GENERIC_TEST_FP_DECL_INIT_MAX(name, ctx) GENERIC_TEST_FP_DECL_INIT6(name, ctx)
 
-/* Check that the string of parameters types only containes 'c', 'f', 'n' and 'u' 
+/* Check that the string of parameters types only containes 'c', 'f', 'n' and 'u'
  * Check that the string of parameters I/O only contains 'i', 'o' and 'O'
- * 
+ *
  */
 #define PARAMETERS_SANITY_CHECK(test_num, param_types, param_io) do {\
 	unsigned int i, real_output = 0;\
-	MUST_HAVE(sizeof(param_types) == sizeof(param_io));\
+	assert(sizeof(param_types) == sizeof(param_io));\
 	for(i = 0; i < sizeof(param_types)-1; i++){\
-		if((param_types[i] != 'c') && (param_types[i] != 'f') && (param_types[i] != 'n') && (param_types[i] != 'u')){ \
+		if((param_types[i] != 'c') && (param_types[i] != 'f') && (param_types[i] != 'n') && (param_types[i] != 'u') && (param_types[i] != 's')){ \
 			printf("Error: types parameters of test %d mismatch!\n", test_num);\
 			return 0;\
 		}\
@@ -345,7 +352,7 @@ struct dispatch_table {
 			printf("Error: I/O parameters of test %d mismatch!\n", test_num);\
 			return 0;\
 		}\
-		if((param_io[i] == 'O') && (param_types[i] != 'u')){\
+		if((param_io[i] == 'O') && (param_types[i] != 'u') && (param_types[i] != 's')){\
 			printf("Error: types and I/O parameters of test %d mismatch!\n", test_num);\
 			return 0;\
 		}\
@@ -412,8 +419,13 @@ struct dispatch_table {
 			}\
 			if(parameters_types[j] == 'u'){\
 				printf("%16s: 0x", &(parameters_string_names[str_pos])); \
-				printf(PRINTF_WORD_HEX_FMT, WORD_T_GENERIC_IN(j));	\
-				printf("\n");						\
+				printf(PRINTF_WORD_HEX_FMT, WORD_T_GENERIC_IN(j));	 \
+				printf("\n");						 \
+			}\
+			if(parameters_types[j] == 's'){\
+				printf("%16s:", &(parameters_string_names[str_pos])); 	 \
+				printf("%d", INT_GENERIC_IN(j));			 \
+				printf("\n");						 \
 			}\
 		}\
 	}\
@@ -446,6 +458,14 @@ struct dispatch_table {
 				printf(PRINTF_WORD_HEX_FMT, WORD_T_GENERIC_IN(j));	\
 				printf("\n");						\
 			}\
+			if(parameters_types[j] == 's'){\
+				printf("%16s: ", real_modified_string_names); 		\
+				printf("%d", *(INT_GENERIC_OUT(j)));			\
+				printf("\n");						\
+				printf("%16s: ", expected_modified_string_names); 	\
+				printf("%d", INT_GENERIC_IN(j));			\
+				printf("\n");						\
+			}\
 		}\
 		if((parameters_io[j] == 'O') && (there_is_output == 1)){\
 			/* This is a real function output */\
@@ -457,6 +477,14 @@ struct dispatch_table {
 				printf(PRINTF_WORD_HEX_FMT, WORD_T_GENERIC_IN(j));	\
 				printf("\n");						\
 			}\
+			if(parameters_types[j] == 's'){\
+				printf("%16s: ", real_modified_string_names); 		\
+				printf("%d", fun_output);				\
+				printf("\n");						\
+				printf("%16s: ", expected_modified_string_names); 	\
+				printf("%d", INT_GENERIC_IN(j));			\
+				printf("\n");						\
+			}\
 		}\
 	}\
 } while(0)
@@ -466,7 +494,7 @@ struct dispatch_table {
 int test_##test_name(const char ATTRIBUTE_UNUSED *op, void **params, int test_num);\
 int test_##test_name(const char ATTRIBUTE_UNUSED *op, void **params, int test_num){\
 	unsigned int i;\
-	int mismatch = 0;\
+	int ret, cmp, mismatch = 0;		\
 	const char *op_string = NULL;\
 	unsigned int n_len ATTRIBUTE_UNUSED = 0;\
 	word_t fun_out_value = 0;\
@@ -480,7 +508,7 @@ int test_##test_name(const char ATTRIBUTE_UNUSED *op, void **params, int test_nu
 	\
 	const char operation[] = #operation_;\
 	\
-	MUST_HAVE(memcmp(operation, op, sizeof(operation)) == 0);\
+	assert(memcmp(operation, op, sizeof(operation)) == 0);\
 	\
 	/* Sanity check: check that the parameters passed from the file are the same as the ones declared in the test */\
 	if(memcmp(global_parameters, parameters_types, LOCAL_MIN(MAX_PARAMS, strlen(parameters_types))) != 0){\
@@ -492,6 +520,7 @@ int test_##test_name(const char ATTRIBUTE_UNUSED *op, void **params, int test_nu
 	\
 	/* Our words used as output of functions */\
 	word_t word_out[MAX_PARAMS] ATTRIBUTE_UNUSED;\
+	int int_out[MAX_PARAMS] ATTRIBUTE_UNUSED;\
 	/* If we find an fp or nn, assume its length is the common length. */\
 	for(i=0; i<sizeof(parameters_io)-1; i++){\
 		if((parameters_io[i] == 'o') && (parameters_types[i] == 'f')){\
@@ -511,20 +540,25 @@ int test_##test_name(const char ATTRIBUTE_UNUSED *op, void **params, int test_nu
 		}\
 	}\
 	GENERIC_TEST_NN_DECL_INIT##nn_out_num(nn_out, n_len * WORD_BYTES);\
-	MUST_HAVE(fp_out_num == 0 || fp_ctx_initialized != 0);\
+	assert(fp_out_num == 0 || fp_ctx_initialized != 0);\
 	GENERIC_TEST_FP_DECL_INIT##fp_out_num(fp_out, fp_ctx_param);\
 	\
 	CHECK_FUN_##fun_output fun_name(__VA_ARGS__);\
+	/* Check generic value return is 0 */\
+	if(there_is_output == 0){\
+		assert(fun_out_value == 0);\
+	}\
 	\
 	/* Check result is what we expect */\
 	FIND_HELPER_IN_DISPATCH_TABLE(operation, op_string);\
-	MUST_HAVE(op_string != NULL);\
+	assert(op_string != NULL);\
 	\
 	for(i=0; i<sizeof(parameters_io)-1; i++){\
 		if(parameters_io[i] == 'o'){\
 			/* We have an input that is an output, check it */\
 			if (parameters_types[i] == 'f') {\
-				if(fp_cmp(fp_out_ptr[i], FP_T_GENERIC_IN(i))){\
+				ret = fp_cmp(fp_out_ptr[i], FP_T_GENERIC_IN(i), &cmp); \
+				if(ret || cmp){\
 					printf("[-] Test %d (%s): result mismatch\n", test_num, op_string);\
 					/* Print the expected outputs */\
 					PRINT_ALL(parameters_types, parameters_io, params, nn_out_ptr, fp_out_ptr, fun_out_value, there_is_output, parameters_string_names, i);\
@@ -534,7 +568,8 @@ int test_##test_name(const char ATTRIBUTE_UNUSED *op, void **params, int test_nu
 				fp_out_local_cnt++;\
 			}\
 			if (parameters_types[i] == 'n') {\
-				if(nn_cmp(nn_out_ptr[i], NN_T_GENERIC_IN(i))){\
+				ret = nn_cmp(nn_out_ptr[i], NN_T_GENERIC_IN(i), &cmp); \
+				if(ret || cmp){\
 					printf("[-] Test %d (%s): result mismatch\n", test_num, op_string);\
 					/* Print the expected outputs */\
 					PRINT_ALL(parameters_types, parameters_io, params, nn_out_ptr, fp_out_ptr, fun_out_value, there_is_output, parameters_string_names, i);\
@@ -545,6 +580,15 @@ int test_##test_name(const char ATTRIBUTE_UNUSED *op, void **params, int test_nu
 			}\
 			if (parameters_types[i] == 'u') {\
 				if((*(WORD_T_GENERIC_OUT(i))) != WORD_T_GENERIC_IN(i)){\
+					printf("[-] Test %d (%s): result mismatch\n", test_num, op_string);\
+					/* Print the expected outputs */\
+					PRINT_ALL(parameters_types, parameters_io, params, nn_out_ptr, fp_out_ptr, fun_out_value, there_is_output, parameters_string_names, i);\
+					mismatch = 1;\
+					break;\
+				}\
+			}\
+			if (parameters_types[i] == 's') {\
+				if((*(INT_GENERIC_OUT(i))) != INT_GENERIC_IN(i)){\
 					printf("[-] Test %d (%s): result mismatch\n", test_num, op_string);\
 					/* Print the expected outputs */\
 					PRINT_ALL(parameters_types, parameters_io, params, nn_out_ptr, fp_out_ptr, fun_out_value, there_is_output, parameters_string_names, i);\
@@ -585,123 +629,125 @@ static char global_parameters[MAX_PARAMS];
 /*********** NN layer tests ************************************************/
 /* Testing shifts and rotates */
 	GENERIC_TEST_NN(nn_lshift_fixedlen, NN_SHIFT_LEFT_FIXEDLEN, "(fixed)<<", nn_lshift_fixedlen, "nnu", "oii",
-		SET_PARAMETER_PRETTY_NAME(3, "output", "input", "fixed lshift"), NO_RET, 1, 
+		SET_PARAMETER_PRETTY_NAME(3, "output", "input", "fixed lshift"), RET, 1,
 		NN_T_GENERIC_OUT(0), NN_T_GENERIC_IN(1), (bitcnt_t)UINT_GENERIC_IN(2))
 	GENERIC_TEST_NN(nn_rshift_fixedlen, NN_SHIFT_RIGHT_FIXEDLEN, "(fixed)>>", nn_rshift_fixedlen, "nnu", "oii",
-		SET_PARAMETER_PRETTY_NAME(3, "output", "input", "fixed rshift"), NO_RET, 1,
+		SET_PARAMETER_PRETTY_NAME(3, "output", "input", "fixed rshift"), RET, 1,
 		NN_T_GENERIC_OUT(0), NN_T_GENERIC_IN(1), (bitcnt_t)UINT_GENERIC_IN(2))
 	GENERIC_TEST_NN(nn_lshift, NN_SHIFT_LEFT, "<<", nn_lshift, "nnu", "oii",
-		SET_PARAMETER_PRETTY_NAME(3, "output", "input", "lshift"), NO_RET, 1, 
+		SET_PARAMETER_PRETTY_NAME(3, "output", "input", "lshift"), RET, 1,
 		NN_T_GENERIC_OUT(0), NN_T_GENERIC_IN(1), (bitcnt_t)UINT_GENERIC_IN(2))
 	GENERIC_TEST_NN(nn_rshift, NN_SHIFT_RIGHT, ">>", nn_rshift, "nnu", "oii",
-		SET_PARAMETER_PRETTY_NAME(3, "output", "input", "rshift"), NO_RET, 1,
+		SET_PARAMETER_PRETTY_NAME(3, "output", "input", "rshift"), RET, 1,
 		NN_T_GENERIC_OUT(0), NN_T_GENERIC_IN(1), (bitcnt_t)UINT_GENERIC_IN(2))
 	GENERIC_TEST_NN(nn_lrot, NN_ROTATE_LEFT, "lrot", nn_lrot, "nnuu", "oiii",
-		SET_PARAMETER_PRETTY_NAME(4, "output", "input", "lrot", "bitlen_base"), NO_RET, 1, 
+		SET_PARAMETER_PRETTY_NAME(4, "output", "input", "lrot", "bitlen_base"), RET, 1,
 		NN_T_GENERIC_OUT(0), NN_T_GENERIC_IN(1), (bitcnt_t)UINT_GENERIC_IN(2), (bitcnt_t)UINT_GENERIC_IN(3))
 	GENERIC_TEST_NN(nn_rrot, NN_ROTATE_RIGHT, "rrot", nn_rrot, "nnuu", "oiii",
-		SET_PARAMETER_PRETTY_NAME(4, "output", "input", "rrot", "bitlen_base"), NO_RET, 1, 
+		SET_PARAMETER_PRETTY_NAME(4, "output", "input", "rrot", "bitlen_base"), RET, 1,
 		NN_T_GENERIC_OUT(0), NN_T_GENERIC_IN(1), (bitcnt_t)UINT_GENERIC_IN(2), (bitcnt_t)UINT_GENERIC_IN(3))
 
 
 /* Testing xor, or, and, not */
 	GENERIC_TEST_NN(nn_xor, NN_XOR, "^", nn_xor, "nnn", "iio",
-		SET_PARAMETER_PRETTY_NAME(3, "input1", "input2", "output"), NO_RET, 3,
+		SET_PARAMETER_PRETTY_NAME(3, "input1", "input2", "output"), RET, 3,
 		NN_T_GENERIC_OUT(2), NN_T_GENERIC_IN(0), NN_T_GENERIC_IN(1))
 	GENERIC_TEST_NN(nn_or, NN_OR, "|", nn_or, "nnn", "iio",
-		SET_PARAMETER_PRETTY_NAME(3, "input1", "input2", "output"), NO_RET, 3,
+		SET_PARAMETER_PRETTY_NAME(3, "input1", "input2", "output"), RET, 3,
 		NN_T_GENERIC_OUT(2), NN_T_GENERIC_IN(0), NN_T_GENERIC_IN(1))
 	GENERIC_TEST_NN(nn_and, NN_AND, "&", nn_and, "nnn", "iio",
-		SET_PARAMETER_PRETTY_NAME(3, "input1", "input2", "output"), NO_RET, 3,
+		SET_PARAMETER_PRETTY_NAME(3, "input1", "input2", "output"), RET, 3,
 		NN_T_GENERIC_OUT(2), NN_T_GENERIC_IN(0), NN_T_GENERIC_IN(1))
 	GENERIC_TEST_NN(nn_not, NN_NOT, "~", nn_not, "nn", "io",
-		SET_PARAMETER_PRETTY_NAME(2, "input", "output"), NO_RET, 2,
+		SET_PARAMETER_PRETTY_NAME(2, "input", "output"), RET, 2,
 		NN_T_GENERIC_OUT(1), NN_T_GENERIC_IN(0))
 
 /* Testing add and sub */
 	GENERIC_TEST_NN(nn_add, NN_ADD, "+", nn_add, "nnn", "iio",
 		SET_PARAMETER_PRETTY_NAME(3, "input1", "input2", "output"),
-		NO_RET, 3, NN_T_GENERIC_OUT(2), NN_T_GENERIC_IN(0),
+		RET, 3, NN_T_GENERIC_OUT(2), NN_T_GENERIC_IN(0),
 		NN_T_GENERIC_IN(1))
 	GENERIC_TEST_NN(nn_sub, NN_SUB, "-", nn_sub, "nnn", "iio",
 		SET_PARAMETER_PRETTY_NAME(3, "input1", "input2", "output"),
-		NO_RET, 3, NN_T_GENERIC_OUT(2), NN_T_GENERIC_IN(0),
+		RET, 3, NN_T_GENERIC_OUT(2), NN_T_GENERIC_IN(0),
 		NN_T_GENERIC_IN(1))
 
 /* Testing inc and dec */
 	GENERIC_TEST_NN(nn_inc, NN_INC, "++", nn_inc, "nn", "io",
-		SET_PARAMETER_PRETTY_NAME(2, "input", "output"), NO_RET, 2,
+		SET_PARAMETER_PRETTY_NAME(2, "input", "output"), RET, 2,
 		NN_T_GENERIC_OUT(1), NN_T_GENERIC_IN(0))
 	GENERIC_TEST_NN(nn_dec, NN_DEC, "--", nn_dec, "nn", "io",
-		SET_PARAMETER_PRETTY_NAME(2, "input", "output"), NO_RET, 2,
+		SET_PARAMETER_PRETTY_NAME(2, "input", "output"), RET, 2,
 		NN_T_GENERIC_OUT(1), NN_T_GENERIC_IN(0))
 
 /* Testing modular add, sub, inc, dec (inputs are supposed < p) */
 	GENERIC_TEST_NN(nn_mod_add, NN_MOD_ADD, "+%", nn_mod_add, "nnnn", "iiio",
 		SET_PARAMETER_PRETTY_NAME(4, "input1", "input2", "modulo", "output"),
-		NO_RET, 4, NN_T_GENERIC_OUT(3), NN_T_GENERIC_IN(0),
+		RET, 4, NN_T_GENERIC_OUT(3), NN_T_GENERIC_IN(0),
 		NN_T_GENERIC_IN(1), NN_T_GENERIC_IN(2))
 	GENERIC_TEST_NN(nn_mod_sub, NN_MOD_SUB, "-%", nn_mod_sub, "nnnn", "iiio",
 		SET_PARAMETER_PRETTY_NAME(4, "input1", "input2", "modulo", "output"),
-		NO_RET, 4, NN_T_GENERIC_OUT(3), NN_T_GENERIC_IN(0),
+		RET, 4, NN_T_GENERIC_OUT(3), NN_T_GENERIC_IN(0),
 		NN_T_GENERIC_IN(1), NN_T_GENERIC_IN(2))
 	GENERIC_TEST_NN(nn_mod_inc, NN_MOD_INC, "++%", nn_mod_inc, "nnn", "iio",
 		SET_PARAMETER_PRETTY_NAME(3, "input1", "modulo", "output"),
-		NO_RET, 3, NN_T_GENERIC_OUT(2), NN_T_GENERIC_IN(0),
+		RET, 3, NN_T_GENERIC_OUT(2), NN_T_GENERIC_IN(0),
 		NN_T_GENERIC_IN(1))
 	GENERIC_TEST_NN(nn_mod_dec, NN_MOD_DEC, "--%", nn_mod_dec, "nnn", "iio",
 		SET_PARAMETER_PRETTY_NAME(3, "input1", "modulo", "output"),
-		NO_RET, 3, NN_T_GENERIC_OUT(2), NN_T_GENERIC_IN(0),
+		RET, 3, NN_T_GENERIC_OUT(2), NN_T_GENERIC_IN(0),
 		NN_T_GENERIC_IN(1))
 
 
 /* Testing mul */
 	GENERIC_TEST_NN(nn_mul, NN_MUL, "*", nn_mul, "nnn", "oii",
 		SET_PARAMETER_PRETTY_NAME(3, "output1", "input1", "input2"),
-		NO_RET, 1, NN_T_GENERIC_OUT(0), NN_T_GENERIC_IN(1),
+		RET, 1, NN_T_GENERIC_OUT(0), NN_T_GENERIC_IN(1),
 		NN_T_GENERIC_IN(2))
+	GENERIC_TEST_NN(nn_sqr, NN_SQR, "(^2)", nn_sqr, "nn", "oi",
+		SET_PARAMETER_PRETTY_NAME(2, "output1", "input1"),
+		RET, 1, NN_T_GENERIC_OUT(0), NN_T_GENERIC_IN(1))
 
 /* Testing division */
 	GENERIC_TEST_NN(nn_divrem, NN_DIVREM, "/", nn_divrem, "nnnn", "ooii",
 		SET_PARAMETER_PRETTY_NAME(4, "quotient", "remainder", "input1", "input2"),
-		NO_RET, 2, NN_T_GENERIC_OUT(0), NN_T_GENERIC_OUT(1), 
+		RET, 2, NN_T_GENERIC_OUT(0), NN_T_GENERIC_OUT(1),
 		NN_T_GENERIC_IN(2), NN_T_GENERIC_IN(3))
-	GENERIC_TEST_NN(nn_xgcd, NN_XGCD, "xgcd", nn_xgcd, "nnnnnu", "oooiiO",
-		SET_PARAMETER_PRETTY_NAME(6, "xgcd", "u", "v", "input1", "input2", "swap"),
+	GENERIC_TEST_NN(nn_xgcd, NN_XGCD, "xgcd", nn_xgcd, "nnnnns", "oooiio",
+		SET_PARAMETER_PRETTY_NAME(6, "xgcd", "u", "v", "input1", "input2", "sign"),
 		RET, 3, NN_T_GENERIC_OUT(0), NN_T_GENERIC_OUT(1), NN_T_GENERIC_OUT(2),
-		NN_T_GENERIC_IN(3), NN_T_GENERIC_IN(4))
-	GENERIC_TEST_NN(nn_gcd, NN_GCD, "gcd", nn_gcd, "nnn", "oii",
-		SET_PARAMETER_PRETTY_NAME(3, "gcd", "input1", "input2"),
-		NO_RET, 1, NN_T_GENERIC_OUT(0),
-		NN_T_GENERIC_IN(1), NN_T_GENERIC_IN(2))
-
+		NN_T_GENERIC_IN(3), NN_T_GENERIC_IN(4), INT_GENERIC_OUT(5))
+	GENERIC_TEST_NN(nn_gcd, NN_GCD, "gcd", nn_gcd, "nnns", "oiio",
+		SET_PARAMETER_PRETTY_NAME(4, "gcd", "input1", "input2", "sign"),
+		RET, 1, NN_T_GENERIC_OUT(0),
+		NN_T_GENERIC_IN(1), NN_T_GENERIC_IN(2), INT_GENERIC_OUT(3))
 	GENERIC_TEST_NN(nn_mod, NN_MOD, "%", nn_mod, "nnn", "oii",
 		SET_PARAMETER_PRETTY_NAME(3, "output", "input1", "input2"),
-		NO_RET, 1, NN_T_GENERIC_OUT(0),
+		RET, 1, NN_T_GENERIC_OUT(0),
 		NN_T_GENERIC_IN(1), NN_T_GENERIC_IN(2))
 
 /* Testing modular inversion */
-	GENERIC_TEST_NN(nn_modinv, NN_MODINV, "(^-1%)", nn_modinv, "nnnu", "oiiO",
-		SET_PARAMETER_PRETTY_NAME(4, "output", "input1", "input2", "ok"),
-		RET, 1, NN_T_GENERIC_OUT(0), NN_T_GENERIC_IN(1),
-		NN_T_GENERIC_IN(2))
+	GENERIC_TEST_NN(nn_modinv, NN_MODINV, "(^-1%)", nn_modinv, "nnn", "oii",
+		SET_PARAMETER_PRETTY_NAME(3, "output", "input1", "input2"),
+		RET, 1, NN_T_GENERIC_OUT(0),
+		NN_T_GENERIC_IN(1), NN_T_GENERIC_IN(2))
 
 /* Testing modular inversion modulo a 2**n */
-	GENERIC_TEST_NN(nn_modinv_2exp, NN_MODINV_2EXP, "(^-1%)(2exp)", nn_modinv_2exp, "nnuu", "oiiO",
-		SET_PARAMETER_PRETTY_NAME(4, "output", "input1", "input2", "ok"),
+	GENERIC_TEST_NN(nn_modinv_2exp, NN_MODINV_2EXP, "(^-1%)(2exp)", nn_modinv_2exp, "nnus", "oiio",
+		SET_PARAMETER_PRETTY_NAME(4, "output", "input1", "input2", "isodd"),
 		RET, 1, NN_T_GENERIC_OUT(0), NN_T_GENERIC_IN(1),
-		UINT_GENERIC_IN(2))
+			UINT_GENERIC_IN(2), INT_GENERIC_OUT(3))
 
 /* Check Montgomery multiplication redcify primitives */
-	GENERIC_TEST_NN(nn_compute_redc1_coefs, NN_COEF_REDC1, "coef_redc1", nn_compute_redc1_coefs, "nnnu", "ooiO",
+	GENERIC_TEST_NN(nn_compute_redc1_coefs, NN_COEF_REDC1, "coef_redc1", nn_compute_redc1_coefs, "nnnu", "ooio",
 		SET_PARAMETER_PRETTY_NAME(4, "r", "r_square", "p", "mpinv"),
-		RET, 2, NN_T_GENERIC_OUT(0), NN_T_GENERIC_OUT(1), NN_T_GENERIC_IN(2))
+		RET, 3, NN_T_GENERIC_OUT(0), NN_T_GENERIC_OUT(1), NN_T_GENERIC_IN(2), WORD_T_GENERIC_OUT(3))
 	GENERIC_TEST_NN(nn_compute_div_coefs, NN_COEF_DIV, "coef_div", nn_compute_div_coefs, "nuun", "oooi",
 		SET_PARAMETER_PRETTY_NAME(4, "p_normalized", "p_shift", "p_reciprocal", "p"),
-		NO_RET, 3, NN_T_GENERIC_OUT(0), WORD_T_GENERIC_OUT(1), WORD_T_GENERIC_OUT(2), NN_T_GENERIC_IN(3))
+		RET, 3, NN_T_GENERIC_OUT(0), WORD_T_GENERIC_OUT(1), WORD_T_GENERIC_OUT(2), NN_T_GENERIC_IN(3))
 	GENERIC_TEST_NN(nn_mul_redc1, NN_MUL_REDC1, "*_redc1", nn_mul_redc1, "nnnnu", "oiiii",
 		SET_PARAMETER_PRETTY_NAME(5, "output", "input1", "input2", "p", "mpinv"),
-		NO_RET, 1, NN_T_GENERIC_OUT(0), NN_T_GENERIC_IN(1), NN_T_GENERIC_IN(2),
+		RET, 1, NN_T_GENERIC_OUT(0), NN_T_GENERIC_IN(1), NN_T_GENERIC_IN(2),
 		NN_T_GENERIC_IN(3), WORD_T_GENERIC_IN(4))
 
 
@@ -710,38 +756,52 @@ static char global_parameters[MAX_PARAMS];
 /* Testing addition in F_p */
 	GENERIC_TEST_FP(fp_add, FP_ADD, "+", fp_add, "cfff", "ioii",
 	     SET_PARAMETER_PRETTY_NAME(4, "p", "sum", "input1", "input2"),
-	     NO_RET, 0, 2,
+	     RET, 0, 2,
 	     FP_T_GENERIC_OUT(1), FP_T_GENERIC_IN(2), FP_T_GENERIC_IN(3))
 
 /* Testing subtraction in F_p */
 	GENERIC_TEST_FP(fp_sub, FP_SUB, "-", fp_sub, "cfff", "ioii",
 	     SET_PARAMETER_PRETTY_NAME(4, "p", "diff", "input1", "input2"),
-	     NO_RET, 0, 2,
+	     RET, 0, 2,
 	     FP_T_GENERIC_OUT(1), FP_T_GENERIC_IN(2), FP_T_GENERIC_IN(3))
 
 /* Testing multiplication in F_p */
 	GENERIC_TEST_FP(fp_mul, FP_MUL, "*", fp_mul, "cfff", "ioii",
 	     SET_PARAMETER_PRETTY_NAME(4, "p", "prod", "input1", "input2"),
-	     NO_RET, 0, 2,
+	     RET, 0, 2,
 	     FP_T_GENERIC_OUT(1), FP_T_GENERIC_IN(2), FP_T_GENERIC_IN(3))
+	GENERIC_TEST_FP(fp_sqr, FP_SQR, "(^2)", fp_sqr, "cff", "ioi",
+	     SET_PARAMETER_PRETTY_NAME(3, "p", "prod", "input1"),
+	     RET, 0, 2,
+	     FP_T_GENERIC_OUT(1), FP_T_GENERIC_IN(2))
 
 /* Testing division in F_p */
 	GENERIC_TEST_FP(fp_div, FP_DIV, "/", fp_div, "cfff", "ioii",
 	     SET_PARAMETER_PRETTY_NAME(4, "p", "quo", "input1", "input2"),
-	     NO_RET, 0, 2,
+	     RET, 0, 2,
 	     FP_T_GENERIC_OUT(1), FP_T_GENERIC_IN(2), FP_T_GENERIC_IN(3))
 
 /* Testing Montgomery multiplication in F_p */
 	GENERIC_TEST_FP(fp_mul_redc1, FP_MUL_REDC1, "*", fp_mul_redc1, "cfff", "ioii",
 	     SET_PARAMETER_PRETTY_NAME(4, "p", "prod", "input1", "input2"),
-	     NO_RET, 0, 2,
+	     RET, 0, 2,
 	     FP_T_GENERIC_OUT(1), FP_T_GENERIC_IN(2), FP_T_GENERIC_IN(3))
+	GENERIC_TEST_FP(fp_sqr_redc1, FP_SQR_REDC1, "(^2)", fp_sqr_redc1, "cff", "ioi",
+	     SET_PARAMETER_PRETTY_NAME(3, "p", "prod", "input1"),
+	     RET, 0, 2,
+	     FP_T_GENERIC_OUT(1), FP_T_GENERIC_IN(2))
 
 /* Testing exponentiation in F_p */
 	GENERIC_TEST_FP(fp_pow, FP_POW, "^", fp_pow, "cffn", "ioii",
 	     SET_PARAMETER_PRETTY_NAME(4, "p", "pow", "input", "exp"),
-	     NO_RET, 0, 2,
+	     RET, 0, 2,
 	     FP_T_GENERIC_OUT(1), FP_T_GENERIC_IN(2), NN_T_GENERIC_IN(3))
+
+/* Testing square residue in F_p */
+	GENERIC_TEST_FP(fp_sqrt, FP_SQRT, "sqrt", fp_sqrt, "cfffs", "iooiO",
+	     SET_PARAMETER_PRETTY_NAME(4, "sqrt1", "sqrt2", "p", "ret"),
+	     RET, 0, 3,
+	     FP_T_GENERIC_OUT(1), FP_T_GENERIC_OUT(2), FP_T_GENERIC_IN(3))
 
 /*****************************************************************/
 
@@ -858,6 +918,7 @@ int main(int argc, char *argv[])
 	fp *fp_tmp;
 	int (*curr_test_fun) (const char *, void **, int);
 	unsigned long p_tmp;
+	int ret, cmp;
 
 #ifdef WITH_ASSERT_BACKTRACE
 	memset(backtrace_buffer, 0, sizeof(backtrace_buffer) - 1);
@@ -905,7 +966,7 @@ int main(int argc, char *argv[])
 		}
 		*t = 0;		/* mark end of record */
 		test_num = strtoul(s, NULL, 10);
-		MUST_HAVE(line == test_num);
+		assert(line == test_num);
 		s = t + 1;	/* jump to beginning of next record */
 
 		/* Find end of second record (operation type) */
@@ -947,99 +1008,108 @@ int main(int argc, char *argv[])
 			case 'c':	/* fp_ctx */
 				if (fp_ctx_local_cnt > 0) {
 					printf("\nLine %lu: Only one fp_ctx allowed\n", line);
-					return -1;
+					ret = -1;
+					goto err;
 				}
 				/*
 				 * We expect a 3 nn of the same size (p, r, r^2)
 				 * followed by a single word providing mpinv
 				 * and an additional nn and two words.
 				 */
-				MUST_HAVE(((t - rec) % 2) == 0);
+				assert(((t - rec) % 2) == 0);
 				nn_len = (unsigned int)(t - rec -
 							3 * (WORD_BYTES * 2)) /
 					(2 * 4);
-				MUST_HAVE((nn_len % WORD_BYTES) == 0);
+				assert((nn_len % WORD_BYTES) == 0);
 				fp_ctx_local_cnt++;
 				tmp = &fp_ctx_modulus;
-				nn_set_wlen(tmp, (u8)(nn_len / WORD_BYTES));
-				nn_import_from_hexbuf(tmp, rec, 2 * nn_len);
+				ret = nn_set_wlen(tmp, (u8)(nn_len / WORD_BYTES)); EG(ret, err);
+				ret = nn_import_from_hexbuf(tmp, rec, 2 * nn_len); EG(ret, err);
 
 				/* Initialize fp context from the prime modulus */
-				fp_ctx_init_from_p(&fp_ctx_param, &fp_ctx_modulus);
+				ret = fp_ctx_init_from_p(&fp_ctx_param, &fp_ctx_modulus); EG(ret, err);
 				/* Now get the other Fp context values and check that
 				 * everything is OK
 				 */
 				tmp = &fp_ctx_r;
-				nn_set_wlen(tmp, (u8)(nn_len / WORD_BYTES));
-				nn_import_from_hexbuf(tmp, rec + (2 * nn_len),
-						      2 * nn_len);
+				ret = nn_set_wlen(tmp, (u8)(nn_len / WORD_BYTES)); EG(ret, err);
+				ret = nn_import_from_hexbuf(tmp, rec + (2 * nn_len),
+						      2 * nn_len); EG(ret, err); EG(ret, err);
 
 				/* Compare r */
-				if(nn_cmp(&fp_ctx_r, &(fp_ctx_param.r)) != 0){
+				ret = nn_cmp(&fp_ctx_r, &(fp_ctx_param.r), &cmp);
+				if(ret || cmp){
 					printf("\nLine %lu: Fp context import failed\n", line);
 					nn_print("Imported r from file   =", &fp_ctx_r);
 					nn_print("Computed r from modulus=", &(fp_ctx_param.r));
-					return -1;
+					ret = -1;
+					goto err;
 				}
 				tmp = &fp_ctx_r_square;
-				nn_set_wlen(tmp, (u8)(nn_len / WORD_BYTES));
-				nn_import_from_hexbuf(tmp, rec + (4 * nn_len),
-						      2 * nn_len);
+				ret = nn_set_wlen(tmp, (u8)(nn_len / WORD_BYTES)); EG(ret, err);
+				ret = nn_import_from_hexbuf(tmp, rec + (4 * nn_len),
+						      2 * nn_len); EG(ret, err);
 
 				/* Compare r_square */
-				if(nn_cmp(&fp_ctx_r_square, &(fp_ctx_param.r_square)) != 0){
+				ret = nn_cmp(&fp_ctx_r_square, &(fp_ctx_param.r_square), &cmp);
+				if(ret || cmp){
 					printf("\nLine %lu: Fp context import failed\n", line);
 					nn_print("Imported r_square from file   =", &fp_ctx_r_square);
 					nn_print("Computed r_square from modulus=", &(fp_ctx_param.r_square));
-					return -1;
+					ret = -1;
+					goto err;
 				}
 				tmp = &fp_ctx_mpinv;
-				nn_set_wlen(tmp, 1);
-				nn_import_from_hexbuf(tmp, rec + (6 * nn_len),
-						      WORD_BYTES * 2);
+				ret = nn_set_wlen(tmp, 1); EG(ret, err);
+				ret = nn_import_from_hexbuf(tmp, rec + (6 * nn_len),
+						      WORD_BYTES * 2); EG(ret, err);
 
 				/* Compare mpinv */
 				if(fp_ctx_mpinv.val[0] != fp_ctx_param.mpinv){
 					printf("\nLine %lu: Fp context import failed\n", line);
 					printf("Imported mpinv from modulus=" PRINTF_WORD_HEX_FMT, fp_ctx_mpinv.val[0]);
 					printf("Computed mpiv  from file   =" PRINTF_WORD_HEX_FMT, fp_ctx_param.mpinv);
-					return -1;
+					ret = -1;
+					goto err;
 				}
 				tmp = &fp_ctx_pshift;
-				nn_set_wlen(tmp, 1);
-				nn_import_from_hexbuf(tmp, rec + (6 * nn_len + 2 * WORD_BYTES),
-						      WORD_BYTES * 2);
+				ret = nn_set_wlen(tmp, 1); EG(ret, err);
+				ret = nn_import_from_hexbuf(tmp, rec + (6 * nn_len + 2 * WORD_BYTES),
+						      WORD_BYTES * 2); EG(ret, err);
 
 				/* Compare p_shift */
 				if((bitcnt_t)fp_ctx_pshift.val[0] != fp_ctx_param.p_shift){
 					printf("\nLine %lu: Fp context import failed\n", line);
 					printf("Imported mpinv from modulus=%d", (bitcnt_t)fp_ctx_pshift.val[0]);
 					printf("Computed mpiv  from file   =%d", fp_ctx_param.p_shift);
-					return -1;
+					ret = -1;
+					goto err;
 				}
 				tmp = &fp_ctx_pnorm;
-				nn_set_wlen(tmp, (u8)(nn_len / WORD_BYTES));
-				nn_import_from_hexbuf(tmp, rec + (6 * nn_len + 4 * WORD_BYTES),
-						      nn_len * 2);
+				ret = nn_set_wlen(tmp, (u8)(nn_len / WORD_BYTES)); EG(ret, err);
+				ret = nn_import_from_hexbuf(tmp, rec + (6 * nn_len + 4 * WORD_BYTES),
+						      nn_len * 2); EG(ret, err);
 
 				/* Compare p_normalized */
-				if(nn_cmp(&fp_ctx_pnorm, &(fp_ctx_param.p_normalized)) != 0){
+				ret = nn_cmp(&fp_ctx_pnorm, &(fp_ctx_param.p_normalized), &cmp);
+				if(ret || (cmp != 0)){
 					printf("\nLine %lu: Fp context import failed\n", line);
 					nn_print("Imported r_square from file   =", &fp_ctx_pnorm);
 					nn_print("Computed r_square from modulus=", &(fp_ctx_param.p_normalized));
 					return -1;
 				}
 				tmp = &fp_ctx_prec;
-				nn_set_wlen(tmp, 1);
-				nn_import_from_hexbuf(tmp, rec + (8 * nn_len + 4 * WORD_BYTES),
-						      WORD_BYTES * 2);
+				ret = nn_set_wlen(tmp, 1); EG(ret, err);
+				ret = nn_import_from_hexbuf(tmp, rec + (8 * nn_len + 4 * WORD_BYTES),
+						      WORD_BYTES * 2); EG(ret, err);
 
 				/* Compare p_reciprocal */
 				if(fp_ctx_prec.val[0] != fp_ctx_param.p_reciprocal){
 					printf("\nLine %lu: Fp context import failed\n", line);
 					printf("Imported mpinv from modulus=" PRINTF_WORD_HEX_FMT, fp_ctx_prec.val[0]);
 					printf("Computed mpiv  from file   =" PRINTF_WORD_HEX_FMT, fp_ctx_param.p_reciprocal);
-					return -1;
+					ret = -1;
+					goto err;
 				}
 				params[i] = &fp_ctx_param;
 				ADD_TO_BACKTRACE("'c' param: %s\n", rec);
@@ -1047,23 +1117,25 @@ int main(int argc, char *argv[])
 			case 'f':	/* fp */
 				if (fp_ctx_local_cnt != 1) {
 					printf("\nLine %lu: No fp_ctx available\n", line);
-					return -1;
+					ret = -1;
+					goto err;
 				}
 				if (fp_local_cnt >= NUM_PRE_ALLOCATED_FP) {
 					printf("\nLine %lu: Not enough fp\n",
 					       line);
-					return -1;
+					ret = -1;
+					goto err;
 				}
-				MUST_HAVE(((t - rec) % 2) == 0);
+				assert(((t - rec) % 2) == 0);
 				nn_len = (unsigned int)(t - rec) / 2;
-				MUST_HAVE((nn_len / WORD_BYTES) <=
+				assert((nn_len / WORD_BYTES) <=
 				       fp_ctx_param.p.wlen);
 				fp_tmp = fp_params_ptr[fp_local_cnt++];
 				fp_tmp->ctx = &fp_ctx_param;
 				tmp = &(fp_tmp->fp_val);
-				nn_set_wlen(tmp, (u8)(nn_len / WORD_BYTES));
-				nn_import_from_hexbuf(tmp, rec, 2 * nn_len);
-				nn_set_wlen(tmp, fp_ctx_param.p.wlen);
+				ret = nn_set_wlen(tmp, (u8)(nn_len / WORD_BYTES)); EG(ret, err);
+				ret = nn_import_from_hexbuf(tmp, rec, 2 * nn_len); EG(ret, err);
+				ret = nn_set_wlen(tmp, fp_ctx_param.p.wlen); EG(ret, err);
 				params[i] = fp_tmp;
 				ADD_TO_BACKTRACE("'f' param: %s\n", rec);
 				break;
@@ -1071,13 +1143,14 @@ int main(int argc, char *argv[])
 				p_tmp = strtoull(rec, NULL, 10);
 				params[i] = (void *)p_tmp;
 				ADD_TO_BACKTRACE("'p' param: %s\n", rec);
-				/* If this is not a NULL pointer, this is weird! 
+				/* If this is not a NULL pointer, this is weird!
 				 * Abort ...
 				 */
 				if(params[i] != NULL){
 					printf("\nLine %lu: imported a pointer (type 'p') non NULL\n",
 					       line);
-					return -1;
+					ret = -1;
+					goto err;
 				}
 				break;
 			case 'n':	/* nn */
@@ -1086,12 +1159,12 @@ int main(int argc, char *argv[])
 					       line);
 					return -1;
 				}
-				MUST_HAVE(((t - rec) % 2) == 0);
+				assert(((t - rec) % 2) == 0);
 				nn_len = (unsigned int)(t - rec) / 2;
-				MUST_HAVE((nn_len % WORD_BYTES) == 0);
+				assert((nn_len % WORD_BYTES) == 0);
 				tmp = nn_params_ptr[nn_local_cnt++];
-				nn_set_wlen(tmp, (u8)(nn_len / WORD_BYTES));
-				nn_import_from_hexbuf(tmp, rec, 2 * nn_len);
+				ret = nn_set_wlen(tmp, (u8)(nn_len / WORD_BYTES)); EG(ret, err);
+				ret = nn_import_from_hexbuf(tmp, rec, 2 * nn_len); EG(ret, err);
 				params[i] = tmp;
 				ADD_TO_BACKTRACE("'n' param: %s\n", rec);
 				break;
@@ -1100,9 +1173,15 @@ int main(int argc, char *argv[])
 				params[i] = &u_params[i];
 				ADD_TO_BACKTRACE("'u' param: %s\n", rec);
 				break;
+			case 's':	/* signed long int (in base 10) */
+				u_params[i] = strtoll(rec, NULL, 10);
+				params[i] = &u_params[i];
+				ADD_TO_BACKTRACE("'s' param: %s\n", rec);
+				break;
 			default:
 				printf("\nUnknown record type '%c'\n", s[i]);
-				return -1;
+				ret = -1;
+				goto err;
 			}
 			rec = t + 1;
 		}
@@ -1136,4 +1215,9 @@ int main(int argc, char *argv[])
 	free(ibuf);
 
 	return 0;
+err:
+	printf("Error: critical error occured! Leaving ...\n");
+	close(fd);
+	free(ibuf);
+	return -1;
 }
