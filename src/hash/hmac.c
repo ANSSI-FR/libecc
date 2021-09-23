@@ -20,7 +20,7 @@ int hmac_init(hmac_context *ctx, const u8 *hmackey, u32 hmackey_len,
 	u8 opad[MAX_BLOCK_SIZE];
 	u8 local_hmac_key[MAX_BLOCK_SIZE];
 	unsigned int i, local_hmac_key_len;
-	int ret = -1;
+	int ret;
 	const hash_mapping *h;
 
 	local_memset(local_hmac_key, 0, sizeof(local_hmac_key));
@@ -28,16 +28,11 @@ int hmac_init(hmac_context *ctx, const u8 *hmackey, u32 hmackey_len,
 	local_memset(ipad, 0x36, sizeof(ipad));
 	local_memset(opad, 0x5c, sizeof(opad));
 
-	if((ctx == NULL) || (hmackey == NULL)){
-		ret = -1;
-		goto err;
-	}
+	MUST_HAVE((ctx != NULL) || (hmackey != NULL), ret, err);
 	/* Get the hash mapping of the current asked hash function */
-	ctx->hash = get_hash_by_type(hash_type);
-	if(ctx->hash == NULL){
-		ret = -1;
-		goto err;
-	}
+	ret = get_hash_by_type(hash_type, &(ctx->hash)); EG(ret, err);
+	MUST_HAVE(ctx->hash != NULL, ret, err);
+
 	/* Make things more readable */
 	h = ctx->hash;
 
@@ -52,103 +47,85 @@ int hmac_init(hmac_context *ctx, const u8 *hmackey, u32 hmackey_len,
 		 */
 		hash_context tmp_ctx;
 		/* Check our callback */
-		if(hash_mapping_callbacks_sanity_check(h)){
-			ret = -1;
-			goto err;
-		}
-		h->hfunc_init(&tmp_ctx);
-		h->hfunc_update(&tmp_ctx, hmackey, hmackey_len);
-		h->hfunc_finalize(&tmp_ctx, local_hmac_key);
+		ret = hash_mapping_callbacks_sanity_check(h); EG(ret, err);
+		ret = h->hfunc_init(&tmp_ctx); EG(ret, err);
+		ret = h->hfunc_update(&tmp_ctx, hmackey, hmackey_len); EG(ret, err);
+		ret = h->hfunc_finalize(&tmp_ctx, local_hmac_key); EG(ret, err);
 		local_hmac_key_len = h->digest_size;
 	}
 
 	/* Initialize our input and output hash contexts */
 	/* Check our callback */
-	if(hash_mapping_callbacks_sanity_check(h)){
-		ret = -1;
-		goto err;
-	}
-	h->hfunc_init(&(ctx->in_ctx));
+	ret = hash_mapping_callbacks_sanity_check(h); EG(ret, err);
+	ret = h->hfunc_init(&(ctx->in_ctx)); EG(ret, err);
 	/* Check our callback */
-	if(hash_mapping_callbacks_sanity_check(h)){
-		ret = -1;
-		goto err;
-	}
-	h->hfunc_init(&(ctx->out_ctx));
+	ret = hash_mapping_callbacks_sanity_check(h); EG(ret, err);
+	ret = h->hfunc_init(&(ctx->out_ctx)); EG(ret, err);
 
 	/* Update our input context with K^ipad */
 	for(i = 0; i < local_hmac_key_len; i++){
 		ipad[i] ^= local_hmac_key[i];
 	}
-	h->hfunc_update(&(ctx->in_ctx), ipad, h->block_size);
+	ret = h->hfunc_update(&(ctx->in_ctx), ipad, h->block_size); EG(ret, err);
 	/* Update our output context with K^opad */
 	for(i = 0; i < local_hmac_key_len; i++){
 		opad[i] ^= local_hmac_key[i];
 	}
-	h->hfunc_update(&(ctx->out_ctx), opad, h->block_size);
+	ret = h->hfunc_update(&(ctx->out_ctx), opad, h->block_size); EG(ret, err);
 
 	/* Initialize our magic */
 	ctx->magic = HMAC_MAGIC;
 
-	ret = 0;
 err:
 	return ret;
 }
 
 int hmac_update(hmac_context *ctx, const u8 *input, u32 ilen)
 {
-	int ret = -1;
+	int ret;
 	const hash_mapping *h;
 
-	HMAC_CHECK_INITIALIZED(ctx);
+	HMAC_CHECK_INITIALIZED(ctx, ret, err);
 
 	/* Make things more readable */
 	h = ctx->hash;
 	/* Check our callback */
-	if(hash_mapping_callbacks_sanity_check(h)){
-		ret = -1;
-		goto err;
-	}
-	h->hfunc_update(&(ctx->in_ctx), input, ilen);
+	ret = hash_mapping_callbacks_sanity_check(h); EG(ret, err);
+	ret = h->hfunc_update(&(ctx->in_ctx), input, ilen); EG(ret, err);
 
-	ret = 0;
 err:
 	return ret;
 }
 
 int hmac_finalize(hmac_context *ctx, u8 *output, u8 *outlen)
 {
-	int ret = -1;
+	int ret;
 	u8 in_hash[MAX_DIGEST_SIZE];
 	const hash_mapping *h;
 
-	HMAC_CHECK_INITIALIZED(ctx);
-	MUST_HAVE((output != NULL) && (outlen != NULL));
+	HMAC_CHECK_INITIALIZED(ctx, ret, err);
+	MUST_HAVE((output != NULL) && (outlen != NULL), ret, err);
 
 	/* Make things more readable */
 	h = ctx->hash;
 
-	if((*outlen) < h->digest_size){
-		ret = -1;
-		goto err;
-	}
-	/* Check our callback */
-	if(hash_mapping_callbacks_sanity_check(h)){
-		ret = -1;
-		goto err;
-	}
-	h->hfunc_finalize(&(ctx->in_ctx), in_hash);
-	h->hfunc_update(&(ctx->out_ctx), in_hash, h->digest_size);
-	h->hfunc_finalize(&(ctx->out_ctx), output);
-	*outlen = h->digest_size;
+	MUST_HAVE((*outlen) >= h->digest_size, ret, err);
 
-	ret = 0;
+	/* Check our callback */
+	ret = hash_mapping_callbacks_sanity_check(h); EG(ret, err);
+	ret = h->hfunc_finalize(&(ctx->in_ctx), in_hash); EG(ret, err);
+	ret = h->hfunc_update(&(ctx->out_ctx), in_hash, h->digest_size); EG(ret, err);
+	ret = h->hfunc_finalize(&(ctx->out_ctx), output); EG(ret, err);
+	(*outlen) = h->digest_size;
+
 err:
-	/* Clear the hash contexts that could contain sensitive data */
-	local_memset(ctx, 0, sizeof(hmac_context));
-	/* Uninitialize the context  */
-	ctx->magic = 0;
-	if(ret){
+	if(ctx != NULL){
+		/* Clear the hash contexts that could contain sensitive data */
+		local_memset(ctx, 0, sizeof(hmac_context));
+		/* Uninitialize the context  */
+		ctx->magic = 0;
+	}
+	if(ret && (outlen != NULL)){
 		*outlen = 0;
 	}
 	return ret;
@@ -157,26 +134,17 @@ err:
 int hmac(const u8 *hmackey, u32 hmackey_len, hash_alg_type hash_type,
 	 const u8 *input, u32 ilen, u8 *output, u8 *outlen)
 {
-	int ret = -1;
+	int ret;
 	hmac_context ctx;
 
-	if(hmac_init(&ctx, hmackey, hmackey_len, hash_type)){
-		ret = -1;
-		goto err;
-	}
-	if(hmac_update(&ctx, input, ilen)){
-		ret = -1;
-		goto err;
-	}
-	if(hmac_finalize(&ctx, output, outlen)){
-		ret = -1;
-		goto err;
-	}
+	ret = hmac_init(&ctx, hmackey, hmackey_len, hash_type); EG(ret, err);
+	ret = hmac_update(&ctx, input, ilen); EG(ret, err);
+	ret = hmac_finalize(&ctx, output, outlen); EG(ret, err);
 
-	ret = 0;
 err:
 	/* Clean our context as it can contain sensitive data */
 	local_memset(&ctx, 0, sizeof(hmac_context));
+
 	return ret;
 }
 

@@ -9,8 +9,8 @@
 #include "hash_algs.h"
 
 #define HMAC_MAGIC ((word_t)(0x9849020187612083ULL))
-#define HMAC_CHECK_INITIALIZED(A) \
-        MUST_HAVE((((void *)(A)) != NULL) && ((A)->magic == HMAC_MAGIC) && ((A)->hash != NULL))
+#define HMAC_CHECK_INITIALIZED(A, ret, err) \
+        MUST_HAVE((((void *)(A)) != NULL) && ((A)->magic == HMAC_MAGIC) && ((A)->hash != NULL), ret, err)
 
 /* The HMAC structure is made of two hash contexts */
 typedef struct {
