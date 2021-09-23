@@ -78,8 +78,14 @@ static int export_private_key(FILE * file, const char *name,
 	u32 i;
 	size_t written;
 
-	priv_key_check_initialized(priv_key);
 	MUST_HAVE(file != NULL, ret, err);
+
+	ret = priv_key_check_initialized(priv_key);
+	if (ret) {
+		printf("Error checking private key\n");
+		ret = -1;
+		goto err;
+	}
 
 	/* Serialize the private key to a buffer */
 	ret = ec_structured_priv_key_export_to_buf(priv_key, priv_key_buf,
@@ -130,8 +136,13 @@ static int export_public_key(FILE * file, const char *name,
 	u32 i;
 	size_t written;
 
-	pub_key_check_initialized(pub_key);
 	MUST_HAVE(file != NULL, ret, err);
+	ret = pub_key_check_initialized(pub_key);
+	if (ret) {
+		printf("Error checking public key\n");
+		ret = -1;
+		goto err;
+	}
 
 	/* Serialize the public key to a buffer */
 	export_buf_size = EC_STRUCTURED_PUB_KEY_EXPORT_SIZE(pub_key);
@@ -586,9 +597,10 @@ static int sign_bin_file(const char *ec_name, const char *ec_sig_name,
 	u8 sig[EC_MAX_SIGLEN];
 	u8 buf[MAX_BUF_LEN];
 	u8 siglen;
-	FILE *in_file;
+	FILE *in_file = NULL;
 	ec_key_pair key_pair;
-	FILE *in_key_file;
+	FILE *in_key_file = NULL;
+	FILE *out_file = NULL;
 	const ec_str_params *ec_str_p;
 	ec_params params;
 	int ret, check;
@@ -610,6 +622,7 @@ static int sign_bin_file(const char *ec_name, const char *ec_sig_name,
 	if (string_to_params
 	    (ec_name, ec_sig_name, &sig_type, &ec_str_p, hash_algorithm,
 	     &hash_type)) {
+		ret = -1;
 		goto err;
 	}
 	/* Check if ancillary data will be used */
@@ -621,18 +634,19 @@ static int sign_bin_file(const char *ec_name, const char *ec_sig_name,
 	/* Import the private key from the file */
 	in_key_file = fopen(in_key_fname, "r");
 	if (in_key_file == NULL) {
+		ret = -1;
 		printf("Error: file %s cannot be opened\n", in_key_fname);
 		goto err;
 	}
 	priv_key_buf_len = (u8)fread(priv_key_buf, 1, sizeof(priv_key_buf),
 				     in_key_file);
-	fclose(in_key_file);
 	ret = ec_structured_key_pair_import_from_priv_key_buf(&key_pair,
 							      &params,
 							      priv_key_buf,
 							      priv_key_buf_len,
 							      sig_type);
 	if (ret) {
+		ret = -1;
 		printf("Error: error when importing key pair from %s\n",
 		       in_key_fname);
 		goto err;
@@ -640,11 +654,13 @@ static int sign_bin_file(const char *ec_name, const char *ec_sig_name,
 
 	ret = get_file_size(in_fname, &raw_data_len);
 	if (ret) {
+		ret = -1;
 		printf("Error: cannot retrieve file %s size\n", in_fname);
 		goto err;
 	}
 	ret = ec_get_sig_len(&params, sig_type, hash_type, &siglen);
 	if (ret) {
+		ret = -1;
 		printf("Error getting effective signature length from %s\n",
 		       (const char *)(ec_str_p->name->buf));
 		goto err;
@@ -658,6 +674,7 @@ static int sign_bin_file(const char *ec_name, const char *ec_sig_name,
 					    EC_STRUCTURED_SIG_EXPORT_SIZE(siglen));
 
 		if (ret) {
+			ret = -1;
 			printf("Error: error when generating metadata\n");
 			goto err;
 		}
@@ -669,6 +686,7 @@ static int sign_bin_file(const char *ec_name, const char *ec_sig_name,
 	 */
 	ret = ec_sign_init(&sig_ctx, &key_pair, sig_type, hash_type, (const u8*)adata, adata_len);
 	if (ret) {
+		ret = -1;
 		printf("Error: error when signing\n");
 		goto err;
 	}
@@ -677,6 +695,7 @@ static int sign_bin_file(const char *ec_name, const char *ec_sig_name,
 	if((hdr_type != NULL) && (version != NULL)){
 		ret = ec_sign_update(&sig_ctx, (const u8 *)&hdr, sizeof(metadata_hdr));
 		if (ret) {
+			ret = -1;
 			printf("Error: error when signing\n");
 			goto err;
 		}
@@ -688,6 +707,7 @@ static int sign_bin_file(const char *ec_name, const char *ec_sig_name,
 	 */
 	in_file = fopen(in_fname, "r");
 	if (in_file == NULL) {
+		ret = -1;
 		printf("Error: file %s cannot be opened\n", in_fname);
 		goto err;
 	}
@@ -721,9 +741,8 @@ static int sign_bin_file(const char *ec_name, const char *ec_sig_name,
 		}
 	}
 
-	fclose(in_file);
-
 	if (raw_data_len) {
+		ret = -1;
 		printf("Error: unable to read full file content\n");
 		goto err;
 	}
@@ -731,6 +750,7 @@ static int sign_bin_file(const char *ec_name, const char *ec_sig_name,
 	/* We can now complete signature generation */
 	ret = ec_sign_finalize(&sig_ctx, sig, siglen);
 	if (ret) {
+		ret = -1;
 		printf("Error: error when signing\n");
 		goto err;
 	}
@@ -744,6 +764,7 @@ static int sign_bin_file(const char *ec_name, const char *ec_sig_name,
 		ret = store_sig(in_fname, out_fname, sig, siglen, sig_type,
 				hash_type, params.curve_name, &hdr);
 		if (ret) {
+			ret = -1;
 			printf("Error: error when storing signature to %s\n",
 			       out_fname);
 			goto err;
@@ -751,27 +772,36 @@ static int sign_bin_file(const char *ec_name, const char *ec_sig_name,
 	}
 	else{
 		/* Store the raw binary signature in the output file */
-		FILE *out_file;
 		size_t written;
 
 		out_file = fopen(out_fname, "w");
 		if (out_file == NULL) {
+			ret = -1;
 			printf("Error: file %s cannot be opened\n", out_fname);
 			goto err;
 		}
 		written = fwrite(sig, 1, siglen, out_file);
-		fclose(out_file);
 		if (written != siglen) {
+			ret = -1;
 			printf("Error: error when writing to %s\n",
 			       out_fname);
 			goto err;
 		}
 	}
 
-	return 0;
+	ret = 0;
 
  err:
-	return -1;
+	if(in_file != NULL){
+		fclose(in_file);
+	}
+	if(in_key_file != NULL){
+		fclose(in_key_file);
+	}
+	if(out_file != NULL){
+		fclose(out_file);
+	}
+	return ret;
 }
 
 /* Dump metadata header */
@@ -779,7 +809,7 @@ static int dump_hdr_info(const metadata_hdr * hdr)
 {
 	/* Dump the header */
 	printf("Metadata header info:\n");
-	printf("    magic   = 0x%08lx\n", hdr->magic);
+	printf("    magic   = 0x%08" PRIx32 "\n", hdr->magic);
 	switch (hdr->type) {
 	case IMAGE_TYPE0:
 		printf("    type    = IMAGE_TYPE0\n");
@@ -794,12 +824,12 @@ static int dump_hdr_info(const metadata_hdr * hdr)
 		printf("    type    = IMAGE_TYPE3\n");
 		break;
 	default:
-		printf("    type %lu unknown!\n", hdr->type);
+		printf("    type %" PRIu32 " unknown!\n", hdr->type);
 		break;
 	}
-	printf("    version = 0x%08lx\n", hdr->version);
-	printf("    len	    = 0x%08lx\n", hdr->len);
-	printf("    siglen  = 0x%08lx\n", hdr->siglen);
+	printf("    version = 0x%08" PRIx32 "\n", hdr->version);
+	printf("    len	    = 0x%08" PRIx32 "\n", hdr->len);
+	printf("    siglen  = 0x%08" PRIx32 "\n", hdr->siglen);
 
 	return 0;
 }
@@ -828,22 +858,20 @@ static int verify_bin_file(const char *ec_name, const char *ec_sig_name,
 	u8 pub_key_buf_len;
 	size_t raw_data_len;
 	ec_pub_key pub_key;
-	FILE *in_key_file;
-	FILE *in_sig_file;
+	FILE *in_key_file = NULL;
+	FILE *in_sig_file = NULL;
 	ec_params params;
 	metadata_hdr hdr;
 	size_t exp_len;
-	FILE *in_file;
+	FILE *in_file = NULL;
 	int ret, eof, check;
 
 	MUST_HAVE(ec_name != NULL, ret, err);
 
 	/************************************/
 	/* Get parameters from pretty names */
-	if (string_to_params(ec_name, ec_sig_name, &sig_type, &ec_str_p,
-			     hash_algorithm, &hash_type)) {
-		goto err;
-	}
+	ret = string_to_params(ec_name, ec_sig_name, &sig_type, &ec_str_p,
+                             hash_algorithm, &hash_type); EG(ret, err);
 	/* Check if ancillary data will be used */
 	ret = check_ancillary_data(adata, sig_type, ec_sig_name, &check); EG(ret, err);
 	/* Import the parameters */
@@ -851,6 +879,7 @@ static int verify_bin_file(const char *ec_name, const char *ec_sig_name,
 
 	ret = ec_get_sig_len(&params, sig_type, hash_type, &siglen);
 	if (ret) {
+		ret = -1;
 		printf("Error getting effective signature length from %s\n",
 		       (const char *)(ec_str_p->name->buf));
 		goto err;
@@ -860,16 +889,17 @@ static int verify_bin_file(const char *ec_name, const char *ec_sig_name,
 	/* Import the public key from the file */
 	in_key_file = fopen(in_key_fname, "r");
 	if (in_key_file == NULL) {
+		ret = -1;
 		printf("Error: file %s cannot be opened\n", in_key_fname);
 		goto err;
 	}
 	pub_key_buf_len =(u8)fread(pub_key_buf, 1, sizeof(pub_key_buf),
 				   in_key_file);
-	fclose(in_key_file);
 	ret = ec_structured_pub_key_import_from_buf(&pub_key, &params,
 						    pub_key_buf,
 						    pub_key_buf_len, sig_type);
 	if (ret) {
+		ret = -1;
 		printf("Error: error when importing public key from %s\n",
 		       in_key_fname);
 		goto err;
@@ -878,6 +908,7 @@ static int verify_bin_file(const char *ec_name, const char *ec_sig_name,
 	/* Let's first get file size */
 	ret = get_file_size(in_fname, &raw_data_len);
 	if (ret) {
+		ret = -1;
 		printf("Error: cannot retrieve file %s size\n", in_fname);
 		goto err;
 	}
@@ -885,6 +916,7 @@ static int verify_bin_file(const char *ec_name, const char *ec_sig_name,
 	/* Open main file to verify ... */
 	in_file = fopen(in_fname, "r");
 	if (in_file == NULL) {
+		ret = -1;
 		printf("Error: file %s cannot be opened\n", in_fname);
 		goto err;
 	}
@@ -897,15 +929,16 @@ static int verify_bin_file(const char *ec_name, const char *ec_sig_name,
 		/* ... and first read metadata header */
 		read = fread(&hdr, 1, sizeof(hdr), in_file);
 		if (read != sizeof(hdr)) {
+			ret = -1;
 			printf("Error: unable to read metadata header "
 			       "from file\n");
-			fclose(in_file);
 			goto err;
 		}
 
 		/* Sanity checks on the header we get */
 		if (hdr.magic != HDR_MAGIC) {
-			printf("Error: got magic 0x%08lx instead of 0x%08x "
+			ret = -1;
+			printf("Error: got magic 0x%08" PRIx32 " instead of 0x%08x "
 			       "from metadata header\n", hdr.magic, HDR_MAGIC);
 			goto err;
 		}
@@ -914,14 +947,16 @@ static int verify_bin_file(const char *ec_name, const char *ec_sig_name,
 		MUST_HAVE(raw_data_len > (sizeof(hdr) + st_siglen), ret, err);
 		exp_len = raw_data_len - sizeof(hdr) - st_siglen;
 		if (hdr.len != exp_len) {
-			printf("Error: got raw size of %lu instead of %lu from "
+			ret = -1;
+			printf("Error: got raw size of %" PRIu32 " instead of %lu from "
 			       "metadata header\n", hdr.len,
 			       (unsigned long)exp_len);
 			goto err;
 		}
 
 		if (hdr.siglen != st_siglen) {
-			printf("Error: got siglen %lu instead of %d from "
+			ret = -1;
+			printf("Error: got siglen %" PRIu32 " instead of %d from "
 			       "metadata header\n", hdr.siglen, siglen);
 			goto err;
 		}
@@ -934,20 +969,22 @@ static int verify_bin_file(const char *ec_name, const char *ec_sig_name,
 		 * Before doing that, let's first check size is large enough.
 		 */
 		if (raw_data_len < (sizeof(hdr) + st_siglen)) {
+			ret = -1;
 			goto err;
 		}
 
 		ret = fseek(in_file, (long)(raw_data_len - st_siglen),
 			    SEEK_SET);
 		if (ret) {
+			ret = -1;
 			printf("Error: file %s cannot be seeked\n", in_fname);
 			goto err;
 		}
 		read = fread(st_sig, 1, st_siglen, in_file);
 		if (read != st_siglen) {
+			ret = -1;
 			printf("Error: unable to read structure sig from "
 			       "file\n");
-			fclose(in_file);
 			goto err;
 		}
 		/* Import the signature from the structured signature buffer */
@@ -957,16 +994,19 @@ static int verify_bin_file(const char *ec_name, const char *ec_sig_name,
 							&stored_hash_type,
 							stored_curve_name);
 		if (ret) {
+			ret = -1;
 			printf("Error: error when importing signature "
 			       "from %s\n", in_fname);
 			goto err;
 		}
 		if (stored_sig_type != sig_type) {
+			ret = -1;
 			printf("Error: signature type imported from signature "
 			       "mismatches with %s\n", ec_sig_name);
 			goto err;
 		}
 		if (stored_hash_type != hash_type) {
+			ret = -1;
 			printf("Error: hash algorithm type imported from "
 			       "signature mismatches with %s\n",
 			       hash_algorithm);
@@ -974,6 +1014,7 @@ static int verify_bin_file(const char *ec_name, const char *ec_sig_name,
 		}
 		if (!are_str_equal((char *)stored_curve_name,
 				   (char *)params.curve_name)) {
+			ret = -1;
 			printf("Error: curve type '%s' imported from signature "
 			       "mismatches with '%s'\n", stored_curve_name,
 			       params.curve_name);
@@ -984,6 +1025,7 @@ static int verify_bin_file(const char *ec_name, const char *ec_sig_name,
 		 * Get back to the beginning of file, at the beginning of header
 		 */
 		if (fseek(in_file, 0, SEEK_SET)) {
+			ret = -1;
 			printf("Error: file %s cannot be seeked\n", in_fname);
 			goto err;
 		}
@@ -992,12 +1034,14 @@ static int verify_bin_file(const char *ec_name, const char *ec_sig_name,
 		/* Get the signature size */
 		ret = get_file_size(in_sig_fname, &to_read);
 		if (ret) {
+			ret = -1;
 			printf("Error: cannot retrieve file %s size\n",
 			       in_sig_fname);
 			goto err;
 		}
 		if((to_read > EC_MAX_SIGLEN) || (to_read > 255)){
 			/* This is not an expected size, get out */
+			ret = -1;
 			printf("Error: size %d of signature in %s is > max "
 			       "signature size %d or > 255",
 			       (int)to_read, in_sig_fname, EC_MAX_SIGLEN);
@@ -1007,13 +1051,14 @@ static int verify_bin_file(const char *ec_name, const char *ec_sig_name,
 		/* Read the raw signature from the signature file */
 		in_sig_file = fopen(in_sig_fname, "r");
 		if (in_sig_file == NULL) {
+			ret = -1;
 			printf("Error: file %s cannot be opened\n",
 			       in_sig_fname);
 			goto err;
 		}
 		read = fread(&sig, 1, siglen, in_sig_file);
-		fclose(in_sig_file);
 		if (read != siglen) {
+			ret = -1;
 			printf("Error: unable to read signature from %s\n",
 			       in_sig_fname);
 			goto err;
@@ -1027,6 +1072,7 @@ static int verify_bin_file(const char *ec_name, const char *ec_sig_name,
 	ret = ec_verify_init(&verif_ctx, &pub_key, sig, siglen,
 			     sig_type, hash_type, (const u8*)adata, adata_len);
 	if (ret) {
+		ret = -1;
 		goto err;
 	}
 
@@ -1051,28 +1097,34 @@ static int verify_bin_file(const char *ec_name, const char *ec_sig_name,
 
 		exp_len -= read;
 
-		ret = ec_verify_update(&verif_ctx, buf, (u32)read);
-		if (ret) {
-			break;
-		}
+		ret = ec_verify_update(&verif_ctx, buf, (u32)read); EG(ret, err);
 	}
 
-	fclose(in_file);
-
 	if (exp_len) {
+		ret = -1;
 		printf("Error: unable to read full file content\n");
 		goto err;
 	}
 
 	ret = ec_verify_finalize(&verif_ctx);
 	if (ret) {
+		ret = -1;
 		goto err;
 	}
 
-	return ret;
+	ret = 0;
 
  err:
-	return -1;
+	if(in_file != NULL){
+		fclose(in_file);
+	}
+	if(in_key_file != NULL){
+		fclose(in_key_file);
+	}
+	if(in_sig_file != NULL){
+		fclose(in_sig_file);
+	}
+	return ret;
 }
 
 /* Compute 'scalar * Point' on the provided curve and prints
@@ -1088,8 +1140,8 @@ static int ec_scalar_mult(const char *ec_name,
 	int ret;
 	u8 buf[MAX_BUF_LEN];
 	size_t buf_len;
-	FILE *in_file;
-	FILE *out_file;
+	FILE *in_file = NULL;
+	FILE *out_file = NULL;
 	u16 coord_len;
 
 	/* Scalar (natural number) to import */
@@ -1104,10 +1156,7 @@ static int ec_scalar_mult(const char *ec_name,
 
 	/* Get parameters from pretty names */
 	ret = string_to_params(ec_name, NULL, NULL, &ec_str_p,
-			       NULL, NULL);
-	if (ret) {
-		goto err;
-	}
+			       NULL, NULL); EG(ret, err);
 
 	/* Import the parameters */
 	ret = import_params(&curve_params, ec_str_p); EG(ret, err);
@@ -1116,25 +1165,28 @@ static int ec_scalar_mult(const char *ec_name,
 	/* Let's first get file size */
 	ret = get_file_size(scalar_file, &buf_len);
 	if (ret) {
+		ret = -1;
 		printf("Error: cannot retrieve file %s size\n", scalar_file);
 		goto err;
 	}
 	if(buf_len > sizeof(buf)){
+		ret = -1;
 		printf("Error: file %s content too large for our local buffers\n", scalar_file);
 		goto err;
 	}
 	/* Open main file to verify ... */
 	in_file = fopen(scalar_file, "r");
 	if (in_file == NULL) {
+		ret = -1;
 		printf("Error: file %s cannot be opened\n", scalar_file);
 		goto err;
 	}
 	/* Read the content of the file */
 	if(fread(buf, 1, buf_len, in_file) != buf_len){
+		ret = -1;
 		printf("Error: error when reading in %s\n", scalar_file);
 		goto err;
 	}
-	fclose(in_file);
 	/* Import the scalar */
 	ret = nn_init_from_buf(&d, buf, (u16)buf_len); EG(ret, err);
 
@@ -1142,28 +1194,32 @@ static int ec_scalar_mult(const char *ec_name,
 	/* Let's first get file size */
 	ret = get_file_size(point_file, &buf_len);
 	if (ret) {
+		ret = -1;
 		printf("Error: cannot retrieve file %s size\n", point_file);
 		goto err;
 	}
 	if(buf_len > sizeof(buf)){
+		ret = -1;
 		printf("Error: file %s content too large for our local buffers\n", point_file);
 		goto err;
 	}
 	/* Open main file to verify ... */
 	in_file = fopen(point_file, "r");
 	if (in_file == NULL) {
+		ret = -1;
 		printf("Error: file %s cannot be opened\n", point_file);
 		goto err;
 	}
 	/* Read the content of the file */
 	if(fread(buf, 1, buf_len, in_file) != buf_len){
-		fclose(in_file);
+		ret = -1;
 		printf("Error: error when reading in %s\n", point_file);
 		goto err;
 	}
 	fclose(in_file);
 	/* Import the point */
 	if(prj_pt_import_from_buf(&Q, buf, (u16)buf_len, &(curve_params.ec_curve))){
+		ret = -1;
 		printf("Error: error when importing the projective point from %s\n", point_file);
 		goto err;
 	}
@@ -1182,12 +1238,14 @@ static int ec_scalar_mult(const char *ec_name,
 	/* Export the projective point in the local buffer */
 	coord_len = 3 * BYTECEIL((Q.crv)->a.ctx->p_bitlen);
 	if(coord_len > sizeof(buf)){
+		ret = -1;
 		nn_uninit(&d);
 		prj_pt_uninit(&Q);
 		printf("Error: error when exporting the point\n");
 		goto err;
 	}
 	if(prj_pt_export_to_buf(&Q, buf, coord_len)){
+		ret = -1;
 		nn_uninit(&d);
 		prj_pt_uninit(&Q);
 		printf("Error: error when exporting the point\n");
@@ -1196,6 +1254,7 @@ static int ec_scalar_mult(const char *ec_name,
 	/* Now save the coordinates in the output file */
 	out_file = fopen(outfile_name, "w");
 	if (out_file == NULL) {
+		ret = -1;
 		nn_uninit(&d);
 		prj_pt_uninit(&Q);
 		printf("Error: file %s cannot be opened\n", outfile_name);
@@ -1204,22 +1263,27 @@ static int ec_scalar_mult(const char *ec_name,
 
 	/* Write in the file */
 	if(fwrite(buf, 1, coord_len, out_file) != coord_len){
-		fclose(out_file);
+		ret = -1;
 		nn_uninit(&d);
 		prj_pt_uninit(&Q);
 		printf("Error: error when writing to %s\n", outfile_name);
 		goto err;
 	}
 
-	fclose(out_file);
 	/* Uninit local variables */
 	nn_uninit(&d);
 	prj_pt_uninit(&Q);
 
-	return 0;
+	ret = 0;
 
 err:
-	return -1;
+	if(in_file != NULL){
+		fclose(in_file);
+	}
+	if(out_file != NULL){
+		fclose(out_file);
+	}
+	return ret;
 }
 
 
@@ -1268,14 +1332,6 @@ static void print_help(const char *prog_name)
 
 int main(int argc, char *argv[])
 {
-	/* Some mockup code to be able to compile in CRYPTOFUZZ mode although
-	 * setjmp/longjmp are used.
-	 */
-#if defined(USE_CRYPTOFUZZ) /* CRYPTOFUZZ mode */
-	/* Save our context */
-	cryptofuzz_save()
-#endif
-
 	if (argc < 2) {
 		print_help(argv[0]);
 		return -1;

@@ -151,7 +151,9 @@ static const ec_test_case ecdsa_secp224r1_sha3_224_test_case = {
 	.sig_type = ECDSA,
 	.exp_sig = ecdsa_secp224r1_sha3_224_test_vectors_expected_sig,
 	.exp_siglen =
-		sizeof(ecdsa_secp224r1_sha3_224_test_vectors_expected_sig)
+		sizeof(ecdsa_secp224r1_sha3_224_test_vectors_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 #endif /* WITH_CURVE_SECP224R1 */
 #endif /* WITH_HASH_SHA3_224 */
@@ -217,7 +219,9 @@ static const ec_test_case ecdsa_secp256r1_sha3_256_test_case = {
 	.sig_type = ECDSA,
 	.exp_sig = ecdsa_secp256r1_sha3_256_test_vectors_expected_sig,
 	.exp_siglen =
-		sizeof(ecdsa_secp256r1_sha3_256_test_vectors_expected_sig)
+		sizeof(ecdsa_secp256r1_sha3_256_test_vectors_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 #endif /* WITH_CURVE_SECP256R1 */
 #endif /* WITH_HASH_SHA3_256 */
@@ -283,7 +287,9 @@ static const ec_test_case ecdsa_secp256r1_sha3_512_test_case = {
 	.sig_type = ECDSA,
 	.exp_sig = ecdsa_secp256r1_sha3_512_test_vectors_expected_sig,
 	.exp_siglen =
-		sizeof(ecdsa_secp256r1_sha3_512_test_vectors_expected_sig)
+		sizeof(ecdsa_secp256r1_sha3_512_test_vectors_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 #endif /* WITH_CURVE_SECP256R1 */
 #endif /* WITH_HASH_SHA3_512 */
@@ -357,7 +363,9 @@ static const ec_test_case ecdsa_secp384r1_sha3_384_test_case = {
 	.sig_type = ECDSA,
 	.exp_sig = ecdsa_secp384r1_sha3_384_test_vectors_expected_sig,
 	.exp_siglen =
-		sizeof(ecdsa_secp384r1_sha3_384_test_vectors_expected_sig)
+		sizeof(ecdsa_secp384r1_sha3_384_test_vectors_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 #endif /* WITH_CURVE_SECP384R1 */
 #endif /* WITH_HASH_SHA3_384 */
@@ -442,7 +450,9 @@ static const ec_test_case ecdsa_secp521r1_sha3_512_test_case = {
 	.sig_type = ECDSA,
 	.exp_sig = ecdsa_secp521r1_sha3_512_test_vectors_expected_sig,
 	.exp_siglen =
-		sizeof(ecdsa_secp521r1_sha3_512_test_vectors_expected_sig)
+		sizeof(ecdsa_secp521r1_sha3_512_test_vectors_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 #endif /* WITH_CURVE_SECP521R1 */
 #endif /* WITH_HASH_SHA3_512 */
@@ -499,7 +509,9 @@ static const ec_test_case ecdsa_secp192r1_test_case = {
 	.msglen = 3,
 	.sig_type = ECDSA,
 	.exp_sig = ecdsa_secp192r1_test_vectors_expected_sig,
-	.exp_siglen = sizeof(ecdsa_secp192r1_test_vectors_expected_sig)
+	.exp_siglen = sizeof(ecdsa_secp192r1_test_vectors_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 #endif /* WITH_CURVE_SECP192R1 */
 #endif /* WITH_HASH_SHA224 */
@@ -563,7 +575,9 @@ static const ec_test_case ecdsa_secp224r1_test_case = {
 	.msglen = 3,
 	.sig_type = ECDSA,
 	.exp_sig = ecdsa_secp224r1_test_vectors_expected_sig,
-	.exp_siglen = sizeof(ecdsa_secp224r1_test_vectors_expected_sig)
+	.exp_siglen = sizeof(ecdsa_secp224r1_test_vectors_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 #endif /* WITH_CURVE_SECP224R1 */
 #endif /* WITH_HASH_SHA224 */
@@ -627,7 +641,9 @@ static const ec_test_case ecdsa_secp256r1_test_case = {
 	.msglen = 3,
 	.sig_type = ECDSA,
 	.exp_sig = ecdsa_secp256r1_test_vectors_expected_sig,
-	.exp_siglen = sizeof(ecdsa_secp256r1_test_vectors_expected_sig)
+	.exp_siglen = sizeof(ecdsa_secp256r1_test_vectors_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 #endif /* WITH_CURVE_SECP256R1 */
 #endif /* WITH_HASH_SHA256 */
@@ -692,7 +708,9 @@ static const ec_test_case ecdsa_secp256r1_sha512_test_case = {
 	.msglen = 3,
 	.sig_type = ECDSA,
 	.exp_sig = ecdsa_secp256r1_sha512_test_vectors_expected_sig,
-	.exp_siglen = sizeof(ecdsa_secp256r1_sha512_test_vectors_expected_sig)
+	.exp_siglen = sizeof(ecdsa_secp256r1_sha512_test_vectors_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 #endif /* WITH_CURVE_SECP256R1 */
 #endif /* WITH_HASH_SHA512 */
@@ -764,7 +782,9 @@ static const ec_test_case ecdsa_secp384r1_test_case = {
 	.msglen = 3,
 	.sig_type = ECDSA,
 	.exp_sig = ecdsa_secp384r1_test_vectors_expected_sig,
-	.exp_siglen = sizeof(ecdsa_secp384r1_test_vectors_expected_sig)
+	.exp_siglen = sizeof(ecdsa_secp384r1_test_vectors_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 #endif /* WITH_CURVE_SECP384R1 */
 #endif /* WITH_HASH_SHA384 */
@@ -847,7 +867,9 @@ static const ec_test_case ecdsa_secp521r1_test_case = {
 	.msglen = 3,
 	.sig_type = ECDSA,
 	.exp_sig = ecdsa_secp521r1_test_vectors_expected_sig,
-	.exp_siglen = sizeof(ecdsa_secp521r1_test_vectors_expected_sig)
+	.exp_siglen = sizeof(ecdsa_secp521r1_test_vectors_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 #endif /* WITH_CURVE_SECP521R1 */
 #endif /* WITH_HASH_SHA512 */
@@ -910,7 +932,9 @@ static const ec_test_case ecdsa_brainpoolp256r1_test_case = {
 	.msglen = 3,
 	.sig_type = ECDSA,
 	.exp_sig = ecdsa_brainpoolp256r1_test_vectors_expected_sig,
-	.exp_siglen = sizeof(ecdsa_brainpoolp256r1_test_vectors_expected_sig)
+	.exp_siglen = sizeof(ecdsa_brainpoolp256r1_test_vectors_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 
 #endif /* WITH_CURVE_BRAINPOOLP256R1 */
@@ -983,7 +1007,9 @@ static const ec_test_case ecdsa_brainpoolp384r1_test_case = {
 	.msglen = 3,
 	.sig_type = ECDSA,
 	.exp_sig = ecdsa_brainpoolp384r1_test_vectors_expected_sig,
-	.exp_siglen = sizeof(ecdsa_brainpoolp384r1_test_vectors_expected_sig)
+	.exp_siglen = sizeof(ecdsa_brainpoolp384r1_test_vectors_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 
 #endif /* WITH_CURVE_BRAINPOOLP384R1 */
@@ -1063,7 +1089,9 @@ static const ec_test_case ecdsa_brainpoolp512r1_test_case = {
 	.msglen = 3,
 	.sig_type = ECDSA,
 	.exp_sig = ecdsa_brainpoolp512r1_test_vectors_expected_sig,
-	.exp_siglen = sizeof(ecdsa_brainpoolp512r1_test_vectors_expected_sig)
+	.exp_siglen = sizeof(ecdsa_brainpoolp512r1_test_vectors_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 #endif /* WITH_CURVE_BRAINPOOLP512R1 */
 #endif /* WITH_HASH_SHA512 */
@@ -1126,7 +1154,9 @@ static const ec_test_case ecdsa_frp256v1_test_case = {
 	.msglen = 3,
 	.sig_type = ECDSA,
 	.exp_sig = ecdsa_frp256v1_test_vectors_expected_sig,
-	.exp_siglen = sizeof(ecdsa_frp256v1_test_vectors_expected_sig)
+	.exp_siglen = sizeof(ecdsa_frp256v1_test_vectors_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 #endif /* WITH_CURVE_FRP256V1 */
 #endif /* WITH_HASH_SHA256 */
@@ -1192,7 +1222,9 @@ static const ec_test_case eckcdsa_secp224r1_test_case = {
 	.msglen = 64,
 	.sig_type = ECKCDSA,
 	.exp_sig = eckcdsa_secp224r1_test_vectors_expected_sig,
-	.exp_siglen = sizeof(eckcdsa_secp224r1_test_vectors_expected_sig)
+	.exp_siglen = sizeof(eckcdsa_secp224r1_test_vectors_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 #endif /* WITH_CURVE_SECP224R1 */
 #endif /* WITH_HASH_SHA224 */
@@ -1255,7 +1287,9 @@ static const ec_test_case eckcdsa_secp224r1_sha256_test_case = {
 	.sig_type = ECKCDSA,
 	.exp_sig = eckcdsa_secp224r1_sha256_test_vectors_expected_sig,
 	.exp_siglen =
-		sizeof(eckcdsa_secp224r1_sha256_test_vectors_expected_sig)
+		sizeof(eckcdsa_secp224r1_sha256_test_vectors_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 #endif /* WITH_CURVE_SECP224R1 */
 #endif /* WITH_HASH_SHA256 */
@@ -1316,7 +1350,9 @@ static const ec_test_case eckcdsa_secp256r1_test_case = {
 	.msglen = 64,
 	.sig_type = ECKCDSA,
 	.exp_sig = eckcdsa_secp256r1_test_vectors_expected_sig,
-	.exp_siglen = sizeof(eckcdsa_secp256r1_test_vectors_expected_sig)
+	.exp_siglen = sizeof(eckcdsa_secp256r1_test_vectors_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 #endif /* WITH_CURVE_SECP256R1 */
 #endif /* WITH_HASH_SHA256 */
@@ -1385,7 +1421,9 @@ static const ec_test_case eckcdsa_secp384r1_test_case = {
 	.msglen = 64,
 	.sig_type = ECKCDSA,
 	.exp_sig = eckcdsa_secp384r1_test_vectors_expected_sig,
-	.exp_siglen = sizeof(eckcdsa_secp384r1_test_vectors_expected_sig)
+	.exp_siglen = sizeof(eckcdsa_secp384r1_test_vectors_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 #endif /* WITH_CURVE_SECP384R1 */
 #endif /* WITH_HASH_SHA384 */
@@ -1452,7 +1490,9 @@ static const ec_test_case eckcdsa_secp256r1_sha512_test_case = {
 	.sig_type = ECKCDSA,
 	.exp_sig = eckcdsa_secp256r1_sha512_test_vectors_expected_sig,
 	.exp_siglen =
-		sizeof(eckcdsa_secp256r1_sha512_test_vectors_expected_sig)
+		sizeof(eckcdsa_secp256r1_sha512_test_vectors_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 #endif /* WITH_CURVE_SECP256R1 */
 #endif /* WITH_HASH_SHA512 */
@@ -1531,7 +1571,9 @@ static const ec_test_case eckcdsa_secp521r1_test_case = {
 	.msglen = 64,
 	.sig_type = ECKCDSA,
 	.exp_sig = eckcdsa_secp521r1_test_vectors_expected_sig,
-	.exp_siglen = sizeof(eckcdsa_secp521r1_test_vectors_expected_sig)
+	.exp_siglen = sizeof(eckcdsa_secp521r1_test_vectors_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 #endif /* WITH_CURVE_SECP521R1 */
 #endif /* WITH_HASH_SHA512 */
@@ -1592,7 +1634,9 @@ static const ec_test_case eckcdsa_brainpoolp256r1_test_case = {
 	.msglen = 15,
 	.sig_type = ECKCDSA,
 	.exp_sig = eckcdsa_brainpoolp256r1_test_vectors_expected_sig,
-	.exp_siglen = sizeof(eckcdsa_brainpoolp256r1_test_vectors_expected_sig)
+	.exp_siglen = sizeof(eckcdsa_brainpoolp256r1_test_vectors_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 #endif /* WITH_CURVE_BRAINPOOLP256R1 */
 #endif /* WITH_HASH_SHA256 */
@@ -1661,7 +1705,9 @@ static const ec_test_case eckcdsa_brainpoolp384r1_test_case = {
 	.msglen = 15,
 	.sig_type = ECKCDSA,
 	.exp_sig = eckcdsa_brainpoolp384r1_test_vectors_expected_sig,
-	.exp_siglen = sizeof(eckcdsa_brainpoolp384r1_test_vectors_expected_sig)
+	.exp_siglen = sizeof(eckcdsa_brainpoolp384r1_test_vectors_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 #endif /* WITH_CURVE_BRAINPOOLP384R1 */
 #endif /* WITH_HASH_SHA384 */
@@ -1738,7 +1784,9 @@ static const ec_test_case eckcdsa_brainpoolp512r1_test_case = {
 	.msglen = 15,
 	.sig_type = ECKCDSA,
 	.exp_sig = eckcdsa_brainpoolp512r1_test_vectors_expected_sig,
-	.exp_siglen = sizeof(eckcdsa_brainpoolp512r1_test_vectors_expected_sig)
+	.exp_siglen = sizeof(eckcdsa_brainpoolp512r1_test_vectors_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 #endif /* WITH_CURVE_BRAINPOOLP512R1 */
 #endif /* WITH_HASH_SHA512 */
@@ -1798,7 +1846,9 @@ static const ec_test_case eckcdsa_frp256v1_test_case = {
 	.msglen = 3,
 	.sig_type = ECKCDSA,
 	.exp_sig = eckcdsa_frp25v1_test_vectors_expected_sig,
-	.exp_siglen = sizeof(eckcdsa_frp25v1_test_vectors_expected_sig)
+	.exp_siglen = sizeof(eckcdsa_frp25v1_test_vectors_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 #endif /* WITH_CURVE_FRP256V1 */
 #endif /* WITH_HASH_SHA256 */
@@ -1864,7 +1914,9 @@ static const ec_test_case ecsdsa_secp224r1_test_case = {
 	.msglen = 3,
 	.sig_type = ECSDSA,
 	.exp_sig = ecsdsa_secp224r1_test_vectors_expected_sig,
-	.exp_siglen = sizeof(ecsdsa_secp224r1_test_vectors_expected_sig)
+	.exp_siglen = sizeof(ecsdsa_secp224r1_test_vectors_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 #endif /* WITH_CURVE_SECP224R1 */
 #endif /* WITH_HASH_SHA224 */
@@ -1924,7 +1976,9 @@ static const ec_test_case ecsdsa_secp256r1_test_case = {
 	.msglen = 3,
 	.sig_type = ECSDSA,
 	.exp_sig = ecsdsa_secp256r1_test_vectors_expected_sig,
-	.exp_siglen = sizeof(ecsdsa_secp256r1_test_vectors_expected_sig)
+	.exp_siglen = sizeof(ecsdsa_secp256r1_test_vectors_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 #endif /* WITH_CURVE_SECP256R1 */
 #endif /* WITH_HASH_SHA256 */
@@ -1992,7 +2046,9 @@ static const ec_test_case ecsdsa_secp384r1_test_case = {
 	.msglen = 3,
 	.sig_type = ECSDSA,
 	.exp_sig = ecsdsa_secp384r1_test_vectors_expected_sig,
-	.exp_siglen = sizeof(ecsdsa_secp384r1_test_vectors_expected_sig)
+	.exp_siglen = sizeof(ecsdsa_secp384r1_test_vectors_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 #endif /* WITH_CURVE_SECP384R1 */
 #endif /* WITH_HASH_SHA384 */
@@ -2075,7 +2131,9 @@ static const ec_test_case ecsdsa_secp521r1_test_case = {
 	.msglen = 3,
 	.sig_type = ECSDSA,
 	.exp_sig = ecsdsa_secp521r1_test_vectors_expected_sig,
-	.exp_siglen = sizeof(ecsdsa_secp521r1_test_vectors_expected_sig)
+	.exp_siglen = sizeof(ecsdsa_secp521r1_test_vectors_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 #endif /* WITH_CURVE_SECP521R1 */
 #endif /* WITH_HASH_SHA512 */
@@ -2138,7 +2196,9 @@ static const ec_test_case ecsdsa_brainpoolp256r1_test_case = {
 	.msglen = 3,
 	.sig_type = ECSDSA,
 	.exp_sig = ecsdsa_brainpoolp256r1_test_vectors_expected_sig,
-	.exp_siglen = sizeof(ecsdsa_brainpoolp256r1_test_vectors_expected_sig)
+	.exp_siglen = sizeof(ecsdsa_brainpoolp256r1_test_vectors_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 
 #endif /* WITH_CURVE_BRAINPOOLP256R1 */
@@ -2211,7 +2271,9 @@ static const ec_test_case ecsdsa_brainpoolp384r1_test_case = {
 	.msglen = 3,
 	.sig_type = ECSDSA,
 	.exp_sig = ecsdsa_brainpoolp384r1_test_vectors_expected_sig,
-	.exp_siglen = sizeof(ecsdsa_brainpoolp384r1_test_vectors_expected_sig)
+	.exp_siglen = sizeof(ecsdsa_brainpoolp384r1_test_vectors_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 
 #endif /* WITH_CURVE_BRAINPOOLP384R1 */
@@ -2292,7 +2354,9 @@ static const ec_test_case ecsdsa_brainpoolp512r1_test_case = {
 	.msglen = 3,
 	.sig_type = ECSDSA,
 	.exp_sig = ecsdsa_brainpoolp512r1_test_vectors_expected_sig,
-	.exp_siglen = sizeof(ecsdsa_brainpoolp512r1_test_vectors_expected_sig)
+	.exp_siglen = sizeof(ecsdsa_brainpoolp512r1_test_vectors_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 #endif /* WITH_CURVE_BRAINPOOLP512R1 */
 #endif /* WITH_HASH_SHA512 */
@@ -2356,7 +2420,9 @@ static const ec_test_case ecsdsa_frp256v1_test_case = {
 	.msglen = 3,
 	.sig_type = ECSDSA,
 	.exp_sig = ecsdsa_frp256v1_test_vectors_expected_sig,
-	.exp_siglen = sizeof(ecsdsa_frp256v1_test_vectors_expected_sig)
+	.exp_siglen = sizeof(ecsdsa_frp256v1_test_vectors_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 #endif /* WITH_CURVE_FRP256V1 */
 #endif /* WITH_HASH_SHA256 */
@@ -2422,7 +2488,9 @@ static const ec_test_case ecosdsa_secp224r1_test_case = {
 	.msglen = 3,
 	.sig_type = ECOSDSA,
 	.exp_sig = ecosdsa_secp224r1_test_vectors_expected_sig,
-	.exp_siglen = sizeof(ecosdsa_secp224r1_test_vectors_expected_sig)
+	.exp_siglen = sizeof(ecosdsa_secp224r1_test_vectors_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 #endif /* WITH_CURVE_SECP224R1 */
 #endif /* WITH_HASH_SHA224 */
@@ -2482,7 +2550,9 @@ static const ec_test_case ecosdsa_secp256r1_test_case = {
 	.msglen = 3,
 	.sig_type = ECOSDSA,
 	.exp_sig = ecosdsa_secp256r1_test_vectors_expected_sig,
-	.exp_siglen = sizeof(ecosdsa_secp256r1_test_vectors_expected_sig)
+	.exp_siglen = sizeof(ecosdsa_secp256r1_test_vectors_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 #endif /* WITH_CURVE_SECP256R1 */
 #endif /* WITH_HASH_SHA256 */
@@ -2551,7 +2621,9 @@ static const ec_test_case ecosdsa_secp384r1_test_case = {
 	.msglen = 3,
 	.sig_type = ECOSDSA,
 	.exp_sig = ecosdsa_secp384r1_test_vectors_expected_sig,
-	.exp_siglen = sizeof(ecosdsa_secp384r1_test_vectors_expected_sig)
+	.exp_siglen = sizeof(ecosdsa_secp384r1_test_vectors_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 #endif /* WITH_CURVE_SECP384R1 */
 #endif /* WITH_HASH_SHA384 */
@@ -2635,7 +2707,9 @@ static const ec_test_case ecosdsa_secp521r1_test_case = {
 	.msglen = 3,
 	.sig_type = ECOSDSA,
 	.exp_sig = ecosdsa_secp521r1_test_vectors_expected_sig,
-	.exp_siglen = sizeof(ecosdsa_secp521r1_test_vectors_expected_sig)
+	.exp_siglen = sizeof(ecosdsa_secp521r1_test_vectors_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 #endif /* WITH_CURVE_SECP521R1 */
 #endif /* WITH_HASH_SHA512 */
@@ -2699,7 +2773,9 @@ static const ec_test_case ecosdsa_brainpoolp256r1_test_case = {
 	.msglen = 3,
 	.sig_type = ECOSDSA,
 	.exp_sig = ecosdsa_brainpoolp256r1_test_vectors_expected_sig,
-	.exp_siglen = sizeof(ecosdsa_brainpoolp256r1_test_vectors_expected_sig)
+	.exp_siglen = sizeof(ecosdsa_brainpoolp256r1_test_vectors_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 
 #endif /* WITH_CURVE_BRAINPOOLP256R1 */
@@ -2772,7 +2848,9 @@ static const ec_test_case ecosdsa_brainpoolp384r1_test_case = {
 	.msglen = 3,
 	.sig_type = ECOSDSA,
 	.exp_sig = ecosdsa_brainpoolp384r1_test_vectors_expected_sig,
-	.exp_siglen = sizeof(ecosdsa_brainpoolp384r1_test_vectors_expected_sig)
+	.exp_siglen = sizeof(ecosdsa_brainpoolp384r1_test_vectors_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 
 #endif /* WITH_CURVE_BRAINPOOLP384R1 */
@@ -2853,7 +2931,9 @@ static const ec_test_case ecosdsa_brainpoolp512r1_test_case = {
 	.msglen = 3,
 	.sig_type = ECOSDSA,
 	.exp_sig = ecosdsa_brainpoolp512r1_test_vectors_expected_sig,
-	.exp_siglen = sizeof(ecosdsa_brainpoolp512r1_test_vectors_expected_sig)
+	.exp_siglen = sizeof(ecosdsa_brainpoolp512r1_test_vectors_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 #endif /* WITH_CURVE_BRAINPOOLP512R1 */
 #endif /* WITH_HASH_SHA512 */
@@ -2917,7 +2997,9 @@ static const ec_test_case ecosdsa_frp256v1_test_case = {
 	.msglen = 3,
 	.sig_type = ECOSDSA,
 	.exp_sig = ecosdsa_frp256v1_test_vectors_expected_sig,
-	.exp_siglen = sizeof(ecosdsa_frp256v1_test_vectors_expected_sig)
+	.exp_siglen = sizeof(ecosdsa_frp256v1_test_vectors_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 #endif /* WITH_CURVE_FRP256V1 */
 #endif /* WITH_HASH_SHA256 */
@@ -2987,7 +3069,9 @@ static const ec_test_case ecfsdsa_secp224r1_test_case = {
 	.msglen = 3,
 	.sig_type = ECFSDSA,
 	.exp_sig = ecfsdsa_secp224r1_test_vectors_expected_sig,
-	.exp_siglen = sizeof(ecfsdsa_secp224r1_test_vectors_expected_sig)
+	.exp_siglen = sizeof(ecfsdsa_secp224r1_test_vectors_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 #endif /* WITH_CURVE_SECP224R1 */
 #endif /* WITH_HASH_SHA224 */
@@ -3051,7 +3135,9 @@ static const ec_test_case ecfsdsa_secp256r1_test_case = {
 	.msglen = 3,
 	.sig_type = ECFSDSA,
 	.exp_sig = ecfsdsa_secp256r1_test_vectors_expected_sig,
-	.exp_siglen = sizeof(ecfsdsa_secp256r1_test_vectors_expected_sig)
+	.exp_siglen = sizeof(ecfsdsa_secp256r1_test_vectors_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 #endif /* WITH_CURVE_SECP256R1 */
 #endif /* WITH_HASH_SHA256 */
@@ -3126,7 +3212,9 @@ static const ec_test_case ecfsdsa_secp384r1_test_case = {
 	.msglen = 3,
 	.sig_type = ECFSDSA,
 	.exp_sig = ecfsdsa_secp384r1_test_vectors_expected_sig,
-	.exp_siglen = sizeof(ecfsdsa_secp384r1_test_vectors_expected_sig)
+	.exp_siglen = sizeof(ecfsdsa_secp384r1_test_vectors_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 #endif /* WITH_CURVE_SECP384R1 */
 #endif /* WITH_HASH_SHA384 */
@@ -3219,7 +3307,9 @@ static const ec_test_case ecfsdsa_secp521r1_test_case = {
 	.msglen = 3,
 	.sig_type = ECFSDSA,
 	.exp_sig = ecfsdsa_secp521r1_test_vectors_expected_sig,
-	.exp_siglen = sizeof(ecfsdsa_secp521r1_test_vectors_expected_sig)
+	.exp_siglen = sizeof(ecfsdsa_secp521r1_test_vectors_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 #endif /* WITH_CURVE_SECP521R1 */
 #endif /* WITH_HASH_SHA512 */
@@ -3287,7 +3377,9 @@ static const ec_test_case ecfsdsa_brainpoolp256r1_test_case = {
 	.msglen = 3,
 	.sig_type = ECFSDSA,
 	.exp_sig = ecfsdsa_brainpoolp256r1_test_vectors_expected_sig,
-	.exp_siglen = sizeof(ecfsdsa_brainpoolp256r1_test_vectors_expected_sig)
+	.exp_siglen = sizeof(ecfsdsa_brainpoolp256r1_test_vectors_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 
 #endif /* WITH_CURVE_BRAINPOOLP256R1 */
@@ -3366,7 +3458,9 @@ static const ec_test_case ecfsdsa_brainpoolp384r1_test_case = {
 	.msglen = 3,
 	.sig_type = ECFSDSA,
 	.exp_sig = ecfsdsa_brainpoolp384r1_test_vectors_expected_sig,
-	.exp_siglen = sizeof(ecfsdsa_brainpoolp384r1_test_vectors_expected_sig)
+	.exp_siglen = sizeof(ecfsdsa_brainpoolp384r1_test_vectors_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 
 #endif /* WITH_CURVE_BRAINPOOLP384R1 */
@@ -3455,7 +3549,9 @@ static const ec_test_case ecfsdsa_brainpoolp512r1_test_case = {
 	.msglen = 3,
 	.sig_type = ECFSDSA,
 	.exp_sig = ecfsdsa_brainpoolp512r1_test_vectors_expected_sig,
-	.exp_siglen = sizeof(ecfsdsa_brainpoolp512r1_test_vectors_expected_sig)
+	.exp_siglen = sizeof(ecfsdsa_brainpoolp512r1_test_vectors_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 #endif /* WITH_CURVE_BRAINPOOLP512R1 */
 #endif /* WITH_HASH_SHA512 */
@@ -3523,7 +3619,9 @@ static const ec_test_case ecfsdsa_frp256v1_test_case = {
 	.msglen = 3,
 	.sig_type = ECFSDSA,
 	.exp_sig = ecfsdsa_frp256v1_test_vectors_expected_sig,
-	.exp_siglen = sizeof(ecfsdsa_frp256v1_test_vectors_expected_sig)
+	.exp_siglen = sizeof(ecfsdsa_frp256v1_test_vectors_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 #endif /* WITH_CURVE_FRP256V1 */
 #endif /* WITH_HASH_SHA256 */
@@ -3584,7 +3682,9 @@ static const ec_test_case ecgdsa_brainpoolp192r1_test_case = {
 	.msglen = 15,
 	.sig_type = ECGDSA,
 	.exp_sig = ecgdsa_brainpoolp192r1_test_vectors_expected_sig,
-	.exp_siglen = sizeof(ecgdsa_brainpoolp192r1_test_vectors_expected_sig)
+	.exp_siglen = sizeof(ecgdsa_brainpoolp192r1_test_vectors_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 #endif /* WITH_CURVE_BRAINPOOLP192R1 */
 #endif /* WITH_HASH_SHA256 */
@@ -3643,7 +3743,9 @@ static const ec_test_case ecgdsa_brainpoolp224r1_test_case = {
 	.msglen = 15,
 	.sig_type = ECGDSA,
 	.exp_sig = ecgdsa_brainpoolp224r1_test_vectors_expected_sig,
-	.exp_siglen = sizeof(ecgdsa_brainpoolp224r1_test_vectors_expected_sig)
+	.exp_siglen = sizeof(ecgdsa_brainpoolp224r1_test_vectors_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 #endif /* WITH_CURVE_BRAINPOOLP224R1 */
 #endif /* WITH_HASH_SHA224 */
@@ -3703,7 +3805,9 @@ static const ec_test_case ecgdsa_brainpoolp256r1_test_case = {
 	.msglen = 15,
 	.sig_type = ECGDSA,
 	.exp_sig = ecgdsa_brainpoolp256r1_test_vectors_expected_sig,
-	.exp_siglen = sizeof(ecgdsa_brainpoolp256r1_test_vectors_expected_sig)
+	.exp_siglen = sizeof(ecgdsa_brainpoolp256r1_test_vectors_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 #endif /* WITH_CURVE_BRAINPOOLP256R1 */
 #endif /* WITH_HASH_SHA256 */
@@ -3772,7 +3876,9 @@ static const ec_test_case ecgdsa_brainpoolp384r1_test_case = {
 	.msglen = 15,
 	.sig_type = ECGDSA,
 	.exp_sig = ecgdsa_brainpoolp384r1_test_vectors_expected_sig,
-	.exp_siglen = sizeof(ecgdsa_brainpoolp384r1_test_vectors_expected_sig)
+	.exp_siglen = sizeof(ecgdsa_brainpoolp384r1_test_vectors_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 #endif /* WITH_CURVE_BRAINPOOLP384R1 */
 #endif /* WITH_HASH_SHA384 */
@@ -3877,6 +3983,8 @@ static const ec_test_case ecrdsa_rfc4491_bis_1_GOST_256bits_curve_test_case = {
 	.sig_type = ECRDSA,
 	.exp_sig = ecrdsa_rfc4491_bis_1_GOST_256bits_curve_test_vector_expected_sig,
 	.exp_siglen = sizeof(ecrdsa_rfc4491_bis_1_GOST_256bits_curve_test_vector_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 
 #endif /* WITH_CURVE_GOST256 */
@@ -3950,6 +4058,8 @@ static const ec_test_case ecrdsa_rfc4491_bis_2_GOST_256bits_curve_test_case = {
 	.sig_type = ECRDSA,
 	.exp_sig = ecrdsa_rfc4491_bis_2_GOST_256bits_curve_test_vector_expected_sig,
 	.exp_siglen = sizeof(ecrdsa_rfc4491_bis_2_GOST_256bits_curve_test_vector_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 
 #endif /* WITH_CURVE_GOST_R3410_2012_256_PARAMSETA */
@@ -4045,6 +4155,8 @@ static const ec_test_case ecrdsa_rfc4491_bis_1_GOST_512bits_curve_test_case = {
 	.sig_type = ECRDSA,
 	.exp_sig = ecrdsa_rfc4491_bis_1_GOST_512bits_curve_test_vector_expected_sig,
 	.exp_siglen = sizeof(ecrdsa_rfc4491_bis_1_GOST_512bits_curve_test_vector_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 
 #endif /* WITH_CURVE_GOST512 */
@@ -4119,7 +4231,9 @@ static const ec_test_case ecrdsa_GOST_256bits_curve_test_case = {
 	.sig_type = ECRDSA,
 	.exp_sig = ecrdsa_GOST_256bits_curve_test_vectors_expected_sig,
 	.exp_siglen =
-		sizeof(ecrdsa_GOST_256bits_curve_test_vectors_expected_sig)
+		sizeof(ecrdsa_GOST_256bits_curve_test_vectors_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 #endif /* WITH_CURVE_GOST256 */
 #endif /* WITH_HASH_SHA256 */
@@ -4180,6 +4294,8 @@ static const ec_test_case ecrdsa_pygostlib_1_GOST_256bits_curve_test_case = {
 	.sig_type = ECRDSA,
 	.exp_sig = ecrdsa_pygostlib_1_GOST_256bits_curve_test_vector_expected_sig,
 	.exp_siglen = sizeof(ecrdsa_pygostlib_1_GOST_256bits_curve_test_vector_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 
 static int ecrdsa_nn_random_pygostlib_2_GOST_256bits_curve_test_vector(nn_t out, nn_src_t q){
@@ -4257,6 +4373,8 @@ static const ec_test_case ecrdsa_pygostlib_2_GOST_256bits_curve_test_case = {
 	.sig_type = ECRDSA,
 	.exp_sig = ecrdsa_pygostlib_2_GOST_256bits_curve_test_vector_expected_sig,
 	.exp_siglen = sizeof(ecrdsa_pygostlib_2_GOST_256bits_curve_test_vector_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 
 #endif /* WITH_CURVE_GOST256 */
@@ -4356,7 +4474,9 @@ static const ec_test_case ecrdsa_GOST_512bits_curve_test_case = {
 	.sig_type = ECRDSA,
 	.exp_sig = ecrdsa_GOST_512bits_curve_test_vectors_expected_sig,
 	.exp_siglen =
-		sizeof(ecrdsa_GOST_512bits_curve_test_vectors_expected_sig)
+		sizeof(ecrdsa_GOST_512bits_curve_test_vectors_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 #endif /* WITH_CURVE_GOST512 */
 #endif /* WITH_HASH_SHA512 */
@@ -4426,6 +4546,8 @@ static const ec_test_case ecrdsa_pygostlib_1_GOST_512bits_curve_test_case = {
 	.sig_type = ECRDSA,
 	.exp_sig = ecrdsa_pygostlib_1_GOST_512bits_curve_test_vector_expected_sig,
 	.exp_siglen = sizeof(ecrdsa_pygostlib_1_GOST_512bits_curve_test_vector_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 
 static int ecrdsa_nn_random_pygostlib_2_GOST_512bits_curve_test_vector(nn_t out, nn_src_t q){
@@ -4512,6 +4634,8 @@ static const ec_test_case ecrdsa_pygostlib_2_GOST_512bits_curve_test_case = {
 	.sig_type = ECRDSA,
 	.exp_sig = ecrdsa_pygostlib_2_GOST_512bits_curve_test_vector_expected_sig,
 	.exp_siglen = sizeof(ecrdsa_pygostlib_2_GOST_512bits_curve_test_vector_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 
 #endif /* WITH_CURVE_GOST512 */
@@ -4730,7 +4854,9 @@ static const ec_test_case dummy_test_case = {
 	.msglen = 0,
 	.sig_type = UNKNOWN_SIG_ALG,
 	.exp_sig = NULL,
-	.exp_siglen = 0
+	.exp_siglen = 0,
+	.adata = NULL,
+	.adata_len = 0
 };
 
 /* List of all test cases */
@@ -5089,6 +5215,8 @@ static int encode_error_value(const ec_test_case *c, test_err_kind failed_test, 
 	hash_alg_type htype = c->hash_type;
 	test_err_kind etype = failed_test;
 	int ret;
+
+	MUST_HAVE((c != NULL) && (err_val != NULL), ret, err);
 
 	ret = ec_get_curve_type_by_name(c->ec_str_p->name->buf,
 					c->ec_str_p->name->buflen, &ctype); EG(ret, err);

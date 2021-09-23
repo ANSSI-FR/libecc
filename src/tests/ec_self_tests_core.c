@@ -88,13 +88,14 @@ static int random_split_ec_sign(u8 *sig, u8 siglen, const ec_key_pair *key_pair,
 {
 	struct ec_sign_context ctx;
 	int ret;
+	u32 consumed = 0;
 
 	ret = _ec_sign_init(&ctx, key_pair, rand, sig_type, hash_type, adata, adata_len);
 	if (ret) {
 		goto err;
 	}
 	/* We randomly split the input message in chunks and proceed with updates */
-	u32 consumed = 0;
+	consumed = 0;
 	while(consumed < mlen){
 		u32 toconsume = 0;
 		ret = get_random((u8 *)&toconsume, sizeof(toconsume));
@@ -129,6 +130,7 @@ static int random_split_ec_verify(const u8 *sig, u8 siglen, const ec_pub_key *pu
 {
 	int ret;
 	struct ec_verify_context ctx;
+	u32 consumed = 0;
 
 	ret = ec_verify_init(&ctx, pub_key, sig, siglen, sig_type, hash_type, adata, adata_len);
 	if (ret) {
@@ -136,7 +138,7 @@ static int random_split_ec_verify(const u8 *sig, u8 siglen, const ec_pub_key *pu
 	}
 
 	/* We randomly split the input message in chunks and proceed with updates */
-	u32 consumed = 0;
+	consumed = 0;
 	while(consumed < mlen){
 		u32 toconsume = 0;
 		ret = get_random((u8 *)&toconsume, sizeof(toconsume));
@@ -180,7 +182,11 @@ static int ec_import_export_test(const ec_test_case *c)
 	int ret, check;
 
 	/* Import EC params from test case */
-	import_params(&params, c->ec_str_p);
+	ret = import_params(&params, c->ec_str_p);
+	if (ret) {
+		ext_printf("Error importing params\n");
+		goto err;
+	}
 
 	/* Generate, import/export a key pair */
 	ret = ec_gen_import_export_kp(&kp, &params, c);
@@ -195,7 +201,9 @@ static int ec_import_export_test(const ec_test_case *c)
 		u8 siglen;
 		u8 msg[MAX_MSG_LEN];
 		u8 sig[EC_MAX_SIGLEN];
-
+#ifdef USE_CRYPTOFUZZ
+		check_type = 0;
+#endif
 		ret = ec_get_sig_len(&params, c->sig_type, c->hash_type,
 				     (u8 *)&siglen);
 		if (ret) {
@@ -306,24 +314,24 @@ static int ec_import_export_test(const ec_test_case *c)
 			}
 		}
 #ifdef USE_CRYPTOFUZZ
-		u8 check = 0;
+		u8 check_type = 0;
 		/* Specific case where we have access to raw signature API */
 #if defined(WITH_SIG_ECDSA)
 		if(c->sig_type == ECDSA){
-			check = 1;
+			check_type = 1;
 		}
 #endif
 #if defined(WITH_SIG_ECGDSA)
 		if(c->sig_type == ECGDSA){
-			check = 1;
+			check_type = 1;
 		}
 #endif
 #if defined(WITH_SIG_ECRDSA)
 		if(c->sig_type == ECRDSA){
-			check = 1;
+			check_type = 1;
 		}
 #endif
-		if(check){
+		if(check_type){
 			struct ec_sign_context sig_ctx;
 			struct ec_verify_context verif_ctx;
 			u8 digest[MAX_DIGEST_SIZE] = { 0 };
@@ -417,7 +425,7 @@ static int ec_test_sign(u8 *sig, u8 siglen, ec_key_pair *kp,
 	/* If the algorithm supports streaming, we check that both the streaming and
 	 * non streaming modes produce the same result.
 	 */
-	int ret = -1, check;
+	int ret, check;
 	ret = _ec_sign(sig, siglen, kp, (const u8 *)(c->msg), c->msglen,
 				c->nn_random, c->sig_type, c->hash_type, c->adata, c->adata_len);
 	if(ret){
@@ -465,7 +473,7 @@ static int ec_test_verify(u8 *sig, u8 siglen, const ec_pub_key *pub_key,
 	/* If the algorithm supports streaming, we check that both the streaming and
 	 * non streaming modes produce the same result.
 	 */
-	int ret = -1, check;
+	int ret, check;
 
 	ret = ec_verify(sig, siglen, pub_key, (const u8 *)(c->msg), c->msglen,
 				 c->sig_type, c->hash_type, c->adata, c->adata_len);
@@ -509,10 +517,16 @@ static int ec_sig_known_vector_tests_one(const ec_test_case *c)
 	ec_key_pair kp;
 	u8 siglen;
 	int ret;
-
+#ifdef USE_CRYPTOFUZZ
+	u8 check = 0;
+#endif
 	MUST_HAVE(c != NULL, ret, err);
 
-	import_params(&params, c->ec_str_p);
+	ret = import_params(&params, c->ec_str_p);
+	if (ret) {
+		ext_printf("Error importing params\n");
+		goto err;
+	}
 
 #if defined(WITH_SIG_EDDSA25519) || defined(WITH_SIG_EDDSA448)
 	/* In the specific case of EdDSA, we perform a specific key derivation */
@@ -567,7 +581,7 @@ static int ec_sig_known_vector_tests_one(const ec_test_case *c)
 	}
 
 #ifdef USE_CRYPTOFUZZ
-	u8 check = 0;
+	check = 0;
 	/* Specific case where we have access to raw signature API */
 #if defined(WITH_SIG_ECDSA)
 	if(c->sig_type == ECDSA){
@@ -833,7 +847,7 @@ static int rand_sig_verif_test_one(const ec_sig_mapping *sig,
 			ret = -1;
 			return ret;
 		}
-		if(get_random((u8 *)rand_adata, rand_len)){
+		if(get_random((u8 *)rand_adata, (rand_len % sizeof(rand_adata)))){
 			ret = -1;
 			return ret;
 		}
@@ -954,7 +968,11 @@ static int ec_performance_test(const ec_test_case *c,
 	int ret;
 
 	/* Import EC params from test case */
-	import_params(&params, c->ec_str_p);
+	ret = import_params(&params, c->ec_str_p);
+	if (ret) {
+		ext_printf("Error when importing parameters\n");
+		goto err;
+	}
 
 	/* Generate, import/export a key pair */
 	ret = ec_gen_import_export_kp(&kp, &params, c);
@@ -1116,7 +1134,7 @@ static int perf_test_one(const ec_sig_mapping *sig, const hash_mapping *hash,
 			ret = -1;
 			return ret;
 		}
-		if(get_random((u8 *)rand_adata, rand_len)){
+		if(get_random((u8 *)rand_adata, (rand_len % sizeof(rand_adata)))){
 			ret = -1;
 			return ret;
 		}

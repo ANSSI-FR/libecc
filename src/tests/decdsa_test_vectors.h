@@ -37,6 +37,8 @@ static const ec_test_case decdsa_rfc6979_SECP192R1_SHA224_0_test_case = {
 	.sig_type = DECDSA,
 	.exp_sig = decdsa_rfc6979_SECP192R1_SHA224_0_test_vector_expected_sig,
 	.exp_siglen = sizeof(decdsa_rfc6979_SECP192R1_SHA224_0_test_vector_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 #endif /* WITH_CURVE_SECP192R1 */
 #endif /* WITH_HASH_SHA224 */
@@ -70,6 +72,8 @@ static const ec_test_case decdsa_rfc6979_SECP192R1_SHA256_0_test_case = {
 	.sig_type = DECDSA,
 	.exp_sig = decdsa_rfc6979_SECP192R1_SHA256_0_test_vector_expected_sig,
 	.exp_siglen = sizeof(decdsa_rfc6979_SECP192R1_SHA256_0_test_vector_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 #endif /* WITH_CURVE_SECP192R1 */
 #endif /* WITH_HASH_SHA256 */
@@ -103,6 +107,8 @@ static const ec_test_case decdsa_rfc6979_SECP192R1_SHA384_0_test_case = {
 	.sig_type = DECDSA,
 	.exp_sig = decdsa_rfc6979_SECP192R1_SHA384_0_test_vector_expected_sig,
 	.exp_siglen = sizeof(decdsa_rfc6979_SECP192R1_SHA384_0_test_vector_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 #endif /* WITH_CURVE_SECP192R1 */
 #endif /* WITH_HASH_SHA384 */
@@ -136,6 +142,8 @@ static const ec_test_case decdsa_rfc6979_SECP192R1_SHA512_0_test_case = {
 	.sig_type = DECDSA,
 	.exp_sig = decdsa_rfc6979_SECP192R1_SHA512_0_test_vector_expected_sig,
 	.exp_siglen = sizeof(decdsa_rfc6979_SECP192R1_SHA512_0_test_vector_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 #endif /* WITH_CURVE_SECP192R1 */
 #endif /* WITH_HASH_SHA512 */
@@ -169,6 +177,8 @@ static const ec_test_case decdsa_rfc6979_SECP192R1_SHA224_1_test_case = {
 	.sig_type = DECDSA,
 	.exp_sig = decdsa_rfc6979_SECP192R1_SHA224_1_test_vector_expected_sig,
 	.exp_siglen = sizeof(decdsa_rfc6979_SECP192R1_SHA224_1_test_vector_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 #endif /* WITH_CURVE_SECP192R1 */
 #endif /* WITH_HASH_SHA224 */
@@ -202,6 +212,8 @@ static const ec_test_case decdsa_rfc6979_SECP192R1_SHA256_1_test_case = {
 	.sig_type = DECDSA,
 	.exp_sig = decdsa_rfc6979_SECP192R1_SHA256_1_test_vector_expected_sig,
 	.exp_siglen = sizeof(decdsa_rfc6979_SECP192R1_SHA256_1_test_vector_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 #endif /* WITH_CURVE_SECP192R1 */
 #endif /* WITH_HASH_SHA256 */
@@ -235,6 +247,8 @@ static const ec_test_case decdsa_rfc6979_SECP192R1_SHA384_1_test_case = {
 	.sig_type = DECDSA,
 	.exp_sig = decdsa_rfc6979_SECP192R1_SHA384_1_test_vector_expected_sig,
 	.exp_siglen = sizeof(decdsa_rfc6979_SECP192R1_SHA384_1_test_vector_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 #endif /* WITH_CURVE_SECP192R1 */
 #endif /* WITH_HASH_SHA384 */
@@ -268,6 +282,8 @@ static const ec_test_case decdsa_rfc6979_SECP192R1_SHA512_1_test_case = {
 	.sig_type = DECDSA,
 	.exp_sig = decdsa_rfc6979_SECP192R1_SHA512_1_test_vector_expected_sig,
 	.exp_siglen = sizeof(decdsa_rfc6979_SECP192R1_SHA512_1_test_vector_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 #endif /* WITH_CURVE_SECP192R1 */
 #endif /* WITH_HASH_SHA512 */
@@ -304,6 +320,8 @@ static const ec_test_case decdsa_rfc6979_SECP256R1_SHA224_0_test_case = {
 	.sig_type = DECDSA,
 	.exp_sig = decdsa_rfc6979_SECP256R1_SHA224_0_test_vector_expected_sig,
 	.exp_siglen = sizeof(decdsa_rfc6979_SECP256R1_SHA224_0_test_vector_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 #endif /* WITH_CURVE_SECP256R1 */
 #endif /* WITH_HASH_SHA224 */
@@ -340,6 +358,8 @@ static const ec_test_case decdsa_rfc6979_SECP256R1_SHA256_0_test_case = {
 	.sig_type = DECDSA,
 	.exp_sig = decdsa_rfc6979_SECP256R1_SHA256_0_test_vector_expected_sig,
 	.exp_siglen = sizeof(decdsa_rfc6979_SECP256R1_SHA256_0_test_vector_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 #endif /* WITH_CURVE_SECP256R1 */
 #endif /* WITH_HASH_SHA256 */
@@ -376,6 +396,8 @@ static const ec_test_case decdsa_rfc6979_SECP256R1_SHA384_0_test_case = {
 	.sig_type = DECDSA,
 	.exp_sig = decdsa_rfc6979_SECP256R1_SHA384_0_test_vector_expected_sig,
 	.exp_siglen = sizeof(decdsa_rfc6979_SECP256R1_SHA384_0_test_vector_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 #endif /* WITH_CURVE_SECP256R1 */
 #endif /* WITH_HASH_SHA384 */
@@ -412,6 +434,8 @@ static const ec_test_case decdsa_rfc6979_SECP256R1_SHA512_0_test_case = {
 	.sig_type = DECDSA,
 	.exp_sig = decdsa_rfc6979_SECP256R1_SHA512_0_test_vector_expected_sig,
 	.exp_siglen = sizeof(decdsa_rfc6979_SECP256R1_SHA512_0_test_vector_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 #endif /* WITH_CURVE_SECP256R1 */
 #endif /* WITH_HASH_SHA512 */
@@ -448,6 +472,8 @@ static const ec_test_case decdsa_rfc6979_SECP256R1_SHA224_1_test_case = {
 	.sig_type = DECDSA,
 	.exp_sig = decdsa_rfc6979_SECP256R1_SHA224_1_test_vector_expected_sig,
 	.exp_siglen = sizeof(decdsa_rfc6979_SECP256R1_SHA224_1_test_vector_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 #endif /* WITH_CURVE_SECP256R1 */
 #endif /* WITH_HASH_SHA224 */
@@ -484,6 +510,8 @@ static const ec_test_case decdsa_rfc6979_SECP256R1_SHA256_1_test_case = {
 	.sig_type = DECDSA,
 	.exp_sig = decdsa_rfc6979_SECP256R1_SHA256_1_test_vector_expected_sig,
 	.exp_siglen = sizeof(decdsa_rfc6979_SECP256R1_SHA256_1_test_vector_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 #endif /* WITH_CURVE_SECP256R1 */
 #endif /* WITH_HASH_SHA256 */
@@ -520,6 +548,8 @@ static const ec_test_case decdsa_rfc6979_SECP256R1_SHA384_1_test_case = {
 	.sig_type = DECDSA,
 	.exp_sig = decdsa_rfc6979_SECP256R1_SHA384_1_test_vector_expected_sig,
 	.exp_siglen = sizeof(decdsa_rfc6979_SECP256R1_SHA384_1_test_vector_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 #endif /* WITH_CURVE_SECP256R1 */
 #endif /* WITH_HASH_SHA384 */
@@ -556,6 +586,8 @@ static const ec_test_case decdsa_rfc6979_SECP256R1_SHA512_1_test_case = {
 	.sig_type = DECDSA,
 	.exp_sig = decdsa_rfc6979_SECP256R1_SHA512_1_test_vector_expected_sig,
 	.exp_siglen = sizeof(decdsa_rfc6979_SECP256R1_SHA512_1_test_vector_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 #endif /* WITH_CURVE_SECP256R1 */
 #endif /* WITH_HASH_SHA512 */
@@ -598,6 +630,8 @@ static const ec_test_case decdsa_rfc6979_SECP384R1_SHA224_0_test_case = {
 	.sig_type = DECDSA,
 	.exp_sig = decdsa_rfc6979_SECP384R1_SHA224_0_test_vector_expected_sig,
 	.exp_siglen = sizeof(decdsa_rfc6979_SECP384R1_SHA224_0_test_vector_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 #endif /* WITH_CURVE_SECP384R1 */
 #endif /* WITH_HASH_SHA224 */
@@ -640,6 +674,8 @@ static const ec_test_case decdsa_rfc6979_SECP384R1_SHA256_0_test_case = {
 	.sig_type = DECDSA,
 	.exp_sig = decdsa_rfc6979_SECP384R1_SHA256_0_test_vector_expected_sig,
 	.exp_siglen = sizeof(decdsa_rfc6979_SECP384R1_SHA256_0_test_vector_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 #endif /* WITH_CURVE_SECP384R1 */
 #endif /* WITH_HASH_SHA256 */
@@ -682,6 +718,8 @@ static const ec_test_case decdsa_rfc6979_SECP384R1_SHA384_0_test_case = {
 	.sig_type = DECDSA,
 	.exp_sig = decdsa_rfc6979_SECP384R1_SHA384_0_test_vector_expected_sig,
 	.exp_siglen = sizeof(decdsa_rfc6979_SECP384R1_SHA384_0_test_vector_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 #endif /* WITH_CURVE_SECP384R1 */
 #endif /* WITH_HASH_SHA384 */
@@ -724,6 +762,8 @@ static const ec_test_case decdsa_rfc6979_SECP384R1_SHA512_0_test_case = {
 	.sig_type = DECDSA,
 	.exp_sig = decdsa_rfc6979_SECP384R1_SHA512_0_test_vector_expected_sig,
 	.exp_siglen = sizeof(decdsa_rfc6979_SECP384R1_SHA512_0_test_vector_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 #endif /* WITH_CURVE_SECP384R1 */
 #endif /* WITH_HASH_SHA512 */
@@ -766,6 +806,8 @@ static const ec_test_case decdsa_rfc6979_SECP384R1_SHA224_1_test_case = {
 	.sig_type = DECDSA,
 	.exp_sig = decdsa_rfc6979_SECP384R1_SHA224_1_test_vector_expected_sig,
 	.exp_siglen = sizeof(decdsa_rfc6979_SECP384R1_SHA224_1_test_vector_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 #endif /* WITH_CURVE_SECP384R1 */
 #endif /* WITH_HASH_SHA224 */
@@ -808,6 +850,8 @@ static const ec_test_case decdsa_rfc6979_SECP384R1_SHA256_1_test_case = {
 	.sig_type = DECDSA,
 	.exp_sig = decdsa_rfc6979_SECP384R1_SHA256_1_test_vector_expected_sig,
 	.exp_siglen = sizeof(decdsa_rfc6979_SECP384R1_SHA256_1_test_vector_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 #endif /* WITH_CURVE_SECP384R1 */
 #endif /* WITH_HASH_SHA256 */
@@ -850,6 +894,8 @@ static const ec_test_case decdsa_rfc6979_SECP384R1_SHA384_1_test_case = {
 	.sig_type = DECDSA,
 	.exp_sig = decdsa_rfc6979_SECP384R1_SHA384_1_test_vector_expected_sig,
 	.exp_siglen = sizeof(decdsa_rfc6979_SECP384R1_SHA384_1_test_vector_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 #endif /* WITH_CURVE_SECP384R1 */
 #endif /* WITH_HASH_SHA384 */
@@ -892,6 +938,8 @@ static const ec_test_case decdsa_rfc6979_SECP384R1_SHA512_1_test_case = {
 	.sig_type = DECDSA,
 	.exp_sig = decdsa_rfc6979_SECP384R1_SHA512_1_test_vector_expected_sig,
 	.exp_siglen = sizeof(decdsa_rfc6979_SECP384R1_SHA512_1_test_vector_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 #endif /* WITH_CURVE_SECP384R1 */
 #endif /* WITH_HASH_SHA512 */
@@ -942,6 +990,8 @@ static const ec_test_case decdsa_rfc6979_SECP521R1_SHA224_0_test_case = {
 	.sig_type = DECDSA,
 	.exp_sig = decdsa_rfc6979_SECP521R1_SHA224_0_test_vector_expected_sig,
 	.exp_siglen = sizeof(decdsa_rfc6979_SECP521R1_SHA224_0_test_vector_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 #endif /* WITH_CURVE_SECP521R1 */
 #endif /* WITH_HASH_SHA224 */
@@ -992,6 +1042,8 @@ static const ec_test_case decdsa_rfc6979_SECP521R1_SHA256_0_test_case = {
 	.sig_type = DECDSA,
 	.exp_sig = decdsa_rfc6979_SECP521R1_SHA256_0_test_vector_expected_sig,
 	.exp_siglen = sizeof(decdsa_rfc6979_SECP521R1_SHA256_0_test_vector_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 #endif /* WITH_CURVE_SECP521R1 */
 #endif /* WITH_HASH_SHA256 */
@@ -1042,6 +1094,8 @@ static const ec_test_case decdsa_rfc6979_SECP521R1_SHA384_0_test_case = {
 	.sig_type = DECDSA,
 	.exp_sig = decdsa_rfc6979_SECP521R1_SHA384_0_test_vector_expected_sig,
 	.exp_siglen = sizeof(decdsa_rfc6979_SECP521R1_SHA384_0_test_vector_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 #endif /* WITH_CURVE_SECP521R1 */
 #endif /* WITH_HASH_SHA384 */
@@ -1092,6 +1146,8 @@ static const ec_test_case decdsa_rfc6979_SECP521R1_SHA512_0_test_case = {
 	.sig_type = DECDSA,
 	.exp_sig = decdsa_rfc6979_SECP521R1_SHA512_0_test_vector_expected_sig,
 	.exp_siglen = sizeof(decdsa_rfc6979_SECP521R1_SHA512_0_test_vector_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 #endif /* WITH_CURVE_SECP521R1 */
 #endif /* WITH_HASH_SHA512 */
@@ -1142,6 +1198,8 @@ static const ec_test_case decdsa_rfc6979_SECP521R1_SHA224_1_test_case = {
 	.sig_type = DECDSA,
 	.exp_sig = decdsa_rfc6979_SECP521R1_SHA224_1_test_vector_expected_sig,
 	.exp_siglen = sizeof(decdsa_rfc6979_SECP521R1_SHA224_1_test_vector_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 #endif /* WITH_CURVE_SECP521R1 */
 #endif /* WITH_HASH_SHA224 */
@@ -1192,6 +1250,8 @@ static const ec_test_case decdsa_rfc6979_SECP521R1_SHA256_1_test_case = {
 	.sig_type = DECDSA,
 	.exp_sig = decdsa_rfc6979_SECP521R1_SHA256_1_test_vector_expected_sig,
 	.exp_siglen = sizeof(decdsa_rfc6979_SECP521R1_SHA256_1_test_vector_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 #endif /* WITH_CURVE_SECP521R1 */
 #endif /* WITH_HASH_SHA256 */
@@ -1242,6 +1302,8 @@ static const ec_test_case decdsa_rfc6979_SECP521R1_SHA384_1_test_case = {
 	.sig_type = DECDSA,
 	.exp_sig = decdsa_rfc6979_SECP521R1_SHA384_1_test_vector_expected_sig,
 	.exp_siglen = sizeof(decdsa_rfc6979_SECP521R1_SHA384_1_test_vector_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 #endif /* WITH_CURVE_SECP521R1 */
 #endif /* WITH_HASH_SHA384 */
@@ -1292,6 +1354,8 @@ static const ec_test_case decdsa_rfc6979_SECP521R1_SHA512_1_test_case = {
 	.sig_type = DECDSA,
 	.exp_sig = decdsa_rfc6979_SECP521R1_SHA512_1_test_vector_expected_sig,
 	.exp_siglen = sizeof(decdsa_rfc6979_SECP521R1_SHA512_1_test_vector_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 #endif /* WITH_CURVE_SECP521R1 */
 #endif /* WITH_HASH_SHA512 */

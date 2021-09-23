@@ -30,6 +30,8 @@ static const ec_test_case ed448_1_test_case = {
         .sig_type = EDDSA448,
         .exp_sig = ed448_1_test_vectors_expected_sig,
         .exp_siglen = sizeof(ed448_1_test_vectors_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 
 /************************************************/
@@ -51,6 +53,8 @@ static const ec_test_case ed448_2_test_case = {
         .sig_type = EDDSA448,
         .exp_sig = ed448_2_test_vectors_expected_sig,
         .exp_siglen = sizeof(ed448_2_test_vectors_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 
 /************************************************/
@@ -72,6 +76,8 @@ static const ec_test_case ed448_3_test_case = {
         .sig_type = EDDSA448,
         .exp_sig = ed448_3_test_vectors_expected_sig,
         .exp_siglen = sizeof(ed448_3_test_vectors_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 
 /************************************************/
@@ -96,6 +102,8 @@ static const ec_test_case ed448_4_test_case = {
         .sig_type = EDDSA448,
         .exp_sig = ed448_4_test_vectors_expected_sig,
         .exp_siglen = sizeof(ed448_4_test_vectors_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 
 /************************************************/
@@ -120,6 +128,8 @@ static const ec_test_case ed448_5_test_case = {
         .sig_type = EDDSA448,
         .exp_sig = ed448_5_test_vectors_expected_sig,
         .exp_siglen = sizeof(ed448_5_test_vectors_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 
 /************************************************/
@@ -144,6 +154,8 @@ static const ec_test_case ed448_6_test_case = {
         .sig_type = EDDSA448,
         .exp_sig = ed448_6_test_vectors_expected_sig,
         .exp_siglen = sizeof(ed448_6_test_vectors_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 
 /************************************************/
@@ -168,6 +180,8 @@ static const ec_test_case ed448_7_test_case = {
         .sig_type = EDDSA448,
         .exp_sig = ed448_7_test_vectors_expected_sig,
         .exp_siglen = sizeof(ed448_7_test_vectors_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 
 /************************************************/
@@ -255,6 +269,8 @@ static const ec_test_case ed448_8_test_case = {
         .sig_type = EDDSA448,
         .exp_sig = ed448_8_test_vectors_expected_sig,
         .exp_siglen = sizeof(ed448_8_test_vectors_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 
 /************************************************/

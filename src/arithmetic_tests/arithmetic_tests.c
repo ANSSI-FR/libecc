@@ -324,7 +324,7 @@ struct dispatch_table {
 #define WORD_T_GENERIC_OUT(num) (&(word_out[num]))
 #define INT_GENERIC_OUT(num) (&(int_out[num]))
 
-#define CHECK_FUN_RET there_is_output = 1; fun_out_value = (word_t)
+#define CHECK_FUN_RET there_is_output = 1; fun_out_value = (int)
 
 #define CHECK_FUN_NO_RET there_is_output = 0; fun_out_value = (int)
 
@@ -471,7 +471,7 @@ struct dispatch_table {
 			/* This is a real function output */\
 			if(parameters_types[j] == 'u'){\
 				printf("%16s: 0x", real_modified_string_names); 	\
-				printf(PRINTF_WORD_HEX_FMT, fun_output);		\
+				printf(PRINTF_WORD_HEX_FMT, (word_t)fun_output);	\
 				printf("\n");						\
 				printf("%16s: 0x", expected_modified_string_names); 	\
 				printf(PRINTF_WORD_HEX_FMT, WORD_T_GENERIC_IN(j));	\
@@ -479,7 +479,7 @@ struct dispatch_table {
 			}\
 			if(parameters_types[j] == 's'){\
 				printf("%16s: ", real_modified_string_names); 		\
-				printf("%d", fun_output);				\
+				printf("%d", (int)fun_output);				\
 				printf("\n");						\
 				printf("%16s: ", expected_modified_string_names); 	\
 				printf("%d", INT_GENERIC_IN(j));			\
@@ -497,7 +497,7 @@ int test_##test_name(const char ATTRIBUTE_UNUSED *op, void **params, int test_nu
 	int ret, cmp, mismatch = 0;		\
 	const char *op_string = NULL;\
 	unsigned int n_len ATTRIBUTE_UNUSED = 0;\
-	word_t fun_out_value = 0;\
+	int fun_out_value = 0;\
 	u8 there_is_output = 0;\
 	unsigned int nn_out_local_cnt = 0, fp_out_local_cnt = 0;\
 	fp_ctx_t fp_ctx_param ATTRIBUTE_UNUSED = NULL;\
@@ -599,7 +599,7 @@ int test_##test_name(const char ATTRIBUTE_UNUSED *op, void **params, int test_nu
 		}\
 		if(parameters_io[i] == 'O'){\
 			/* We have a function output, check it */\
-			if(fun_out_value != WORD_T_GENERIC_IN(i)){\
+			if(fun_out_value != INT_GENERIC_IN(i)){\
 				printf("[-] Test %d (%s): result mismatch\n", test_num, op_string);\
 				/* Print the expected outputs */\
 				PRINT_ALL(parameters_types, parameters_io, params, nn_out_ptr, fp_out_ptr, fun_out_value, there_is_output, parameters_string_names, i);\
@@ -629,125 +629,125 @@ static char global_parameters[MAX_PARAMS];
 /*********** NN layer tests ************************************************/
 /* Testing shifts and rotates */
 	GENERIC_TEST_NN(nn_lshift_fixedlen, NN_SHIFT_LEFT_FIXEDLEN, "(fixed)<<", nn_lshift_fixedlen, "nnu", "oii",
-		SET_PARAMETER_PRETTY_NAME(3, "output", "input", "fixed lshift"), RET, 1,
+		SET_PARAMETER_PRETTY_NAME(3, "output", "input", "fixed lshift"), NO_RET, 1,
 		NN_T_GENERIC_OUT(0), NN_T_GENERIC_IN(1), (bitcnt_t)UINT_GENERIC_IN(2))
 	GENERIC_TEST_NN(nn_rshift_fixedlen, NN_SHIFT_RIGHT_FIXEDLEN, "(fixed)>>", nn_rshift_fixedlen, "nnu", "oii",
-		SET_PARAMETER_PRETTY_NAME(3, "output", "input", "fixed rshift"), RET, 1,
+		SET_PARAMETER_PRETTY_NAME(3, "output", "input", "fixed rshift"), NO_RET, 1,
 		NN_T_GENERIC_OUT(0), NN_T_GENERIC_IN(1), (bitcnt_t)UINT_GENERIC_IN(2))
 	GENERIC_TEST_NN(nn_lshift, NN_SHIFT_LEFT, "<<", nn_lshift, "nnu", "oii",
-		SET_PARAMETER_PRETTY_NAME(3, "output", "input", "lshift"), RET, 1,
+		SET_PARAMETER_PRETTY_NAME(3, "output", "input", "lshift"), NO_RET, 1,
 		NN_T_GENERIC_OUT(0), NN_T_GENERIC_IN(1), (bitcnt_t)UINT_GENERIC_IN(2))
 	GENERIC_TEST_NN(nn_rshift, NN_SHIFT_RIGHT, ">>", nn_rshift, "nnu", "oii",
-		SET_PARAMETER_PRETTY_NAME(3, "output", "input", "rshift"), RET, 1,
+		SET_PARAMETER_PRETTY_NAME(3, "output", "input", "rshift"), NO_RET, 1,
 		NN_T_GENERIC_OUT(0), NN_T_GENERIC_IN(1), (bitcnt_t)UINT_GENERIC_IN(2))
 	GENERIC_TEST_NN(nn_lrot, NN_ROTATE_LEFT, "lrot", nn_lrot, "nnuu", "oiii",
-		SET_PARAMETER_PRETTY_NAME(4, "output", "input", "lrot", "bitlen_base"), RET, 1,
+		SET_PARAMETER_PRETTY_NAME(4, "output", "input", "lrot", "bitlen_base"), NO_RET, 1,
 		NN_T_GENERIC_OUT(0), NN_T_GENERIC_IN(1), (bitcnt_t)UINT_GENERIC_IN(2), (bitcnt_t)UINT_GENERIC_IN(3))
 	GENERIC_TEST_NN(nn_rrot, NN_ROTATE_RIGHT, "rrot", nn_rrot, "nnuu", "oiii",
-		SET_PARAMETER_PRETTY_NAME(4, "output", "input", "rrot", "bitlen_base"), RET, 1,
+		SET_PARAMETER_PRETTY_NAME(4, "output", "input", "rrot", "bitlen_base"), NO_RET, 1,
 		NN_T_GENERIC_OUT(0), NN_T_GENERIC_IN(1), (bitcnt_t)UINT_GENERIC_IN(2), (bitcnt_t)UINT_GENERIC_IN(3))
 
 
 /* Testing xor, or, and, not */
 	GENERIC_TEST_NN(nn_xor, NN_XOR, "^", nn_xor, "nnn", "iio",
-		SET_PARAMETER_PRETTY_NAME(3, "input1", "input2", "output"), RET, 3,
+		SET_PARAMETER_PRETTY_NAME(3, "input1", "input2", "output"), NO_RET, 3,
 		NN_T_GENERIC_OUT(2), NN_T_GENERIC_IN(0), NN_T_GENERIC_IN(1))
 	GENERIC_TEST_NN(nn_or, NN_OR, "|", nn_or, "nnn", "iio",
-		SET_PARAMETER_PRETTY_NAME(3, "input1", "input2", "output"), RET, 3,
+		SET_PARAMETER_PRETTY_NAME(3, "input1", "input2", "output"), NO_RET, 3,
 		NN_T_GENERIC_OUT(2), NN_T_GENERIC_IN(0), NN_T_GENERIC_IN(1))
 	GENERIC_TEST_NN(nn_and, NN_AND, "&", nn_and, "nnn", "iio",
-		SET_PARAMETER_PRETTY_NAME(3, "input1", "input2", "output"), RET, 3,
+		SET_PARAMETER_PRETTY_NAME(3, "input1", "input2", "output"), NO_RET, 3,
 		NN_T_GENERIC_OUT(2), NN_T_GENERIC_IN(0), NN_T_GENERIC_IN(1))
 	GENERIC_TEST_NN(nn_not, NN_NOT, "~", nn_not, "nn", "io",
-		SET_PARAMETER_PRETTY_NAME(2, "input", "output"), RET, 2,
+		SET_PARAMETER_PRETTY_NAME(2, "input", "output"), NO_RET, 2,
 		NN_T_GENERIC_OUT(1), NN_T_GENERIC_IN(0))
 
 /* Testing add and sub */
 	GENERIC_TEST_NN(nn_add, NN_ADD, "+", nn_add, "nnn", "iio",
 		SET_PARAMETER_PRETTY_NAME(3, "input1", "input2", "output"),
-		RET, 3, NN_T_GENERIC_OUT(2), NN_T_GENERIC_IN(0),
+		NO_RET, 3, NN_T_GENERIC_OUT(2), NN_T_GENERIC_IN(0),
 		NN_T_GENERIC_IN(1))
 	GENERIC_TEST_NN(nn_sub, NN_SUB, "-", nn_sub, "nnn", "iio",
 		SET_PARAMETER_PRETTY_NAME(3, "input1", "input2", "output"),
-		RET, 3, NN_T_GENERIC_OUT(2), NN_T_GENERIC_IN(0),
+		NO_RET, 3, NN_T_GENERIC_OUT(2), NN_T_GENERIC_IN(0),
 		NN_T_GENERIC_IN(1))
 
 /* Testing inc and dec */
 	GENERIC_TEST_NN(nn_inc, NN_INC, "++", nn_inc, "nn", "io",
-		SET_PARAMETER_PRETTY_NAME(2, "input", "output"), RET, 2,
+		SET_PARAMETER_PRETTY_NAME(2, "input", "output"), NO_RET, 2,
 		NN_T_GENERIC_OUT(1), NN_T_GENERIC_IN(0))
 	GENERIC_TEST_NN(nn_dec, NN_DEC, "--", nn_dec, "nn", "io",
-		SET_PARAMETER_PRETTY_NAME(2, "input", "output"), RET, 2,
+		SET_PARAMETER_PRETTY_NAME(2, "input", "output"), NO_RET, 2,
 		NN_T_GENERIC_OUT(1), NN_T_GENERIC_IN(0))
 
 /* Testing modular add, sub, inc, dec (inputs are supposed < p) */
 	GENERIC_TEST_NN(nn_mod_add, NN_MOD_ADD, "+%", nn_mod_add, "nnnn", "iiio",
 		SET_PARAMETER_PRETTY_NAME(4, "input1", "input2", "modulo", "output"),
-		RET, 4, NN_T_GENERIC_OUT(3), NN_T_GENERIC_IN(0),
+		NO_RET, 4, NN_T_GENERIC_OUT(3), NN_T_GENERIC_IN(0),
 		NN_T_GENERIC_IN(1), NN_T_GENERIC_IN(2))
 	GENERIC_TEST_NN(nn_mod_sub, NN_MOD_SUB, "-%", nn_mod_sub, "nnnn", "iiio",
 		SET_PARAMETER_PRETTY_NAME(4, "input1", "input2", "modulo", "output"),
-		RET, 4, NN_T_GENERIC_OUT(3), NN_T_GENERIC_IN(0),
+		NO_RET, 4, NN_T_GENERIC_OUT(3), NN_T_GENERIC_IN(0),
 		NN_T_GENERIC_IN(1), NN_T_GENERIC_IN(2))
 	GENERIC_TEST_NN(nn_mod_inc, NN_MOD_INC, "++%", nn_mod_inc, "nnn", "iio",
 		SET_PARAMETER_PRETTY_NAME(3, "input1", "modulo", "output"),
-		RET, 3, NN_T_GENERIC_OUT(2), NN_T_GENERIC_IN(0),
+		NO_RET, 3, NN_T_GENERIC_OUT(2), NN_T_GENERIC_IN(0),
 		NN_T_GENERIC_IN(1))
 	GENERIC_TEST_NN(nn_mod_dec, NN_MOD_DEC, "--%", nn_mod_dec, "nnn", "iio",
 		SET_PARAMETER_PRETTY_NAME(3, "input1", "modulo", "output"),
-		RET, 3, NN_T_GENERIC_OUT(2), NN_T_GENERIC_IN(0),
+		NO_RET, 3, NN_T_GENERIC_OUT(2), NN_T_GENERIC_IN(0),
 		NN_T_GENERIC_IN(1))
 
 
 /* Testing mul */
 	GENERIC_TEST_NN(nn_mul, NN_MUL, "*", nn_mul, "nnn", "oii",
 		SET_PARAMETER_PRETTY_NAME(3, "output1", "input1", "input2"),
-		RET, 1, NN_T_GENERIC_OUT(0), NN_T_GENERIC_IN(1),
+		NO_RET, 1, NN_T_GENERIC_OUT(0), NN_T_GENERIC_IN(1),
 		NN_T_GENERIC_IN(2))
 	GENERIC_TEST_NN(nn_sqr, NN_SQR, "(^2)", nn_sqr, "nn", "oi",
 		SET_PARAMETER_PRETTY_NAME(2, "output1", "input1"),
-		RET, 1, NN_T_GENERIC_OUT(0), NN_T_GENERIC_IN(1))
+		NO_RET, 1, NN_T_GENERIC_OUT(0), NN_T_GENERIC_IN(1))
 
 /* Testing division */
 	GENERIC_TEST_NN(nn_divrem, NN_DIVREM, "/", nn_divrem, "nnnn", "ooii",
 		SET_PARAMETER_PRETTY_NAME(4, "quotient", "remainder", "input1", "input2"),
-		RET, 2, NN_T_GENERIC_OUT(0), NN_T_GENERIC_OUT(1),
+		NO_RET, 2, NN_T_GENERIC_OUT(0), NN_T_GENERIC_OUT(1),
 		NN_T_GENERIC_IN(2), NN_T_GENERIC_IN(3))
 	GENERIC_TEST_NN(nn_xgcd, NN_XGCD, "xgcd", nn_xgcd, "nnnnns", "oooiio",
 		SET_PARAMETER_PRETTY_NAME(6, "xgcd", "u", "v", "input1", "input2", "sign"),
-		RET, 3, NN_T_GENERIC_OUT(0), NN_T_GENERIC_OUT(1), NN_T_GENERIC_OUT(2),
+		NO_RET, 3, NN_T_GENERIC_OUT(0), NN_T_GENERIC_OUT(1), NN_T_GENERIC_OUT(2),
 		NN_T_GENERIC_IN(3), NN_T_GENERIC_IN(4), INT_GENERIC_OUT(5))
 	GENERIC_TEST_NN(nn_gcd, NN_GCD, "gcd", nn_gcd, "nnns", "oiio",
 		SET_PARAMETER_PRETTY_NAME(4, "gcd", "input1", "input2", "sign"),
-		RET, 1, NN_T_GENERIC_OUT(0),
+		NO_RET, 1, NN_T_GENERIC_OUT(0),
 		NN_T_GENERIC_IN(1), NN_T_GENERIC_IN(2), INT_GENERIC_OUT(3))
 	GENERIC_TEST_NN(nn_mod, NN_MOD, "%", nn_mod, "nnn", "oii",
 		SET_PARAMETER_PRETTY_NAME(3, "output", "input1", "input2"),
-		RET, 1, NN_T_GENERIC_OUT(0),
+		NO_RET, 1, NN_T_GENERIC_OUT(0),
 		NN_T_GENERIC_IN(1), NN_T_GENERIC_IN(2))
 
 /* Testing modular inversion */
-	GENERIC_TEST_NN(nn_modinv, NN_MODINV, "(^-1%)", nn_modinv, "nnn", "oii",
-		SET_PARAMETER_PRETTY_NAME(3, "output", "input1", "input2"),
+	GENERIC_TEST_NN(nn_modinv, NN_MODINV, "(^-1%)", nn_modinv, "nnns", "oiiO",
+		SET_PARAMETER_PRETTY_NAME(4, "output", "input1", "input2", "ret"),
 		RET, 1, NN_T_GENERIC_OUT(0),
 		NN_T_GENERIC_IN(1), NN_T_GENERIC_IN(2))
 
 /* Testing modular inversion modulo a 2**n */
 	GENERIC_TEST_NN(nn_modinv_2exp, NN_MODINV_2EXP, "(^-1%)(2exp)", nn_modinv_2exp, "nnus", "oiio",
 		SET_PARAMETER_PRETTY_NAME(4, "output", "input1", "input2", "isodd"),
-		RET, 1, NN_T_GENERIC_OUT(0), NN_T_GENERIC_IN(1),
+		NO_RET, 1, NN_T_GENERIC_OUT(0), NN_T_GENERIC_IN(1),
 			UINT_GENERIC_IN(2), INT_GENERIC_OUT(3))
 
 /* Check Montgomery multiplication redcify primitives */
 	GENERIC_TEST_NN(nn_compute_redc1_coefs, NN_COEF_REDC1, "coef_redc1", nn_compute_redc1_coefs, "nnnu", "ooio",
 		SET_PARAMETER_PRETTY_NAME(4, "r", "r_square", "p", "mpinv"),
-		RET, 3, NN_T_GENERIC_OUT(0), NN_T_GENERIC_OUT(1), NN_T_GENERIC_IN(2), WORD_T_GENERIC_OUT(3))
+		NO_RET, 3, NN_T_GENERIC_OUT(0), NN_T_GENERIC_OUT(1), NN_T_GENERIC_IN(2), WORD_T_GENERIC_OUT(3))
 	GENERIC_TEST_NN(nn_compute_div_coefs, NN_COEF_DIV, "coef_div", nn_compute_div_coefs, "nuun", "oooi",
 		SET_PARAMETER_PRETTY_NAME(4, "p_normalized", "p_shift", "p_reciprocal", "p"),
-		RET, 3, NN_T_GENERIC_OUT(0), WORD_T_GENERIC_OUT(1), WORD_T_GENERIC_OUT(2), NN_T_GENERIC_IN(3))
+		NO_RET, 3, NN_T_GENERIC_OUT(0), WORD_T_GENERIC_OUT(1), WORD_T_GENERIC_OUT(2), NN_T_GENERIC_IN(3))
 	GENERIC_TEST_NN(nn_mul_redc1, NN_MUL_REDC1, "*_redc1", nn_mul_redc1, "nnnnu", "oiiii",
 		SET_PARAMETER_PRETTY_NAME(5, "output", "input1", "input2", "p", "mpinv"),
-		RET, 1, NN_T_GENERIC_OUT(0), NN_T_GENERIC_IN(1), NN_T_GENERIC_IN(2),
+		NO_RET, 1, NN_T_GENERIC_OUT(0), NN_T_GENERIC_IN(1), NN_T_GENERIC_IN(2),
 		NN_T_GENERIC_IN(3), WORD_T_GENERIC_IN(4))
 
 
@@ -756,45 +756,45 @@ static char global_parameters[MAX_PARAMS];
 /* Testing addition in F_p */
 	GENERIC_TEST_FP(fp_add, FP_ADD, "+", fp_add, "cfff", "ioii",
 	     SET_PARAMETER_PRETTY_NAME(4, "p", "sum", "input1", "input2"),
-	     RET, 0, 2,
+	     NO_RET, 0, 2,
 	     FP_T_GENERIC_OUT(1), FP_T_GENERIC_IN(2), FP_T_GENERIC_IN(3))
 
 /* Testing subtraction in F_p */
 	GENERIC_TEST_FP(fp_sub, FP_SUB, "-", fp_sub, "cfff", "ioii",
 	     SET_PARAMETER_PRETTY_NAME(4, "p", "diff", "input1", "input2"),
-	     RET, 0, 2,
+	     NO_RET, 0, 2,
 	     FP_T_GENERIC_OUT(1), FP_T_GENERIC_IN(2), FP_T_GENERIC_IN(3))
 
 /* Testing multiplication in F_p */
 	GENERIC_TEST_FP(fp_mul, FP_MUL, "*", fp_mul, "cfff", "ioii",
 	     SET_PARAMETER_PRETTY_NAME(4, "p", "prod", "input1", "input2"),
-	     RET, 0, 2,
+	     NO_RET, 0, 2,
 	     FP_T_GENERIC_OUT(1), FP_T_GENERIC_IN(2), FP_T_GENERIC_IN(3))
 	GENERIC_TEST_FP(fp_sqr, FP_SQR, "(^2)", fp_sqr, "cff", "ioi",
 	     SET_PARAMETER_PRETTY_NAME(3, "p", "prod", "input1"),
-	     RET, 0, 2,
+	     NO_RET, 0, 2,
 	     FP_T_GENERIC_OUT(1), FP_T_GENERIC_IN(2))
 
 /* Testing division in F_p */
 	GENERIC_TEST_FP(fp_div, FP_DIV, "/", fp_div, "cfff", "ioii",
 	     SET_PARAMETER_PRETTY_NAME(4, "p", "quo", "input1", "input2"),
-	     RET, 0, 2,
+	     NO_RET, 0, 2,
 	     FP_T_GENERIC_OUT(1), FP_T_GENERIC_IN(2), FP_T_GENERIC_IN(3))
 
 /* Testing Montgomery multiplication in F_p */
 	GENERIC_TEST_FP(fp_mul_redc1, FP_MUL_REDC1, "*", fp_mul_redc1, "cfff", "ioii",
 	     SET_PARAMETER_PRETTY_NAME(4, "p", "prod", "input1", "input2"),
-	     RET, 0, 2,
+	     NO_RET, 0, 2,
 	     FP_T_GENERIC_OUT(1), FP_T_GENERIC_IN(2), FP_T_GENERIC_IN(3))
 	GENERIC_TEST_FP(fp_sqr_redc1, FP_SQR_REDC1, "(^2)", fp_sqr_redc1, "cff", "ioi",
 	     SET_PARAMETER_PRETTY_NAME(3, "p", "prod", "input1"),
-	     RET, 0, 2,
+	     NO_RET, 0, 2,
 	     FP_T_GENERIC_OUT(1), FP_T_GENERIC_IN(2))
 
 /* Testing exponentiation in F_p */
 	GENERIC_TEST_FP(fp_pow, FP_POW, "^", fp_pow, "cffn", "ioii",
 	     SET_PARAMETER_PRETTY_NAME(4, "p", "pow", "input", "exp"),
-	     RET, 0, 2,
+	     NO_RET, 0, 2,
 	     FP_T_GENERIC_OUT(1), FP_T_GENERIC_IN(2), NN_T_GENERIC_IN(3))
 
 /* Testing square residue in F_p */
