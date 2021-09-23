@@ -81,12 +81,12 @@ ATTRIBUTE_WARN_UNUSED_RET static inline int sig_mapping_sanity_check(const ec_si
 {
 	int ret;
 
-	MUST_HAVE(!((sm == NULL) || (sm->name == NULL) || (sm->siglen == NULL) ||
-		    (sm->gen_priv_key == NULL) || (sm->init_pub_key == NULL) ||
-		    (sm->sign_init == NULL) || (sm->sign_update == NULL) ||
-		    (sm->sign_finalize == NULL) || (sm->sign == NULL) ||
-		    (sm->verify_init == NULL) || (sm->verify_update == NULL) ||
-		    (sm->verify_finalize == NULL) || (sm->verify == NULL)),
+	MUST_HAVE(((sm != NULL) && (sm->name != NULL) && (sm->siglen != NULL) &&
+		    (sm->gen_priv_key != NULL) && (sm->init_pub_key != NULL) &&
+		    (sm->sign_init != NULL) && (sm->sign_update != NULL) &&
+		    (sm->sign_finalize != NULL) && (sm->sign != NULL) &&
+		    (sm->verify_init != NULL) && (sm->verify_update != NULL) &&
+		    (sm->verify_finalize != NULL) && (sm->verify != NULL)),
 		   ret, err);
 
 	ret = 0;

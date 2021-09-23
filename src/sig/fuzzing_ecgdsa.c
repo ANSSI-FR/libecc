@@ -83,9 +83,9 @@ int ecgdsa_sign_raw(struct ec_sign_context *ctx, const u8 *input, u8 inputlen, u
 	s_len = (u8)ECGDSA_S_LEN(q_bit_len);
 	hsize = inputlen;
 
-	MUST_HAVE(siglen == ECGDSA_SIGLEN(q_bit_len), ret, err);
+	MUST_HAVE((siglen == ECGDSA_SIGLEN(q_bit_len)), ret, err);
 
-	MUST_HAVE(p_len <= NN_MAX_BYTE_LEN, ret, err);
+	MUST_HAVE(((u32)p_len <= NN_MAX_BYTE_LEN), ret, err);
 
 	dbg_nn_print("p", &(priv_key->params->ec_fp.p));
 	dbg_nn_print("q", q);
@@ -95,7 +95,7 @@ int ecgdsa_sign_raw(struct ec_sign_context *ctx, const u8 *input, u8 inputlen, u
 
 	/* 1. Compute h = H(m) */
         /* NOTE: here we have raw ECGDSA, this is the raw input */
-	MUST_HAVE((inputlen <= sizeof(e_buf)), ret, err);
+	MUST_HAVE(((u32)inputlen <= sizeof(e_buf)), ret, err);
         ret = local_memset(e_buf, 0, sizeof(e_buf)); EG(ret, err);
         ret = local_memcpy(e_buf, input, hsize); EG(ret, err);
 	dbg_buf_print("H(m)", e_buf, hsize);
@@ -140,21 +140,12 @@ int ecgdsa_sign_raw(struct ec_sign_context *ctx, const u8 *input, u8 inputlen, u
 	/* 3. Get a random value k in ]0,q[ */
         /* NOTE: copy our input nonce if not NULL */
         if(nonce != NULL){
-                if(noncelen > (u8)(BYTECEIL(q_bit_len))){
-                        ret = -1;
-                }
-                else{
-                        ret = nn_init_from_buf(&k, nonce, noncelen); EG(ret, err);
-                        ret = 0;
-                }
+		MUST_HAVE((noncelen <= (u8)(BYTECEIL(q_bit_len))), ret, err);
+		ret = nn_init_from_buf(&k, nonce, noncelen); EG(ret, err);
         }
         else{
-                ret = ctx->rand(&k, q);
+                ret = ctx->rand(&k, q); EG(ret, err);
         }
-	if (ret) {
-		ret = -1;
-		goto err;
-	}
 
 #ifdef USE_SIG_BLINDING
         /* Note: if we use blinding, e and e are multiplied by
@@ -185,7 +176,7 @@ int ecgdsa_sign_raw(struct ec_sign_context *ctx, const u8 *input, u8 inputlen, u
          * the procedure but throw an assert exception instead.
          */
 	ret = nn_iszero(&r, &iszero); EG(ret, err);
-        MUST_HAVE(!iszero, ret, err);
+        MUST_HAVE((!iszero), ret, err);
 
 	/* Export r */
 	ret = nn_export_to_buf(sig, r_len, &r); EG(ret, err);
@@ -211,7 +202,7 @@ int ecgdsa_sign_raw(struct ec_sign_context *ctx, const u8 *input, u8 inputlen, u
          * the procedure but throw an assert exception instead.
          */
 	ret = nn_iszero(&s, &iszero); EG(ret, err);
-        MUST_HAVE(!iszero, ret, err);
+        MUST_HAVE((!iszero), ret, err);
 
 	/* 9. Return (r,s) */
 	ret = nn_export_to_buf(sig + r_len, s_len, &s);
@@ -231,7 +222,9 @@ int ecgdsa_sign_raw(struct ec_sign_context *ctx, const u8 *input, u8 inputlen, u
 	 * We can now clear data part of the context. This will clear
 	 * magic and avoid further reuse of the whole context.
 	 */
-	IGNORE_RET_VAL(local_memset(&(ctx->sign_data.ecgdsa), 0, sizeof(ecgdsa_sign_data)));
+	if(ctx != NULL){
+		IGNORE_RET_VAL(local_memset(&(ctx->sign_data.ecgdsa), 0, sizeof(ecgdsa_sign_data)));
+	}
 
 	/* Clean what remains on the stack */
 	VAR_ZEROIFY(q_bit_len);
@@ -302,7 +295,7 @@ int ecgdsa_verify_raw(struct ec_verify_context *ctx, const u8 *input, u8 inputle
 
 	/* 2. Compute h = H(m) */
         /* NOTE: here we have raw ECGDSA, this is the raw input */
-	MUST_HAVE((input != NULL) && (inputlen <= sizeof(e_buf)), ret, err);
+	MUST_HAVE((input != NULL) && ((u32)inputlen <= sizeof(e_buf)), ret, err);
 
         ret = local_memset(e_buf, 0, sizeof(e_buf)); EG(ret, err);
         ret = local_memcpy(e_buf, input, hsize); EG(ret, err);
@@ -365,8 +358,10 @@ err:
 	 * We can now clear data part of the context. This will clear
 	 * magic and avoid further reuse of the whole context.
 	 */
-	IGNORE_RET_VAL(local_memset(&(ctx->verify_data.ecgdsa), 0,
-		     sizeof(ecgdsa_verify_data)));
+	if(ctx != NULL){
+		IGNORE_RET_VAL(local_memset(&(ctx->verify_data.ecgdsa), 0,
+			     sizeof(ecgdsa_verify_data)));
+	}
 
 	PTR_NULLIFY(Wprime);
 	PTR_NULLIFY(r);

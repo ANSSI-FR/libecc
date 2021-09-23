@@ -30,7 +30,7 @@ int fp_add(fp_t out, fp_src_t in1, fp_src_t in2)
 
 	MUST_HAVE(((&(in1->ctx->p)) == (&(in2->ctx->p))), ret, err);
 	MUST_HAVE(((&(in1->ctx->p)) == (&(out->ctx->p))), ret, err);
-	(void)cmp; /* silence warning when macro results in nothing */
+	FORCE_USED_VAR(cmp); /* silence warning when macro results in nothing */
 	SHOULD_HAVE(!nn_cmp(&in1->fp_val, &(in1->ctx->p), &cmp) && (cmp < 0), ret, err);
 	SHOULD_HAVE(!nn_cmp(&in2->fp_val, &(in2->ctx->p), &cmp) && (cmp < 0), ret, err);
 
@@ -53,7 +53,7 @@ int fp_inc(fp_t out, fp_src_t in)
 	ret = fp_check_initialized(out); EG(ret, err);
 
 	MUST_HAVE(((&(in->ctx->p)) == (&(out->ctx->p))), ret, err);
-	(void)cmp; /* silence warning when macro results in nothing */
+	FORCE_USED_VAR(cmp); /* silence warning when macro results in nothing */
 	SHOULD_HAVE(!nn_cmp(&in->fp_val, &(in->ctx->p), &cmp) && (cmp < 0), ret, err);
 
 	ret = nn_mod_inc(&(out->fp_val), &(in->fp_val), &(in->ctx->p));
@@ -76,7 +76,7 @@ int fp_sub(fp_t out, fp_src_t in1, fp_src_t in2)
 
 	MUST_HAVE(((&(in1->ctx->p)) == (&(in2->ctx->p))), ret, err);
 	MUST_HAVE(((&(in1->ctx->p)) == (&(out->ctx->p))), ret, err);
-	(void)cmp; /* silence warning when macro results in nothing */
+	FORCE_USED_VAR(cmp); /* silence warning when macro results in nothing */
 	SHOULD_HAVE(!nn_cmp(&in1->fp_val, &(in1->ctx->p), &cmp) && (cmp < 0), ret, err);
 	SHOULD_HAVE(!nn_cmp(&in2->fp_val, &(in2->ctx->p), &cmp) && (cmp < 0), ret, err);
 
@@ -99,7 +99,7 @@ int fp_dec(fp_t out, fp_src_t in)
 	ret = fp_check_initialized(in); EG(ret, err);
 
 	MUST_HAVE(((&(in->ctx->p)) == (&(out->ctx->p))), ret, err);
-	(void)cmp; /* silence warning when macro results in nothing */
+	FORCE_USED_VAR(cmp); /* silence warning when macro results in nothing */
 	SHOULD_HAVE(!nn_cmp(&in->fp_val, &(in->ctx->p), &cmp) && (cmp < 0), ret, err);
 
 	ret = nn_mod_dec(&(out->fp_val), &(in->fp_val), &(in->ctx->p));
@@ -120,7 +120,7 @@ int fp_neg(fp_t out, fp_src_t in)
 	ret = fp_check_initialized(out); EG(ret, err);
 
 	MUST_HAVE(((&(in->ctx->p)) == (&(out->ctx->p))), ret, err);
-	(void)cmp; /* silence warning when macro results in nothing */
+	FORCE_USED_VAR(cmp); /* silence warning when macro results in nothing */
 	SHOULD_HAVE(!nn_cmp(&in->fp_val, &(in->ctx->p), &cmp) && (cmp < 0), ret, err);
 
 	ret = nn_sub(&(out->fp_val), &(in->ctx->p), &(in->fp_val));

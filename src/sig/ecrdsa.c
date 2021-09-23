@@ -52,7 +52,7 @@ ATTRIBUTE_WARN_UNUSED_RET static inline int _reverse_endianness(u8 *buf, u16 buf
 	u8 tmp;
 	int ret;
 
-	MUST_HAVE(buf != NULL, ret, err);
+	MUST_HAVE((buf != NULL), ret, err);
 
 	if(buf_size > 1){
 		for(i = 0; i < (buf_size / 2); i++){
@@ -74,7 +74,7 @@ int ecrdsa_init_pub_key(ec_pub_key *out_pub, const ec_priv_key *in_priv)
 	prj_pt_src_t G;
 	nn_src_t q;
 
-	MUST_HAVE(out_pub != NULL, ret, err);
+	MUST_HAVE((out_pub != NULL), ret, err);
 
 	/* Zero init public key to be generated */
 	ret = local_memset(out_pub, 0, sizeof(ec_pub_key)); EG(ret, err);
@@ -83,7 +83,7 @@ int ecrdsa_init_pub_key(ec_pub_key *out_pub, const ec_priv_key *in_priv)
 	q = &(in_priv->params->ec_gen_order);
 
 	/* Sanity check on key */
-	MUST_HAVE(!nn_cmp(&(in_priv->x), q, &cmp) && (cmp < 0), ret, err);
+	MUST_HAVE((!nn_cmp(&(in_priv->x), q, &cmp)) && (cmp < 0), ret, err);
 
 	/* Y = xG */
 	G = &(in_priv->params->ec_gen);
@@ -102,7 +102,7 @@ int ecrdsa_siglen(u16 p_bit_len, u16 q_bit_len, u8 hsize, u8 blocksize, u8 *sigl
 {
 	int ret;
 
-	MUST_HAVE(siglen != NULL, ret, err);
+	MUST_HAVE((siglen != NULL), ret, err);
 	MUST_HAVE((p_bit_len <= CURVES_MAX_P_BIT_LEN) &&
 		  (q_bit_len <= CURVES_MAX_Q_BIT_LEN) &&
 		  (hsize <= MAX_DIGEST_SIZE) && (blocksize <= MAX_BLOCK_SIZE), ret, err);
@@ -143,7 +143,7 @@ err:
 
 #define ECRDSA_SIGN_MAGIC ((word_t)(0xcc97bbc8ada8973cULL))
 #define ECRDSA_SIGN_CHECK_INITIALIZED(A, ret, err) \
-	MUST_HAVE((((const void *)(A)) != NULL) && \
+	MUST_HAVE((((void *)(A)) != NULL) && \
 		  ((A)->magic == ECRDSA_SIGN_MAGIC), ret, err)
 
 int _ecrdsa_sign_init(struct ec_sign_context *ctx)
@@ -187,7 +187,7 @@ int _ecrdsa_sign_update(struct ec_sign_context *ctx,
 
 	/* Since we call a callback, sanity check our mapping */
 	ret = hash_mapping_callbacks_sanity_check(ctx->h); EG(ret, err);
-	ret = ctx->h->hfunc_update(&(ctx->sign_data.ecrdsa.h_ctx), chunk, chunklen); EG(ret, err);
+	ret = ctx->h->hfunc_update(&(ctx->sign_data.ecrdsa.h_ctx), chunk, chunklen);
 
 err:
 	return ret;
@@ -241,11 +241,7 @@ int _ecrdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	/* This should not happen and means that our
 	 * private key is not compliant!
 	 */
-	MUST_HAVE(cmp < 0, ret, err);
-
-	MUST_HAVE(p_bit_len <= NN_MAX_BIT_LEN, ret, err);
-
-	MUST_HAVE(siglen == ECRDSA_SIGLEN(q_bit_len), ret, err);
+	MUST_HAVE((cmp < 0) && (p_bit_len <= NN_MAX_BIT_LEN) && (siglen == ECRDSA_SIGLEN(q_bit_len)), ret, err);
 
 	dbg_nn_print("p", &(priv_key->params->ec_fp.p));
 	dbg_nn_print("q", q);
@@ -261,9 +257,9 @@ int _ecrdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	 * This allows us to avoid the corruption of such a pointer.
 	 */
 	/* Sanity check on the handler before calling it */
-	MUST_HAVE(ctx->rand == nn_get_random_mod, ret, err);
+	MUST_HAVE((ctx->rand == nn_get_random_mod), ret, err);
 #endif
-	MUST_HAVE(ctx->rand != NULL, ret, err);
+	MUST_HAVE((ctx->rand != NULL), ret, err);
 	ret = ctx->rand(&k, q); EG(ret, err);
 
 	dbg_nn_print("k", &k);
@@ -365,7 +361,9 @@ int _ecrdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	 * We can now clear data part of the context. This will clear
 	 * magic and avoid further reuse of the whole context.
 	 */
-	IGNORE_RET_VAL(local_memset(&(ctx->sign_data.ecrdsa), 0, sizeof(ecrdsa_sign_data)));
+	if(ctx != NULL){
+		IGNORE_RET_VAL(local_memset(&(ctx->sign_data.ecrdsa), 0, sizeof(ecrdsa_sign_data)));
+	}
 
 	/* Clean what remains on the stack */
 	VAR_ZEROIFY(r_len);
@@ -383,7 +381,7 @@ int _ecrdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 
 #define ECRDSA_VERIFY_MAGIC ((word_t)(0xa8e16b7e8180cb9aULL))
 #define ECRDSA_VERIFY_CHECK_INITIALIZED(A, ret, err) \
-	MUST_HAVE((((const void *)(A)) != NULL) && \
+	MUST_HAVE((((void *)(A)) != NULL) && \
 		  ((A)->magic == ECRDSA_VERIFY_MAGIC), ret, err)
 
 /*
@@ -446,11 +444,7 @@ int _ecrdsa_verify_init(struct ec_verify_context *ctx,
 	ret = nn_iszero(&r, &iszero2); EG(ret, err);
 	ret = nn_cmp(&s, q, &cmp1); EG(ret, err);
 	ret = nn_cmp(&s, q, &cmp2); EG(ret, err);
-	if (iszero1 || (cmp1 >= 0) ||
-	    iszero2 || (cmp2 >= 0)) {
-		ret = -1;
-		goto err;
-	}
+	MUST_HAVE((!iszero1) && (cmp1 < 0) && (!iszero2) && (cmp2 < 0), ret, err);
 
 	/* Initialize the remaining of verify context. */
 	ret = nn_copy(&(ctx->verify_data.ecrdsa.r), &r); EG(ret, err);
@@ -605,8 +599,10 @@ err:
 	 * We can now clear data part of the context. This will clear
 	 * magic and avoid further reuse of the whole context.
 	 */
-	IGNORE_RET_VAL(local_memset(&(ctx->verify_data.ecrdsa), 0,
-		     sizeof(ecrdsa_verify_data)));
+	if(ctx != NULL){
+		IGNORE_RET_VAL(local_memset(&(ctx->verify_data.ecrdsa), 0,
+			     sizeof(ecrdsa_verify_data)));
+	}
 
 	/* Clean what remains on the stack */
 	PTR_NULLIFY(Wprime);

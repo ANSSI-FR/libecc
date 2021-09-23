@@ -823,7 +823,7 @@ int read_string(int fd, char *buf, unsigned int *buflen);
 int read_string(int fd, char *buf, unsigned int *buflen)
 {
 	unsigned int pos = 0, len;
-	int ret;
+	int ret = -1;
 	char c;
 
 	MUST_HAVE((buf != NULL) && (buflen != NULL), ret, err);
@@ -1018,7 +1018,7 @@ int main(int argc, char *argv[])
 				tmp = &fp_ctx_r;
 				ret = nn_set_wlen(tmp, (u8)(nn_len / WORD_BYTES)); EG(ret, err);
 				ret = nn_import_from_hexbuf(tmp, rec + (2 * nn_len),
-						      2 * nn_len); EG(ret, err); EG(ret, err);
+						      2 * nn_len); EG(ret, err);
 
 				/* Compare r */
 				ret = nn_cmp(&fp_ctx_r, &(fp_ctx_param.r), &cmp);

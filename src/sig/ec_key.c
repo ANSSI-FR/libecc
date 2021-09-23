@@ -25,7 +25,7 @@ int priv_key_check_initialized(const ec_priv_key *A)
 {
 	int ret = 0;
 
-	MUST_HAVE(!((A == NULL) || (A->magic != PRIV_KEY_MAGIC)), ret, err);
+	MUST_HAVE(((A != NULL) && (A->magic == PRIV_KEY_MAGIC) && (A->params != NULL)), ret, err);
 
 err:
 	return ret;
@@ -40,8 +40,8 @@ int priv_key_check_initialized_and_type(const ec_priv_key *A,
 {
 	int ret = 0;
 
-	MUST_HAVE(!((A == NULL) || (A->magic != PRIV_KEY_MAGIC) ||
-			(A->key_type != sig_type)), ret, err);
+	MUST_HAVE(((A != NULL) && (A->magic == PRIV_KEY_MAGIC) &&
+			(A->params != NULL) && (A->key_type == sig_type)), ret, err);
 
 err:
 	return ret;
@@ -90,7 +90,7 @@ int ec_priv_key_export_to_buf(const ec_priv_key *priv_key, u8 *priv_key_buf,
 	 * losing information.
 	 */
 	ret = nn_bitlen(&(priv_key->x), &blen); EG(ret, err);
-	MUST_HAVE((8 * (u32)priv_key_buf_len) >= (u32)blen, ret, err);
+	MUST_HAVE(((8 * (u32)priv_key_buf_len) >= (u32)blen), ret, err);
 
 	/* Export our private key */
 	ret = nn_export_to_buf(priv_key_buf, priv_key_buf_len, &(priv_key->x));
@@ -107,7 +107,7 @@ int pub_key_check_initialized(const ec_pub_key *A)
 {
 	int ret = 0;
 
-	MUST_HAVE(((A != NULL) && (A->magic == PUB_KEY_MAGIC)), ret, err);
+	MUST_HAVE(((A != NULL) && (A->magic == PUB_KEY_MAGIC) && (A->params != NULL)), ret, err);
 
 err:
 	return ret;
@@ -123,7 +123,7 @@ int pub_key_check_initialized_and_type(const ec_pub_key *A,
 	int ret = 0;
 
 	MUST_HAVE(((A != NULL) && (A->magic == PUB_KEY_MAGIC) &&
-			(A->key_type == sig_type)), ret, err);
+			(A->params != NULL) && (A->key_type == sig_type)), ret, err);
 
 err:
 	return ret;
@@ -158,10 +158,7 @@ int ec_pub_key_import_from_buf(ec_pub_key *pub_key, const ec_params *params,
 	 */
 	ret = nn_isone(&(params->ec_gen_cofactor), &isone); EG(ret, err);
 	if (!isone) {
-		if (check_prj_pt_order(&(pub_key->y), &(params->ec_gen_order))) {
-			ret = -1;
-			goto err;
-		}
+		ret = check_prj_pt_order(&(pub_key->y), &(params->ec_gen_order)); EG(ret, err);
 	}
 
 	/* Set key type and pointer to EC params */
@@ -201,11 +198,8 @@ int ec_pub_key_import_from_aff_buf(ec_pub_key *pub_key, const ec_params *params,
 	 * be the case in some protocols.
 	 */
 	ret = nn_isone(&(params->ec_gen_cofactor), &isone); EG(ret, err);
-	if(!isone){
-		if(check_prj_pt_order(&(pub_key->y), &(params->ec_gen_order))){
-			ret = -1;
-			goto err;
-		}
+	if (!isone){
+		ret = check_prj_pt_order(&(pub_key->y), &(params->ec_gen_order)); EG(ret, err);
 	}
 
 	/* Set key type and pointer to EC params */
@@ -329,11 +323,8 @@ int ec_structured_priv_key_import_from_buf(ec_priv_key *priv_key,
 	 *   - One byte = the algorithm type (ECDSA, ECKCDSA, ...)
 	 *   - One byte = the curve type (FRP256V1, ...)
 	 */
-	MUST_HAVE((priv_key != NULL), ret, err);
-	MUST_HAVE((priv_key_buf != NULL), ret, err);
-	MUST_HAVE((priv_key_buf_len > metadata_len), ret, err);
-	MUST_HAVE((params != NULL), ret, err);
-	MUST_HAVE((params->curve_name != NULL), ret, err);
+	MUST_HAVE((priv_key != NULL) && (priv_key_buf != NULL) && (priv_key_buf_len > metadata_len), ret, err);
+	MUST_HAVE((params != NULL) && (params->curve_name != NULL), ret, err);
 
 	/* Pull and check the key type */
 	MUST_HAVE((EC_PRIVKEY == priv_key_buf[0]), ret, err);
@@ -344,7 +335,7 @@ int ec_structured_priv_key_import_from_buf(ec_priv_key *priv_key,
 	/* Pull and check the curve type */
 	ret = local_strlen((const char *)params->curve_name, &len); EG(ret, err);
 	len += 1;
-	MUST_HAVE(len < 256, ret, err);
+	MUST_HAVE((len < 256), ret, err);
 	crv_name_len = (u8)len;
 
 	ret = ec_check_curve_type_and_name((ec_curve_type) (priv_key_buf[2]),
@@ -375,9 +366,7 @@ int ec_structured_priv_key_export_to_buf(const ec_priv_key *priv_key,
 
 	ret = priv_key_check_initialized(priv_key); EG(ret, err);
 
-	MUST_HAVE((priv_key_buf != NULL), ret, err);
-	MUST_HAVE((priv_key_buf_len > metadata_len), ret, err);
-	MUST_HAVE((priv_key->params->curve_name != NULL), ret, err);
+	MUST_HAVE((priv_key_buf != NULL) && (priv_key_buf_len > metadata_len) && (priv_key->params->curve_name != NULL), ret, err);
 
 	/*
 	 * We first put the metadata, consisting on:
@@ -397,7 +386,7 @@ int ec_structured_priv_key_export_to_buf(const ec_priv_key *priv_key,
 
 	ret = local_strlen((const char *)curve_name, &len); EG(ret, err);
 	len += 1;
-	MUST_HAVE(len < 256, ret, err);
+	MUST_HAVE((len < 256), ret, err);
 	curve_name_len = (u8)len;
 
 	ret = ec_get_curve_type_by_name(curve_name, curve_name_len, &curve_type); EG(ret, err);
@@ -426,10 +415,8 @@ int ec_structured_pub_key_import_from_buf(ec_pub_key *pub_key,
 	u32 len;
 	int ret;
 
-	MUST_HAVE((pub_key_buf != NULL), ret, err);
-	MUST_HAVE((pub_key_buf_len > metadata_len), ret, err);
-	MUST_HAVE((params != NULL), ret, err);
-	MUST_HAVE((params->curve_name != NULL), ret, err);
+	MUST_HAVE((pub_key_buf != NULL) && (pub_key_buf_len > metadata_len), ret, err);
+	MUST_HAVE((params != NULL) && (params->curve_name != NULL), ret, err);
 
 	/*
 	 * We first pull the metadata, consisting of:
@@ -439,21 +426,15 @@ int ec_structured_pub_key_import_from_buf(ec_pub_key *pub_key,
 	 */
 
 	/* Pull and check the key type */
-	if (EC_PUBKEY != pub_key_buf[0]) {
-		ret = -1;
-		goto err;
-	}
+	MUST_HAVE((EC_PUBKEY == pub_key_buf[0]), ret, err);
 
 	/* Pull and check the algorithm type */
-	if (ec_key_alg != pub_key_buf[1]) {
-		ret = -1;
-		goto err;
-	}
+	MUST_HAVE((ec_key_alg == pub_key_buf[1]), ret, err);
 
 	/* Pull and check the curve type */
 	ret = local_strlen((const char *)params->curve_name, &len); EG(ret, err);
 	len += 1;
-	MUST_HAVE(len < 256, ret, err);
+	MUST_HAVE((len < 256), ret, err);
 	crv_name_len = (u8)len;
 
 	ret = ec_check_curve_type_and_name((ec_curve_type) (pub_key_buf[2]),
@@ -483,8 +464,7 @@ int ec_structured_pub_key_export_to_buf(const ec_pub_key *pub_key,
 
 	ret = pub_key_check_initialized(pub_key); EG(ret, err);
 
-	MUST_HAVE((pub_key_buf != NULL), ret, err);
-	MUST_HAVE((pub_key_buf_len > metadata_len), ret, err);
+	MUST_HAVE((pub_key_buf != NULL) && (pub_key_buf_len > metadata_len), ret, err);
 	MUST_HAVE((pub_key->params->curve_name != NULL), ret, err);
 
 	/*
@@ -505,7 +485,7 @@ int ec_structured_pub_key_export_to_buf(const ec_pub_key *pub_key,
 
 	ret = local_strlen((const char *)curve_name, &len); EG(ret, err);
 	len += 1;
-	MUST_HAVE(len < 256, ret, err);
+	MUST_HAVE((len < 256), ret, err);
 	curve_name_len = (u8)len;
 
 	ret = ec_get_curve_type_by_name(curve_name, curve_name_len, &curve_type); EG(ret, err);
@@ -534,11 +514,8 @@ int ec_structured_key_pair_import_from_priv_key_buf(ec_key_pair *kp,
 	u32 len;
 	int ret;
 
-	MUST_HAVE((kp != NULL), ret, err);
-	MUST_HAVE((priv_key_buf != NULL), ret, err);
-	MUST_HAVE((priv_key_buf_len > metadata_len), ret, err);
-	MUST_HAVE((params != NULL), ret, err);
-	MUST_HAVE((params->curve_name != NULL), ret, err);
+	MUST_HAVE((kp != NULL) && (priv_key_buf != NULL) && (priv_key_buf_len > metadata_len), ret, err);
+	MUST_HAVE((params != NULL) && (params->curve_name != NULL), ret, err);
 
 	/* We first pull the metadata, consisting on:
 	 *   - One byte = the key type (public or private)
@@ -547,21 +524,15 @@ int ec_structured_key_pair_import_from_priv_key_buf(ec_key_pair *kp,
 	 */
 
 	/* Pull and check the key type */
-	if (EC_PRIVKEY != priv_key_buf[0]) {
-		ret = -1;
-		goto err;
-	}
+	MUST_HAVE((EC_PRIVKEY == priv_key_buf[0]), ret, err);
 
 	/* Pull and check the algorithm type */
-	if (ec_key_alg != priv_key_buf[1]) {
-		ret = -1;
-		goto err;
-	}
+	MUST_HAVE((ec_key_alg == priv_key_buf[1]), ret, err);
 
 	/* Pull and check the curve type */
 	ret = local_strlen((const char *)params->curve_name, &len); EG(ret, err);
 	len += 1;
-	MUST_HAVE(len < 256, ret, err);
+	MUST_HAVE((len < 256), ret, err);
 	crv_name_len = (u8)len;
 
 	ret = ec_check_curve_type_and_name((ec_curve_type) (priv_key_buf[2]),
@@ -614,8 +585,7 @@ int ec_key_pair_gen(ec_key_pair *kp, const ec_params *params,
 {
 	int ret;
 
-	MUST_HAVE((kp != NULL), ret, err);
-	MUST_HAVE((params != NULL), ret, err);
+	MUST_HAVE((kp != NULL) && (params != NULL), ret, err);
 
 	/* Get a random value in ]0,q[ */
 	ret = nn_get_random_mod(&(kp->priv_key.x), &(params->ec_gen_order)); EG(ret, err);

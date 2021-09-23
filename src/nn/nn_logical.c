@@ -271,8 +271,8 @@ int nn_rrot(nn_t out, nn_src_t in, bitcnt_t cnt, bitcnt_t bitlen)
 	nn tmp;
 	tmp.magic = 0;
 
-	MUST_HAVE(!(bitlen > NN_MAX_BIT_LEN), ret, err);
-	MUST_HAVE(!(cnt >= bitlen), ret, err);
+	MUST_HAVE((bitlen <= NN_MAX_BIT_LEN), ret, err);
+	MUST_HAVE((cnt < bitlen), ret, err);
 
 	ret = nn_check_initialized(in); EG(ret, err);
 	ret = nn_init(&tmp, 0); EG(ret, err);
@@ -487,6 +487,8 @@ int nn_clz(nn_src_t in, bitcnt_t *lz)
 	int ret;
 	u8 i;
 
+	/* Sanity check */
+	MUST_HAVE((lz != NULL), ret, err);
 	ret = nn_check_initialized(in); EG(ret, err);
 
 	for (i = in->wlen; i > 0; i--) {
@@ -514,6 +516,7 @@ int nn_bitlen(nn_src_t in, bitcnt_t *blen)
 	int ret;
 	u8 i;
 
+	/* Sanity check */
 	MUST_HAVE((blen != NULL), ret, err);
 	ret = nn_check_initialized(in); EG(ret, err);
 
@@ -523,7 +526,7 @@ int nn_bitlen(nn_src_t in, bitcnt_t *blen)
 			break;
 		}
 	}
-	*blen = _blen;
+	(*blen) = _blen;
 
 err:
 	return ret;
@@ -540,12 +543,13 @@ int nn_getbit(nn_src_t in, bitcnt_t bit, u8 *bitval)
 	u8 bidx = bit % WORD_BITS;
 	int ret;
 
+	/* Sanity check */
 	MUST_HAVE((bitval != NULL), ret, err);
 	ret = nn_check_initialized(in); EG(ret, err);
-	MUST_HAVE(!(bit >= NN_MAX_BIT_LEN), ret, err);
+	MUST_HAVE((bit < NN_MAX_BIT_LEN), ret, err);
 
 	/* bidx is less than WORD_BITS so shift operations below are ok */
-	*bitval = (u8)((((in->val[widx]) & (WORD(1) << bidx)) >> bidx) & 0x1);
+	(*bitval) = (u8)((((in->val[widx]) & (WORD(1) << bidx)) >> bidx) & 0x1);
 
 err:
 	return ret;

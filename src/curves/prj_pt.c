@@ -33,9 +33,9 @@ int prj_pt_check_initialized(prj_pt_src_t in)
 {
 	int ret;
 
-	MUST_HAVE(((in != NULL) && (in->magic == PRJ_PT_MAGIC) && (in->crv != NULL)), ret, err);
+	MUST_HAVE(((in != NULL) && (in->magic == PRJ_PT_MAGIC)), ret, err);
+	ret = ec_shortw_crv_check_initialized(in->crv);
 
-	ret = 0;
 err:
 	return ret;
 }
@@ -152,6 +152,14 @@ int prj_pt_is_on_curve(prj_pt_src_t in,  int *on_curve)
 	ret = prj_pt_check_initialized(in); EG(ret, err);
 	MUST_HAVE((on_curve != NULL), ret, err);
 
+ 	ret = fp_init(&X, in->X.ctx); EG(ret, err);
+	ret = fp_init(&Y, in->X.ctx); EG(ret, err);
+
+	/* NOTE: use Y as a temporary dummy random variable for
+	 * dummy operations when whe deal with the point at infinity.
+	 */
+	ret = nn_get_random_mod(&(Y.fp_val), &((in->X.ctx)->p)); EG(ret, err);
+
 	ret = fp_iszero(&(in->Z), &iszero); EG(ret, err);
 
 	/* Go back to affine and avoid leaking the point
@@ -159,12 +167,10 @@ int prj_pt_is_on_curve(prj_pt_src_t in,  int *on_curve)
 	 * tentatively in constant time when we have to
 	 * deal with the point at infinity.
 	 */
-	dummy_Z = iszero ? &(in->crv->a) : &(in->Z);
-
- 	ret = fp_init(&X, in->X.ctx); EG(ret, err);
-	ret = fp_init(&Y, in->X.ctx); EG(ret, err);
+	dummy_Z = iszero ? (&Y) : &(in->Z);
 
  	ret = fp_inv(&X, dummy_Z); EG(ret, err);
+
  	ret = fp_mul(&Y, &(in->Y), &X); EG(ret, err);
 	ret = fp_mul(&X, &(in->X), &X); EG(ret, err);
 
@@ -172,11 +178,12 @@ int prj_pt_is_on_curve(prj_pt_src_t in,  int *on_curve)
 	ret = is_on_shortw_curve(&X, &Y, in->crv, &_on_curve);
 
 	if(!ret){
-		*on_curve = (iszero | _on_curve);
+		(*on_curve) = (iszero | _on_curve);
 	}
 
 err:
 	PTR_NULLIFY(dummy_Z);
+
 	fp_uninit(&X);
 	fp_uninit(&Y);
 
@@ -283,7 +290,7 @@ int ec_shortw_aff_to_prj(prj_pt_t out, aff_pt_src_t in)
 	ret = prj_pt_init(out, in->crv); EG(ret, err);
 	ret = fp_copy(&(out->X), &(in->x)); EG(ret, err);
 	ret = fp_copy(&(out->Y), &(in->y)); EG(ret, err);
-	ret = nn_inc(&(out->Z).fp_val, &(out->Z).fp_val); /* Z = 1 */
+	ret = nn_one(&(out->Z).fp_val); /* Z = 1 */
 
 err:
 	return ret;
@@ -329,7 +336,7 @@ int prj_pt_cmp(prj_pt_src_t in1, prj_pt_src_t in2, int *cmp)
 	ret = fp_cmp(&Y1, &Y2, &y_cmp);
 
 	if (!ret) {
-		*cmp = (x_cmp | y_cmp);
+		(*cmp) = (x_cmp | y_cmp);
 	}
 
 err:
@@ -365,6 +372,7 @@ ATTRIBUTE_WARN_UNUSED_RET static inline int _prj_pt_eq_or_opp_X(prj_pt_src_t in1
 err:
 	fp_uninit(&X1);
 	fp_uninit(&X2);
+
 	return ret;
 }
 
@@ -392,6 +400,7 @@ ATTRIBUTE_WARN_UNUSED_RET static inline int _prj_pt_eq_or_opp_Y(prj_pt_src_t in1
 err:
 	fp_uninit(&Y1);
 	fp_uninit(&Y2);
+
 	return ret;
 }
 
@@ -414,7 +423,7 @@ int prj_pt_eq_or_opp(prj_pt_src_t in1, prj_pt_src_t in2, int *eq_or_opp)
 	ret = _prj_pt_eq_or_opp_Y(in1, in2, &_eq_or_opp);
 
 	if (!ret) {
-		*eq_or_opp = ((cmp == 0) & _eq_or_opp);
+		(*eq_or_opp) = ((cmp == 0) & _eq_or_opp);
 	}
 
 err:
@@ -464,11 +473,7 @@ int prj_pt_import_from_buf(prj_pt_t pt,
 
 	ctx = crv->a.ctx;
 	coord_len = BYTECEIL(ctx->p_bitlen);
-
-	if (pt_buf_len != (3 * coord_len)) {
-		ret = -1;
-		goto err;
-	}
+	MUST_HAVE((pt_buf_len == (3 * coord_len)), ret, err);
 
 	ret = fp_init_from_buf(&(pt->X), ctx, pt_buf, coord_len); EG(ret, err);
 	ret = fp_init_from_buf(&(pt->Y), ctx, pt_buf + coord_len, coord_len); EG(ret, err);
@@ -490,6 +495,8 @@ int prj_pt_import_from_buf(prj_pt_t pt,
 	}
 
 err:
+	PTR_NULLIFY(ctx);
+
 	return ret;
 }
 
@@ -515,11 +522,7 @@ int prj_pt_import_from_aff_buf(prj_pt_t pt,
 
 	ctx = crv->a.ctx;
 	coord_len = BYTECEIL(ctx->p_bitlen);
-
-	if (pt_buf_len != (2 * coord_len)) {
-		ret = -1;
-		goto err;
-	}
+	MUST_HAVE((pt_buf_len == (2 * coord_len)), ret, err);
 
 	ret = fp_init_from_buf(&(pt->X), ctx, pt_buf, coord_len); EG(ret, err);
 	ret = fp_init_from_buf(&(pt->Y), ctx, pt_buf + coord_len, coord_len); EG(ret, err);
@@ -543,6 +546,8 @@ int prj_pt_import_from_aff_buf(prj_pt_t pt,
 	}
 
 err:
+	PTR_NULLIFY(ctx);
+
 	return ret;
 }
 
@@ -571,11 +576,7 @@ int prj_pt_export_to_buf(prj_pt_src_t pt, u8 *pt_buf, u32 pt_buf_len)
 
 	ctx = pt->crv->a.ctx;
 	coord_len = BYTECEIL(ctx->p_bitlen);
-
-	if (pt_buf_len != (3 * coord_len)) {
-		ret = -1;
-		goto err;
-	}
+	MUST_HAVE((pt_buf_len == (3 * coord_len)), ret, err);
 
 	/* Export the three coordinates */
 	ret = fp_export_to_buf(pt_buf, coord_len, &(pt->X)); EG(ret, err);
@@ -583,6 +584,8 @@ int prj_pt_export_to_buf(prj_pt_src_t pt, u8 *pt_buf, u32 pt_buf_len)
 	ret = fp_export_to_buf(pt_buf + (2 * coord_len), coord_len, &(pt->Z));
 
 err:
+	PTR_NULLIFY(ctx);
+
 	return ret;
 }
 
@@ -617,6 +620,7 @@ int prj_pt_export_to_aff_buf(prj_pt_src_t pt, u8 *pt_buf, u32 pt_buf_len)
 
 err:
 	aff_pt_uninit(&tmp_aff);
+
 	return ret;
 }
 
@@ -826,7 +830,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int __prj_pt_add_monty_no_cf(prj_pt_t out, prj_
 
 	ret = prj_pt_check_initialized(in1); EG(ret, err);
 	ret = prj_pt_check_initialized(in2); EG(ret, err);
-	MUST_HAVE(in1->crv == in2->crv, ret, err);
+	MUST_HAVE((in1->crv == in2->crv), ret, err);
 
 	ret = prj_pt_iszero(in1, &iszero); EG(ret, err);
 	if (iszero) {
@@ -1088,6 +1092,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int _prj_pt_dbl_monty_aliased(prj_pt_t val)
 
 err:
 	prj_pt_uninit(&out_cpy);
+
 	return ret;
 }
 
@@ -1149,8 +1154,8 @@ ATTRIBUTE_WARN_UNUSED_RET static int _prj_pt_add_monty_aliased(prj_pt_t out,
 								prj_pt_src_t in1,
 								prj_pt_src_t in2)
 {
-	prj_pt out_cpy;
 	int ret;
+	prj_pt out_cpy;
 	out_cpy.magic = 0;
 
 	ret = _prj_pt_add_monty(&out_cpy, in1, in2); EG(ret, err);
@@ -1158,6 +1163,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int _prj_pt_add_monty_aliased(prj_pt_t out,
 
 err:
 	prj_pt_uninit(&out_cpy);
+
 	return ret;
 }
 
@@ -1176,7 +1182,7 @@ int prj_pt_add(prj_pt_t out, prj_pt_src_t in1, prj_pt_src_t in2)
 
 	ret = prj_pt_check_initialized(in1); EG(ret, err);
 	ret = prj_pt_check_initialized(in2); EG(ret, err);
-	MUST_HAVE(in1->crv == in2->crv, ret, err);
+	MUST_HAVE((in1->crv == in2->crv), ret, err);
 
 	if ((out == in1) || (out == in2)) {
 		ret = _prj_pt_add_monty_aliased(out, in1, in2);
@@ -1224,8 +1230,8 @@ err:
  *
  *   => We only deal with 0 <= m < (q**2) using the countermeasure. When m >= (q**2),
  *      we stick with m' = m, accepting MSB issues (not much can be done in this case
- *      anyways). In the two first cases, Double-and-Add-Always is performed in constant
- *      time wrt the size of the scalar m.
+ *      anyways). In the two first cases, Double-and-Add-Always and Montgomery Ladder are
+ *      performed in constant time wrt the size of the scalar m.
  */
 /***********/
 /*
@@ -1240,7 +1246,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int _blind_projective_point(prj_pt_t out, prj_p
 	/* NOTE: to limit stack usage, we reuse out->Z as a temporary
 	 * variable. This does not work if in == out, hence the check.
 	 */
-	MUST_HAVE(in != out, ret, err);
+	MUST_HAVE((in != out), ret, err);
 
 	ret = prj_pt_init(out, in->crv); EG(ret, err);
 
@@ -1302,7 +1308,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int _prj_pt_mul_ltr_monty_dbl_add_always(prj_pt
 	T[0].magic = T[1].magic = T[2].magic = 0;
 
 	/* Check that the input is on the curve */
-	MUST_HAVE(!prj_pt_is_on_curve(in, &on_curve) && on_curve, ret, err);
+	MUST_HAVE((!prj_pt_is_on_curve(in, &on_curve)) && on_curve, ret, err);
 	/* Compute m' from m depending on the rule described above */
 	curve_order = &(in->crv->order);
 	/* First compute q**2 */
@@ -1335,10 +1341,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int _prj_pt_mul_ltr_monty_dbl_add_always(prj_pt
 		}
 	}
 	ret = nn_bitlen(&m_msb_fixed, &mlen); EG(ret, err);
-	if (mlen == 0){
-		ret = -1;
-		goto err;
-	}
+	MUST_HAVE(mlen != 0, ret, err);
 	mlen--;
 
 	/* Get a random r with the same size of m_msb_fixed */
@@ -1413,6 +1416,8 @@ err:
 	nn_uninit(&m_msb_fixed);
 	nn_uninit(&curve_order_square);
 
+	PTR_NULLIFY(curve_order);
+
 	return ret;
 }
 #endif
@@ -1423,8 +1428,11 @@ err:
  */
 ATTRIBUTE_WARN_UNUSED_RET static int _prj_pt_mul_ltr_monty_dbl_add_always(prj_pt_t out, nn_src_t m, prj_pt_src_t in)
 {
-	int ret;
+	int ret, on_curve;
 
+	MUST_HAVE((!prj_pt_is_on_curve(in, &on_curve)) && on_curve, ret, err);
+
+	/* Check that the input point is on the curve */
 	ret = _blind_projective_point(out, in); EG(ret, err);
 
 	/*******************/
@@ -1479,10 +1487,7 @@ err1:
 		}
 
 		ret = nn_bitlen(&m_msb_fixed, &mlen); EG(ret, err);
-		if (mlen == 0){
-			ret = -1;
-			goto err;
-		}
+		MUST_HAVE((mlen != 0), ret, err);
 		mlen--;
 
 		{
@@ -1518,8 +1523,12 @@ err2:
 			prj_pt_uninit(&dbl); EG(ret, err);
 		}
 
+		/* Check that the resulting point is on the curve */
+		MUST_HAVE((!prj_pt_is_on_curve(out, &on_curve)) && on_curve, ret, err);
 err:
 		nn_uninit(&m_msb_fixed);
+
+		PTR_NULLIFY(curve_order);
 	}
 
 	return ret;
@@ -1585,10 +1594,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int _prj_pt_mul_ltr_monty_ladder(prj_pt_t out, 
 	}
 
 	ret = nn_bitlen(&m_msb_fixed, &mlen); EG(ret, err);
-	if (mlen == 0) {
-		ret = -1;
-		goto err;
-	}
+	MUST_HAVE((mlen != 0), ret, err);
 	mlen--;
 
 	/* Get a random r with the same size of m_msb_fixed */
@@ -1680,6 +1686,8 @@ err:
 	nn_uninit(&m_msb_fixed);
 	nn_uninit(&curve_order_square);
 
+	PTR_NULLIFY(curve_order);
+
 	return ret;
 }
 #endif
@@ -1759,6 +1767,8 @@ int prj_pt_mul_blind(prj_pt_t out, nn_src_t m, prj_pt_src_t in)
 
 err:
 	nn_uninit(&b);
+
+	PTR_NULLIFY(q);
 
 	return ret;
 }
@@ -1876,17 +1886,20 @@ int prj_pt_shortw_to_aff_pt_edwards(prj_pt_src_t in_shortw,
 	ret = prj_pt_iszero(in_shortw, &iszero); EG(ret, err);
 	if(iszero){
 		fp zero, one;
-		ret = fp_init(&zero, in_shortw->X.ctx); EG(ret, err);
-		ret = fp_init(&one, in_shortw->X.ctx); EG(ret, err);
-		/**/
-		ret = fp_zero(&zero); EG(ret, err);
-		ret = fp_one(&one); EG(ret, err);
-		/**/
-		ret = aff_pt_edwards_init_from_coords(out_edwards, edwards_crv, &zero, &one); EG(ret, err);
-		/**/
+		zero.magic = one.magic = 0;
+
+		ret = fp_init(&zero, in_shortw->X.ctx); EG(ret, err1);
+		ret = fp_init(&one, in_shortw->X.ctx); EG(ret, err1);
+
+		ret = fp_zero(&zero); EG(ret, err1);
+		ret = fp_one(&one); EG(ret, err1);
+
+		ret = aff_pt_edwards_init_from_coords(out_edwards, edwards_crv, &zero, &one);
+
+err1:
 		fp_uninit(&zero);
 		fp_uninit(&one);
-		ret = 0;
+
 		goto err;
 	}
 

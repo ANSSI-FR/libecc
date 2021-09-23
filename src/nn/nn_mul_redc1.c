@@ -73,7 +73,6 @@ int nn_compute_redc1_coefs(nn_t r, nn_t r_square, nn_src_t p_in, word_t *mpinv)
 	tmp_nn1.val[1] = WORD(1);
 	ret = nn_copy(&tmp_nn2, &tmp_nn1); EG(ret, err);
 	ret = nn_modinv_2exp(&tmp_nn1, &p, WORD_BITS, &isodd); EG(ret, err);
-	/* XXX FIXME: verify why we do not check isodd after previous call */
 	ret = nn_sub(&tmp_nn1, &tmp_nn2, &tmp_nn1); EG(ret, err);
 	_mpinv = tmp_nn1.val[0];
 
@@ -96,7 +95,7 @@ int nn_compute_redc1_coefs(nn_t r, nn_t r_square, nn_src_t p_in, word_t *mpinv)
 	ret = nn_sqr(r_square, r); EG(ret, err);
 	ret = nn_mod(r_square, r_square, &p); EG(ret, err);
 
-	*mpinv = _mpinv;
+	(*mpinv) = _mpinv;
 
 err:
 	nn_uninit(&p);
@@ -210,7 +209,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int _nn_mul_redc1(nn_t out, nn_src_t in1, nn_sr
 	 */
 	ret = nn_cmp(out, p, &cmp); EG(ret, err);
 	ret = nn_cnd_sub(cmp >= 0, out, out, p); EG(ret, err);
-	MUST_HAVE(!nn_cmp(out, p, &cmp) && (cmp < 0), ret, err);
+	MUST_HAVE((!nn_cmp(out, p, &cmp)) && (cmp < 0), ret, err);
 	/* We restore out wlen. */
 	out->wlen = old_wlen;
 
@@ -236,6 +235,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int _nn_mul_redc1_aliased(nn_t out, nn_src_t in
 
 err:
 	nn_uninit(&out_cpy);
+
 	return ret;
 }
 
@@ -317,7 +317,7 @@ int nn_mul_mod(nn_t out, nn_src_t in1, nn_src_t in2, nn_src_t p_in)
 	/* Come back to real world by unredcifying result */
 	ret = nn_init(&in1_tmp, 0); EG(ret, err);
 	ret = nn_one(&in1_tmp); EG(ret, err);
-	ret = nn_mul_redc1(out, &r_square, &in1_tmp, &p, mpinv); EG(ret, err);
+	ret = nn_mul_redc1(out, &r_square, &in1_tmp, &p, mpinv);
 
 err:
 	nn_uninit(&p);

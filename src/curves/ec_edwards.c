@@ -47,13 +47,13 @@ int ec_edwards_crv_init(ec_edwards_crv_t crv, fp_src_t a, fp_src_t d, nn_src_t o
 	ret = nn_check_initialized(order); EG(ret, err);
 	ret = fp_check_initialized(a); EG(ret, err);
 	ret = fp_check_initialized(d); EG(ret, err);
-	MUST_HAVE(a->ctx == d->ctx, ret, err);
-	MUST_HAVE(crv != NULL, ret, err);
+	MUST_HAVE((a->ctx == d->ctx), ret, err);
+	MUST_HAVE((crv != NULL), ret, err);
 
 	/* a and d in Fp, must be distinct and non zero */
-	MUST_HAVE(!fp_iszero(a, &iszero) && !iszero, ret, err);
-	MUST_HAVE(!fp_iszero(d, &iszero) && !iszero, ret, err);
-	MUST_HAVE(!fp_cmp(a, d, &cmp) && cmp, ret, err);
+	MUST_HAVE((!fp_iszero(a, &iszero)) && (!iszero), ret, err);
+	MUST_HAVE((!fp_iszero(d, &iszero)) && (!iszero), ret, err);
+	MUST_HAVE((!fp_cmp(a, d, &cmp)) && cmp, ret, err);
 
 	ret = fp_init(&(crv->a), a->ctx); EG(ret, err);
 	ret = fp_init(&(crv->d), d->ctx); EG(ret, err);

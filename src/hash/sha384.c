@@ -110,8 +110,8 @@ int sha384_update(sha384_context *ctx, const u8 *input, u32 ilen)
 	}
 
 	/* Get what's left in our local buffer */
-	left = ctx->sha384_total[0] & 0x7F;
-	fill = SHA384_BLOCK_SIZE - left;
+	left = (ctx->sha384_total[0] & 0x7F);
+	fill = (SHA384_BLOCK_SIZE - left);
 
 	ADD_UINT128_UINT64(ctx->sha384_total[0], ctx->sha384_total[1], ilen);
 
@@ -158,7 +158,7 @@ int sha384_final(sha384_context *ctx, u8 output[SHA384_DIGEST_SIZE])
 	ret = local_memset(last_padded_block, 0, sizeof(last_padded_block)); EG(ret, err);
 
 	/* This is our final step, so we proceed with the padding */
-	block_present = ctx->sha384_total[0] % SHA384_BLOCK_SIZE;
+	block_present = (ctx->sha384_total[0] % SHA384_BLOCK_SIZE);
 	if (block_present != 0) {
 		/* Copy what's left in our temporary context buffer */
 		ret = local_memcpy(last_padded_block, ctx->sha384_buffer,
@@ -235,15 +235,15 @@ err:
 /* init/update/finalize on a single buffer 'input' of length 'ilen'. */
 int sha384(const u8 *input, u32 ilen, u8 output[SHA384_DIGEST_SIZE])
 {
-	const u8 *inputs[2];
-	u32 ilens[1];
+	sha384_context ctx;
+	int ret;
 
-	inputs[0] = input;
-	inputs[1] = NULL;
+	ret = sha384_init(&ctx); EG(ret, err);
+	ret = sha384_update(&ctx, input, ilen); EG(ret, err);
+	ret = sha384_final(&ctx, output);
 
-	ilens[0] = ilen;
-
-	return sha384_scattered(inputs, ilens, output);
+err:
+	return ret;
 }
 
 #else /* WITH_HASH_SHA384 */

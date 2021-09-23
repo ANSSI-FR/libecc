@@ -46,7 +46,7 @@ int get_random_point_on_curve(ec_params *curve_params, prj_pt *out_point)
 	fp x, y, fp_tmp1, fp_tmp2;
 	fp_ctx_src_t ctx;
 
-	MUST_HAVE(curve_params != NULL, ret, err);
+	MUST_HAVE((curve_params != NULL), ret, err);
 
 	nn_tmp.magic = 0;
 	x.magic = y.magic = fp_tmp1.magic = fp_tmp2.magic = 0;
@@ -130,11 +130,11 @@ int check_curve(const u8 *curve_name)
 	 */
 	const ec_str_params *the_curve_const_parameters;
 
-	MUST_HAVE(curve_name != NULL, ret, err);
+	MUST_HAVE((curve_name != NULL), ret, err);
 
 	ret = local_strnlen((const char *)curve_name, MAX_CURVE_NAME_LEN, &len); EG(ret, err);
 	len += 1;
-	MUST_HAVE(len < 256, ret, err);
+	MUST_HAVE((len < 256), ret, err);
 	ret = ec_get_curve_params_by_name(curve_name,
 					    (u8)len, &the_curve_const_parameters); EG(ret, err);
 

@@ -34,7 +34,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int streebog_init(streebog_context *ctx, u8 dig
 	/* Sanity check */
 	MUST_HAVE((digest_size == 32) || (digest_size == 64), ret, err);
 
-	MUST_HAVE(ctx != NULL, ret, err);
+	MUST_HAVE((ctx != NULL), ret, err);
 
 	/* Zeroize the internal state */
 	ret = local_memset(ctx, 0, sizeof(streebog_context)); EG(ret, err);
@@ -70,8 +70,8 @@ ATTRIBUTE_WARN_UNUSED_RET static int streebog_update(streebog_context *ctx, cons
 	}
 
 	/* Get what's left in our local buffer */
-	left = ctx->streebog_total & 0x3F;
-	fill = STREEBOG_BLOCK_SIZE - left;
+	left = (ctx->streebog_total & 0x3F);
+	fill = (STREEBOG_BLOCK_SIZE - left);
 
 	ctx->streebog_total += ilen;
 
@@ -123,7 +123,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int streebog_final(streebog_context *ctx, u8 *o
 	ret = local_memset(last_padded_block, 0, sizeof(last_padded_block)); EG(ret, err);
 
 	/* This is our final step, so we proceed with the padding */
-	block_present = ctx->streebog_total % STREEBOG_BLOCK_SIZE;
+	block_present = (ctx->streebog_total % STREEBOG_BLOCK_SIZE);
 	if (block_present != 0) {
 		/* Copy what's left in our temporary context buffer */
 		ret = local_memcpy(last_padded_block, ctx->streebog_buffer,

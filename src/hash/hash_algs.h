@@ -190,9 +190,9 @@ ATTRIBUTE_WARN_UNUSED_RET static inline int hash_mapping_sanity_check(const hash
 {
 	int ret;
 
-	MUST_HAVE(!((hm == NULL) || (hm->name == NULL) || (hm->hfunc_init == NULL) ||
-		    (hm->hfunc_update == NULL) || (hm->hfunc_finalize == NULL) ||
-		    (hm->hfunc_scattered == NULL)), ret, err);
+	MUST_HAVE(((hm != NULL) && (hm->name != NULL) && (hm->hfunc_init != NULL) &&
+		    (hm->hfunc_update != NULL) && (hm->hfunc_finalize != NULL) &&
+		    (hm->hfunc_scattered != NULL)), ret, err);
 
 	ret = 0;
 

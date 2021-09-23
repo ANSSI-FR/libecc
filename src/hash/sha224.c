@@ -27,7 +27,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int sha224_process(sha224_context *ctx,
 	unsigned int i;
 	int ret;
 
-	MUST_HAVE(data != NULL, ret, err);
+	MUST_HAVE((data != NULL), ret, err);
 	SHA224_HASH_CHECK_INITIALIZED(ctx, ret, err);
 
 	/* Init our inner variables */
@@ -71,7 +71,7 @@ int sha224_init(sha224_context *ctx)
 {
 	int ret;
 
-	MUST_HAVE(ctx != NULL, ret, err);
+	MUST_HAVE((ctx != NULL), ret, err);
 
 	ctx->sha224_total = 0;
 	ctx->sha224_state[0] = 0xC1059ED8;
@@ -101,7 +101,7 @@ int sha224_update(sha224_context *ctx, const u8 *input, u32 ilen)
 	u8 left;
 	int ret;
 
-	MUST_HAVE(input != NULL, ret, err);
+	MUST_HAVE((input != NULL), ret, err);
 	SHA224_HASH_CHECK_INITIALIZED(ctx, ret, err);
 
 	/* Nothing to process, return */
@@ -111,8 +111,8 @@ int sha224_update(sha224_context *ctx, const u8 *input, u32 ilen)
 	}
 
 	/* Get what's left in our local buffer */
-	left = ctx->sha224_total & 0x3F;
-	fill = SHA224_BLOCK_SIZE - left;
+	left = (ctx->sha224_total & 0x3F);
+	fill = (SHA224_BLOCK_SIZE - left);
 
 	ctx->sha224_total += ilen;
 
@@ -148,7 +148,7 @@ int sha224_final(sha224_context *ctx, u8 output[SHA224_DIGEST_SIZE])
 	u8 last_padded_block[2 * SHA224_BLOCK_SIZE];
 	int ret;
 
-	MUST_HAVE(output != NULL, ret, err);
+	MUST_HAVE((output != NULL), ret, err);
 	SHA224_HASH_CHECK_INITIALIZED(ctx, ret, err);
 
 	/* Fill in our last block with zeroes */
@@ -218,7 +218,7 @@ int sha224_scattered(const u8 **inputs, const u32 *ilens,
 		pos += 1;
 	}
 
-	ret = sha224_final(&ctx, output); EG(ret, err);
+	ret = sha224_final(&ctx, output);
 
 err:
 	return ret;
@@ -235,7 +235,7 @@ int sha224(const u8 *input, u32 ilen, u8 output[SHA224_DIGEST_SIZE])
 
 	ret = sha224_init(&ctx); EG(ret, err);
 	ret = sha224_update(&ctx, input, ilen); EG(ret, err);
-	ret = sha224_final(&ctx, output); EG(ret, err);
+	ret = sha224_final(&ctx, output);
 
 err:
 	return ret;

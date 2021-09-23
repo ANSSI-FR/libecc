@@ -79,7 +79,9 @@ static const u32 SM3_Tj_high = 0x7a879d8a;
 #define SM3_P_0(X) (((u32)X) ^ SM3_ROTL((X),  9) ^ SM3_ROTL((X), 17))
 #define SM3_P_1(X) (((u32)X) ^ SM3_ROTL((X), 15) ^ SM3_ROTL((X), 23))
 
-/* SM3 Iterative Compression Process */
+/* SM3 Iterative Compression Process
+ * NOTE: ctx and data sanity checks are performed by the caller (this is an internal function)
+ */
 ATTRIBUTE_WARN_UNUSED_RET static int sm3_process(sm3_context *ctx, const u8 data[SM3_BLOCK_SIZE])
 {
 	u32 A, B, C, D, E, F, G, H;
@@ -87,8 +89,6 @@ ATTRIBUTE_WARN_UNUSED_RET static int sm3_process(sm3_context *ctx, const u8 data
 	u32 W[68 + 64];
 	unsigned int j;
 	int ret;
-
-	SM3_HASH_CHECK_INITIALIZED(ctx, ret, err);
 
 	/* Message Expansion Function ME */
 
@@ -182,7 +182,6 @@ ATTRIBUTE_WARN_UNUSED_RET static int sm3_process(sm3_context *ctx, const u8 data
 
 	ret = 0;
 
-err:
 	return ret;
 }
 
@@ -221,7 +220,7 @@ int sm3_update(sm3_context *ctx, const u8 *input, u32 ilen)
 	u8 left;
 	int ret;
 
-	MUST_HAVE(input != NULL, ret, err);
+	MUST_HAVE((input != NULL), ret, err);
 	SM3_HASH_CHECK_INITIALIZED(ctx, ret, err);
 
 	/* Nothing to process, return */
@@ -231,8 +230,8 @@ int sm3_update(sm3_context *ctx, const u8 *input, u32 ilen)
 	}
 
 	/* Get what's left in our local buffer */
-	left = ctx->sm3_total & 0x3F;
-	fill = SM3_BLOCK_SIZE - left;
+	left = (ctx->sm3_total & 0x3F);
+	fill = (SM3_BLOCK_SIZE - left);
 
 	ctx->sm3_total += ilen;
 
@@ -268,14 +267,14 @@ int sm3_final(sm3_context *ctx, u8 output[SM3_DIGEST_SIZE])
 	u8 last_padded_block[2 * SM3_BLOCK_SIZE];
 	int ret;
 
-	MUST_HAVE(output != NULL, ret, err);
+	MUST_HAVE((output != NULL), ret, err);
 	SM3_HASH_CHECK_INITIALIZED(ctx, ret, err);
 
 	/* Fill in our last block with zeroes */
 	ret = local_memset(last_padded_block, 0, sizeof(last_padded_block)); EG(ret, err);
 
 	/* This is our final step, so we proceed with the padding */
-	block_present = ctx->sm3_total % SM3_BLOCK_SIZE;
+	block_present = (ctx->sm3_total % SM3_BLOCK_SIZE);
 	if (block_present != 0) {
 		/* Copy what's left in our temporary context buffer */
 		ret = local_memcpy(last_padded_block, ctx->sm3_buffer,

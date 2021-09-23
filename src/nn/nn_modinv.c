@@ -46,7 +46,7 @@
  */
 ATTRIBUTE_WARN_UNUSED_RET static int _nn_modinv_odd(nn_t out, nn_src_t x, nn_src_t m)
 {
-	int isodd, swap, smaller, ret,  cmp, iszero, tmp_isodd;
+	int isodd, swap, smaller, ret, cmp, iszero, tmp_isodd;
 	nn a, b, u, tmp, mp1d2;
 	nn_t uu = out;
 	bitcnt_t cnt;
@@ -62,9 +62,9 @@ ATTRIBUTE_WARN_UNUSED_RET static int _nn_modinv_odd(nn_t out, nn_src_t x, nn_src
 	 */
 	ret = nn_init(&tmp, m->wlen * WORD_BYTES); EG(ret, err);
 
-	MUST_HAVE(!nn_isodd(m, &isodd) && isodd, ret, err);
-	MUST_HAVE(!nn_cmp(x, m, &cmp) && (cmp < 0), ret, err);
-	MUST_HAVE(!nn_iszero(x, &iszero) && (!iszero), ret, err);
+	MUST_HAVE((!nn_isodd(m, &isodd)) && isodd, ret, err);
+	MUST_HAVE((!nn_cmp(x, m, &cmp)) && (cmp < 0), ret, err);
+	MUST_HAVE((!nn_iszero(x, &iszero)) && (!iszero), ret, err);
 
 	/*
 	 * Maintain:
@@ -121,7 +121,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int _nn_modinv_odd(nn_t out, nn_src_t x, nn_src
 		 * a /= 2
 		 */
 
-		MUST_HAVE(!nn_isodd(&b, &tmp_isodd) && tmp_isodd, ret, err);
+		MUST_HAVE((!nn_isodd(&b, &tmp_isodd)) && tmp_isodd, ret, err);
 
 		ret = nn_isodd(&a, &isodd); EG(ret, err);
 		ret = nn_cmp(&a, &b, &cmp); EG(ret, err);
@@ -130,7 +130,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int _nn_modinv_odd(nn_t out, nn_src_t x, nn_src
 		ret = nn_cnd_swap(swap, &a, &b); EG(ret, err);
 		ret = nn_cnd_sub(isodd, &a, &a, &b); EG(ret, err);
 
-		MUST_HAVE(!nn_isodd(&a, &tmp_isodd) && (!tmp_isodd), ret, err); /* a is now even */
+		MUST_HAVE((!nn_isodd(&a, &tmp_isodd)) && (!tmp_isodd), ret, err); /* a is now even */
 
 		ret = nn_rshift_fixedlen(&a, &a, 1);  EG(ret, err);/* division by 2 */
 
@@ -160,15 +160,15 @@ ATTRIBUTE_WARN_UNUSED_RET static int _nn_modinv_odd(nn_t out, nn_src_t x, nn_src
 
 		/* Selection btw 'm-uu' and '-uu' is made by the following function calls. */
 		ret = nn_cnd_add(isodd & smaller, &u, &u, &tmp); EG(ret, err); /* no carry can occur as 'u+(m-uu) = m-(uu-u) < m' */
-		ret = nn_cnd_sub(isodd & !smaller, &u, &u, uu); EG(ret, err);
+		ret = nn_cnd_sub(isodd & (!smaller), &u, &u, uu); EG(ret, err);
 
 		/* Divide u by 2 */
 		ret = nn_isodd(&u, &isodd); EG(ret, err);
 		ret = nn_rshift_fixedlen(&u, &u, 1); EG(ret, err);
 		ret = nn_cnd_add(isodd, &u, &u, &mp1d2); EG(ret, err); /* no carry can occur as u=1+u' with u'<m-1 and u' even so u'/2+(m+1)/2<(m-1)/2+(m+1)/2=m */
 
-		MUST_HAVE(!nn_cmp(&u, m, &cmp) && (cmp < 0), ret, err);
-		MUST_HAVE(!nn_cmp(uu, m, &cmp) && (cmp < 0), ret, err);
+		MUST_HAVE((!nn_cmp(&u, m, &cmp)) && (cmp < 0), ret, err);
+		MUST_HAVE((!nn_cmp(uu, m, &cmp)) && (cmp < 0), ret, err);
 
 		/*
 		 * As long as a > 0, the quantity
@@ -180,7 +180,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int _nn_modinv_odd(nn_t out, nn_src_t x, nn_src
 		 */
 	}
 
-	MUST_HAVE(!nn_iszero(&a, &iszero) && iszero, ret, err);
+	MUST_HAVE((!nn_iszero(&a, &iszero)) && iszero, ret, err);
 
 	/* Check that gcd is one. */
 	ret = nn_cmp_word(&b, WORD(1), &cmp); EG(ret, err);
@@ -196,6 +196,8 @@ err:
 	nn_uninit(&u);
 	nn_uninit(&mp1d2);
 	nn_uninit(&tmp);
+
+	PTR_NULLIFY(uu);
 
 	return ret;
 }
@@ -248,23 +250,17 @@ int nn_modinv(nn_t _out, nn_src_t x, nn_src_t m)
 
 	/* Now m is even */
 	ret = nn_isodd(x, &isodd); EG(ret, err);
-	if (!isodd) {
-		ret = -1;
-		goto err;
-	}
+	MUST_HAVE(isodd, ret, err);
 
 	ret = nn_init(&u, 0); EG(ret, err);
 	ret = nn_init(&v, 0); EG(ret, err);
 	ret = nn_xgcd(&out, &u, &v, x, m, &sign); EG(ret, err);
 	ret = nn_isone(&out, &isone); EG(ret, err);
-	if (!isone) {
-		ret = -1;
-		goto err;
-	} else {
-		ret = nn_mod(&out, &u, m); EG(ret, err);
-		if (sign == -1) {
-			ret = nn_sub(&out, m, &out); EG(ret, err);
-		}
+	MUST_HAVE(isone, ret, err);
+
+	ret = nn_mod(&out, &u, m); EG(ret, err);
+	if (sign == -1) {
+		ret = nn_sub(&out, m, &out); EG(ret, err);
 	}
 	ret = nn_copy(_out, &out);
 
@@ -272,6 +268,8 @@ err:
 	nn_uninit(&out);
 	nn_uninit(&u);
 	nn_uninit(&v);
+
+	PTR_NULLIFY(x_mod_m);
 
 	return ret;
 }
@@ -290,6 +288,7 @@ ATTRIBUTE_WARN_UNUSED_RET static inline int _nn_sub_mod_2exp(nn_t A, nn_src_t B)
 	ret = nn_set_wlen(A, Awlen + 1); EG(ret, err);
 
 	/* Make sure A > B */
+	/* NOTE: A->wlen - 1 is not an issue here thant to the nn_set_wlen above */
 	A->val[A->wlen - 1] = WORD(1);
 	ret = nn_sub(A, A, B); EG(ret, err);
 
@@ -317,7 +316,7 @@ int nn_modinv_2exp(nn_t _out, nn_src_t x, bitcnt_t exp, int *x_isodd)
 	nn out;
 	out.magic = tmp_sqr.magic = tmp_mul.magic = 0;
 
-	MUST_HAVE(x_isodd != NULL, ret, err);
+	MUST_HAVE((x_isodd != NULL), ret, err);
 	ret = nn_check_initialized(x); EG(ret, err);
 	ret = nn_check_initialized(_out); EG(ret, err);
 
@@ -327,8 +326,7 @@ int nn_modinv_2exp(nn_t _out, nn_src_t x, bitcnt_t exp, int *x_isodd)
 	ret = nn_isodd(x, &isodd); EG(ret, err);
 	if (!isodd) {
 		ret = nn_zero(_out); EG(ret, err);
-		nn_uninit(&out);
-		*x_isodd = 0;
+		(*x_isodd) = 0;
 		goto err;
 	}
 
@@ -390,13 +388,11 @@ int nn_modinv_2exp(nn_t _out, nn_src_t x, bitcnt_t exp, int *x_isodd)
 	/*
 	 * Inverse modulo 2^exp.
 	 */
-	{
-		out.val[exp_wlen - 1] &= mask;
-	}
+	out.val[exp_wlen - 1] &= mask;
 
 	ret = nn_copy(_out, &out); EG(ret, err);
 
-	*x_isodd = 1;
+	(*x_isodd) = 1;
 
 err:
 	nn_uninit(&out);

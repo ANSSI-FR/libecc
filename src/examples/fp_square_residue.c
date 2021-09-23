@@ -32,7 +32,7 @@ int main()
 
 	while (1) {
 		/* Get a random prime p of maximum 521 bits */
-		ret = nn_init(&p, 0);
+		ret = nn_init(&p, 0); EG(ret, err);
 		while (1) {
 			/* x = random with max size ~= (NN_MAX_BIT_LEN / 3) bytes.
 			 * This size limit is infered from the NN arithmetic primitives

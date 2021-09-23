@@ -52,7 +52,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int _fp_pow(fp_t out, fp_src_t base, nn_src_t e
 	ret = nn_bitlen(exp, &explen); EG(ret, err);
 
 	/* Sanity check */
-	MUST_HAVE(explen > 0, ret, err);
+	MUST_HAVE((explen > 0), ret, err);
 
 	explen -= (bitcnt_t)1;
 

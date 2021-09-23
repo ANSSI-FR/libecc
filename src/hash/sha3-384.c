@@ -39,7 +39,8 @@ int sha3_384_update(sha3_384_context *ctx, const u8 *input, u32 ilen)
 
 	SHA3_384_HASH_CHECK_INITIALIZED(ctx, ret, err);
 
-	ret = _sha3_update((sha3_context *)ctx, input, ilen); EG(ret, err);
+	ret = _sha3_update((sha3_context *)ctx, input, ilen);
+
 err:
 	return ret;
 }
@@ -86,7 +87,7 @@ int sha3_384_scattered(const u8 **inputs, const u32 *ilens,
 		pos += 1;
 	}
 
-	ret = sha3_384_final(&ctx, output); EG(ret, err);
+	ret = sha3_384_final(&ctx, output);
 
 err:
 	return ret;
@@ -103,7 +104,7 @@ int sha3_384(const u8 *input, u32 ilen, u8 output[SHA3_384_DIGEST_SIZE])
 
 	ret = sha3_384_init(&ctx); EG(ret, err);
 	ret = sha3_384_update(&ctx, input, ilen); EG(ret, err);
-	ret = sha3_384_final(&ctx, output); EG(ret, err);
+	ret = sha3_384_final(&ctx, output);
 
 err:
 	return ret;

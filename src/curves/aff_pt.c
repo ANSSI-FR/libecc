@@ -25,9 +25,8 @@ int aff_pt_check_initialized(aff_pt_src_t in)
 {
 	int ret;
 
-	MUST_HAVE(((in != NULL) && (in->magic == AFF_PT_MAGIC) && (in->crv != NULL)), ret, err);
-
-	ret = 0;
+	MUST_HAVE(((in != NULL) && (in->magic == AFF_PT_MAGIC)), ret, err);
+	ret = ec_shortw_crv_check_initialized(in->crv);
 
 err:
 	return ret;
@@ -107,7 +106,7 @@ int is_on_shortw_curve(fp_src_t x, fp_src_t y, ec_shortw_crv_src_t curve, int *o
 	ret = ec_shortw_crv_check_initialized(curve); EG(ret, err);
 	ret = fp_check_initialized(x);  EG(ret, err);
 	ret = fp_check_initialized(y);  EG(ret, err);
-	MUST_HAVE(on_curve != NULL, ret, err);
+	MUST_HAVE((on_curve != NULL), ret, err);
 
 	MUST_HAVE((x->ctx == y->ctx), ret, err);
 	MUST_HAVE((x->ctx == curve->a.ctx), ret, err);
@@ -147,7 +146,7 @@ int aff_pt_is_on_curve(aff_pt_src_t pt, int *on_curve)
 {
 	int ret;
 
-	MUST_HAVE(on_curve != NULL, ret, err);
+	MUST_HAVE((on_curve != NULL), ret, err);
 	ret = aff_pt_check_initialized(pt); EG(ret, err);
 	ret = is_on_shortw_curve(&(pt->x), &(pt->y), pt->crv, on_curve);
 
@@ -181,7 +180,7 @@ int ec_shortw_aff_cmp(aff_pt_src_t in1, aff_pt_src_t in2, int *cmp)
 {
 	int ret, cmp_x, cmp_y;
 
-	MUST_HAVE(!(cmp == NULL), ret, err);
+	MUST_HAVE((cmp != NULL), ret, err);
 
 	ret = aff_pt_check_initialized(in1); EG(ret, err);
 	ret = aff_pt_check_initialized(in2); EG(ret, err);
@@ -191,7 +190,7 @@ int ec_shortw_aff_cmp(aff_pt_src_t in1, aff_pt_src_t in2, int *cmp)
 	ret = fp_cmp(&(in1->x), &(in2->x), &cmp_x); EG(ret, err);
 	ret = fp_cmp(&(in1->y), &(in2->y), &cmp_y); EG(ret, err);
 
-	*cmp = cmp_x | cmp_y;
+	(*cmp) = (cmp_x | cmp_y);
 
 err:
 	return ret;
@@ -218,7 +217,7 @@ int ec_shortw_aff_eq_or_opp(aff_pt_src_t in1, aff_pt_src_t in2,
 	ret = fp_cmp(&(in1->x), &(in2->x), &cmp); EG(ret, err);
 	ret = fp_eq_or_opp(&(in1->y), &(in2->y), &eq_or_opp); EG(ret, err);
 
-	*aff_is_eq_or_opp = (cmp == 0) & eq_or_opp;
+	(*aff_is_eq_or_opp) = ((cmp == 0) & eq_or_opp);
 
 err:
 	return ret;
@@ -271,6 +270,8 @@ int aff_pt_import_from_buf(aff_pt_t pt,
 	}
 
 err:
+	PTR_NULLIFY(ctx);
+
 	return ret;
 }
 

@@ -53,7 +53,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int _nn_cmp_shift(nn_src_t in1, nn_src_t in2, u
 		tmp += (in1->val[shift + i - 1] > in2->val[i - 1]) & mask;
 		tmp -= (in1->val[shift + i - 1] < in2->val[i - 1]) & mask;
 	}
-	*cmp = tmp;
+	(*cmp) = tmp;
 	ret = 0;
 
 err:
@@ -95,7 +95,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int _nn_cnd_sub_shift(int cnd, nn_t out, nn_src
 		_borrow = borrow1 | borrow2;
 	}
 
-	*borrow = _borrow;
+	(*borrow) = _borrow;
 	ret = 0;
 
 err:
@@ -141,7 +141,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int _nn_submul_word_shift(nn_t out, nn_src_t in
 		out->val[shift + i] = tmp;
 	}
 
-	*borrow = _borrow;
+	(*borrow) = _borrow;
 	ret = 0;
 
 err:
@@ -205,10 +205,10 @@ ATTRIBUTE_WARN_UNUSED_RET static int _nn_divrem_normalized(nn_t q, nn_t r,
 	/* Handle trivial aliasing for a and r */
 	if (r != a) {
 		ret = nn_set_wlen(r, a->wlen); EG(ret, err);
-		ret = nn_copy(r, a); EG(ret, err); EG(ret, err);
+		ret = nn_copy(r, a); EG(ret, err);
 	}
 
-	ret = nn_set_wlen(q, r->wlen - b->wlen); EG(ret, err); EG(ret, err);
+	ret = nn_set_wlen(q, r->wlen - b->wlen); EG(ret, err);
 
 	/*
 	 * Compute subsequent words of the quotient one by one.
@@ -721,7 +721,7 @@ int wreciprocal(word_t dh, word_t dl, word_t *reciprocal)
 
 	if (((word_t)(dh + WORD(1)) == WORD(0)) &&
 	    ((word_t)(dl + WORD(1)) == WORD(0))) {
-		*reciprocal = WORD(0);
+		(*reciprocal) = WORD(0);
 		ret = 0;
 		goto err;
 	}
@@ -733,12 +733,11 @@ int wreciprocal(word_t dh, word_t dl, word_t *reciprocal)
 		t[1] = ~dh;
 		t[0] = ~dl;
 		ret = _word_divrem(&q, r+1, t[1], t[0],
-				   (word_t)(dh + WORD(1)));
-		MUST_HAVE(!ret, ret, err);
+				   (word_t)(dh + WORD(1))); EG(ret, err);
 	}
 
 	if ((word_t)(dl + WORD(1)) == WORD(0)) {
-		*reciprocal = q;
+		(*reciprocal) = q;
 		ret = 0;
 		goto err;
 	}
@@ -755,7 +754,7 @@ int wreciprocal(word_t dh, word_t dl, word_t *reciprocal)
 		carry -= _wsub_22(r, t);
 	}
 
-	*reciprocal = q;
+	(*reciprocal) = q;
 	ret = 0;
 
 err:
@@ -791,8 +790,8 @@ int nn_compute_div_coefs(nn_t p_normalized, word_t *p_shift,
 
 	ret = nn_check_initialized(p_in); EG(ret, err);
 
-	MUST_HAVE(!(p_shift == NULL), ret, err);
-	MUST_HAVE(!(p_reciprocal == NULL), ret, err);
+	MUST_HAVE((p_shift != NULL), ret, err);
+	MUST_HAVE((p_reciprocal != NULL), ret, err);
 
 	ret = nn_init(&p, 0); EG(ret, err);
 	ret = nn_copy(&p, p_in); EG(ret, err);
@@ -813,14 +812,14 @@ int nn_compute_div_coefs(nn_t p_normalized, word_t *p_shift,
 	p_rounded_bitlen = WORD_BITS * p.wlen;
 
 	/* p_shift */
-	ret = nn_bitlen(&p, &p_bitlen); EG(ret, err); EG(ret, err);
+	ret = nn_bitlen(&p, &p_bitlen); EG(ret, err);
 	*p_shift = p_rounded_bitlen - p_bitlen;
 
 	/* p_normalized = p << pshift */
 	ret = nn_lshift(p_normalized, &p, (bitcnt_t)(*p_shift)); EG(ret, err);
 
 	/* Sanity check to protect the p_reciprocal computation */
-	MUST_HAVE(p_rounded_bitlen >= (2 * WORDSIZE), ret, err);
+	MUST_HAVE((p_rounded_bitlen >= (2 * WORDSIZE)), ret, err);
 
 	/*
 	 * p_reciprocal = B^3 / ((p_normalized >> (p_rounded_bitlen - 2 * wlen)) + 1) - B
@@ -828,7 +827,7 @@ int nn_compute_div_coefs(nn_t p_normalized, word_t *p_shift,
 	 * helper to compute it.
 	 */
 	ret = nn_rshift(&tmp_nn, p_normalized, (p_rounded_bitlen - (2 * WORDSIZE))); EG(ret, err);
-	ret = wreciprocal(tmp_nn.val[1], tmp_nn.val[0], p_reciprocal); EG(ret, err);
+	ret = wreciprocal(tmp_nn.val[1], tmp_nn.val[0], p_reciprocal);
 
 err:
 	nn_uninit(&p);
@@ -919,7 +918,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int __nn_divrem_notrim_alias(nn_t q, nn_t r, nn
 	ret = nn_init(&b_cpy, 0); EG(ret, err);
 	ret = nn_copy(&a_cpy, a); EG(ret, err);
 	ret = nn_copy(&b_cpy, b); EG(ret, err);
-	ret = _nn_divrem(q, r, &a_cpy, &b_cpy); EG(ret, err);
+	ret = _nn_divrem(q, r, &a_cpy, &b_cpy);
 
 err:
 	nn_uninit(&b_cpy);

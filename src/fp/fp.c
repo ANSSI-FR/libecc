@@ -90,7 +90,7 @@ int fp_ctx_init_from_p(fp_ctx_t ctx, nn_src_t p_in)
 	int ret;
 	p.magic = r.magic = r_square.magic = p_normalized.magic = 0;
 
-	MUST_HAVE(!(ctx == NULL), ret, err);
+	MUST_HAVE((ctx != NULL), ret, err);
 	ret = nn_check_initialized(p_in); EG(ret, err);
 
 	ret = nn_init(&p, 0); EG(ret, err);
@@ -135,7 +135,7 @@ int fp_check_initialized(fp_src_t in)
 {
 	int ret = 0;
 
-	MUST_HAVE(((in != NULL) && (in->magic == FP_MAGIC) && (in->ctx != NULL)), ret, err);
+	MUST_HAVE(((in != NULL) && (in->magic == FP_MAGIC) && (in->ctx != NULL) && (in->ctx->magic == FP_CTX_MAGIC)), ret, err);
 
 err:
 	return ret;
@@ -152,7 +152,7 @@ int fp_init(fp_t in, fp_ctx_src_t fpctx)
 	MUST_HAVE((in != NULL), ret, err);
 
 	ret = fp_ctx_check_initialized(fpctx); EG(ret, err);
-	ret = nn_init(&in->fp_val, fpctx->p.wlen * WORD_BYTES); EG(ret, err);
+	ret = nn_init(&(in->fp_val), (fpctx->p.wlen) * WORD_BYTES); EG(ret, err);
 
 	in->ctx = fpctx;
 	in->magic = FP_MAGIC;
@@ -269,7 +269,7 @@ int fp_set_word_value(fp_t out, word_t val)
 
 	/* Check that our value is indeed < p */
 	ret = nn_cmp_word(&(out->ctx->p), val, &cmp); EG(ret, err);
-	MUST_HAVE(cmp > 0, ret, err);
+	MUST_HAVE((cmp > 0), ret, err);
 
 	/* Set the word in the NN layer */
 	ret = nn_set_word_value(&(out->fp_val), val);
@@ -361,7 +361,7 @@ int fp_tabselect(fp_t out, u8 idx, fp_src_t *tab, u8 tabsize)
 	int ret;
 
 	/* Basic sanity checks */
-	MUST_HAVE(((((void *)(tab)) != NULL) && (idx < tabsize)), ret, err);
+	MUST_HAVE(((tab != NULL) && (idx < tabsize)), ret, err);
 
 	ret = fp_check_initialized(out); EG(ret, err);
 
@@ -414,7 +414,7 @@ int fp_eq_or_opp(fp_src_t in1, fp_src_t in2, int *eq_or_opp)
 	ret = nn_cmp(&(in1->fp_val), &(in2->fp_val), &cmp_eq); EG(ret, err);
 	ret = nn_cmp(&(in1->fp_val), &(opp.fp_val), &cmp_opp); EG(ret, err);
 
-	*eq_or_opp = (cmp_eq == 0) | (cmp_opp == 0);
+	(*eq_or_opp) = ((cmp_eq == 0) | (cmp_opp == 0));
 
 err:
 	fp_uninit(&opp);

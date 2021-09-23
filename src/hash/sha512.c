@@ -23,7 +23,7 @@ int sha512_init(sha512_context *ctx)
 {
 	int ret;
 
-	MUST_HAVE(!(ctx == NULL), ret, err);
+	MUST_HAVE((ctx != NULL), ret, err);
 
 	ctx->sha512_total[0] = ctx->sha512_total[1] = 0;
 	ctx->sha512_state[0] = (u64)(0x6A09E667F3BCC908);

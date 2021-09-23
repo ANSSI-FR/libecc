@@ -52,8 +52,8 @@ int miller_rabin(nn_src_t n, const unsigned int t, int *res)
 	s.magic = q.magic = r.magic = d.magic = a.magic = y.magic = j.magic = 0;
 	one.magic = two.magic = tmp.magic = 0;
 
-	ret = nn_check_initialized(n);
-	MUST_HAVE(res != NULL, ret, err);
+	ret = nn_check_initialized(n); EG(ret, err);
+	MUST_HAVE((res != NULL), ret, err);
 	(*res) = 0;
 
 	/* Initialize our local NN variables */
@@ -69,7 +69,7 @@ int miller_rabin(nn_src_t n, const unsigned int t, int *res)
 	ret = nn_init(&tmp, 0); EG(ret, err);
 
 	/* Security parameter t must be >= 1 */
-	MUST_HAVE(t >= 1, ret, err);
+	MUST_HAVE((t >= 1), ret, err);
 
 	/* one = 1 */
 	ret = nn_one(&one); EG(ret, err);
@@ -132,6 +132,7 @@ int miller_rabin(nn_src_t n, const unsigned int t, int *res)
 	}
 	/* 2. For i from 1 to t do the following: */
 	for (i = 1; i <= t; i++) {
+		bitcnt_t blen;
 		/* 2.1 Choose a random integer a, 2 ≤ a ≤ n − 2 */
 		ret = nn_copy(&tmp, n); EG(ret, err);
 		ret = nn_dec(&tmp, &tmp); EG(ret, err);
@@ -147,7 +148,6 @@ int miller_rabin(nn_src_t n, const unsigned int t, int *res)
 		 * WARNING: NOT to be used in production code!
 		 */
 		ret = nn_one(&y); EG(ret, err);
-		bitcnt_t blen;
 		ret = nn_bitlen(&r, &blen); EG(ret, err);
 		for (k = 0; k < blen; k++) {
 			u8 bit;
@@ -156,12 +156,12 @@ int miller_rabin(nn_src_t n, const unsigned int t, int *res)
 				/* Warning: the multiplication is not modular, we
 				 * have to take care of our size here!
 				 */
-				MUST_HAVE(NN_MAX_BIT_LEN >=
-					  (WORD_BITS * (y.wlen + a.wlen)), ret, err);
+				MUST_HAVE((NN_MAX_BIT_LEN >=
+					  (WORD_BITS * (y.wlen + a.wlen))), ret, err);
 				ret = nn_mul(&y, &y, &a); EG(ret, err);
 				ret = nn_mod(&y, &y, n); EG(ret, err);
 			}
-			MUST_HAVE(NN_MAX_BIT_LEN >= (2 * WORD_BITS * a.wlen), ret, err);
+			MUST_HAVE((NN_MAX_BIT_LEN >= (2 * WORD_BITS * a.wlen)), ret, err);
 			ret = nn_sqr(&a, &a); EG(ret, err);
 			ret = nn_mod(&a, &a, n); EG(ret, err);
 		}
@@ -178,8 +178,8 @@ int miller_rabin(nn_src_t n, const unsigned int t, int *res)
 			ret = nn_cmp(&y, &tmp, &cmp2); EG(ret, err);
 			while ((cmp1 < 0) && (cmp2 != 0)) {
 				/* Compute y←y2 mod n. */
-				MUST_HAVE(NN_MAX_BIT_LEN >=
-					  (2 * WORD_BITS * y.wlen), ret, err);
+				MUST_HAVE((NN_MAX_BIT_LEN >=
+					  (2 * WORD_BITS * y.wlen)), ret, err);
 				ret = nn_sqr(&y, &y); EG(ret, err);
 				ret = nn_mod(&y, &y, n); EG(ret, err);
 				/* If y = 1 then return(“composite”). */

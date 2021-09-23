@@ -128,7 +128,7 @@ int ECDH_helper(const u8 *curve_name, const u8 *role)
 	 */
 	ret = local_strnlen((const char *)curve_name, MAX_CURVE_NAME_LEN, &len); EG(ret, err);
 	len += 1;
-	MUST_HAVE(len < 256, ret, err);
+	MUST_HAVE((len < 256), ret, err);
 	ret =	ec_get_curve_params_by_name(curve_name,
 					    (u8)len, &the_curve_const_parameters); EG(ret, err);
 	/* Get out if getting the parameters went wrong */

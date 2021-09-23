@@ -50,7 +50,8 @@ int _decdsa_sign_init(struct ec_sign_context *ctx)
 	/* Override our random source with NULL since we want a deterministic
 	 * generation.
 	 */
-	MUST_HAVE(ctx != NULL, ret, err);
+	MUST_HAVE((ctx != NULL), ret, err);
+
 	ctx->rand = NULL;
 	ret =  __ecdsa_sign_init(ctx, DECDSA);
 
@@ -63,6 +64,9 @@ int _decdsa_sign_update(struct ec_sign_context *ctx,
 {
 	int ret;
 
+	/* NOTE: for deterministic ECDSA, the random source MUST be NULL, hence
+	 * the following check.
+	 */
 	MUST_HAVE((ctx != NULL) && (ctx->rand == NULL), ret, err);
 
 	ret = __ecdsa_sign_update(ctx, chunk, chunklen, DECDSA);
@@ -75,6 +79,9 @@ int _decdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 {
 	int ret;
 
+	/* NOTE: for deterministic ECDSA, the random source MUST be NULL, hence
+	 * the following check.
+	 */
 	MUST_HAVE((ctx != NULL) && (ctx->rand == NULL), ret, err);
 
 	ret =  __ecdsa_sign_finalize(ctx, sig, siglen, DECDSA);

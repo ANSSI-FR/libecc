@@ -16,7 +16,7 @@ int _shake_init(shake_context *ctx, u8 digest_size, u8 block_size)
 {
 	int ret;
 
-	MUST_HAVE(ctx != NULL, ret, err);
+	MUST_HAVE((ctx != NULL), ret, err);
 
         /* Zeroize the internal state */
         ret = local_memset(ctx->shake_state, 0, sizeof(ctx->shake_state)); EG(ret, err);
@@ -68,7 +68,7 @@ int _shake_finalize(shake_context *ctx, u8 *output)
 	int ret;
 
         MUST_HAVE((ctx != NULL) && (output != NULL), ret, err);
-        MUST_HAVE(ctx->shake_digest_size <= sizeof(ctx->shake_state), ret, err);
+        MUST_HAVE((ctx->shake_digest_size <= sizeof(ctx->shake_state)), ret, err);
 
         state = (u8*)(ctx->shake_state);
 

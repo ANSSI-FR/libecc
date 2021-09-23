@@ -63,7 +63,7 @@ int ec_get_curve_params_by_name(const u8 *ec_name, u8 ec_name_len,
 		}
 
 		if ((!are_str_equal((const char *)ec_name, (const char *)name, &check)) && check) {
-			*ec_params = params;
+			(*ec_params) = params;
 			ret = 0;
 			break;
 		}
@@ -111,7 +111,7 @@ int ec_get_curve_params_by_type(ec_curve_type ec_type,
 
 			MUST_HAVE((params->name->buflen == (name_len + 1)), ret, err);
 
-			*ec_params = params;
+			(*ec_params) = params;
 			ret = 0;
 			break;
 		}
@@ -141,8 +141,8 @@ int ec_get_curve_type_by_name(const u8 *ec_name, u8 ec_name_len,
 
 	/* No need to bother w/ obvious crap */
 	MUST_HAVE(((ec_name_len > 2) && (ec_name_len <= MAX_CURVE_NAME_LEN)), ret, err);
-	MUST_HAVE(ec_type != NULL, ret, err);
-	MUST_HAVE(ec_name != NULL, ret, err);
+	MUST_HAVE((ec_type != NULL), ret, err);
+	MUST_HAVE((ec_name != NULL), ret, err);
 
 	/*
 	 * User has been warned ec_name_len is expected to include final
@@ -171,7 +171,7 @@ int ec_get_curve_type_by_name(const u8 *ec_name, u8 ec_name_len,
 		}
 
 		if((!are_str_equal((const char *)ec_name, (const char *)name, &check)) && check) {
-			*ec_type = map->type;
+			(*ec_type) = map->type;
 			ret = 0;
 			break;
 		}
@@ -193,13 +193,13 @@ int ec_get_curve_name_by_type(const ec_curve_type ec_type, u8 *out, u8 outlen)
 	u8 name_len;
 	int ret;
 
-	MUST_HAVE(out != NULL, ret, err);
+	MUST_HAVE((out != NULL), ret, err);
 
 	/* Let's first do the lookup by type */
 	ret =  ec_get_curve_params_by_type(ec_type, &by_type); EG(ret, err);
 
 	/* Found a curve for that type. Let's check name matches. */
-	MUST_HAVE(by_type != NULL, ret, err);
+	MUST_HAVE((by_type != NULL), ret, err);
 	MUST_HAVE((by_type->name != NULL), ret, err);
 	MUST_HAVE((by_type->name->buf != NULL), ret, err);
 
@@ -238,7 +238,7 @@ int ec_check_curve_type_and_name(const ec_curve_type ec_type,
 	ret = ec_get_curve_params_by_type(ec_type, &by_type); EG(ret, err);
 
 	/* Found a curve for that type. Let's check name matches. */
-	MUST_HAVE(by_type != NULL, ret, err);
+	MUST_HAVE((by_type != NULL), ret, err);
 	MUST_HAVE((by_type->name != NULL), ret, err);
 	MUST_HAVE((by_type->name->buf != NULL), ret, err);
 

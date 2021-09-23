@@ -89,7 +89,7 @@ typedef struct streebog_context_ {
 
 
 /* STREEBOG constants*/
-static const u64 C[12][STREEBOG_BLOCK_U64_SIZE] =
+static const u64 C_STREEBOG[12][STREEBOG_BLOCK_U64_SIZE] =
 {
      { /* 0 */
 	     0xdd806559f2a64507ULL, 0x05767436cc744d23ULL,
@@ -1211,7 +1211,7 @@ static const u64 PI[STREEBOG_BLOCK_U64_SIZE][256] = {
 #define S64(x) (B((x), 0, 7) | B((x), 1, 6) | B((x), 2, 5) | B((x), 3, 4) | \
 		B((x), 4, 3) | B((x), 5, 2) | B((x), 6, 1) | B((x), 7, 0))
 
-static inline u64 streebog_permute(const u64 in[STREEBOG_BLOCK_U64_SIZE], u8 i)
+ATTRIBUTE_WARN_UNUSED_RET static inline u64 streebog_permute(const u64 in[STREEBOG_BLOCK_U64_SIZE], u8 i)
 {
 	u64 t = 0;
 	unsigned int j;
@@ -1250,11 +1250,11 @@ static inline void gN(u64 h[STREEBOG_BLOCK_U64_SIZE],
 
 	streebog_transform(K, h, N);
 	streebog_transform(T, K, m);
-	streebog_transform(K, K, C[0]);
+	streebog_transform(K, K, C_STREEBOG[0]);
 
 	for (j = 1; j < 12; j++) {
 		streebog_transform(T, K, T);
-		streebog_transform(K, K, C[j]);
+		streebog_transform(K, K, C_STREEBOG[j]);
 	}
 	for(j = 0; j < STREEBOG_BLOCK_U64_SIZE; j++){
 		h[j] ^= T[j] ^ K[j] ^ m[j];

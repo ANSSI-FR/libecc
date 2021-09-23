@@ -380,7 +380,7 @@ int nn_copy(nn_t dst_nn, nn_src_t src_nn)
 	int ret;
 	u8 i;
 
-	MUST_HAVE(((const void *)dst_nn != NULL), ret, err);
+	MUST_HAVE((dst_nn != NULL), ret, err);
 	ret = nn_check_initialized(src_nn); EG(ret, err);
 
 	for (i = 0; i < NN_MAX_WORD_LEN; i++) {
@@ -460,7 +460,7 @@ ATTRIBUTE_WARN_UNUSED_RET static inline int _htonw(const u8 *val, word_t *out)
 /*
  * 'out_nn' is expected to point to the storage location of a declared nn,
  * which will be initialized by the function (i.e. given nn need not be
- * initialized). The function then import value (expected to be in big
+ * initialized). The function then imports value (expected to be in big
  * endian) from given buffer 'buf' of length 'buflen' into it. The function
  * expects (and enforces) that buflen is less than or equal to NN_MAX_BYTE_LEN.
  * The function returns 0 on success, -1 on error.
@@ -505,7 +505,7 @@ int nn_export_to_buf(u8 *buf, u16 buflen, nn_src_t in_nn)
 	int ret;
 	u8 i;
 
-	MUST_HAVE(!(buf == NULL), ret, err);
+	MUST_HAVE((buf != NULL), ret, err);
 	ret = nn_check_initialized(in_nn); EG(ret, err);
 
 	ret = local_memset(buf, 0, buflen); EG(ret, err);

@@ -60,7 +60,7 @@ int sm2_init_pub_key(ec_pub_key *out_pub, const ec_priv_key *in_priv)
 	nn tmp;
 	tmp.magic = 0;
 
-	MUST_HAVE(out_pub != NULL, ret, err);
+	MUST_HAVE((out_pub != NULL), ret, err);
 
 	ret = priv_key_check_initialized_and_type(in_priv, SM2); EG(ret, err);
 
@@ -72,7 +72,7 @@ int sm2_init_pub_key(ec_pub_key *out_pub, const ec_priv_key *in_priv)
 	ret = nn_init(&tmp, 0); EG(ret, err);
 	ret = nn_dec(&tmp, &in_priv->params->ec_gen_order); EG(ret, err);
 	/* If x >= (q - 1), this is an error */
-	MUST_HAVE(!nn_cmp(&(in_priv->x), &tmp, &cmp) && (cmp < 0), ret, err);
+	MUST_HAVE((!nn_cmp(&(in_priv->x), &tmp, &cmp)) && (cmp < 0), ret, err);
 
 	/* Y = xG */
 	G = &(in_priv->params->ec_gen);
@@ -97,7 +97,7 @@ int sm2_siglen(u16 p_bit_len, u16 q_bit_len, u8 hsize, u8 blocksize, u8 *siglen)
 {
 	int ret;
 
-	MUST_HAVE(siglen != NULL, ret, err);
+	MUST_HAVE((siglen != NULL), ret, err);
 	MUST_HAVE((p_bit_len <= CURVES_MAX_P_BIT_LEN) &&
 		  (q_bit_len <= CURVES_MAX_Q_BIT_LEN) &&
 		  (hsize <= MAX_DIGEST_SIZE) && (blocksize <= MAX_BLOCK_SIZE), ret, err);
@@ -148,11 +148,11 @@ ATTRIBUTE_WARN_UNUSED_RET static int sm2_compute_Z(u8 *Z, u16 *Zlen, const u8 *i
 	MUST_HAVE((Z != NULL) && (Zlen != NULL), ret, err);
 	MUST_HAVE((id != NULL) && (pub_key != NULL), ret, err);
 	/* Maximum size is Entlen on 16 bits in *bits*, i.e. 8192 bytes */
-	MUST_HAVE(id_len <= SM2_MAX_ID_LEN, ret, err);
+	MUST_HAVE((id_len <= SM2_MAX_ID_LEN), ret, err);
 	ret = pub_key_check_initialized_and_type(pub_key, SM2); EG(ret, err);
 
 	ret = get_hash_by_type(hash_type, &hm); EG(ret, err);
-	MUST_HAVE(hm != NULL, ret, err);
+	MUST_HAVE((hm != NULL), ret, err);
 
 	/* Zlen must be large enough to receive digest */
 	hsize = hm->digest_size;
@@ -167,6 +167,8 @@ ATTRIBUTE_WARN_UNUSED_RET static int sm2_compute_Z(u8 *Z, u16 *Zlen, const u8 *i
 	a = &(pub_key->params->ec_curve.a);
 	b = &(pub_key->params->ec_curve.b);
 
+	/* Since we call a callback, sanity check our mapping */
+	ret = hash_mapping_callbacks_sanity_check(hm); EG(ret, err);
 	ret = hm->hfunc_init(&hctx); EG(ret, err);
 
 	/* ENTL */
@@ -200,11 +202,11 @@ ATTRIBUTE_WARN_UNUSED_RET static int sm2_compute_Z(u8 *Z, u16 *Zlen, const u8 *i
 	ret = local_memset(buf, 0, sizeof(buf)); EG(ret, err);
 	ret = local_memset(&hctx, 0, sizeof(hctx)); EG(ret, err);
 
-	*Zlen = hsize;
+	(*Zlen) = hsize;
 
 err:
 	if (ret && (Zlen != NULL)){
-		*Zlen = 0;
+		(*Zlen) = 0;
 	}
 	return ret;
 }
@@ -352,7 +354,7 @@ int _sm2_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	dbg_pub_key_print("Y", &(ctx->key_pair->pub_key));
 
 	/* Check given signature buffer length has the expected size */
-	MUST_HAVE(siglen == SM2_SIGLEN(q_bit_len), ret, err);
+	MUST_HAVE((siglen == SM2_SIGLEN(q_bit_len)), ret, err);
 
 	ret = local_memset(hash, 0, hsize); EG(ret, err);
 	/* Since we call a callback, sanity check our mapping */
@@ -535,7 +537,7 @@ int _sm2_verify_init(struct ec_verify_context *ctx,
 	s = &(ctx->verify_data.sm2.s);
 
 	/* Check given signature length is the expected one */
-	MUST_HAVE(siglen == SM2_SIGLEN(q_bit_len), ret, err);
+	MUST_HAVE((siglen == SM2_SIGLEN(q_bit_len)), ret, err);
 
 	/* Import r and s values from signature buffer */
 	ret = nn_init_from_buf(r, sig, q_len); EG(ret, err);
@@ -548,11 +550,7 @@ int _sm2_verify_init(struct ec_verify_context *ctx,
 	ret = nn_iszero(s, &iszero2); EG(ret, err);
 	ret = nn_cmp(r, q, &cmp1); EG(ret, err);
 	ret = nn_cmp(s, q, &cmp2); EG(ret, err);
-	if (iszero1 || (cmp1 >= 0) ||
-	    iszero2 || (cmp2 >= 0)) {
-		ret = -1;
-		goto err;
-	}
+	MUST_HAVE((!iszero1) && (cmp1 < 0) && (!iszero2) && (cmp2 < 0), ret, err);
 
 	/* Initialize the remaining of verify context. */
 	/* Since we call a callback, sanity check our mapping */
@@ -565,8 +563,6 @@ int _sm2_verify_init(struct ec_verify_context *ctx,
 	ret = sm2_compute_Z(Z, &Zlen, ctx->adata, ctx->adata_len, ctx->pub_key, ctx->h->type); EG(ret, err);
 
 	/* Update the hash function with Z */
-	/* Since we call a callback, sanity check our mapping */
-	ret = hash_mapping_callbacks_sanity_check(ctx->h); EG(ret, err);
 	ret = ctx->h->hfunc_update(&(ctx->verify_data.sm2.h_ctx), Z, Zlen); EG(ret, err);
 
 	ctx->verify_data.sm2.magic = SM2_VERIFY_MAGIC;
@@ -655,7 +651,7 @@ int _sm2_verify_finalize(struct ec_verify_context *ctx)
 
 	/* 4. Reject signature if t is 0 */
 	ret = nn_iszero(&t, &iszero); EG(ret, err);
-	MUST_HAVE(!iszero, ret, err);
+	MUST_HAVE((!iszero), ret, err);
 
 	/* 5. Compute e = OS2I(h) mod q */
 	ret = nn_init_from_buf(&tmp, hash, hsize); EG(ret, err);
@@ -671,7 +667,7 @@ int _sm2_verify_finalize(struct ec_verify_context *ctx)
 
 	/* 7. If W' is the point at infinity, reject the signature. */
 	ret = prj_pt_iszero(W_prime, &iszero); EG(ret, err);
-	MUST_HAVE(!iszero, ret, err);
+	MUST_HAVE((!iszero), ret, err);
 
 	/* 8. Compute r' = (e + W'_x) mod q */
 	ret = prj_pt_unique(W_prime, W_prime); EG(ret, err);

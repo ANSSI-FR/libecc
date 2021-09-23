@@ -33,7 +33,7 @@ int ecfsdsa_init_pub_key(ec_pub_key *out_pub, const ec_priv_key *in_priv)
 	prj_pt_src_t G;
 	nn_src_t q;
 
-	MUST_HAVE(out_pub != NULL, ret, err);
+	MUST_HAVE((out_pub != NULL), ret, err);
 
 	/* Zero init public key to be generated */
 	ret = local_memset(out_pub, 0, sizeof(ec_pub_key)); EG(ret, err);
@@ -61,7 +61,7 @@ int ecfsdsa_siglen(u16 p_bit_len, u16 q_bit_len, u8 hsize, u8 blocksize, u8 *sig
 {
 	int ret;
 
-	MUST_HAVE(siglen != NULL, ret, err);
+	MUST_HAVE((siglen != NULL), ret, err);
 	MUST_HAVE((p_bit_len <= CURVES_MAX_P_BIT_LEN) &&
 		  (q_bit_len <= CURVES_MAX_Q_BIT_LEN) &&
 		  (hsize <= MAX_DIGEST_SIZE) && (blocksize <= MAX_BLOCK_SIZE), ret, err);
@@ -113,7 +113,7 @@ err:
 
 #define ECFSDSA_SIGN_MAGIC ((word_t)(0x1ed9635924b48ddaULL))
 #define ECFSDSA_SIGN_CHECK_INITIALIZED(A, ret, err) \
-	MUST_HAVE((((const void *)(A)) != NULL) && \
+	MUST_HAVE((((void *)(A)) != NULL) && \
 		  ((A)->magic == ECFSDSA_SIGN_MAGIC), ret, err)
 
 int _ecfsdsa_sign_init(struct ec_sign_context *ctx)
@@ -150,7 +150,7 @@ int _ecfsdsa_sign_init(struct ec_sign_context *ctx)
 	p_len = (u8)BYTECEIL(p_bit_len);
 	r_len = (u8)ECFSDSA_R_LEN(p_bit_len);
 
-	MUST_HAVE(p_len <= NN_MAX_BYTE_LEN, ret, err);
+	MUST_HAVE(((u32)p_len <= NN_MAX_BYTE_LEN), ret, err);
 
 	dbg_nn_print("p", &(priv_key->params->ec_fp.p));
 	dbg_nn_print("q", q);
@@ -167,9 +167,9 @@ int _ecfsdsa_sign_init(struct ec_sign_context *ctx)
 	 * This allows us to avoid the corruption of such a pointer.
 	 */
 	/* Sanity check on the handler before calling it */
-	MUST_HAVE(ctx->rand == nn_get_random_mod, ret, err);
+	MUST_HAVE((ctx->rand == nn_get_random_mod), ret, err);
 #endif
-	MUST_HAVE(ctx->rand != NULL, ret, err);
+	MUST_HAVE((ctx->rand != NULL), ret, err);
 	ret = ctx->rand(k, q); EG(ret, err);
 
 	/*  2. Compute W = (W_x,W_y) = kG */
@@ -296,9 +296,9 @@ int _ecfsdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	/* This should not happen and means that our
 	 * private key is not compliant!
 	 */
-	MUST_HAVE(cmp < 0, ret, err);
+	MUST_HAVE((cmp < 0), ret, err);
 
-	MUST_HAVE(siglen == ECFSDSA_SIGLEN(p_bit_len, q_bit_len), ret, err);
+	MUST_HAVE((siglen == ECFSDSA_SIGLEN(p_bit_len, q_bit_len)), ret, err);
 
 #ifdef USE_SIG_BLINDING
 	ret = nn_get_random_mod(&b, q); EG(ret, err);
@@ -344,7 +344,7 @@ int _ecfsdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	 * In practice, as we cannot restart the whole process in
 	 * finalize() we just report an error.
 	 */
-	MUST_HAVE(!nn_iszero(&s, &iszero) && !iszero, ret, err);
+	MUST_HAVE((!nn_iszero(&s, &iszero)) && (!iszero), ret, err);
 
 	/*  9. Return (r,s) */
 	ret = local_memcpy(sig, r, r_len); EG(ret, err);
@@ -364,7 +364,9 @@ int _ecfsdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	 * We can now clear data part of the context. This will clear
 	 * magic and avoid further reuse of the whole context.
 	 */
-	IGNORE_RET_VAL(local_memset(&(ctx->sign_data.ecfsdsa), 0, sizeof(ecfsdsa_sign_data)));
+	if(ctx != NULL){
+		IGNORE_RET_VAL(local_memset(&(ctx->sign_data.ecfsdsa), 0, sizeof(ecfsdsa_sign_data)));
+	}
 
 	PTR_NULLIFY(q);
 	PTR_NULLIFY(x);
@@ -405,7 +407,7 @@ int _ecfsdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 
 #define ECFSDSA_VERIFY_MAGIC ((word_t)(0x26afb13ccd96fa04ULL))
 #define ECFSDSA_VERIFY_CHECK_INITIALIZED(A, ret, err) \
-	MUST_HAVE((((const void *)(A)) != NULL) && \
+	MUST_HAVE((((void *)(A)) != NULL) && \
 		  ((A)->magic == ECFSDSA_VERIFY_MAGIC), ret, err)
 
 int _ecfsdsa_verify_init(struct ec_verify_context *ctx,
@@ -439,7 +441,7 @@ int _ecfsdsa_verify_init(struct ec_verify_context *ctx,
 	s_len = (u8)ECFSDSA_S_LEN(q_bit_len);
 	s = &(ctx->verify_data.ecfsdsa.s);
 
-	MUST_HAVE(siglen == ECFSDSA_SIGLEN(p_bit_len, q_bit_len), ret, err);
+	MUST_HAVE((siglen == ECFSDSA_SIGLEN(p_bit_len, q_bit_len)), ret, err);
 
 	/*  1. Reject the signature if r is not a valid point on the curve. */
 
@@ -482,7 +484,7 @@ int _ecfsdsa_verify_init(struct ec_verify_context *ctx,
 	fp_uninit(&rx);
 	fp_uninit(&ry);
 
-	if (ret) {
+	if (ret && (ctx != NULL)) {
 		/*
 		 * Signature is invalid. Clear data part of the context.
 		 * This will clear magic and avoid further reuse of the
@@ -621,8 +623,10 @@ err:
 	 * We can now clear data part of the context. This will clear
 	 * magic and avoid further reuse of the whole context.
 	 */
-	IGNORE_RET_VAL(local_memset(&(ctx->verify_data.ecfsdsa), 0,
-		     sizeof(ecfsdsa_verify_data)));
+	if(ctx != NULL){
+		IGNORE_RET_VAL(local_memset(&(ctx->verify_data.ecfsdsa), 0,
+			     sizeof(ecfsdsa_verify_data)));
+	}
 
 	/* Clean what remains on the stack */
 	PTR_NULLIFY(Wprime);

@@ -61,8 +61,8 @@ ATTRIBUTE_WARN_UNUSED_RET static int __ecdsa_rfc6979_nonce(nn_t k, nn_src_t q, b
 	u8 tmp;
 
 	/* Sanity checks */
-	MUST_HAVE(k != NULL, ret, err);
-	MUST_HAVE(hash != NULL, ret, err);
+	MUST_HAVE((k != NULL), ret, err);
+	MUST_HAVE((hash != NULL), ret, err);
 	ret = nn_check_initialized(q); EG(ret, err);
 	ret = nn_check_initialized(x); EG(ret, err);
 
@@ -176,7 +176,7 @@ int __ecdsa_init_pub_key(ec_pub_key *out_pub, const ec_priv_key *in_priv,
 	int ret, cmp;
 	nn_src_t q;
 
-	MUST_HAVE(out_pub != NULL, ret, err);
+	MUST_HAVE((out_pub != NULL), ret, err);
 
 	/* Zero init public key to be generated */
 	ret = local_memset(out_pub, 0, sizeof(ec_pub_key)); EG(ret, err);
@@ -185,7 +185,7 @@ int __ecdsa_init_pub_key(ec_pub_key *out_pub, const ec_priv_key *in_priv,
 	q = &(in_priv->params->ec_gen_order);
 
 	/* Sanity check on key compliance */
-	MUST_HAVE(!nn_cmp(&(in_priv->x), q, &cmp) && (cmp < 0), ret, err);
+	MUST_HAVE((!nn_cmp(&(in_priv->x), q, &cmp)) && (cmp < 0), ret, err);
 
 	/* Y = xG */
 	G = &(in_priv->params->ec_gen);
@@ -309,7 +309,7 @@ int __ecdsa_sign_update(struct ec_sign_context *ctx,
 	/* 1. Compute h = H(m) */
 	/* Since we call a callback, sanity check our mapping */
 	ret = hash_mapping_callbacks_sanity_check(ctx->h); EG(ret, err);
-	ret = ctx->h->hfunc_update(&(ctx->sign_data.ecdsa.h_ctx), chunk, chunklen); EG(ret, err);
+	ret = ctx->h->hfunc_update(&(ctx->sign_data.ecdsa.h_ctx), chunk, chunklen);
 
 err:
 	return ret;
@@ -361,14 +361,14 @@ int __ecdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen,
 	x = &(priv_key->x);
 	hsize = ctx->h->digest_size;
 
-	MUST_HAVE(priv_key->key_type == key_type, ret, err);
+	MUST_HAVE((priv_key->key_type == key_type), ret, err);
 
 	/* Sanity check */
 	ret = nn_cmp(x, q, &cmp); EG(ret, err);
 	/* This should not happen and means that our
 	 * private key is not compliant!
 	 */
-	MUST_HAVE(cmp < 0, ret, err);
+	MUST_HAVE((cmp < 0), ret, err);
 
 	dbg_nn_print("p", &(priv_key->params->ec_fp.p));
 	dbg_nn_print("q", &(priv_key->params->ec_gen_order));
@@ -377,7 +377,7 @@ int __ecdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen,
 	dbg_pub_key_print("Y", &(ctx->key_pair->pub_key));
 
 	/* Check given signature buffer length has the expected size */
-	MUST_HAVE(siglen == ECDSA_SIGLEN(q_bit_len), ret, err);
+	MUST_HAVE((siglen == ECDSA_SIGLEN(q_bit_len)), ret, err);
 
 	/* 1. Compute h = H(m) */
 	ret = local_memset(hash, 0, hsize); EG(ret, err);
@@ -565,7 +565,9 @@ err:
 	 * We can now clear data part of the context. This will clear
 	 * magic and avoid further reuse of the whole context.
 	 */
-	IGNORE_RET_VAL(local_memset(&(ctx->sign_data.ecdsa), 0, sizeof(ecdsa_sign_data)));
+	if(ctx != NULL){
+		IGNORE_RET_VAL(local_memset(&(ctx->sign_data.ecdsa), 0, sizeof(ecdsa_sign_data)));
+	}
 
 	/* Clean what remains on the stack */
 	PTR_NULLIFY(priv_key);
@@ -637,7 +639,7 @@ int __ecdsa_verify_init(struct ec_verify_context *ctx, const u8 *sig, u8 siglen,
 	s = &(ctx->verify_data.ecdsa.s);
 
 	/* Check given signature length is the expected one */
-	MUST_HAVE(siglen == ECDSA_SIGLEN(q_bit_len), ret, err);
+	MUST_HAVE((siglen == ECDSA_SIGLEN(q_bit_len)), ret, err);
 
 	/* Import r and s values from signature buffer */
 	ret = nn_init_from_buf(r, sig, q_len); EG(ret, err);
@@ -650,7 +652,7 @@ int __ecdsa_verify_init(struct ec_verify_context *ctx, const u8 *sig, u8 siglen,
 	ret = nn_iszero(s, &iszero2); EG(ret, err);
 	ret = nn_cmp(r, q, &cmp1); EG(ret, err);
 	ret = nn_cmp(s, q, &cmp2); EG(ret, err);
-	MUST_HAVE((!iszero1 && (cmp1 < 0) && !iszero2 && (cmp2 < 0)), ret, err);
+	MUST_HAVE(((!iszero1) && (cmp1 < 0) && !iszero2 && (cmp2 < 0)), ret, err);
 
 	/* Initialize the remaining of verify context. */
 	/* Since we call a callback, sanity check our mapping */
@@ -816,7 +818,9 @@ int __ecdsa_verify_finalize(struct ec_verify_context *ctx,
 	 * We can now clear data part of the context. This will clear
 	 * magic and avoid further reuse of the whole context.
 	 */
-	IGNORE_RET_VAL(local_memset(&(ctx->verify_data.ecdsa), 0, sizeof(ecdsa_verify_data)));
+	if(ctx != NULL){
+		IGNORE_RET_VAL(local_memset(&(ctx->verify_data.ecdsa), 0, sizeof(ecdsa_verify_data)));
+	}
 
 	/* Clean what remains on the stack */
 	PTR_NULLIFY(W_prime);

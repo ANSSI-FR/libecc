@@ -30,7 +30,7 @@ int nn_get_random_len(nn_t out, u16 len)
 {
 	int ret;
 
-	MUST_HAVE(!(len > NN_MAX_BYTE_LEN), ret, err);
+	MUST_HAVE((len <= NN_MAX_BYTE_LEN), ret, err);
 
 	ret = nn_init(out, len); EG(ret, err);
 	ret = get_random((u8*) out->val, len);
@@ -56,11 +56,11 @@ int nn_get_random_maxlen(nn_t out, u16 max_len)
 	u16 len;
 	int ret;
 
-	MUST_HAVE(!(max_len > NN_MAX_BYTE_LEN), ret, err);
+	MUST_HAVE((max_len <= NN_MAX_BYTE_LEN), ret, err);
 
 	ret = get_random((u8 *)&len, 2); EG(ret, err);
 
-	len %= max_len + 1;
+	len %= (max_len + 1);
 
 	ret = nn_get_random_len(out, len);
 
@@ -103,7 +103,7 @@ int nn_get_random_mod(nn_t out, nn_src_t q)
 
 	/* Check q is neither 0, nor 1 and its size is ok */
 	MUST_HAVE((q_len) && (q_len <= (NN_MAX_BYTE_LEN / 2)), ret, err);
-	MUST_HAVE(!nn_isone(q, &isone) && !isone, ret, err);
+	MUST_HAVE((!nn_isone(q, &isone)) && (!isone), ret, err);
 
 	/* 1) compute q' = q - 1  */
 	ret = nn_copy(&qprime, q); EG(ret, err);

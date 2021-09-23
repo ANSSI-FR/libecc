@@ -74,12 +74,12 @@ int __ecsdsa_siglen(u16 p_bit_len, u16 q_bit_len, u8 hsize, u8 blocksize,
 	int ret;
 
 	MUST_HAVE((siglen != NULL), ret, err);
-	MUST_HAVE(!((p_bit_len > CURVES_MAX_P_BIT_LEN) ||
-		    (q_bit_len > CURVES_MAX_Q_BIT_LEN) ||
-		    (hsize > MAX_DIGEST_SIZE) || (blocksize > MAX_BLOCK_SIZE)),
+	MUST_HAVE(((p_bit_len <= CURVES_MAX_P_BIT_LEN) &&
+		   (q_bit_len <= CURVES_MAX_Q_BIT_LEN) &&
+		   (hsize <= MAX_DIGEST_SIZE) && (blocksize <= MAX_BLOCK_SIZE)),
 		   ret, err);
 
-	*siglen = (u8)ECSDSA_SIGLEN(hsize, q_bit_len);
+	(*siglen) = (u8)ECSDSA_SIGLEN(hsize, q_bit_len);
 	ret = 0;
 
 err:
@@ -131,7 +131,7 @@ err:
 
 #define ECSDSA_SIGN_MAGIC ((word_t)(0x743c03ae409d15c4ULL))
 #define ECSDSA_SIGN_CHECK_INITIALIZED(A, ret, err) \
-	MUST_HAVE((((const void *)(A)) != NULL) && \
+	MUST_HAVE((((void *)(A)) != NULL) && \
 		  ((A)->magic == ECSDSA_SIGN_MAGIC), ret, err)
 
 /*
@@ -184,15 +184,9 @@ int __ecsdsa_sign_init(struct ec_sign_context *ctx,
 	 * This allows us to avoid the corruption of such a pointer.
 	 */
 	/* Sanity check on the handler before calling it */
-	if(ctx->rand != nn_get_random_mod){
-		ret = -1;
-		goto err;
-	}
+	MUST_HAVE((ctx->rand == nn_get_random_mod), ret, err);
 #endif
-	if (ctx->rand == NULL) {
-		ret = -1;
-		goto err;
-	}
+	MUST_HAVE((ctx->rand != NULL), ret, err);
 	ret = ctx->rand(&k, q); EG(ret, err);
 	dbg_nn_print("k", &k);
 
@@ -216,13 +210,9 @@ int __ecsdsa_sign_init(struct ec_sign_context *ctx,
 	ret = hash_mapping_callbacks_sanity_check(ctx->h); EG(ret, err);
 	ret = ctx->h->hfunc_init(&(ctx->sign_data.ecsdsa.h_ctx)); EG(ret, err);
 	ret = fp_export_to_buf(Wx, p_len, &(kG.X)); EG(ret, err);
-	/* Since we call a callback, sanity check our mapping */
-	ret = hash_mapping_callbacks_sanity_check(ctx->h); EG(ret, err);
 	ret = ctx->h->hfunc_update(&(ctx->sign_data.ecsdsa.h_ctx), Wx, p_len); EG(ret, err);
 	if (!optimized) {
 		ret = fp_export_to_buf(Wy, p_len, &(kG.Y)); EG(ret, err);
-		/* Since we call a callback, sanity check our mapping */
-		ret = hash_mapping_callbacks_sanity_check(ctx->h); EG(ret, err);
 		ret = ctx->h->hfunc_update(&(ctx->sign_data.ecsdsa.h_ctx), Wy,
 					   p_len); EG(ret, err);
 	}
@@ -314,7 +304,7 @@ int __ecsdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	r_len = (u8)ECSDSA_R_LEN(hsize);
 	s_len = (u8)ECSDSA_S_LEN(q_bit_len);
 
-	MUST_HAVE(siglen == ECSDSA_SIGLEN(hsize, q_bit_len), ret, err);
+	MUST_HAVE((siglen == ECSDSA_SIGLEN(hsize, q_bit_len)), ret, err);
 
 #ifdef USE_SIG_BLINDING
 	ret = nn_get_random_mod(&b, q); EG(ret, err);
@@ -370,7 +360,7 @@ int __ecsdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	 * As we cannot restart at that point (step 1. is in init()),
 	 * we just stop and return an error.
 	 */
-	MUST_HAVE(!nn_iszero(&s, &iszero) && !iszero, ret, err);
+	MUST_HAVE((!nn_iszero(&s, &iszero)) && (!iszero), ret, err);
 
 	/* 8. Return (r, s) */
 	ret = local_memcpy(sig, r, r_len); EG(ret, err);
@@ -390,7 +380,9 @@ int __ecsdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	 * We can now clear data part of the context. This will clear
 	 * magic and avoid further reuse of the whole context.
 	 */
-	IGNORE_RET_VAL(local_memset(&(ctx->sign_data.ecsdsa), 0, sizeof(ecsdsa_sign_data)));
+	if(ctx != NULL){
+		IGNORE_RET_VAL(local_memset(&(ctx->sign_data.ecsdsa), 0, sizeof(ecsdsa_sign_data)));
+	}
 
 	/* Clean what remains on the stack */
 	PTR_NULLIFY(q);
@@ -474,16 +466,13 @@ int __ecsdsa_verify_init(struct ec_verify_context *ctx,
 	r_len = (u8)ECSDSA_R_LEN(hsize);
 	s_len = (u8)ECSDSA_S_LEN(q_bit_len);
 
-	MUST_HAVE(siglen == ECSDSA_SIGLEN(hsize, q_bit_len), ret, err);
+	MUST_HAVE((siglen == ECSDSA_SIGLEN(hsize, q_bit_len)), ret, err);
 
 	/* 1. if s is not in ]0,q[, reject the signature. */
 	ret = nn_init_from_buf(&s, sig + r_len, s_len); EG(ret, err);
-	ret = nn_iszero(&s, &iszero); EG(ret, err); EG(ret, err);
+	ret = nn_iszero(&s, &iszero); EG(ret, err);
 	ret = nn_cmp(&s, q, &cmp); EG(ret, err);
-	if (iszero || (cmp >= 0)) {
-		ret = -1;
-		goto err;
-	}
+	MUST_HAVE((!iszero) && (cmp < 0), ret, err);
 
 	/*
 	 * 2. Compute e = -r mod q
@@ -502,10 +491,7 @@ int __ecsdsa_verify_init(struct ec_verify_context *ctx,
 
 	/* 3. If e == 0, reject the signature. */
 	ret = nn_iszero(&e, &iszero); EG(ret, err);
-	if (iszero) {
-		ret = -1;
-		goto err;
-	}
+	MUST_HAVE((!iszero), ret, err);
 
 	/* 4. Compute W' = sG + eY */
 	ret = prj_pt_mul(&sG, &s, G); EG(ret, err);
@@ -628,8 +614,10 @@ err:
 	 * We can now clear data part of the context. This will clear
 	 * magic and avoid further reuse of the whole context.
 	 */
-	IGNORE_RET_VAL(local_memset(&(ctx->verify_data.ecsdsa), 0,
-		     sizeof(ecsdsa_verify_data)));
+	if(ctx != NULL){
+		IGNORE_RET_VAL(local_memset(&(ctx->verify_data.ecsdsa), 0,
+			     sizeof(ecsdsa_verify_data)));
+	}
 
 	/* Clean what remains on the stack */
 	VAR_ZEROIFY(r_len);

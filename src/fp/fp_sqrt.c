@@ -29,7 +29,8 @@ ATTRIBUTE_WARN_UNUSED_RET static int legendre(fp_src_t a)
 	fp pow; /* The result if the exponentiation is in Fp */
 	fp one; /* The element 1 in the field */
 	nn exp; /* The power exponent is in NN */
-	pow.magic = one.magic = exp.magic = 0;
+	pow.magic = one.magic = 0;
+	exp.magic = 0;
 
 	/* Initialize elements */
 	ret = fp_check_initialized(a); EG(ret, err);
@@ -268,6 +269,8 @@ int fp_sqrt(fp_t sqrt1, fp_t sqrt2, fp_src_t n)
 	fp_uninit(&one_fp);
 	fp_uninit(&tmp_fp);
 	fp_uninit(&__n);
+
+	PTR_NULLIFY(_n);
 
 	return ret;
 }

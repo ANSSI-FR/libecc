@@ -607,7 +607,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int ec_sig_known_vector_tests_one(const ec_test
 			goto err;
 		}
 		u8 noncelen = (u8)(BYTECEIL(q_bit_len));
-		MUST_HAVE(noncelen <= sizeof(nonce), ret, err);
+		MUST_HAVE((u32)noncelen <= sizeof(nonce), ret, err);
 		/* Raw signing of data */
 #if defined(WITH_SIG_ECDSA)
 		if(c->sig_type == ECDSA){

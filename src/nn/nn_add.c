@@ -65,7 +65,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int _nn_cnd_add(int cnd, nn_t out, nn_src_t in1
 	u8 i, loop_wlen;
 	int ret;
 
-	MUST_HAVE(carry != NULL, ret, err);
+	MUST_HAVE((carry != NULL), ret, err);
 	ret = nn_check_initialized(in1); EG(ret, err);
 	ret = nn_check_initialized(in2); EG(ret, err);
 
@@ -132,7 +132,7 @@ int nn_cnd_add(int cnd, nn_t out, nn_src_t in1, nn_src_t in2)
 		 * cases. If carry is 0, no change is performed in practice,
 		 * neither to 'out' value, nor to its length.
 		 * Note that the length of the output can vary and make
-		 * the time taken by further operations on it will vary.
+		 * the time taken by further operations on it also vary.
 		 */
 		out->val[out->wlen] = carry;
 		out->wlen += (u8)carry;
@@ -186,7 +186,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int nn_add_word(nn_t out, nn_src_t in1, word_t 
 
 	/* Handle aliasing */
 	n_wlen = in1->wlen;
-	if ((out != in1)) {
+	if (out != in1) {
 		ret = nn_init(out, n_wlen * WORD_BYTES); EG(ret, err);
 	} else {
 		ret = nn_set_wlen(out, n_wlen); EG(ret, err);

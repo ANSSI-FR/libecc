@@ -27,7 +27,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int sha256_process(sha256_context *ctx,
 	unsigned int i;
 	int ret;
 
-	MUST_HAVE(data != NULL, ret, err);
+	MUST_HAVE((data != NULL), ret, err);
 	SHA256_HASH_CHECK_INITIALIZED(ctx, ret, err);
 
 	/* Init our inner variables */
@@ -71,7 +71,7 @@ int sha256_init(sha256_context *ctx)
 {
 	int ret;
 
-	MUST_HAVE(ctx != NULL, ret, err);
+	MUST_HAVE((ctx != NULL), ret, err);
 
 	ctx->sha256_total = 0;
 	ctx->sha256_state[0] = 0x6A09E667;
@@ -101,7 +101,7 @@ int sha256_update(sha256_context *ctx, const u8 *input, u32 ilen)
 	u8 left;
 	int ret;
 
-	MUST_HAVE(input != NULL, ret, err);
+	MUST_HAVE((input != NULL), ret, err);
 	SHA256_HASH_CHECK_INITIALIZED(ctx, ret, err);
 
 	/* Nothing to process, return */
@@ -111,8 +111,8 @@ int sha256_update(sha256_context *ctx, const u8 *input, u32 ilen)
 	}
 
 	/* Get what's left in our local buffer */
-	left = ctx->sha256_total & 0x3F;
-	fill = SHA256_BLOCK_SIZE - left;
+	left = (ctx->sha256_total & 0x3F);
+	fill = (SHA256_BLOCK_SIZE - left);
 
 	ctx->sha256_total += ilen;
 
@@ -148,14 +148,14 @@ int sha256_final(sha256_context *ctx, u8 output[SHA256_DIGEST_SIZE])
 	u8 last_padded_block[2 * SHA256_BLOCK_SIZE];
 	int ret;
 
-	MUST_HAVE(output != NULL, ret, err);
+	MUST_HAVE((output != NULL), ret, err);
 	SHA256_HASH_CHECK_INITIALIZED(ctx, ret, err);
 
 	/* Fill in our last block with zeroes */
 	ret = local_memset(last_padded_block, 0, sizeof(last_padded_block)); EG(ret, err);
 
 	/* This is our final step, so we proceed with the padding */
-	block_present = ctx->sha256_total % SHA256_BLOCK_SIZE;
+	block_present = (ctx->sha256_total % SHA256_BLOCK_SIZE);
 	if (block_present != 0) {
 		/* Copy what's left in our temporary context buffer */
 		ret = local_memcpy(last_padded_block, ctx->sha256_buffer,

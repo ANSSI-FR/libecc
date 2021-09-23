@@ -152,15 +152,15 @@ int import_params(ec_params *out_params, const ec_str_params *in_str_params)
 	/* Import a local copy of curve OID */
 	MUST_HAVE(in_str_params->oid->buflen < MAX_CURVE_OID_LEN, ret, err);
 	ret = local_memset(out_params->curve_oid, 0, MAX_CURVE_OID_LEN); EG(ret, err);
-	ret = local_strncpy((char *)out_params->curve_oid,
-		      (const char *)in_str_params->oid->buf,
+	ret = local_strncpy((char *)(out_params->curve_oid),
+		      (const char *)(in_str_params->oid->buf),
 		      in_str_params->oid->buflen); EG(ret, err);
 
 	/* Import a local copy of curve name */
 	MUST_HAVE(in_str_params->name->buflen < MAX_CURVE_NAME_LEN, ret, err);
 	ret = local_memset(out_params->curve_name, 0, MAX_CURVE_NAME_LEN); EG(ret, err);
-	ret = local_strncpy((char *)out_params->curve_name,
-		      (const char *)in_str_params->name->buf,
+	ret = local_strncpy((char *)(out_params->curve_name),
+		      (const char *)(in_str_params->name->buf),
 		      in_str_params->name->buflen); EG(ret, err);
 
 	/* Get the curve type */

@@ -216,7 +216,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int eddsa_key_pair_sanity_check(const ec_key_pa
 	MUST_HAVE((key_pair != NULL), ret, err);
 	ret = eddsa_priv_key_sanity_check(&(key_pair->priv_key)); EG(ret, err);
 	ret = eddsa_pub_key_sanity_check(&(key_pair->pub_key)); EG(ret, err);
-	MUST_HAVE(key_pair->priv_key.key_type == key_pair->pub_key.key_type, ret, err);
+	MUST_HAVE((key_pair->priv_key.key_type == key_pair->pub_key.key_type), ret, err);
 
 err:
 	return ret;
@@ -231,8 +231,8 @@ ATTRIBUTE_WARN_UNUSED_RET static int eddsa_decode_integer(nn_t nn_out, const u8 
 	u8 buf_little_endian[MAX_DIGEST_SIZE];
 	int ret;
 
-	MUST_HAVE(buf != NULL, ret, err);
-	MUST_HAVE(sizeof(buf_little_endian) >= buf_size, ret, err);
+	MUST_HAVE((buf != NULL), ret, err);
+	MUST_HAVE((sizeof(buf_little_endian) >= buf_size), ret, err);
 
 	ret = nn_init(nn_out, 0); EG(ret, err);
 
@@ -261,12 +261,12 @@ ATTRIBUTE_WARN_UNUSED_RET static int eddsa_encode_integer(nn_src_t nn_in, u8 *bu
 	int ret;
 	bitcnt_t blen;
 
-	MUST_HAVE(buf != NULL, ret, err);
+	MUST_HAVE((buf != NULL), ret, err);
 	ret = nn_check_initialized(nn_in); EG(ret, err);
 
 	/* Sanity check that we do not lose information */
 	ret = nn_bitlen(nn_in, &blen); EG(ret, err);
-	MUST_HAVE(((u32)blen) <= (8 * (u32)buf_size), ret, err);
+	MUST_HAVE((((u32)blen) <= (8 * (u32)buf_size)), ret, err);
 
 	/* Export the number to our buffer */
 	ret = nn_export_to_buf(buf, buf_size, nn_in); EG(ret, err);
@@ -291,8 +291,8 @@ ATTRIBUTE_WARN_UNUSED_RET static int eddsa_compute_s(nn_t s, const u8 *digest, u
 {
 	int ret;
 
-	MUST_HAVE(digest != NULL, ret, err);
-	MUST_HAVE((digest_size % 2) == 0, ret, err);
+	MUST_HAVE((digest != NULL), ret, err);
+	MUST_HAVE(((digest_size % 2) == 0), ret, err);
 
 	/* s is half of the digest size encoded in little endian format */
 	ret = eddsa_decode_integer(s, digest, (digest_size / 2)); EG(ret, err);
@@ -308,18 +308,18 @@ ATTRIBUTE_WARN_UNUSED_RET static int eddsa_get_digest_from_priv_key(u8 *digest, 
 	hash_alg_type hash_type;
 	const hash_mapping *hash;
 
-	MUST_HAVE((digest != NULL) && (digest_size != NULL), ret, err);
+	MUST_HAVE(((digest != NULL) && (digest_size != NULL)), ret, err);
 	ret = eddsa_priv_key_sanity_check(in_priv); EG(ret, err);
 
-	MUST_HAVE((hash_type = get_eddsa_hash_type(in_priv->key_type)) != UNKNOWN_HASH_ALG, ret, err);
+	MUST_HAVE(((hash_type = get_eddsa_hash_type(in_priv->key_type)) != UNKNOWN_HASH_ALG), ret, err);
 	ret = get_hash_by_type(hash_type, &hash); EG(ret, err);
-	MUST_HAVE(hash != NULL, ret, err);
+	MUST_HAVE((hash != NULL), ret, err);
 
 	/* Check real digest size */
-	MUST_HAVE((*digest_size) >= hash->digest_size, ret, err);
+	MUST_HAVE(((*digest_size) >= hash->digest_size), ret, err);
 
-	*digest_size = hash->digest_size;
-	ret = nn_export_to_buf(digest, *digest_size, &(in_priv->x)); EG(ret, err);
+	(*digest_size) = hash->digest_size;
+	ret = nn_export_to_buf(digest, *digest_size, &(in_priv->x));
 
 err:
 	return ret;
@@ -337,7 +337,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int eddsa_encode_point(aff_pt_edwards_src_t in,
 	out_reduced.magic = 0;
 
 	/* Sanity checks */
-	MUST_HAVE(buf != NULL, ret, err);
+	MUST_HAVE((buf != NULL), ret, err);
 	ret = aff_pt_edwards_check_initialized(in); EG(ret, err);
 	ret = fp_check_initialized(alpha_edwards); EG(ret, err);
 
@@ -410,7 +410,7 @@ err1:
 	 * Now deal with the sign for the last bit: copy the least significant
 	 * bit of the x coordinate in the MSB of the last octet.
 	 */
-	MUST_HAVE(buflen > 1, ret, err);
+	MUST_HAVE((buflen > 1), ret, err);
 	buf[buflen - 1] |= (u8)(lsb << 7);
 
 err:
@@ -447,19 +447,19 @@ ATTRIBUTE_WARN_UNUSED_RET static int eddsa_decode_point(aff_pt_edwards_t out, ec
 
 	x.magic = y.magic = sqrt1.magic = sqrt2.magic = 0;
 
-	MUST_HAVE(buf != NULL, ret, err);
+	MUST_HAVE((buf != NULL), ret, err);
 
 	ret = ec_edwards_crv_check_initialized(edwards_curve); EG(ret, err);
 
 	ret = fp_check_initialized(alpha_edwards); EG(ret, err);
 
 	/* Extract the sign */
-	x_0 = (buf[buflen - 1] & 0x80) >> 7;
+	x_0 = ((buf[buflen - 1] & 0x80) >> 7);
 	/* Extract the value by reversing endianness */
-	MUST_HAVE(sizeof(buf_little_endian) >= buflen, ret, err);
+	MUST_HAVE((sizeof(buf_little_endian) >= buflen), ret, err);
 
 	/* Inverse endianness of our input buffer and mask the sign bit */
-	MUST_HAVE(buflen > 1, ret, err);
+	MUST_HAVE((buflen > 1), ret, err);
 
 	for(i = 0; i < buflen; i++){
 		buf_little_endian[i] = buf[buflen - 1 - i];
@@ -583,22 +583,22 @@ ATTRIBUTE_WARN_UNUSED_RET static int eddsa_derive_priv_key_hash(const ec_priv_ke
 	const u8 *in[2];
 	u32 in_len[2];
 
-	MUST_HAVE(buf != NULL, ret, err);
+	MUST_HAVE((buf != NULL), ret, err);
 	ret = eddsa_priv_key_sanity_check(in_priv); EG(ret, err);
 
-	MUST_HAVE((hash_type = get_eddsa_hash_type(in_priv->key_type)) != UNKNOWN_HASH_ALG, ret, err);
+	MUST_HAVE(((hash_type = get_eddsa_hash_type(in_priv->key_type)) != UNKNOWN_HASH_ALG), ret, err);
 	ret = get_hash_by_type(hash_type, &hash); EG(ret, err);
-	MUST_HAVE(hash != NULL, ret, err);
+	MUST_HAVE((hash != NULL), ret, err);
 
 	/* Get the private key as a buffer and hash it */
 	ret = local_memset(x_buf, 0, sizeof(x_buf)); EG(ret, err);
-	MUST_HAVE(sizeof(x_buf) >= (hash->digest_size / 2), ret, err);
+	MUST_HAVE((sizeof(x_buf) >= (hash->digest_size / 2)), ret, err);
 
 	ret = ec_priv_key_export_to_buf(in_priv, x_buf, (hash->digest_size / 2)); EG(ret, err);
 
 	ret = hash_mapping_callbacks_sanity_check(hash); EG(ret, err);
 
-	MUST_HAVE(buflen >= hash->digest_size, ret, err);
+	MUST_HAVE((buflen >= hash->digest_size), ret, err);
 
 	in[0] = x_buf; in[1] = NULL;
 	in_len[0] = (hash->digest_size / 2); in_len[1] = 0;
@@ -628,14 +628,14 @@ int eddsa_derive_priv_key(ec_priv_key *priv_key)
 	/* Check hash function compatibility:
 	 *   We must have 2**(b-1) > p with (2*b) the size of the hash function.
 	 */
-	MUST_HAVE((hash_type = get_eddsa_hash_type(priv_key->key_type)) != UNKNOWN_HASH_ALG, ret, err);
+	MUST_HAVE(((hash_type = get_eddsa_hash_type(priv_key->key_type)) != UNKNOWN_HASH_ALG), ret, err);
 
 	digest_size = 0;
 	ret = get_hash_sizes(hash_type, &digest_size, NULL); EG(ret, err);
 
-	MUST_HAVE((2 * priv_key->params->ec_fp.p_bitlen) < (8 * (bitcnt_t)digest_size), ret, err);
-	MUST_HAVE((digest_size % 2) == 0, ret, err);
-	MUST_HAVE(digest_size <= sizeof(digest), ret, err);
+	MUST_HAVE(((2 * priv_key->params->ec_fp.p_bitlen) < (8 * (bitcnt_t)digest_size)), ret, err);
+	MUST_HAVE(((digest_size % 2) == 0), ret, err);
+	MUST_HAVE((digest_size <= sizeof(digest)), ret, err);
 
 	/*
 	 * Now that we have our private scalar, derive the hash value of secret
@@ -647,7 +647,7 @@ int eddsa_derive_priv_key(ec_priv_key *priv_key)
 	/* Get the cofactor as an integer */
 	cofactor = priv_key->params->ec_gen_cofactor.val[0];
 	ret = nn_cmp_word(&(priv_key->params->ec_gen_cofactor), cofactor, &cmp); EG(ret, err);
-	MUST_HAVE(cmp == 0, ret, err);
+	MUST_HAVE((cmp == 0), ret, err);
 	/* Cofactor must be 2**2 or 2**3 as per RFC8032 standard */
 	MUST_HAVE((cofactor == (0x1 << 2)) || (cofactor == (0x1 << 3)), ret, err);
 
@@ -709,13 +709,13 @@ int eddsa_gen_priv_key(ec_priv_key *priv_key)
 	/* Check hash function compatibility:
 	 *   We must have 2**(b-1) > p with (2*b) the size of the hash function.
 	 */
-	MUST_HAVE((hash_type = get_eddsa_hash_type(priv_key->key_type)) != UNKNOWN_HASH_ALG, ret, err);
+	MUST_HAVE(((hash_type = get_eddsa_hash_type(priv_key->key_type)) != UNKNOWN_HASH_ALG), ret, err);
 
 	digest_size = 0;
 	ret = get_hash_sizes(hash_type, &digest_size, NULL); EG(ret, err);
 
-	MUST_HAVE((2 * priv_key->params->ec_fp.p_bitlen) < (8 * (bitcnt_t)digest_size), ret, err);
-	MUST_HAVE((digest_size % 2) == 0, ret, err);
+	MUST_HAVE(((2 * priv_key->params->ec_fp.p_bitlen) < (8 * (bitcnt_t)digest_size)), ret, err);
+	MUST_HAVE(((digest_size % 2) == 0), ret, err);
 
 	/* Generate a random private key
 	 * An EdDSA secret scalar is a b bit string with (2*b) the size of the hash function
@@ -723,7 +723,7 @@ int eddsa_gen_priv_key(ec_priv_key *priv_key)
 	ret = nn_get_random_len(&(priv_key->x), (digest_size / 2)); EG(ret, err);
 
 	/* Derive the private key */
-	ret = eddsa_derive_priv_key(priv_key); EG(ret, err);
+	ret = eddsa_derive_priv_key(priv_key);
 
 err:
 	VAR_ZEROIFY(digest_size);
@@ -756,13 +756,13 @@ int eddsa_import_priv_key(ec_priv_key *priv_key, const u8 *buf, u16 buflen,
 	ret = nn_init_from_buf(&(priv_key->x), buf, buflen); EG(ret, err);
 	/* The bit length of our big number must be <= b, half the digest size */
 	hash_type = get_eddsa_hash_type(sig_type);
-	MUST_HAVE(hash_type != UNKNOWN_HASH_ALG, ret, err);
+	MUST_HAVE((hash_type != UNKNOWN_HASH_ALG), ret, err);
 
 	digest_size = 0;
 	ret = get_hash_sizes(hash_type, &digest_size, NULL); EG(ret, err);
 
 	ret = nn_bitlen(&(priv_key->x), &blen); EG(ret, err);
-	MUST_HAVE(blen <= (8 * ((bitcnt_t)digest_size / 2)), ret, err);
+	MUST_HAVE((blen <= (8 * ((bitcnt_t)digest_size / 2))), ret, err);
 
 	/* Initialize stuff */
 	priv_key->key_type = sig_type;
@@ -772,10 +772,10 @@ int eddsa_import_priv_key(ec_priv_key *priv_key, const u8 *buf, u16 buflen,
 	/* Now derive the private key.
 	 * NOTE: sanity check on the private key is performed during derivation.
 	 */
-	ret = eddsa_derive_priv_key(priv_key); EG(ret, err);
+	ret = eddsa_derive_priv_key(priv_key);
 
 err:
-	if((priv_key != NULL) && (ret != 0)){
+	if((priv_key != NULL) && ret){
 		IGNORE_RET_VAL(local_memset(priv_key, 0, sizeof(ec_priv_key)));
 	}
 	VAR_ZEROIFY(digest_size);
@@ -812,7 +812,7 @@ int eddsa_init_pub_key(ec_pub_key *out_pub, const ec_priv_key *in_priv)
 	G = &(in_priv->params->ec_gen);
 
 	/* Get the digest in proper format */
-	MUST_HAVE((hash_type = get_eddsa_hash_type(in_priv->key_type)) != UNKNOWN_HASH_ALG, ret, err);
+	MUST_HAVE(((hash_type = get_eddsa_hash_type(in_priv->key_type)) != UNKNOWN_HASH_ALG), ret, err);
 
 	u8 digest_size_;
 	digest_size_ = 0;
@@ -823,7 +823,7 @@ int eddsa_init_pub_key(ec_pub_key *out_pub, const ec_priv_key *in_priv)
 	ret = eddsa_get_digest_from_priv_key(digest, &digest_size, in_priv); EG(ret, err);
 
 	/* Sanity check */
-	MUST_HAVE(digest_size == digest_size_, ret, err);
+	MUST_HAVE((digest_size == digest_size_), ret, err);
 
 	/* Encode the scalar s from the digest */
 	ret = eddsa_compute_s(&s, digest, digest_size); EG(ret, err);
@@ -916,6 +916,8 @@ int eddsa_import_pub_key(ec_pub_key *pub_key, const u8 *buf, u16 buflen,
 	if((sig_type == EDDSA448) || (sig_type == EDDSA448PH)){
 		nn_src_t gen_order = &(shortw_curve_params->ec_gen_order);
 		nn tmp;
+		tmp.magic = 0;
+
 		/*
 		 * NOTE: because of the 4-isogeny between Ed448 and Edwards448,
 		 * we actually multiply by (s/4) since the base point of
@@ -941,7 +943,7 @@ err1:
 	ret = eddsa_pub_key_sanity_check(pub_key);
 
 err:
-	if((pub_key != NULL) && (ret != 0)){
+	if((pub_key != NULL) && ret){
 		IGNORE_RET_VAL(local_memset(pub_key, 0, sizeof(ec_pub_key)));
 	}
 	PTR_NULLIFY(shortw_curve);
@@ -972,7 +974,7 @@ int eddsa_export_pub_key(const ec_pub_key *in_pub, u8 *buf, u16 buflen)
 	_Tmp.magic = edwards_curve.magic = 0;
 
 	ret = pub_key_check_initialized(in_pub); EG(ret, err);
-	MUST_HAVE(buf != NULL, ret, err);
+	MUST_HAVE((buf != NULL), ret, err);
 
 	/* Make things more readable */
 	shortw_curve = &(in_pub->params->ec_curve);
@@ -1010,7 +1012,7 @@ int eddsa_import_key_pair_from_priv_key_buf(ec_key_pair *kp,
 {
 	int ret;
 
-	MUST_HAVE(kp != NULL, ret, err);
+	MUST_HAVE((kp != NULL), ret, err);
 
 	/* Try to import the private key */
 	ret = eddsa_import_priv_key(&(kp->priv_key), buf, buflen,
@@ -1035,15 +1037,15 @@ ATTRIBUTE_WARN_UNUSED_RET static int eddsa_compute_pre_hash(const u8 *message, u
 
 	MUST_HAVE((message != NULL) && (digest != NULL) && (digest_size != NULL), ret, err);
 
-	MUST_HAVE((hash_type = get_eddsa_hash_type(sig_type)) != UNKNOWN_HASH_ALG, ret, err);
+	MUST_HAVE(((hash_type = get_eddsa_hash_type(sig_type)) != UNKNOWN_HASH_ALG), ret, err);
 
 	ret = get_hash_by_type(hash_type, &hash); EG(ret, err);
-	MUST_HAVE(hash != NULL, ret, err);
+	MUST_HAVE((hash != NULL), ret, err);
 
 	/* Sanity check on the size */
-	MUST_HAVE((*digest_size) >= hash->digest_size, ret, err);
+	MUST_HAVE(((*digest_size) >= hash->digest_size), ret, err);
 
-	*digest_size = hash->digest_size;
+	(*digest_size) = hash->digest_size;
 	/* Hash the message */
 	ret = hash_mapping_callbacks_sanity_check(hash); EG(ret, err);
 	ret = hash->hfunc_init(&hash_ctx); EG(ret, err);
@@ -1061,7 +1063,7 @@ int eddsa_siglen(u16 p_bit_len, u16 q_bit_len, u8 hsize, u8 blocksize, u8 *sigle
 {
 	int ret;
 
-	MUST_HAVE(siglen != NULL, ret, err);
+	MUST_HAVE((siglen != NULL), ret, err);
 	MUST_HAVE((p_bit_len <= CURVES_MAX_P_BIT_LEN) &&
 		  (q_bit_len <= CURVES_MAX_Q_BIT_LEN) &&
 		  (hsize <= MAX_DIGEST_SIZE) && (blocksize <= MAX_BLOCK_SIZE), ret, err);
@@ -1113,23 +1115,15 @@ int _eddsa_sign_init_pre_hash(struct ec_sign_context *ctx)
 		use_message_pre_hash = 1;
 	}
 #endif
-	MUST_HAVE(use_message_pre_hash == 1, ret, err);
+	MUST_HAVE((use_message_pre_hash == 1), ret, err);
 
 	/* Additional sanity checks on input params from context */
 	ret = eddsa_key_pair_sanity_check(key_pair); EG(ret, err);
 
-	if ((!h) || (h->digest_size > MAX_DIGEST_SIZE) ||
-	    (h->block_size > MAX_BLOCK_SIZE)) {
-		ret = -1;
-		goto err;
-	}
+	MUST_HAVE((h != NULL) && (h->digest_size <= MAX_DIGEST_SIZE) && (h->block_size <= MAX_BLOCK_SIZE), ret, err);
 
 	/* Sanity check on hash types */
-	if((key_type != key_pair->pub_key.key_type) ||
-	   (h->type != get_eddsa_hash_type(key_type))){
-		ret = -1;
-		goto err;
-	}
+	MUST_HAVE((key_type == key_pair->pub_key.key_type) && (h->type == get_eddsa_hash_type(key_type)), ret, err);
 
 	/*
 	 * Sanity check on hash size versus private key size
@@ -1142,10 +1136,7 @@ int _eddsa_sign_init_pre_hash(struct ec_sign_context *ctx)
 	 * and record data init has been done
 	 */
 	/* Since we call a callback, sanity check our mapping */
-	if(hash_mapping_callbacks_sanity_check(h)){
-		ret = -1;
-		goto err;
-	}
+	ret = hash_mapping_callbacks_sanity_check(h); EG(ret, err);
 	ret = h->hfunc_init(&(ctx->sign_data.eddsa.h_ctx)); EG(ret, err);
 
 	/* Initialize other elements in the context */
@@ -1174,7 +1165,7 @@ int _eddsa_sign_update_pre_hash(struct ec_sign_context *ctx,
 	 */
 	ret = sig_sign_check_initialized(ctx); EG(ret, err);
 	EDDSA_SIGN_CHECK_INITIALIZED(&(ctx->sign_data.eddsa), ret, err);
-	MUST_HAVE(chunk != NULL, ret, err);
+	MUST_HAVE((chunk != NULL), ret, err);
 
 	key_type = ctx->key_pair->priv_key.key_type;
 
@@ -1192,7 +1183,7 @@ int _eddsa_sign_update_pre_hash(struct ec_sign_context *ctx,
 	MUST_HAVE(use_message_pre_hash == 1, ret, err);
 
 	/* Sanity check on hash types */
-	MUST_HAVE(ctx->h->type == get_eddsa_hash_type(key_type), ret, err);
+	MUST_HAVE((ctx->h->type == get_eddsa_hash_type(key_type)), ret, err);
 
 	/* 2. Compute h = H(m) */
 	/* Since we call a callback, sanity check our mapping */
@@ -1248,7 +1239,7 @@ int _eddsa_sign_finalize_pre_hash(struct ec_sign_context *ctx, u8 *sig, u8 sigle
 	 */
 	ret = sig_sign_check_initialized(ctx); EG(ret, err);
 	EDDSA_SIGN_CHECK_INITIALIZED(&(ctx->sign_data.eddsa), ret, err);
-	MUST_HAVE(sig != NULL, ret, err);
+	MUST_HAVE((sig != NULL), ret, err);
 
 	/* Zero init out points and data */
 	ret = local_memset(&R, 0, sizeof(prj_pt)); EG(ret, err);
@@ -1260,11 +1251,7 @@ int _eddsa_sign_finalize_pre_hash(struct ec_sign_context *ctx, u8 *sig, u8 sigle
 	/* Key type */
 	key_type = ctx->key_pair->priv_key.key_type;
 	/* Sanity check on hash types */
-	if((key_type != ctx->key_pair->pub_key.key_type) || \
-	   (ctx->h->type != get_eddsa_hash_type(key_type))){
-		ret = -1;
-		goto err;
-	}
+	MUST_HAVE((key_type == ctx->key_pair->pub_key.key_type) && (ctx->h->type == get_eddsa_hash_type(key_type)), ret, err);
 
 	/* Make things more readable */
 	priv_key = &(ctx->key_pair->priv_key);
@@ -1308,7 +1295,7 @@ int _eddsa_sign_finalize_pre_hash(struct ec_sign_context *ctx, u8 *sig, u8 sigle
 	}
 #endif
 	/* Sanity check: this function is only supported in PH mode */
-	MUST_HAVE(use_message_pre_hash == 1, ret, err);
+	MUST_HAVE((use_message_pre_hash == 1), ret, err);
 
 	/* Finish the message hash session */
 	/* Since we call a callback, sanity check our mapping */
@@ -1322,7 +1309,7 @@ int _eddsa_sign_finalize_pre_hash(struct ec_sign_context *ctx, u8 *sig, u8 sigle
 	ret = eddsa_get_digest_from_priv_key(hash, &hash_size, priv_key); EG(ret, err);
 
 	/* Sanity check */
-	MUST_HAVE(hash_size == hsize, ret, err);
+	MUST_HAVE((hash_size == hsize), ret, err);
 
 	/* Hash half the digest */
 	ret = h->hfunc_init(&(ctx->sign_data.eddsa.h_ctx)); EG(ret, err);
@@ -1343,7 +1330,7 @@ int _eddsa_sign_finalize_pre_hash(struct ec_sign_context *ctx, u8 *sig, u8 sigle
 	ret = h->hfunc_update(&(ctx->sign_data.eddsa.h_ctx), &hash[hsize / 2], hsize / 2); EG(ret, err);
 
 	/* Update hash h with message hash PH(m) */
-	MUST_HAVE(use_message_pre_hash_hsize <= hsize, ret, err);
+	MUST_HAVE((use_message_pre_hash_hsize <= hsize), ret, err);
 
 	ret = h->hfunc_update(&(ctx->sign_data.eddsa.h_ctx), ph_hash,
 			use_message_pre_hash_hsize); EG(ret, err);
@@ -1367,15 +1354,19 @@ int _eddsa_sign_finalize_pre_hash(struct ec_sign_context *ctx, u8 *sig, u8 sigle
 		 * divide our scalar by 4.
 		 */
 		nn r_tmp;
-		ret = nn_init(&r_tmp, 0); EG(ret, err);
-		ret = nn_modinv_word(&r_tmp, WORD(4), q); EG(ret, err);
-		ret = nn_mul_mod(&r_tmp, &r_tmp, &r, q); EG(ret, err);
+		r_tmp.magic = 0;
+
+		ret = nn_init(&r_tmp, 0); EG(ret, err1);
+		ret = nn_modinv_word(&r_tmp, WORD(4), q); EG(ret, err1);
+		ret = nn_mul_mod(&r_tmp, &r_tmp, &r, q); EG(ret, err1);
 #ifdef USE_SIG_BLINDING
-		ret = prj_pt_mul_blind(&R, &r_tmp, G); EG(ret, err);
+		ret = prj_pt_mul_blind(&R, &r_tmp, G);
 #else
-		ret = prj_pt_mul(&R, &r_tmp, G); EG(ret, err);
+		ret = prj_pt_mul(&R, &r_tmp, G);
 #endif
+err1:
 		nn_uninit(&r_tmp);
+		EG(ret, err);
 	}
 	else
 #endif /* !defined(WITH_SIG_EDDSA448) */
@@ -1396,7 +1387,7 @@ int _eddsa_sign_finalize_pre_hash(struct ec_sign_context *ctx, u8 *sig, u8 sigle
 					alpha_edwards); EG(ret, err);
 	dbg_ec_edwards_point_print("R", &Tmp_edwards);
 
-	MUST_HAVE(r_len <= siglen, ret, err);
+	MUST_HAVE((r_len <= siglen), ret, err);
 	/* Encode R and update */
 	ret = eddsa_encode_point(&Tmp_edwards, alpha_edwards, &sig[0],
 			      r_len, key_type); EG(ret, err);
@@ -1457,8 +1448,6 @@ int _eddsa_sign_finalize_pre_hash(struct ec_sign_context *ctx, u8 *sig, u8 sigle
 #endif
 	/* Multiply by the secret */
 	ret = nn_mul_mod(&S, &S, &s, q); EG(ret, err);
-	/* The secret is not needed anymore */
-	nn_uninit(&s);
 	/* Add to r */
 	ret = nn_mod_add(&S, &S, &r, q); EG(ret, err);
 #ifdef USE_SIG_BLINDING
@@ -1466,8 +1455,8 @@ int _eddsa_sign_finalize_pre_hash(struct ec_sign_context *ctx, u8 *sig, u8 sigle
 	ret = nn_mul_mod(&S, &S, &binv, q); EG(ret, err);
 #endif
 	/* Store our S in the context as an encoded buffer */
-	MUST_HAVE(s_len <= (siglen - r_len), ret, err);
-	ret = eddsa_encode_integer(&S, &sig[r_len], s_len); EG(ret, err);
+	MUST_HAVE((s_len <= (siglen - r_len)), ret, err);
+	ret = eddsa_encode_integer(&S, &sig[r_len], s_len);
 
  err:
 	/* Clean what remains on the stack */
@@ -1503,7 +1492,9 @@ int _eddsa_sign_finalize_pre_hash(struct ec_sign_context *ctx, u8 *sig, u8 sigle
 	 * We can now clear data part of the context. This will clear
 	 * magic and avoid further reuse of the whole context.
 	 */
-	IGNORE_RET_VAL(local_memset(&(ctx->sign_data.eddsa), 0, sizeof(eddsa_sign_data)));
+	if(ctx != NULL){
+		IGNORE_RET_VAL(local_memset(&(ctx->sign_data.eddsa), 0, sizeof(eddsa_sign_data)));
+	}
 	IGNORE_RET_VAL(local_memset(ph_hash, 0, sizeof(ph_hash)));
 
 	return ret;
@@ -1556,7 +1547,7 @@ int _eddsa_sign(u8 *sig, u8 siglen, const ec_key_pair *key_pair,
 	 * NOTE: EdDSA does not use any notion of random Nonce, so no need
 	 * to use 'rand' here: we strictly check that NULL is provided.
 	 */
-	MUST_HAVE(rand == NULL, ret, err);
+	MUST_HAVE((rand == NULL), ret, err);
 
 	/* Zero init out points and data */
 	ret = local_memset(&R, 0, sizeof(prj_pt)); EG(ret, err);
@@ -1573,20 +1564,16 @@ int _eddsa_sign(u8 *sig, u8 siglen, const ec_key_pair *key_pair,
 	key_type = key_pair->priv_key.key_type;
 
 	/* Sanity check on the hash type */
-	MUST_HAVE(h != NULL, ret, err);
-	MUST_HAVE(get_eddsa_hash_type(sig_type) == hash_type, ret, err);
+	MUST_HAVE((h != NULL), ret, err);
+	MUST_HAVE((get_eddsa_hash_type(sig_type) == hash_type), ret, err);
 	/* Sanity check on the key type */
 	MUST_HAVE(key_type == sig_type, ret, err);
-	if ((!h) || (h->digest_size > MAX_DIGEST_SIZE) ||
-	    (h->block_size > MAX_BLOCK_SIZE)) {
-		ret = -1;
-		goto err;
-	}
+	MUST_HAVE((h != NULL) && (h->digest_size <= MAX_DIGEST_SIZE) && (h->block_size <= MAX_BLOCK_SIZE), ret, err);
 	/*
 	 * Sanity check on hash size versus private key size
 	 */
 	ret = nn_bitlen(&(key_pair->priv_key.x), &blen); EG(ret, err);
-	MUST_HAVE(blen <= (8 * h->digest_size), ret, err);
+	MUST_HAVE((blen <= (8 * h->digest_size)), ret, err);
 
 	/* Make things more readable */
 	priv_key = &(key_pair->priv_key);
@@ -1639,7 +1626,7 @@ int _eddsa_sign(u8 *sig, u8 siglen, const ec_key_pair *key_pair,
 	hash_size = sizeof(hash);
 	ret = eddsa_get_digest_from_priv_key(hash, &hash_size, &(key_pair->priv_key)); EG(ret, err);
 	/* Sanity check */
-	MUST_HAVE(hash_size == hsize, ret, err);
+	MUST_HAVE((hash_size == hsize), ret, err);
 	/* Since we call a callback, sanity check our mapping */
 	ret = hash_mapping_callbacks_sanity_check(h); EG(ret, err);
 	ret = h->hfunc_init(&h_ctx); EG(ret, err);
@@ -1686,15 +1673,19 @@ int _eddsa_sign(u8 *sig, u8 siglen, const ec_key_pair *key_pair,
 		 * divide our scalar by 4.
 		 */
 		nn r_tmp;
-		ret = nn_init(&r_tmp, 0); EG(ret, err);
-		ret = nn_modinv_word(&r_tmp, WORD(4), q); EG(ret, err);
-		ret = nn_mul_mod(&r_tmp, &r_tmp, &r, q); EG(ret, err);
+		r_tmp.magic = 0;
+
+		ret = nn_init(&r_tmp, 0); EG(ret, err1);
+		ret = nn_modinv_word(&r_tmp, WORD(4), q); EG(ret, err1);
+		ret = nn_mul_mod(&r_tmp, &r_tmp, &r, q); EG(ret, err1);
 #ifdef USE_SIG_BLINDING
-		ret = prj_pt_mul_blind(&R, &r_tmp, G); EG(ret, err);
+		ret = prj_pt_mul_blind(&R, &r_tmp, G);
 #else
-		ret = prj_pt_mul(&R, &r_tmp, G); EG(ret, err);
+		ret = prj_pt_mul(&R, &r_tmp, G);
 #endif
+err1:
 		nn_uninit(&r_tmp);
+		EG(ret, err);
 	}
 	else
 #endif /* !defined(WITH_SIG_EDDSA448) */
@@ -1714,7 +1705,7 @@ int _eddsa_sign(u8 *sig, u8 siglen, const ec_key_pair *key_pair,
 	ret = prj_pt_shortw_to_aff_pt_edwards(&R, &crv_edwards, &Tmp_edwards,
 					alpha_edwards); EG(ret, err);
 	dbg_ec_edwards_point_print("R", &Tmp_edwards);
-	MUST_HAVE(r_len <= siglen, ret, err);
+	MUST_HAVE((r_len <= siglen), ret, err);
 	/* Encode R and update */
 	ret = eddsa_encode_point(&Tmp_edwards, alpha_edwards, &sig[0],
 			      r_len, key_type); EG(ret, err);
@@ -1724,7 +1715,7 @@ int _eddsa_sign(u8 *sig, u8 siglen, const ec_key_pair *key_pair,
 		 * As per RFC8032, for EDDSA25519CTX the context
 		 * SHOULD NOT be empty
 		 */
-		MUST_HAVE(adata != NULL, ret, err);
+		MUST_HAVE((adata != NULL), ret, err);
 		ret = dom2(0, adata, adata_len, h, &h_ctx); EG(ret, err);
 	}
 	if(key_type == EDDSA25519PH){
@@ -1745,7 +1736,7 @@ int _eddsa_sign(u8 *sig, u8 siglen, const ec_key_pair *key_pair,
 	ret = prj_pt_shortw_to_aff_pt_edwards(pub_key_y, &crv_edwards, &Tmp_edwards,
 					alpha_edwards); EG(ret, err);
 	dbg_ec_edwards_point_print("A", &Tmp_edwards);
-	MUST_HAVE(r_len <= sizeof(hash), ret, err);
+	MUST_HAVE((r_len <= sizeof(hash)), ret, err);
 	/* Encode the public key */
 	/* NOTE: we use the hash buffer as a temporary buffer */
 	ret = eddsa_encode_point(&Tmp_edwards, alpha_edwards,
@@ -1791,9 +1782,9 @@ int _eddsa_sign(u8 *sig, u8 siglen, const ec_key_pair *key_pair,
 	ret = nn_mul_mod(&S, &S, &binv, q); EG(ret, err);
 #endif
 	/* Store our S in the context as an encoded buffer */
-	MUST_HAVE(s_len <= (siglen - r_len), ret, err);
+	MUST_HAVE((s_len <= (siglen - r_len)), ret, err);
 	/* Encode the scalar s from the digest */
-	ret = eddsa_encode_integer(&S, &sig[r_len], s_len); EG(ret, err);
+	ret = eddsa_encode_integer(&S, &sig[r_len], s_len);
 
 err:
 	/* Clean what remains on the stack */
@@ -1850,13 +1841,12 @@ ATTRIBUTE_WARN_UNUSED_RET static int _eddsa_cofactor_scalar_mult(prj_pt_t out, p
 	ret = nn_check_initialized(cofactor); EG(ret, err);
 
 	ret = nn_iszero(cofactor, &iszero); EG(ret, err);
-	if(iszero){
-		/* This should not happen: cofactor cannot be zero! */
-		goto err;
-	}
+	/* This should not happen: cofactor cannot be zero! */
+	MUST_HAVE((!iszero), ret, err);
+
 	ret = nn_bitlen(cofactor, &explen); EG(ret, err);
 	/* Sanity check */
-	MUST_HAVE(explen > 0, ret, err);
+	MUST_HAVE((explen > 0), ret, err);
 	explen -= (bitcnt_t)1;
 	ret = prj_pt_copy(out, in); EG(ret, err);
 	while (explen > 0) {
@@ -1906,7 +1896,7 @@ int _eddsa_verify_init(struct ec_verify_context *ctx, const u8 *sig, u8 siglen)
 
 	/* First, verify context has been initialized */
 	ret = sig_verify_check_initialized(ctx); EG(ret, err);
-	MUST_HAVE(sig != NULL, ret, err);
+	MUST_HAVE((sig != NULL), ret, err);
 
 	/* Zero init our local data */
 	ret = local_memset(&A, 0, sizeof(aff_pt_edwards)); EG(ret, err);
@@ -1917,11 +1907,7 @@ int _eddsa_verify_init(struct ec_verify_context *ctx, const u8 *sig, u8 siglen)
 
 	/* Do some sanity checks on input params */
 	ret = eddsa_pub_key_sanity_check(ctx->pub_key); EG(ret, err);
-	if ((!(ctx->h)) || (ctx->h->digest_size > MAX_DIGEST_SIZE) ||
-	    (ctx->h->block_size > MAX_BLOCK_SIZE)) {
-		ret = -1;
-		goto err;
-	}
+	MUST_HAVE((ctx->h != NULL) && (ctx->h->digest_size <= MAX_DIGEST_SIZE) && (ctx->h->block_size <= MAX_BLOCK_SIZE), ret, err);
 
 	/* Make things more readable */
 	q = &(ctx->pub_key->params->ec_fp.p);
@@ -1941,11 +1927,11 @@ int _eddsa_verify_init(struct ec_verify_context *ctx, const u8 *sig, u8 siglen)
 	h_ctx_pre_hash = &(ctx->verify_data.eddsa.h_ctx_pre_hash);
 
 	/* Sanity check on hash types */
-	MUST_HAVE(ctx->h->type == get_eddsa_hash_type(key_type), ret, err);
+	MUST_HAVE((ctx->h->type == get_eddsa_hash_type(key_type)), ret, err);
 
 	/* Check given signature length is the expected one */
-	MUST_HAVE(siglen == EDDSA_SIGLEN(hsize), ret, err);
-	MUST_HAVE(siglen == (EDDSA_R_LEN(hsize) + EDDSA_S_LEN(hsize)), ret, err);
+	MUST_HAVE((siglen == EDDSA_SIGLEN(hsize)), ret, err);
+	MUST_HAVE((siglen == (EDDSA_R_LEN(hsize) + EDDSA_S_LEN(hsize))), ret, err);
 
 	/* Initialize the hash context */
 	/* Since we call a callback, sanity check our mapping */
@@ -1955,7 +1941,7 @@ int _eddsa_verify_init(struct ec_verify_context *ctx, const u8 *sig, u8 siglen)
 #if defined(WITH_SIG_EDDSA25519)
 	if(key_type == EDDSA25519CTX){
 		/* As per RFC8032, for EDDSA25519CTX the context SHOULD NOT be empty */
-		MUST_HAVE(ctx->adata != NULL, ret, err);
+		MUST_HAVE((ctx->adata != NULL), ret, err);
 		ret = dom2(0, ctx->adata, ctx->adata_len, ctx->h, h_ctx); EG(ret, err);
 	}
 	if(key_type == EDDSA25519PH){
@@ -1989,7 +1975,7 @@ int _eddsa_verify_init(struct ec_verify_context *ctx, const u8 *sig, u8 siglen)
 	ret = eddsa_decode_integer(S, &sig[EDDSA_R_LEN(hsize)], EDDSA_S_LEN(hsize)); EG(ret, err);
 	/* Reject S if it is not reduced modulo q */
 	ret = nn_cmp(S, q, &cmp); EG(ret, err);
-	MUST_HAVE(cmp < 0, ret, err);
+	MUST_HAVE((cmp < 0), ret, err);
 	dbg_nn_print("S", S);
 
 	/*******************************/
@@ -2006,12 +1992,12 @@ int _eddsa_verify_init(struct ec_verify_context *ctx, const u8 *sig, u8 siglen)
 	 * that the public key is of small order.
 	 */
 	ret = prj_pt_iszero(&_Tmp, &iszero); EG(ret, err);
-	MUST_HAVE(!iszero, ret, err);
+	MUST_HAVE((!iszero), ret, err);
 
 	/* Transfer the public key to Edwards */
 	ret = prj_pt_shortw_to_aff_pt_edwards(pub_key_y, &crv_edwards, &A, alpha_edwards); EG(ret, err);
 	dbg_ec_edwards_point_print("A", &A);
-	MUST_HAVE(EDDSA_R_LEN(hsize) <= sizeof(buff), ret, err);
+	MUST_HAVE((EDDSA_R_LEN(hsize) <= sizeof(buff)), ret, err);
 	/* NOTE: we use the hash buffer as a temporary buffer */
 	ret = eddsa_encode_point(&A, alpha_edwards, buff, EDDSA_R_LEN(hsize), key_type); EG(ret, err);
 
@@ -2138,7 +2124,7 @@ int _eddsa_verify_finalize(struct ec_verify_context *ctx)
 	h_ctx_pre_hash = &(ctx->verify_data.eddsa.h_ctx_pre_hash);
 
 	/* Sanity check on hash types */
-	MUST_HAVE(ctx->h->type == get_eddsa_hash_type(key_type), ret, err);
+	MUST_HAVE((ctx->h->type == get_eddsa_hash_type(key_type)), ret, err);
 
 	/* Do we use the raw message or its PH(M) hashed version? */
 #if defined(WITH_SIG_EDDSA25519)
@@ -2159,9 +2145,9 @@ int _eddsa_verify_finalize(struct ec_verify_context *ctx)
 
 	/* Reject S if it is not reduced modulo q */
 	ret = nn_cmp(S, q, &cmp); EG(ret, err);
-	MUST_HAVE(cmp < 0, ret, err);
+	MUST_HAVE((cmp < 0), ret, err);
 
-	MUST_HAVE(hsize <= sizeof(hash), ret, err);
+	MUST_HAVE((hsize <= sizeof(hash)), ret, err);
 
 	/* 2. Finish our computation of h = H(R || A || M) */
 	/* Since we call a callback, sanity check our mapping */
@@ -2169,7 +2155,7 @@ int _eddsa_verify_finalize(struct ec_verify_context *ctx)
 	/* Update the hash with the message or its hash for the PH versions */
 	if(use_message_pre_hash == 1){
 		ret = ctx->h->hfunc_finalize(h_ctx_pre_hash, hash); EG(ret, err);
-		MUST_HAVE(use_message_pre_hash_hsize <= hsize, ret, err);
+		MUST_HAVE((use_message_pre_hash_hsize <= hsize), ret, err);
 		ret = ctx->h->hfunc_update(h_ctx, hash, use_message_pre_hash_hsize); EG(ret, err);
 	}
 	ret = ctx->h->hfunc_finalize(h_ctx, hash); EG(ret, err);
@@ -2213,7 +2199,9 @@ int _eddsa_verify_finalize(struct ec_verify_context *ctx)
 	 * We can now clear data part of the context. This will clear
 	 * magic and avoid further reuse of the whole context.
 	 */
-	IGNORE_RET_VAL(local_memset(&(ctx->verify_data.eddsa), 0, sizeof(eddsa_verify_data)));
+	if(ctx != NULL){
+		IGNORE_RET_VAL(local_memset(&(ctx->verify_data.eddsa), 0, sizeof(eddsa_verify_data)));
+	}
 
 	/* Clean what remains on the stack */
 	PTR_NULLIFY(G);

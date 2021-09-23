@@ -115,6 +115,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int _nn_mul_low_aliased(nn_t out, nn_src_t in1,
 
 err:
 	nn_uninit(&out_cpy);
+
 	return ret;
 }
 
@@ -184,5 +185,6 @@ int nn_mul_word(nn_t out, nn_src_t in, word_t w)
 
 err:
 	nn_uninit(&w_nn);
+
 	return ret;
 }

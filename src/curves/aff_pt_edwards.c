@@ -24,9 +24,8 @@ int aff_pt_edwards_check_initialized(aff_pt_edwards_src_t in)
 {
 	int ret;
 
-	MUST_HAVE((in != NULL) && (in->magic == AFF_PT_EDWARDS_MAGIC)
-		  && (in->crv != NULL), ret, err);
-	ret = 0;
+	MUST_HAVE(((in != NULL) && (in->magic == AFF_PT_EDWARDS_MAGIC)), ret, err);
+	ret = ec_edwards_crv_check_initialized(in->crv);
 
 err:
 	return ret;
@@ -42,7 +41,7 @@ int aff_pt_edwards_init(aff_pt_edwards_t in, ec_edwards_crv_src_t curve)
 {
 	int ret;
 
-	MUST_HAVE(in != NULL, ret, err);
+	MUST_HAVE((in != NULL), ret, err);
 	ret = ec_edwards_crv_check_initialized(curve); EG(ret, err);
 
 	ret = fp_init(&(in->x), curve->a.ctx); EG(ret, err);
@@ -116,8 +115,8 @@ int is_on_edwards_curve(fp_src_t x, fp_src_t y,
 	ret = fp_check_initialized(x); EG(ret, err);
 	ret = fp_check_initialized(y); EG(ret, err);
 
-	MUST_HAVE(x->ctx == y->ctx, ret, err);
-	MUST_HAVE(x->ctx == curve->a.ctx, ret, err);
+	MUST_HAVE((x->ctx == y->ctx), ret, err);
+	MUST_HAVE((x->ctx == curve->a.ctx), ret, err);
 
 	ret = fp_init(&x2, x->ctx); EG(ret, err);
 	ret = fp_sqr(&x2, x); EG(ret, err);
@@ -197,17 +196,17 @@ int ec_edwards_aff_cmp(aff_pt_edwards_src_t in1, aff_pt_edwards_src_t in2,
 {
 	int ret, cmp1, cmp2;
 
-	MUST_HAVE(cmp != NULL, ret, err);
+	MUST_HAVE((cmp != NULL), ret, err);
 	ret = aff_pt_edwards_check_initialized(in1); EG(ret, err);
 	ret = aff_pt_edwards_check_initialized(in2); EG(ret, err);
 
-	MUST_HAVE(in1->crv == in2->crv, ret, err);
+	MUST_HAVE((in1->crv == in2->crv), ret, err);
 
 	ret = fp_cmp(&(in1->x), &(in2->x), &cmp1); EG(ret, err);
 	ret = fp_cmp(&(in1->y), &(in2->y), &cmp2);
 
 	if (!ret) {
-		*cmp = (cmp1 | cmp2);
+		(*cmp) = (cmp1 | cmp2);
 	}
 
 err:
@@ -232,7 +231,7 @@ int aff_pt_edwards_import_from_buf(aff_pt_edwards_t pt,
 	int ret, on_curve;
 
 	ret = ec_edwards_crv_check_initialized(crv); EG(ret, err);
-	MUST_HAVE((pt_buf != NULL) && (pt != NULL), ret, err);
+	MUST_HAVE(((pt_buf != NULL) && (pt != NULL)), ret, err);
 
 	ctx = crv->a.ctx;
 	coord_len = BYTECEIL(ctx->p_bitlen);
@@ -278,7 +277,7 @@ int aff_pt_edwards_export_to_buf(aff_pt_edwards_src_t pt,
 	int ret, on_curve;
 
 	ret = aff_pt_edwards_check_initialized(pt); EG(ret, err);
-	MUST_HAVE(pt_buf != NULL, ret, err);
+	MUST_HAVE((pt_buf != NULL), ret, err);
 
 	/* The point to be exported must be on the curve */
 	ret = aff_pt_edwards_is_on_curve(pt, &on_curve); EG(ret, err);
@@ -316,7 +315,7 @@ int curve_edwards_to_montgomery(ec_edwards_crv_src_t edwards_crv,
 
 	ret = ec_edwards_crv_check_initialized(edwards_crv); EG(ret, err);
 	ret = fp_check_initialized(alpha_edwards); EG(ret, err);
-	MUST_HAVE(edwards_crv->a.ctx == alpha_edwards->ctx, ret, err);
+	MUST_HAVE((edwards_crv->a.ctx == alpha_edwards->ctx), ret, err);
 
 	ret = fp_init(&tmp1, edwards_crv->a.ctx); EG(ret, err);
 	ret = fp_init(&tmp2, edwards_crv->a.ctx); EG(ret, err);
@@ -370,9 +369,9 @@ int curve_edwards_montgomery_check(ec_edwards_crv_src_t e_crv,
 	ret = curve_edwards_to_montgomery(e_crv, &check, alpha_edwards); EG(ret, err);
 
 	/* Check elements */
-	MUST_HAVE(!fp_cmp(&(check.A), &(m_crv->A), &cmp) && !cmp, ret, err);
-	MUST_HAVE(!fp_cmp(&(check.B), &(m_crv->B), &cmp) && !cmp, ret, err);
-	MUST_HAVE(!nn_cmp(&(check.order), &(m_crv->order), &cmp) && !cmp, ret, err);
+	MUST_HAVE((!fp_cmp(&(check.A), &(m_crv->A), &cmp)) && (!cmp), ret, err);
+	MUST_HAVE((!fp_cmp(&(check.B), &(m_crv->B), &cmp)) && (!cmp), ret, err);
+	MUST_HAVE((!nn_cmp(&(check.order), &(m_crv->order), &cmp)) && (!cmp), ret, err);
 
 err:
 	ec_montgomery_crv_uninit(&check);
@@ -401,7 +400,7 @@ int curve_montgomery_to_edwards(ec_montgomery_crv_src_t m_crv,
 
 	ret = ec_montgomery_crv_check_initialized(m_crv); EG(ret, err);
 	ret = fp_check_initialized(alpha_edwards); EG(ret, err);
-	MUST_HAVE(m_crv->A.ctx == alpha_edwards->ctx, ret, err);
+	MUST_HAVE((m_crv->A.ctx == alpha_edwards->ctx), ret, err);
 
 	ret = fp_init(&tmp, m_crv->A.ctx); EG(ret, err);
 	ret = fp_init(&tmp2, m_crv->A.ctx); EG(ret, err);
@@ -470,8 +469,8 @@ int curve_edwards_shortw_check(ec_edwards_crv_src_t edwards_crv,
 			       ec_shortw_crv_src_t shortw_crv,
 			       fp_src_t alpha_edwards)
 {
-	ec_montgomery_crv montgomery_crv;
 	int ret;
+	ec_montgomery_crv montgomery_crv;
 	montgomery_crv.magic = 0;
 
 	ret = curve_edwards_to_montgomery(edwards_crv, &montgomery_crv, alpha_edwards); EG(ret, err);

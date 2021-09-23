@@ -20,6 +20,7 @@
 #define SM3_STATE_SIZE    8 /* in 32 bits word */
 #define SM3_BLOCK_SIZE   64
 #define SM3_DIGEST_SIZE  32
+#define SM3_DIGEST_SIZE_BITS  256
 
 /* Compute max hash digest and block sizes */
 #ifndef MAX_DIGEST_SIZE
@@ -28,6 +29,14 @@
 #if (MAX_DIGEST_SIZE < SM3_DIGEST_SIZE)
 #undef MAX_DIGEST_SIZE
 #define MAX_DIGEST_SIZE SM3_DIGEST_SIZE
+#endif
+
+#ifndef MAX_DIGEST_SIZE_BITS
+#define MAX_DIGEST_SIZE_BITS    0
+#endif
+#if (MAX_DIGEST_SIZE_BITS < SM3_DIGEST_SIZE_BITS)
+#undef MAX_DIGEST_SIZE_BITS
+#define MAX_DIGEST_SIZE_BITS SM3_DIGEST_SIZE_BITS
 #endif
 
 #ifndef MAX_BLOCK_SIZE

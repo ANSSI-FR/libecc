@@ -58,7 +58,7 @@ ATTRIBUTE_WARN_UNUSED_RET static inline int _reverse_endianness(u8 *buf, u16 buf
         u8 tmp;
         int ret;
 
-	MUST_HAVE(buf != NULL, ret, err);
+	MUST_HAVE((buf != NULL), ret, err);
 
         if(buf_size > 1){
                 for(i = 0; i < (buf_size / 2); i++){
@@ -123,9 +123,9 @@ int ecrdsa_sign_raw(struct ec_sign_context *ctx, const u8 *input, u8 inputlen, u
 	s_len = (u8)ECRDSA_S_LEN(q_bit_len);
 	hsize = inputlen;
 
-	MUST_HAVE(NN_MAX_BIT_LEN >= p_bit_len, ret, err);
+	MUST_HAVE((NN_MAX_BIT_LEN >= p_bit_len), ret, err);
 
-	MUST_HAVE(siglen == ECRDSA_SIGLEN(q_bit_len), ret, err);
+	MUST_HAVE((siglen == ECRDSA_SIGLEN(q_bit_len)), ret, err);
 
 	dbg_nn_print("p", &(priv_key->params->ec_fp.p));
 	dbg_nn_print("q", q);
@@ -141,20 +141,12 @@ int ecrdsa_sign_raw(struct ec_sign_context *ctx, const u8 *input, u8 inputlen, u
 	/* 2. Get a random value k in ]0, q[ ... */
         /* NOTE: copy our input nonce if not NULL */
         if(nonce != NULL){
-                if(noncelen > (u8)(BYTECEIL(q_bit_len))){
-                        ret = -1;
-                }
-                else{
-                        ret = nn_init_from_buf(&k, nonce, noncelen); EG(ret, err);
-                }
+		MUST_HAVE((noncelen <= (u8)(BYTECEIL(q_bit_len))), ret, err);
+		ret = nn_init_from_buf(&k, nonce, noncelen); EG(ret, err);
         }
         else{
-                ret = ctx->rand(&k, q);
+                ret = ctx->rand(&k, q); EG(ret, err);
         }
-	if (ret) {
-		ret = -1;
-		goto err;
-	}
 
 	dbg_nn_print("k", &k);
 #ifdef USE_SIG_BLINDING
@@ -183,7 +175,7 @@ int ecrdsa_sign_raw(struct ec_sign_context *ctx, const u8 *input, u8 inputlen, u
          * the procedure but throw an assert exception instead.
          */
 	ret = nn_iszero(&r, &iszero); EG(ret, err);
-        MUST_HAVE(!iszero, ret, err);
+        MUST_HAVE((!iszero), ret, err);
 
 	dbg_nn_print("r", &r);
 
@@ -192,7 +184,7 @@ int ecrdsa_sign_raw(struct ec_sign_context *ctx, const u8 *input, u8 inputlen, u
 
 	/* 6. Compute e = OS2I(h) mod q. If e is 0, set e to 1. */
         /* NOTE: here we have raw ECRDSA, this is the raw input */
-	MUST_HAVE((input != NULL) && (inputlen <= sizeof(h_buf)), ret, err);
+	MUST_HAVE((input != NULL) && ((u32)inputlen <= sizeof(h_buf)), ret, err);
 
         ret = local_memset(h_buf, 0, sizeof(h_buf)); EG(ret, err);
         ret = local_memcpy(h_buf, input, hsize); EG(ret, err);
@@ -235,7 +227,7 @@ int ecrdsa_sign_raw(struct ec_sign_context *ctx, const u8 *input, u8 inputlen, u
          * the procedure but throw an assert exception instead.
          */
 	ret = nn_iszero(&s, &iszero); EG(ret, err);
-        MUST_HAVE(!iszero, ret, err);
+        MUST_HAVE((!iszero), ret, err);
 
 	dbg_nn_print("s", &s);
 
@@ -256,7 +248,9 @@ int ecrdsa_sign_raw(struct ec_sign_context *ctx, const u8 *input, u8 inputlen, u
 	 * We can now clear data part of the context. This will clear
 	 * magic and avoid further reuse of the whole context.
 	 */
-	IGNORE_RET_VAL(local_memset(&(ctx->sign_data.ecrdsa), 0, sizeof(ecrdsa_sign_data)));
+	if(ctx != NULL){
+		IGNORE_RET_VAL(local_memset(&(ctx->sign_data.ecrdsa), 0, sizeof(ecrdsa_sign_data)));
+	}
 
 	/* Clean what remains on the stack */
 	VAR_ZEROIFY(r_len);
@@ -325,7 +319,7 @@ int ecrdsa_verify_raw(struct ec_verify_context *ctx, const u8 *input, u8 inputle
 
 	/* 2. Compute h = H(m) */
         /* NOTE: here we have raw ECRDSA, this is the raw input */
-	MUST_HAVE((input != NULL) && (inputlen <= sizeof(h_buf)), ret, err);
+	MUST_HAVE((input != NULL) && ((u32)inputlen <= sizeof(h_buf)), ret, err);
 
         ret = local_memset(h_buf, 0, sizeof(h_buf)); EG(ret, err);
         ret = local_memcpy(h_buf, input, hsize); EG(ret, err);
@@ -394,8 +388,10 @@ err:
 	 * We can now clear data part of the context. This will clear
 	 * magic and avoid further reuse of the whole context.
 	 */
-	IGNORE_RET_VAL(local_memset(&(ctx->verify_data.ecrdsa), 0,
-		     sizeof(ecrdsa_verify_data)));
+	if(ctx != NULL){
+		IGNORE_RET_VAL(local_memset(&(ctx->verify_data.ecrdsa), 0,
+			     sizeof(ecrdsa_verify_data)));
+	}
 
 	/* Clean what remains on the stack */
 	PTR_NULLIFY(Wprime);

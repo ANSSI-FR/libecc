@@ -39,7 +39,7 @@ int sha3_224_update(sha3_224_context *ctx, const u8 *input, u32 ilen)
 
 	SHA3_224_HASH_CHECK_INITIALIZED(ctx, ret, err);
 
-	ret = _sha3_update((sha3_context *)ctx, input, ilen); EG(ret, err);
+	ret = _sha3_update((sha3_context *)ctx, input, ilen);
 
 err:
 	return ret;
@@ -83,7 +83,7 @@ int sha3_224_scattered(const u8 **inputs, const u32 *ilens,
 		pos += 1;
 	}
 
-	ret = sha3_224_final(&ctx, output); EG(ret, err);
+	ret = sha3_224_final(&ctx, output);
 
 err:
 	return ret;
@@ -100,7 +100,7 @@ int sha3_224(const u8 *input, u32 ilen, u8 output[SHA3_224_DIGEST_SIZE])
 
 	ret = sha3_224_init(&ctx); EG(ret, err);
 	ret = sha3_224_update(&ctx, input, ilen); EG(ret, err);
-	ret = sha3_224_final(&ctx, output); EG(ret, err);
+	ret = sha3_224_final(&ctx, output);
 
 err:
 	return ret;

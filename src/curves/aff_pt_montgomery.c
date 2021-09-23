@@ -20,9 +20,8 @@ int aff_pt_montgomery_check_initialized(aff_pt_montgomery_src_t in)
 {
 	int ret;
 
-	MUST_HAVE((in != NULL) && (in->magic == AFF_PT_MONTGOMERY_MAGIC)
-		  && (in->crv != NULL), ret, err);
-	ret = 0;
+	MUST_HAVE(((in != NULL) && (in->magic == AFF_PT_MONTGOMERY_MAGIC)), ret, err);
+	ret = ec_montgomery_crv_check_initialized(in->crv);
 
 err:
 	return ret;
@@ -38,7 +37,7 @@ int aff_pt_montgomery_init(aff_pt_montgomery_t in, ec_montgomery_crv_src_t curve
 {
 	int ret;
 
-	MUST_HAVE(in != NULL, ret, err);
+	MUST_HAVE((in != NULL), ret, err);
 	ret = ec_montgomery_crv_check_initialized(curve); EG(ret, err);
 
 	ret = fp_init(&(in->u), curve->A.ctx); EG(ret, err);
@@ -110,8 +109,8 @@ int is_on_montgomery_curve(fp_src_t u, fp_src_t v, ec_montgomery_crv_src_t curve
 	ret = fp_check_initialized(u); EG(ret, err);
 	ret = fp_check_initialized(v); EG(ret, err);
 
-	MUST_HAVE(u->ctx == v->ctx, ret, err);
-	MUST_HAVE(u->ctx == curve->A.ctx, ret, err);
+	MUST_HAVE((u->ctx == v->ctx), ret, err);
+	MUST_HAVE((u->ctx == curve->A.ctx), ret, err);
 
 	ret = fp_init(&Bv2, v->ctx); EG(ret, err);
 	ret = fp_sqr(&Bv2, v); EG(ret, err);
@@ -130,7 +129,7 @@ int is_on_montgomery_curve(fp_src_t u, fp_src_t v, ec_montgomery_crv_src_t curve
 
 	ret = fp_cmp(&tmp, &Bv2, &cmp); EG(ret, err);
 
-	*on_curve = (!cmp);
+	(*on_curve) = (!cmp);
 
 err:
 	fp_uninit(&Bv2);
@@ -186,15 +185,15 @@ int ec_montgomery_aff_cmp(aff_pt_montgomery_src_t in1, aff_pt_montgomery_src_t i
 {
 	int ret, cmp1, cmp2;
 
-	MUST_HAVE(cmp != NULL, ret, err);
+	MUST_HAVE((cmp != NULL), ret, err);
 	ret = aff_pt_montgomery_check_initialized(in1); EG(ret, err);
 	ret = aff_pt_montgomery_check_initialized(in2); EG(ret, err);
-	MUST_HAVE(in1->crv == in2->crv, ret, err);
+	MUST_HAVE((in1->crv == in2->crv), ret, err);
 
 	ret = fp_cmp(&(in1->u), &(in2->u), &cmp1); EG(ret, err);
 	ret = fp_cmp(&(in1->v), &(in2->v), &cmp2); EG(ret, err);
 
-	*cmp = (cmp1 | cmp2);
+	(*cmp) = (cmp1 | cmp2);
 
 err:
 	return ret;
@@ -263,7 +262,7 @@ int aff_pt_montgomery_export_to_buf(aff_pt_montgomery_src_t pt, u8 *pt_buf, u32 
 	int ret, on_curve;
 
 	ret = aff_pt_montgomery_check_initialized(pt); EG(ret, err);
-	MUST_HAVE(pt_buf != NULL, ret, err);
+	MUST_HAVE((pt_buf != NULL), ret, err);
 
 	/* The point to be exported must be on the curve */
 	ret = aff_pt_montgomery_is_on_curve(pt, &on_curve); EG(ret, err);
@@ -369,9 +368,9 @@ int curve_montgomery_shortw_check(ec_montgomery_crv_src_t montgomery_crv,
 	ret = curve_montgomery_to_shortw(montgomery_crv, &check); EG(ret, err);
 
 	/* Check elements */
-	MUST_HAVE(!fp_cmp(&(check.a), &(shortw_crv->a), &cmp) && !cmp, ret, err);
-	MUST_HAVE(!fp_cmp(&(check.b), &(shortw_crv->b), &cmp) && !cmp, ret, err);
-	MUST_HAVE(!nn_cmp(&(check.order), &(shortw_crv->order), &cmp) && !cmp, ret, err);
+	MUST_HAVE((!fp_cmp(&(check.a), &(shortw_crv->a), &cmp)) && (!cmp), ret, err);
+	MUST_HAVE((!fp_cmp(&(check.b), &(shortw_crv->b), &cmp)) && (!cmp), ret, err);
+	MUST_HAVE((!nn_cmp(&(check.order), &(shortw_crv->order), &cmp)) && (!cmp), ret, err);
 
 err:
 	ec_shortw_crv_uninit(&check);
@@ -422,7 +421,7 @@ int curve_shortw_to_montgomery(ec_shortw_crv_src_t shortw_crv,
 	ret = fp_add(&c, &c, &(shortw_crv->a)); EG(ret, err);
 	ret = fp_sqr(&tmp, gamma); EG(ret, err);
 	/* gamma ** 2 must be equal to c */
-	MUST_HAVE(!fp_cmp(&c, &tmp, &cmp) && (!cmp), ret, err);
+	MUST_HAVE((!fp_cmp(&c, &tmp, &cmp)) && (!cmp), ret, err);
 
 	/* B is simply the inverse of gamma */
 	ret = ec_montgomery_crv_init(montgomery_crv, &A, &gamma_inv, &(shortw_crv->order));
@@ -453,7 +452,7 @@ int aff_pt_montgomery_to_shortw(aff_pt_montgomery_src_t in_montgomery,
 	ret = ec_shortw_crv_check_initialized(shortw_crv); EG(ret, err);
 
 	/* Check that our input point is on its curve */
-	MUST_HAVE(!aff_pt_montgomery_is_on_curve(in_montgomery, &on_curve) && on_curve, ret, err);
+	MUST_HAVE((!aff_pt_montgomery_is_on_curve(in_montgomery, &on_curve)) && on_curve, ret, err);
 
 	ret = fp_init(&tmp, in_montgomery->crv->A.ctx); EG(ret, err);
 	ret = fp_init(&tmp2, in_montgomery->crv->A.ctx); EG(ret, err);
@@ -477,7 +476,7 @@ int aff_pt_montgomery_to_shortw(aff_pt_montgomery_src_t in_montgomery,
 	ret = fp_mul(&(out_shortw->y), &tmp, &(in_montgomery->v)); EG(ret, err);
 
 	/* Final check that the point is on the curve */
-	MUST_HAVE(!aff_pt_is_on_curve(out_shortw, &on_curve) && on_curve, ret, err);
+	MUST_HAVE((!aff_pt_is_on_curve(out_shortw, &on_curve)) && on_curve, ret, err);
 
 err:
 	fp_uninit(&tmp);
@@ -504,7 +503,7 @@ int aff_pt_shortw_to_montgomery(aff_pt_src_t in_shortw,
 	ret = ec_montgomery_crv_check_initialized(montgomery_crv); EG(ret, err);
 
 	/* Check that our input point is on its curve */
-	MUST_HAVE(!aff_pt_is_on_curve(in_shortw, &on_curve) && on_curve, ret, err);
+	MUST_HAVE((!aff_pt_is_on_curve(in_shortw, &on_curve)) && on_curve, ret, err);
 
 	ret = fp_init(&tmp, in_shortw->crv->a.ctx); EG(ret, err);
 	ret = fp_init(&tmp2, in_shortw->crv->a.ctx); EG(ret, err);
@@ -527,7 +526,7 @@ int aff_pt_shortw_to_montgomery(aff_pt_src_t in_shortw,
 	ret = fp_mul(&(out_montgomery->v), &(montgomery_crv->B), &(in_shortw->y)); EG(ret, err);
 
 	/* Final check that the point is on the curve */
-	MUST_HAVE(!aff_pt_montgomery_is_on_curve(out_montgomery, &on_curve) && on_curve, ret, err);
+	MUST_HAVE((!aff_pt_montgomery_is_on_curve(out_montgomery, &on_curve)) && on_curve, ret, err);
 
 err:
 	fp_uninit(&tmp);

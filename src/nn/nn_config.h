@@ -21,6 +21,13 @@
  * (prime and order of the curve).
  */
 #include "../curves/curves_list.h"
+/*
+ * We also include the hash layer to adapt the maximum NN size to the
+ * maximum digest size as we have to import full digests as NN when dealing
+ * with some signature algorithms.
+ *
+ */
+#include "../hash/hash_algs.h"
 
 /*
  * All the big num used in the lib are statically allocated. This constant
@@ -32,7 +39,7 @@
  * Rationale for the default value: the main purpose of the lirary is to
  * support for an ECC implementation. ATM, a forseeable upper limit for the
  * numbers that will be dealt with is 521 bits.
- * 
+ *
  * However, the user is allowed to overload the maximum bit length of the
  * numbers through the USER_NN_BIT_LEN macro definition (see below). A
  * hard limit 'nn_max' for this size depends on the word size and verifies
@@ -41,8 +48,8 @@
  *             floor((nn_max + w - 1) / w) * 3 = 255
  *
  * This equation is explained by elements given below, and by the fact that
- * the length in words of our big numbers are encoded on an u8. This yields 
- * in max sizes of around 5300 bits for 64-bit words, around 2650 bits for 
+ * the length in words of our big numbers are encoded on an u8. This yields
+ * in max sizes of around 5300 bits for 64-bit words, around 2650 bits for
  * 32-bit words, and around 1300 bits for 16-bit words.
  *
  * Among all the functions we have, some need to handle something which
@@ -104,6 +111,21 @@
 #endif
 #endif
 
+/* Now adjust the maximum length with our maximum digest size as we
+ * have to import full digests as big numbers in some signature algorithms.
+ *
+ * The division by 2 here is related to the fact that we usually import hash values
+ * without performing much NN operations on them (immediately reducing them modulo q), so
+ * it is safe to remove some additional space left for multiplications.
+ */
+#if NN_MAX_BIT_LEN < (8 * MAX_DIGEST_SIZE)
+#undef NN_MAX_BIT_LEN
+#define NN_MAX_BIT_LEN MAX_BIT_LEN_ROUNDING(((8 * MAX_DIGEST_SIZE) / 2), WORD_BITS)
+#undef NN_MAX_BASE
+#define NN_MAX_BASE MAX_DIGEST_SIZE_BITS
+#endif
+
+/************/
 #define NN_MAX_BYTE_LEN (NN_MAX_BIT_LEN / 8)
 #define NN_MAX_WORD_LEN (NN_MAX_BYTE_LEN / WORD_BYTES)
 

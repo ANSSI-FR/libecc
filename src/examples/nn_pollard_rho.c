@@ -70,7 +70,7 @@ int pollard_rho(nn_t d, nn_src_t n, const word_t c)
 	ret = nn_init(&c_bignum, 0); EG(ret, err);
 	ret = nn_init(d, 0); EG(ret, err);
 
-	MUST_HAVE(c > 0, ret, err);
+	MUST_HAVE((c > 0), ret, err);
 
 	/* Zeroize the output */
 	ret = nn_zero(d); EG(ret, err);
@@ -82,6 +82,7 @@ int pollard_rho(nn_t d, nn_src_t n, const word_t c)
 
 	/* For i = 1, 2, . . . do the following: */
 	while (1) {
+		int sign;
 		/* 2.1 Compute a←a^2 + c mod n */
 		ret = nn_sqr(&a, &a); EG(ret, err);
 		ret = nn_add(&a, &a, &c_bignum); EG(ret, err);
@@ -100,7 +101,6 @@ int pollard_rho(nn_t d, nn_src_t n, const word_t c)
 		} else {
 			ret = nn_sub(&tmp, &b, &a); EG(ret, err);
 		}
-		int sign;
 		ret = nn_gcd(d, &tmp, n, &sign); EG(ret, err);
 		ret = nn_cmp(d, n, &cmp1); EG(ret, err);
 		ret = nn_cmp(d, &one, &cmp2); EG(ret, err);

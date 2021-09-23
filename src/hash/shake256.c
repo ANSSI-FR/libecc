@@ -81,7 +81,7 @@ int shake256(const u8 *input, u32 ilen, u8 output[SHAKE256_DIGEST_SIZE])
 
 	ret = shake256_init(&ctx); EG(ret, err);
 	ret = shake256_update(&ctx, input, ilen); EG(ret, err);
-	ret = shake256_final(&ctx, output); EG(ret, err);
+	ret = shake256_final(&ctx, output);
 
 err:
 	return ret;

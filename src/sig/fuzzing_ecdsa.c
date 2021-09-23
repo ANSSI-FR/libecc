@@ -87,11 +87,11 @@ int ecdsa_sign_raw(struct ec_sign_context *ctx, const u8 *input, u8 inputlen, u8
 	dbg_pub_key_print("Y", &(ctx->key_pair->pub_key));
 
 	/* Check given signature buffer length has the expected size */
-	MUST_HAVE(siglen == ECDSA_SIGLEN(q_bit_len), ret, err);
+	MUST_HAVE((siglen == ECDSA_SIGLEN(q_bit_len)), ret, err);
 
 	/* 1. Compute h = H(m) */
 	/* NOTE: here we have raw ECDSA, this is the raw input */
-	MUST_HAVE((inputlen <= sizeof(hash)), ret, err);
+	MUST_HAVE(((u32)inputlen <= sizeof(hash)), ret, err);
 
 	ret = local_memset(hash, 0, sizeof(hash)); EG(ret, err);
 	ret = local_memcpy(hash, input, hsize); EG(ret, err);
@@ -134,13 +134,8 @@ int ecdsa_sign_raw(struct ec_sign_context *ctx, const u8 *input, u8 inputlen, u8
 	/* 4. get a random value k in ]0,q[ */
 	/* NOTE: copy our input nonce if not NULL */
 	if(nonce != NULL){
-                if(noncelen > (u8)(BYTECEIL(q_bit_len))){
-			ret = -1;
-			goto err;
-		}
-		else{
-			ret = nn_init_from_buf(&k, nonce, noncelen); EG(ret, err);
-		}
+		MUST_HAVE((noncelen <= (u8)(BYTECEIL(q_bit_len))), ret, err);
+		ret = nn_init_from_buf(&k, nonce, noncelen); EG(ret, err);
 	}
 	else{
 		ret = ctx->rand(&k, q); EG(ret, err);
@@ -175,7 +170,7 @@ int ecdsa_sign_raw(struct ec_sign_context *ctx, const u8 *input, u8 inputlen, u8
 	 * the procedure but throw an assert exception instead.
 	 */
 	ret = nn_iszero(&r, &iszero); EG(ret, err);
-	MUST_HAVE(!iszero, ret, err);
+	MUST_HAVE((!iszero), ret, err);
 
 	/* Export r */
 	ret = nn_export_to_buf(sig, q_len, &r); EG(ret, err);
@@ -226,7 +221,7 @@ int ecdsa_sign_raw(struct ec_sign_context *ctx, const u8 *input, u8 inputlen, u8
 	 * the procedure but throw an assert exception instead.
 	 */
 	ret = nn_iszero(&s, &iszero); EG(ret, err);
-	MUST_HAVE(!iszero, ret, err);
+	MUST_HAVE((!iszero), ret, err);
 
 	/* 11. return (r,s) */
 	ret = nn_export_to_buf(sig + q_len, q_len, &s);
@@ -245,7 +240,9 @@ int ecdsa_sign_raw(struct ec_sign_context *ctx, const u8 *input, u8 inputlen, u8
 	 * We can now clear data part of the context. This will clear
 	 * magic and avoid further reuse of the whole context.
 	 */
-	IGNORE_RET_VAL(local_memset(&(ctx->sign_data.ecdsa), 0, sizeof(ecdsa_sign_data)));
+	if(ctx != NULL){
+		IGNORE_RET_VAL(local_memset(&(ctx->sign_data.ecdsa), 0, sizeof(ecdsa_sign_data)));
+	}
 
 	/* Clean what remains on the stack */
 	PTR_NULLIFY(priv_key);
@@ -313,7 +310,7 @@ int ecdsa_verify_raw(struct ec_verify_context *ctx, const u8 *input, u8 inputlen
 
 	/* 2. Compute h = H(m) */
 	/* NOTE: here we have raw ECDSA, this is the raw input */
-	MUST_HAVE((input != NULL) && (inputlen <= sizeof(hash)), ret, err);
+	MUST_HAVE((input != NULL) && ((u32)inputlen <= sizeof(hash)), ret, err);
 
 	ret = local_memset(hash, 0, sizeof(hash)); EG(ret, err);
 	ret = local_memcpy(hash, input, hsize); EG(ret, err);
@@ -370,7 +367,7 @@ int ecdsa_verify_raw(struct ec_verify_context *ctx, const u8 *input, u8 inputlen
 
 	/* 8. If W' is the point at infinity, reject the signature. */
 	ret = prj_pt_iszero(W_prime, &iszero); EG(ret, err);
-	MUST_HAVE(!iszero, ret, err);
+	MUST_HAVE((!iszero), ret, err);
 
 	/* 9. Compute r' = W'_x mod q */
 	ret = prj_pt_unique(W_prime, W_prime); EG(ret, err);
@@ -394,7 +391,9 @@ int ecdsa_verify_raw(struct ec_verify_context *ctx, const u8 *input, u8 inputlen
 	 * We can now clear data part of the context. This will clear
 	 * magic and avoid further reuse of the whole context.
 	 */
-	IGNORE_RET_VAL(local_memset(&(ctx->verify_data.ecdsa), 0, sizeof(ecdsa_verify_data)));
+	if(ctx != NULL){
+		IGNORE_RET_VAL(local_memset(&(ctx->verify_data.ecdsa), 0, sizeof(ecdsa_verify_data)));
+	}
 
 	/* Clean what remains on the stack */
 	PTR_NULLIFY(W_prime);
