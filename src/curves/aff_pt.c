@@ -17,95 +17,119 @@
 
 #define AFF_PT_MAGIC ((word_t)(0x4c82a9bcd0d9ffabULL))
 
-/* Verify that a prj point has already been initialized */
-void aff_pt_check_initialized(aff_pt_src_t in)
-{
-	MUST_HAVE((in != NULL) && (in->magic == AFF_PT_MAGIC)
-		  && (in->crv != NULL));
-}
-
-/* Verify that an affine point has already been initialized.
- * Return 0 or 1.
+/*
+ * Verify that an affine point has already been initialized. Return 0 on
+ * success, -1 otherwise.
  */
-int aff_pt_is_initialized(aff_pt_src_t in)
+int aff_pt_check_initialized(aff_pt_src_t in)
 {
-	return !!((in != NULL) && (in->magic == AFF_PT_MAGIC) &&
-		   (in->crv != NULL));
+	int ret;
+
+	MUST_HAVE(((in != NULL) && (in->magic == AFF_PT_MAGIC) && (in->crv != NULL)), ret, err);
+
+	ret = 0;
+
+err:
+	return ret;
 }
 
 /*
  * Initialize pointed aff_pt structure to make it usable by library
- * function on given curve.
+ * function on given curve. Return 0 on success, -1 on error.
  */
-void aff_pt_init(aff_pt_t in, ec_shortw_crv_src_t curve)
+int aff_pt_init(aff_pt_t in, ec_shortw_crv_src_t curve)
 {
-	MUST_HAVE(in != NULL);
-	ec_shortw_crv_check_initialized(curve);
+	int ret;
 
-	fp_init(&(in->x), curve->a.ctx);
-	fp_init(&(in->y), curve->a.ctx);
+	MUST_HAVE((in != NULL), ret, err);
+	MUST_HAVE((curve != NULL), ret, err);
+
+	ret = ec_shortw_crv_check_initialized(curve); EG(ret, err);
+	ret = fp_init(&(in->x), curve->a.ctx); EG(ret, err);
+	ret = fp_init(&(in->y), curve->a.ctx); EG(ret, err);
+
 	in->crv = curve;
 	in->magic = AFF_PT_MAGIC;
-}
 
-void aff_pt_init_from_coords(aff_pt_t in,
-			     ec_shortw_crv_src_t curve,
-			     fp_src_t xcoord, fp_src_t ycoord)
-{
-	aff_pt_init(in, curve);
-	fp_copy(&(in->x), xcoord);
-	fp_copy(&(in->y), ycoord);
+err:
+	return ret;
 }
 
 /*
- * Uninitialize pointed affine point to prevent further use (magic field
- * in the structure is zeroized) and zeroize associated storage space.
- * Note that the curve context pointed to by the point element (passed
- * during init) is left untouched.
+ * Initialize given point 'in' on given curve 'curve' and set its coordinates to
+ * 'xcoord' and 'ycoord'. Return 0 on success, -1 on error.
+ */
+int aff_pt_init_from_coords(aff_pt_t in,
+			    ec_shortw_crv_src_t curve,
+			    fp_src_t xcoord, fp_src_t ycoord)
+{
+	int ret;
+
+	ret = aff_pt_init(in, curve); EG(ret, err);
+	ret = fp_copy(&(in->x), xcoord); EG(ret, err);
+	ret = fp_copy(&(in->y), ycoord);
+
+err:
+	return ret;
+}
+
+/*
+ * Uninitialize pointed affine point 'in' to prevent further use (magic field
+ * in the structure is zeroized) and zeroize associated storage space. Note
+ * that the curve context pointed to by the point element (passed during init)
+ * is left untouched.
  */
 void aff_pt_uninit(aff_pt_t in)
 {
-	fp_uninit(&(in->x));
-	fp_uninit(&(in->y));
-	in->crv = NULL;
-	in->magic = WORD(0);
+	if((in != NULL) && (in->magic == AFF_PT_MAGIC) && (in->crv != NULL)){
+		in->crv = NULL;
+		in->magic = WORD(0);
+
+		fp_uninit(&(in->x));
+		fp_uninit(&(in->y));
+	}
+
+	return;
 }
 
 /*
- * Return 1 if the point of coordinates (x,y) is on the curve, i.e. if it
- * verifies curve equation y^2 = x^3 + ax + b. Returns 0 otherwise.
+ * Check if given point of corrdinate ('x', 'y') is on given curve 'curve' (i.e.
+ * if it verifies curve equation y^2 = x^3 + ax + b). On success, the verdict is
+ * given using 'on_curve' out parameter (1 if on curve, 0 if not). On error,
+ * the function returns -1 and 'on_curve' is left unmodified.
  */
-int is_on_shortw_curve(fp_src_t x, fp_src_t y, ec_shortw_crv_src_t curve)
+int is_on_shortw_curve(fp_src_t x, fp_src_t y, ec_shortw_crv_src_t curve, int *on_curve)
 {
 	fp y2, ax, x3, x2, tmp, tmp2;
-	int ret;
+	int ret, cmp;
+	y2.magic = ax.magic = x3.magic = x2.magic = 0;
+	tmp.magic = tmp2.magic = 0;
 
-	ec_shortw_crv_check_initialized(curve);
-	fp_check_initialized(x);
-	fp_check_initialized(y);
-	MUST_HAVE(x->ctx == y->ctx);
-	MUST_HAVE(x->ctx == curve->a.ctx);
+	ret = ec_shortw_crv_check_initialized(curve); EG(ret, err);
+	ret = fp_check_initialized(x);  EG(ret, err);
+	ret = fp_check_initialized(y);  EG(ret, err);
+	MUST_HAVE(on_curve != NULL, ret, err);
 
-	fp_init(&y2, x->ctx);
-	fp_sqr(&y2, y);
+	MUST_HAVE((x->ctx == y->ctx), ret, err);
+	MUST_HAVE((x->ctx == curve->a.ctx), ret, err);
 
-	fp_init(&ax, x->ctx);
-	fp_mul(&ax, &(curve->a), x);
+	ret = fp_init(&y2, x->ctx); EG(ret, err);
+	ret = fp_sqr(&y2, y); EG(ret, err);
+	ret = fp_init(&ax, x->ctx); EG(ret, err);
+	ret = fp_mul(&ax, &(curve->a), x); EG(ret, err);
+	ret = fp_init(&x2, x->ctx); EG(ret, err);
+	ret = fp_sqr(&x2, x); EG(ret, err);
+	ret = fp_init(&x3, x->ctx); EG(ret, err);
+	ret = fp_mul(&x3, &x2, x); EG(ret, err);
+	ret = fp_init(&tmp, x->ctx); EG(ret, err);
+	ret = fp_add(&tmp, &ax, &curve->b); EG(ret, err);
+	ret = fp_init(&tmp2, x->ctx); EG(ret, err);
+	ret = fp_add(&tmp2, &x3, &tmp); EG(ret, err);
+	ret = fp_cmp(&y2, &tmp2, &cmp); EG(ret, err);
 
-	fp_init(&x2, x->ctx);
-	fp_sqr(&x2, x);
+	(*on_curve) = (!cmp);
 
-	fp_init(&x3, x->ctx);
-	fp_mul(&x3, &x2, x);
-
-	fp_init(&tmp, x->ctx);
-	fp_add(&tmp, &ax, &curve->b);
-
-	fp_init(&tmp2, x->ctx);
-	fp_add(&tmp2, &x3, &tmp);
-
-	ret = !fp_cmp(&y2, &tmp2);
-
+err:
 	fp_uninit(&y2);
 	fp_uninit(&ax);
 	fp_uninit(&x3);
@@ -116,45 +140,88 @@ int is_on_shortw_curve(fp_src_t x, fp_src_t y, ec_shortw_crv_src_t curve)
 	return ret;
 }
 
-int aff_pt_is_on_curve(aff_pt_src_t pt)
-{
-	aff_pt_check_initialized(pt);
-	return is_on_shortw_curve(&(pt->x), &(pt->y), pt->crv);
-}
-
-void ec_shortw_aff_copy(aff_pt_t out, aff_pt_src_t in)
-{
-	aff_pt_check_initialized(in);
-	aff_pt_init(out, in->crv);
-
-	fp_copy(&(out->x), &(in->x));
-	fp_copy(&(out->y), &(in->y));
-}
-
-int ec_shortw_aff_cmp(aff_pt_src_t in1, aff_pt_src_t in2)
-{
-	aff_pt_check_initialized(in1);
-	aff_pt_check_initialized(in2);
-	MUST_HAVE(in1->crv == in2->crv);
-
-	return fp_cmp(&(in1->x), &(in2->x)) | fp_cmp(&(in1->y), &(in2->y));
-}
-
 /*
- * Return 1 if given points (on the same curve) are equal or opposite.
- * Return 0 otherwise.
+ * Same as previous but using an affine point instead of pair of coordinates
+ * and a curve
  */
-int ec_shortw_aff_eq_or_opp(aff_pt_src_t in1, aff_pt_src_t in2)
+int aff_pt_is_on_curve(aff_pt_src_t pt, int *on_curve)
 {
 	int ret;
 
-	aff_pt_check_initialized(in1);
-	aff_pt_check_initialized(in2);
-	MUST_HAVE(in1->crv == in2->crv);
+	MUST_HAVE(on_curve != NULL, ret, err);
+	ret = aff_pt_check_initialized(pt); EG(ret, err);
+	ret = is_on_shortw_curve(&(pt->x), &(pt->y), pt->crv, on_curve);
 
-	ret = (fp_cmp(&(in1->x), &(in2->x)) == 0);
-	ret &= fp_eq_or_opp(&(in1->y), &(in2->y));
+err:
+	return ret;
+}
 
+/*
+ * Copy 'in' affine point into 'out'. 'out' is initialized by the function.
+ * 0 is returned on success, -1 on error.
+ */
+int ec_shortw_aff_copy(aff_pt_t out, aff_pt_src_t in)
+{
+	int ret;
+
+	ret = aff_pt_check_initialized(in); EG(ret, err);
+	ret = aff_pt_init(out, in->crv); EG(ret, err);
+	ret = fp_copy(&(out->x), &(in->x)); EG(ret, err);
+	ret = fp_copy(&(out->y), &(in->y));
+
+err:
+	return ret;
+}
+
+/*
+ * Compare affine points 'in1' and 'in2'. On success, 0 is returned and
+ * comparison value is given using 'cmp' (0 if equal, a non-zero value
+ * if they are different). -1 is returned on error.
+ */
+int ec_shortw_aff_cmp(aff_pt_src_t in1, aff_pt_src_t in2, int *cmp)
+{
+	int ret, cmp_x, cmp_y;
+
+	MUST_HAVE(!(cmp == NULL), ret, err);
+
+	ret = aff_pt_check_initialized(in1); EG(ret, err);
+	ret = aff_pt_check_initialized(in2); EG(ret, err);
+
+	MUST_HAVE((in1->crv == in2->crv), ret, err);
+
+	ret = fp_cmp(&(in1->x), &(in2->x), &cmp_x); EG(ret, err);
+	ret = fp_cmp(&(in1->y), &(in2->y), &cmp_y); EG(ret, err);
+
+	*cmp = cmp_x | cmp_y;
+
+err:
+	return ret;
+}
+
+/*
+ * Check if given affine points 'in1' and 'in2' on the same curve are equal
+ * or opposite. On success, 0 is returned and 'aff_is_eq_or_opp' contains:
+ *  - 1 if points are equal or opposite
+ *  - 0 if not
+ * The function returns -1 on error, in which case 'aff_is_eq_or_opp'
+ * is left untouched.
+ */
+int ec_shortw_aff_eq_or_opp(aff_pt_src_t in1, aff_pt_src_t in2,
+			    int *aff_is_eq_or_opp)
+{
+	int ret, cmp, eq_or_opp;
+
+	ret = aff_pt_check_initialized(in1); EG(ret, err);
+	ret = aff_pt_check_initialized(in2); EG(ret, err);
+
+	MUST_HAVE((in1->crv == in2->crv), ret, err);
+
+	ret = fp_cmp(&(in1->x), &(in2->x), &cmp); EG(ret, err);
+	ret = fp_eq_or_opp(&(in1->y), &(in2->y), &eq_or_opp); EG(ret, err);
+
+	*aff_is_eq_or_opp = (cmp == 0) & eq_or_opp;
+
+err:
 	return ret;
 }
 
@@ -163,47 +230,54 @@ int ec_shortw_aff_eq_or_opp(aff_pt_src_t in1, aff_pt_src_t in2)
  * coordinates (elements of Fp) are each encoded on p_len bytes, where p_len
  * is the size of p in bytes (e.g. 66 for a prime p of 521 bits). Each
  * coordinate is encoded in big endian. Size of buffer must exactly match
- * 2 * p_len.
+ * 2 * p_len. The function returns 0 on success, -1 on error.
  */
 int aff_pt_import_from_buf(aff_pt_t pt,
-                           const u8 *pt_buf,
-                           u16 pt_buf_len, ec_shortw_crv_src_t crv)
+			   const u8 *pt_buf,
+			   u16 pt_buf_len, ec_shortw_crv_src_t crv)
 {
-        fp_ctx_src_t ctx;
-        u16 coord_len;
+	fp_ctx_src_t ctx;
+	u16 coord_len;
+	int ret, on_curve;
 
-        ec_shortw_crv_check_initialized(crv);
-        MUST_HAVE(pt_buf != NULL);
+	MUST_HAVE((pt_buf != NULL), ret, err);
+	MUST_HAVE((pt != NULL), ret, err);
+	ret = ec_shortw_crv_check_initialized(crv); EG(ret, err);
 
-        ctx = crv->a.ctx;
-        coord_len = BYTECEIL(ctx->p_bitlen);
+	ctx = crv->a.ctx;
+	coord_len = BYTECEIL(ctx->p_bitlen);
 
-        if (pt_buf_len != (2 * coord_len)) {
-                return -1;
-        }
+	MUST_HAVE((pt_buf_len == (2 * coord_len)), ret, err);
 
-        fp_init_from_buf(&(pt->x), ctx, pt_buf, coord_len);
-        fp_init_from_buf(&(pt->y), ctx, pt_buf + coord_len, coord_len);
+	ret = fp_init_from_buf(&(pt->x), ctx, pt_buf, coord_len); EG(ret, err);
+	ret = fp_init_from_buf(&(pt->y), ctx, pt_buf + coord_len, coord_len); EG(ret, err);
 
-        /* Set the curve */
-        pt->crv = crv;
+	/* Set the curve */
+	pt->crv = crv;
 
-        /* Mark the point as initialized */
-        pt->magic = AFF_PT_MAGIC;
+	/* Mark the point as initialized */
+	pt->magic = AFF_PT_MAGIC;
 
-        /* Check that the point is indeed on the provided curve, uninitialize it
-         * if this is not the case.
-         */
-        if(aff_pt_is_on_curve(pt) != 1){
-                aff_pt_uninit(pt);
-                return -1;
-        }
+	/*
+	 * Check that the point is indeed on provided curve, uninitialize it
+	 * if this is not the case.
+	 */
+	ret = aff_pt_is_on_curve(pt, &on_curve); EG(ret, err);
 
-        return 0;
+	if (!on_curve) {
+		aff_pt_uninit(pt);
+		ret = -1;
+	} else {
+		ret = 0;
+	}
+
+err:
+	return ret;
 }
 
 
-/* Export an affine point to a buffer with the following layout; the 2
+/*
+ * Export an affine point 'pt' to a buffer with the following layout; the 2
  * coordinates (elements of Fp) are each encoded on p_len bytes, where p_len
  * is the size of p in bytes (e.g. 66 for a prime p of 521 bits). Each
  * coordinate is encoded in big endian. Size of buffer must exactly match
@@ -211,25 +285,23 @@ int aff_pt_import_from_buf(aff_pt_t pt,
  */
 int aff_pt_export_to_buf(aff_pt_src_t pt, u8 *pt_buf, u32 pt_buf_len)
 {
-        fp_ctx_src_t ctx;
-        u16 coord_len;
+	u16 coord_len;
+	int ret, on_curve;
 
-        aff_pt_check_initialized(pt);
-        MUST_HAVE(pt_buf != NULL);
+	MUST_HAVE((pt_buf != NULL), ret, err);
 
-        /* The point to be exported must be on the curve */
-        MUST_HAVE(aff_pt_is_on_curve(pt) == 1);
+	/* The point to be exported must be on the curve */
+	ret = aff_pt_is_on_curve(pt, &on_curve); EG(ret, err);
+	MUST_HAVE((on_curve), ret, err);
 
-        ctx = pt->crv->a.ctx;
-        coord_len = BYTECEIL(ctx->p_bitlen);
+	/* buffer size must match 2 * p_len */
+	coord_len = BYTECEIL(pt->crv->a.ctx->p_bitlen);
+	MUST_HAVE((pt_buf_len == (2 * coord_len)), ret, err);
 
-        if (pt_buf_len != (2 * coord_len)) {
-                return -1;
-        }
+	/* Export the two coordinates */
+	ret = fp_export_to_buf(pt_buf, coord_len, &(pt->x)); EG(ret, err);
+	ret = fp_export_to_buf(pt_buf + coord_len, coord_len, &(pt->y));
 
-        /* Export the three coordinates */
-        fp_export_to_buf(pt_buf, coord_len, &(pt->x));
-        fp_export_to_buf(pt_buf + coord_len, coord_len, &(pt->y));
-
-        return 0;
+err:
+	return ret;
 }
