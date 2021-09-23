@@ -29,46 +29,47 @@
 
 int ecfsdsa_init_pub_key(ec_pub_key *out_pub, const ec_priv_key *in_priv)
 {
+	int ret, cmp;
 	prj_pt_src_t G;
+	nn_src_t q;
 
-	MUST_HAVE(out_pub != NULL);
+	MUST_HAVE(out_pub != NULL, ret, err);
 
 	/* Zero init public key to be generated */
 	local_memset(out_pub, 0, sizeof(ec_pub_key));
 
-	priv_key_check_initialized_and_type(in_priv, ECFSDSA);
+	ret = priv_key_check_initialized_and_type(in_priv, ECFSDSA); EG(ret, err);
+	q = &(in_priv->params->ec_gen_order);
 
-	/* Sanity check */
-	if(nn_cmp(&(in_priv->x), &(in_priv->params->ec_gen_order)) >= 0){
-		/* This should not happen and means that our
-		 * private key is not compliant!
-		 */
-		goto err;
-	}
+	/* Sanity check on key compliance */
+	MUST_HAVE(!nn_cmp(&(in_priv->x), q, &cmp) && (cmp < 0), ret, err);
 
 	/* Y = xG */
 	G = &(in_priv->params->ec_gen);
 	/* Use blinding when computing point scalar multiplication */
-	if(prj_pt_mul_monty_blind(&(out_pub->y), &(in_priv->x), G)){
-		goto err;
-	}
+	ret = prj_pt_mul_monty_blind(&(out_pub->y), &(in_priv->x), G); EG(ret, err);
 
 	out_pub->key_type = ECFSDSA;
 	out_pub->params = in_priv->params;
 	out_pub->magic = PUB_KEY_MAGIC;
 
-	return 0;
 err:
-	return -1;
+	return ret;
 }
 
-u8 ecfsdsa_siglen(u16 p_bit_len, u16 q_bit_len, u8 hsize, u8 blocksize)
+int ecfsdsa_siglen(u16 p_bit_len, u16 q_bit_len, u8 hsize, u8 blocksize, u8 *siglen)
 {
+	int ret;
+
+	MUST_HAVE(siglen != NULL, ret, err);
 	MUST_HAVE((p_bit_len <= CURVES_MAX_P_BIT_LEN) &&
 		  (q_bit_len <= CURVES_MAX_Q_BIT_LEN) &&
-		  (hsize <= MAX_DIGEST_SIZE) && (blocksize <= MAX_BLOCK_SIZE));
+		  (hsize <= MAX_DIGEST_SIZE) && (blocksize <= MAX_BLOCK_SIZE), ret, err);
+	(*siglen) = (u8)ECFSDSA_SIGLEN(p_bit_len, q_bit_len);
+	ret = 0;
 
-	return (u8)ECFSDSA_SIGLEN(p_bit_len, q_bit_len);
+err:
+	return ret;
 }
 
 /*
@@ -111,9 +112,9 @@ u8 ecfsdsa_siglen(u16 p_bit_len, u16 q_bit_len, u8 hsize, u8 blocksize)
  */
 
 #define ECFSDSA_SIGN_MAGIC ((word_t)(0x1ed9635924b48ddaULL))
-#define ECFSDSA_SIGN_CHECK_INITIALIZED(A) \
+#define ECFSDSA_SIGN_CHECK_INITIALIZED(A, ret, err) \
 	MUST_HAVE((((const void *)(A)) != NULL) && \
-		  ((A)->magic == ECFSDSA_SIGN_MAGIC))
+		  ((A)->magic == ECFSDSA_SIGN_MAGIC), ret, err)
 
 int _ecfsdsa_sign_init(struct ec_sign_context *ctx)
 {
@@ -126,22 +127,19 @@ int _ecfsdsa_sign_init(struct ec_sign_context *ctx)
 	const ec_priv_key *priv_key;
 	bitcnt_t p_bit_len;
 	u8 i, p_len, r_len;
-	u16 p_len_;
-	int ret = -1;
+	int ret;
+	kG.magic = W.magic = 0;
 
 	/* First, verify context has been initialized */
-	SIG_SIGN_CHECK_INITIALIZED(ctx);
+	ret = sig_sign_check_initialized(ctx); EG(ret, err);
 
 	/* Zero init points */
 	local_memset(&kG, 0, sizeof(prj_pt));
 
 	/* Additional sanity checks on input params from context */
-	key_pair_check_initialized_and_type(ctx->key_pair, ECFSDSA);
-	if ((!(ctx->h)) || (ctx->h->digest_size > MAX_DIGEST_SIZE) ||
-	    (ctx->h->block_size > MAX_BLOCK_SIZE)) {
-		ret = -1;
-		goto err;
-	}
+	ret = key_pair_check_initialized_and_type(ctx->key_pair, ECFSDSA); EG(ret, err);
+	MUST_HAVE((ctx->h != NULL) && (ctx->h->digest_size <= MAX_DIGEST_SIZE) &&
+		  (ctx->h->block_size <= MAX_BLOCK_SIZE), ret, err);
 
 	/* Make things more readable */
 	priv_key = &(ctx->key_pair->priv_key);
@@ -153,11 +151,7 @@ int _ecfsdsa_sign_init(struct ec_sign_context *ctx)
 	p_len = (u8)BYTECEIL(p_bit_len);
 	r_len = (u8)ECFSDSA_R_LEN(p_bit_len);
 
-	p_len_ = p_len;
-	if (p_len_ > NN_MAX_BYTE_LEN) {
-		ret = -1;
-		goto err;
-	}
+	MUST_HAVE(p_len <= NN_MAX_BYTE_LEN, ret, err);
 
 	dbg_nn_print("p", &(priv_key->params->ec_fp.p));
 	dbg_nn_print("q", q);
@@ -174,41 +168,26 @@ int _ecfsdsa_sign_init(struct ec_sign_context *ctx)
 	 * This allows us to avoid the corruption of such a pointer.
 	 */
 	/* Sanity check on the handler before calling it */
-	if(ctx->rand != nn_get_random_mod){
-		ret = -1;
-		goto err;
-	}
+	MUST_HAVE(ctx->rand == nn_get_random_mod, ret, err);
 #endif
-	if(ctx->rand == NULL){
-		ret = -1;
-		goto err;
-	}
-	ret = ctx->rand(k, q);
-	if (ret) {
-		ret = -1;
-		goto err;
-	}
+	MUST_HAVE(ctx->rand != NULL, ret, err);
+	ret = ctx->rand(k, q); EG(ret, err);
 
 	/*  2. Compute W = (W_x,W_y) = kG */
 #ifdef USE_SIG_BLINDING
 	/* We use blinding for the scalar multiplication */
-	if(prj_pt_mul_monty_blind(&kG, k, G)){
-		ret = -1;
-		goto err;
-	}
+	ret = prj_pt_mul_monty_blind(&kG, k, G); EG(ret, err);
 #else
-	prj_pt_mul_monty(&kG, k, G);
+	ret = prj_pt_mul_monty(&kG, k, G); EG(ret, err);
 #endif
-	prj_pt_to_aff(&W, &kG);
-	prj_pt_uninit(&kG);
+	ret = prj_pt_to_aff(&W, &kG); EG(ret, err);
 
 	dbg_nn_print("Wx", &(W.x.fp_val));
 	dbg_nn_print("Wy", &(W.y.fp_val));
 
 	/*  3. Compute r = FE2OS(W_x)||FE2OS(W_y) */
-	fp_export_to_buf(r, p_len, &(W.x));
-	fp_export_to_buf(r + p_len, p_len, &(W.y));
-	aff_pt_uninit(&W);
+	ret = fp_export_to_buf(r, p_len, &(W.x)); EG(ret, err);
+	ret = fp_export_to_buf(r + p_len, p_len, &(W.y)); EG(ret, err);
 	dbg_buf_print("r: ", r, r_len);
 
 	/*  4. If r is an all zero string, restart the process at step 1. */
@@ -227,22 +206,17 @@ int _ecfsdsa_sign_init(struct ec_sign_context *ctx)
 	 * update() calls.
 	 */
 	/* Since we call a callback, sanity check our mapping */
-	if(hash_mapping_callbacks_sanity_check(ctx->h)){
-		ret = -1;
-		goto err;
-	}
-	ctx->h->hfunc_init(&(ctx->sign_data.ecfsdsa.h_ctx));
+	ret = hash_mapping_callbacks_sanity_check(ctx->h); EG(ret, err);
+	ret = ctx->h->hfunc_init(&(ctx->sign_data.ecfsdsa.h_ctx)); EG(ret, err);
 	/* Since we call a callback, sanity check our mapping */
-	if(hash_mapping_callbacks_sanity_check(ctx->h)){
-		ret = -1;
-		goto err;
-	}
-	ctx->h->hfunc_update(&(ctx->sign_data.ecfsdsa.h_ctx), r, r_len);
+	ret = hash_mapping_callbacks_sanity_check(ctx->h); EG(ret, err);
+	ret = ctx->h->hfunc_update(&(ctx->sign_data.ecfsdsa.h_ctx), r, r_len); EG(ret, err);
+
 	ctx->sign_data.ecfsdsa.magic = ECFSDSA_SIGN_MAGIC;
 
-	ret = 0;
-
  err:
+	aff_pt_uninit(&W);
+	prj_pt_uninit(&kG);
 
 	PTR_NULLIFY(G);
 	PTR_NULLIFY(q);
@@ -259,23 +233,24 @@ int _ecfsdsa_sign_init(struct ec_sign_context *ctx)
 int _ecfsdsa_sign_update(struct ec_sign_context *ctx,
 			 const u8 *chunk, u32 chunklen)
 {
+	int ret;
+
 	/*
 	 * First, verify context has been initialized and private
 	 * part too. This guarantees the context is an ECFSDSA
 	 * signature one and we do not update() or finalize()
 	 * before init().
 	 */
-	SIG_SIGN_CHECK_INITIALIZED(ctx);
-	ECFSDSA_SIGN_CHECK_INITIALIZED(&(ctx->sign_data.ecfsdsa));
+	ret = sig_sign_check_initialized(ctx); EG(ret, err);
+	ECFSDSA_SIGN_CHECK_INITIALIZED(&(ctx->sign_data.ecfsdsa), ret, err);
 
 	/*  5. Compute h = H(r||m) */
 	/* Since we call a callback, sanity check our mapping */
-	if(hash_mapping_callbacks_sanity_check(ctx->h)){
-		return -1;
-	}
-	ctx->h->hfunc_update(&(ctx->sign_data.ecfsdsa.h_ctx), chunk, chunklen);
+	ret = hash_mapping_callbacks_sanity_check(ctx->h); EG(ret, err);
+	ret = ctx->h->hfunc_update(&(ctx->sign_data.ecfsdsa.h_ctx), chunk, chunklen); EG(ret, err);
 
-	return 0;
+err:
+	return ret;
 }
 
 int _ecfsdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
@@ -286,21 +261,24 @@ int _ecfsdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	u8 e_buf[MAX_DIGEST_SIZE];
 	bitcnt_t p_bit_len, q_bit_len;
 	u8 hsize, s_len, r_len;
-	int ret = -1;
+	int ret, iszero, cmp;
 	u8 *r;
 
 #ifdef USE_SIG_BLINDING
 	/* b is the blinding mask */
 	nn b, binv;
+	b.magic = binv.magic = 0;
 #endif /* USE_SIG_BLINDING */
+
+	tmp.magic = s.magic = e.magic = ex.magic = 0;
 
 	/*
 	 * First, verify context has been initialized and private
 	 * part too. This guarantees the context is an ECFSDSA
 	 * signature one and we do not finalize() before init().
 	 */
-	SIG_SIGN_CHECK_INITIALIZED(ctx);
-	ECFSDSA_SIGN_CHECK_INITIALIZED(&(ctx->sign_data.ecfsdsa));
+	ret = sig_sign_check_initialized(ctx); EG(ret, err);
+	ECFSDSA_SIGN_CHECK_INITIALIZED(&(ctx->sign_data.ecfsdsa), ret, err);
 
 	/* Make things more readable */
 	priv_key = &(ctx->key_pair->priv_key);
@@ -315,67 +293,49 @@ int _ecfsdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	r = ctx->sign_data.ecfsdsa.r;
 
 	/* Sanity check */
-	if(nn_cmp(x, q) >= 0){
-		/* This should not happen and means that our
-		 * private key is not compliant!
-		 */
-		ret = -1;
-		goto err;
-	}
+	ret = nn_cmp(x, q, &cmp); EG(ret, err);
+	/* This should not happen and means that our
+	 * private key is not compliant!
+	 */
+	MUST_HAVE(cmp < 0, ret, err);
 
-	if (siglen != ECFSDSA_SIGLEN(p_bit_len, q_bit_len)) {
-		ret = -1;
-		goto err;
-	}
+	MUST_HAVE(siglen == ECFSDSA_SIGLEN(p_bit_len, q_bit_len), ret, err);
 
 #ifdef USE_SIG_BLINDING
-	ret = nn_get_random_mod(&b, q);
-	if (ret) {
-		ret = -1;
-		goto err;
-	}
+	ret = nn_get_random_mod(&b, q); EG(ret, err);
 	dbg_nn_print("b", &b);
 #endif /* USE_SIG_BLINDING */
 
 	/* Since we call a callback, sanity check our mapping */
-	if(hash_mapping_callbacks_sanity_check(ctx->h)){
-		ret = -1;
-		goto err;
-	}
+	ret = hash_mapping_callbacks_sanity_check(ctx->h); EG(ret, err);
 	/*  5. Compute h = H(r||m) */
 	/* Since we call a callback, sanity check our mapping */
-	if(hash_mapping_callbacks_sanity_check(ctx->h)){
-		ret = -1;
-		goto err;
-	}
-	ctx->h->hfunc_finalize(&(ctx->sign_data.ecfsdsa.h_ctx), e_buf);
+	ret = hash_mapping_callbacks_sanity_check(ctx->h); EG(ret, err);
+	ret = ctx->h->hfunc_finalize(&(ctx->sign_data.ecfsdsa.h_ctx), e_buf); EG(ret, err);
 	dbg_buf_print("h(R||m)", e_buf, hsize);
 
 	/*  6. Compute e by converting h to an integer and reducing it mod q */
-	nn_init_from_buf(&tmp, e_buf, hsize);
+	ret = nn_init_from_buf(&tmp, e_buf, hsize); EG(ret, err);
 	local_memset(e_buf, 0, hsize);
-	nn_mod(&e, &tmp, q);
+	ret = nn_mod(&e, &tmp, q); EG(ret, err);
 
 #ifdef USE_SIG_BLINDING
 	/* Blind e with b */
-	nn_mul_mod(&e, &e, &b, q);
+	ret = nn_mul_mod(&e, &e, &b, q); EG(ret, err);
 #endif /* USE_SIG_BLINDING */
 	/*  7. Compute s = (k + ex) mod q */
-	nn_mul_mod(&ex, &e, x, q);
-	nn_uninit(&e);
+	ret = nn_mul_mod(&ex, &e, x, q); EG(ret, err);
 #ifdef USE_SIG_BLINDING
 	/* Blind k with b */
-	nn_mul_mod(&s, k, &b, q);
-	nn_mod_add(&s, &s, &ex, q);
+	ret = nn_mul_mod(&s, k, &b, q); EG(ret, err);
+	ret = nn_mod_add(&s, &s, &ex, q); EG(ret, err);
 #else
-	nn_mod_add(&s, k, &ex, q);
+	ret = nn_mod_add(&s, k, &ex, q); EG(ret, err);
 #endif /* USE_SIG_BLINDING */
-	nn_uninit(&ex);
-	nn_uninit(&tmp);
 #ifdef USE_SIG_BLINDING
 	/* Unblind s */
-	nn_modinv(&binv, &b, q);
-	nn_mul_mod(&s, &s, &binv, q);
+	ret = nn_modinv(&binv, &b, q); EG(ret, err);
+	ret = nn_mul_mod(&s, &s, &binv, q); EG(ret, err);
 #endif /* USE_SIG_BLINDING */
 	dbg_nn_print("s: ", &s);
 
@@ -385,20 +345,22 @@ int _ecfsdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	 * In practice, as we cannot restart the whole process in
 	 * finalize() we just report an error.
 	 */
-	if (nn_iszero(&s)) {
-		nn_uninit(&s);
-		ret = -1;
-		goto err;
-	}
+	MUST_HAVE(!nn_iszero(&s, &iszero) && !iszero, ret, err);
 
 	/*  9. Return (r,s) */
 	local_memcpy(sig, r, r_len);
-	nn_export_to_buf(sig + r_len, s_len, &s);
-	nn_uninit(&s);
-
-	ret = 0;
+	local_memset(r, 0, r_len);
+	ret = nn_export_to_buf(sig + r_len, s_len, &s);
 
  err:
+	nn_uninit(&s);
+	nn_uninit(&e);
+	nn_uninit(&ex);
+	nn_uninit(&tmp);
+#ifdef USE_SIG_BLINDING
+	nn_uninit(&b);
+	nn_uninit(&binv);
+#endif
 
 	/*
 	 * We can now clear data part of the context. This will clear
@@ -416,15 +378,6 @@ int _ecfsdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	VAR_ZEROIFY(q_bit_len);
 	VAR_ZEROIFY(r_len);
 	VAR_ZEROIFY(s_len);
-
-#ifdef USE_SIG_BLINDING
-	if(nn_is_initialized(&b)){
-		nn_uninit(&b);
-	}
-	if(nn_is_initialized(&binv)){
-		nn_uninit(&binv);
-	}
-#endif /* USE_SIG_BLINDING */
 
 	return ret;
 }
@@ -453,31 +406,30 @@ int _ecfsdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
  */
 
 #define ECFSDSA_VERIFY_MAGIC ((word_t)(0x26afb13ccd96fa04ULL))
-#define ECFSDSA_VERIFY_CHECK_INITIALIZED(A) \
+#define ECFSDSA_VERIFY_CHECK_INITIALIZED(A, ret, err) \
 	MUST_HAVE((((const void *)(A)) != NULL) && \
-		  ((A)->magic == ECFSDSA_VERIFY_MAGIC))
+		  ((A)->magic == ECFSDSA_VERIFY_MAGIC), ret, err)
 
 int _ecfsdsa_verify_init(struct ec_verify_context *ctx,
 			 const u8 *sig, u8 siglen)
 {
 	bitcnt_t p_bit_len, q_bit_len;
 	u8 p_len, r_len, s_len;
-	int ret = -1;
+	int ret, iszero, on_curve, cmp;
 	const u8 *r;
 	nn_src_t q;
 	fp rx, ry;
 	nn *s;
 
+	rx.magic = ry.magic = 0;
+
 	/* First, verify context has been initialized */
-	SIG_VERIFY_CHECK_INITIALIZED(ctx);
+	ret = sig_verify_check_initialized(ctx); EG(ret, err);
 
 	/* Do some sanity checks on input params */
-	pub_key_check_initialized_and_type(ctx->pub_key, ECFSDSA);
-	if ((!(ctx->h)) || (ctx->h->digest_size > MAX_DIGEST_SIZE) ||
-	    (ctx->h->block_size > MAX_BLOCK_SIZE)) {
-		ret = -1;
-		goto err;
-	}
+	ret = pub_key_check_initialized_and_type(ctx->pub_key, ECFSDSA); EG(ret, err);
+	MUST_HAVE((ctx->h != NULL) && (ctx->h->digest_size <= MAX_DIGEST_SIZE) &&
+		(ctx->h->block_size <= MAX_BLOCK_SIZE), ret, err);
 
 	/* Make things more readable */
 	q = &(ctx->pub_key->params->ec_gen_order);
@@ -488,60 +440,49 @@ int _ecfsdsa_verify_init(struct ec_verify_context *ctx,
 	s_len = (u8)ECFSDSA_S_LEN(q_bit_len);
 	s = &(ctx->verify_data.ecfsdsa.s);
 
-	if (siglen != ECFSDSA_SIGLEN(p_bit_len, q_bit_len)) {
-		ret = -1;
-		goto err;
-	}
+	MUST_HAVE(siglen == ECFSDSA_SIGLEN(p_bit_len, q_bit_len), ret, err);
 
 	/*  1. Reject the signature if r is not a valid point on the curve. */
 
 	/* Let's first import r, i.e. x and y coordinates of the point */
 	r = sig;
-	fp_init(&rx, ctx->pub_key->params->ec_curve.a.ctx);
-	fp_import_from_buf(&rx, r, p_len);
-	fp_init(&ry, ctx->pub_key->params->ec_curve.a.ctx);
-	fp_import_from_buf(&ry, r + p_len, p_len);
+	ret = fp_init(&rx, ctx->pub_key->params->ec_curve.a.ctx); EG(ret, err);
+	ret = fp_import_from_buf(&rx, r, p_len); EG(ret, err);
+	ret = fp_init(&ry, ctx->pub_key->params->ec_curve.a.ctx); EG(ret, err);
+	ret = fp_import_from_buf(&ry, r + p_len, p_len); EG(ret, err);
 
 	/* Let's now check that r represents a point on the curve */
-	if (!is_on_shortw_curve(&rx, &ry, &(ctx->pub_key->params->ec_curve))) {
-		ret = -1;
-		goto err;
-	}
-	fp_uninit(&rx);
-	fp_uninit(&ry);
+	ret = is_on_shortw_curve(&rx, &ry, &(ctx->pub_key->params->ec_curve), &on_curve); EG(ret, err);
+	MUST_HAVE(on_curve, ret, err);
 
 	/* 2. Reject the signature if s is not in ]0,q[ */
 
 	/* Import s as a nn */
-	nn_init_from_buf(s, sig + r_len, s_len);
+	ret = nn_init_from_buf(s, sig + r_len, s_len); EG(ret, err);
 
 	/* Check that s is in ]0,q[ */
-	if (nn_iszero(s) || (nn_cmp(s, q) >= 0)) {
-		ret = -1;
-		goto err;
-	}
+	ret = nn_iszero(s, &iszero); EG(ret, err);
+	ret = nn_cmp(s, q, &cmp); EG(ret, err);
+	MUST_HAVE((!iszero) && (cmp < 0), ret, err);
 
 	/* 3. Compute h = H(r||m) */
 
 	/* Initialize the verify context */
 	local_memcpy(&(ctx->verify_data.ecfsdsa.r), r, r_len);
 	/* Since we call a callback, sanity check our mapping */
-	if(hash_mapping_callbacks_sanity_check(ctx->h)){
-		ret = -1;
-		goto err;
-	}
-	ctx->h->hfunc_init(&(ctx->verify_data.ecfsdsa.h_ctx));
+	ret = hash_mapping_callbacks_sanity_check(ctx->h); EG(ret, err);
+	ret = ctx->h->hfunc_init(&(ctx->verify_data.ecfsdsa.h_ctx)); EG(ret, err);
+
 	/* Since we call a callback, sanity check our mapping */
-	if(hash_mapping_callbacks_sanity_check(ctx->h)){
-		ret = -1;
-		goto err;
-	}
-	ctx->h->hfunc_update(&(ctx->verify_data.ecfsdsa.h_ctx), r, r_len);
+	ret = hash_mapping_callbacks_sanity_check(ctx->h); EG(ret, err);
+	ret = ctx->h->hfunc_update(&(ctx->verify_data.ecfsdsa.h_ctx), r, r_len); EG(ret, err);
+
 	ctx->verify_data.ecfsdsa.magic = ECFSDSA_VERIFY_MAGIC;
 
-	ret = 0;
-
  err:
+	fp_uninit(&rx);
+	fp_uninit(&ry);
+
 	if (ret) {
 		/*
 		 * Signature is invalid. Clear data part of the context.
@@ -567,24 +508,25 @@ int _ecfsdsa_verify_init(struct ec_verify_context *ctx,
 int _ecfsdsa_verify_update(struct ec_verify_context *ctx,
 			   const u8 *chunk, u32 chunklen)
 {
+	int ret;
+
 	/*
 	 * First, verify context has been initialized and public
 	 * part too. This guarantees the context is an ECFSDSA
 	 * verification one and we do not update() or finalize()
 	 * before init().
 	 */
-	SIG_VERIFY_CHECK_INITIALIZED(ctx);
-	ECFSDSA_VERIFY_CHECK_INITIALIZED(&(ctx->verify_data.ecfsdsa));
+	ret = sig_verify_check_initialized(ctx); EG(ret, err);
+	ECFSDSA_VERIFY_CHECK_INITIALIZED(&(ctx->verify_data.ecfsdsa), ret, err);
 
 	/* 3. Compute h = H(r||m) */
 	/* Since we call a callback, sanity check our mapping */
-	if(hash_mapping_callbacks_sanity_check(ctx->h)){
-		return -1;
-	}
-	ctx->h->hfunc_update(&(ctx->verify_data.ecfsdsa.h_ctx), chunk,
+	ret = hash_mapping_callbacks_sanity_check(ctx->h); EG(ret, err);
+	ret = ctx->h->hfunc_update(&(ctx->verify_data.ecfsdsa.h_ctx), chunk,
 			     chunklen);
 
-	return 0;
+err:
+	return ret;
 }
 
 int _ecfsdsa_verify_finalize(struct ec_verify_context *ctx)
@@ -599,15 +541,18 @@ int _ecfsdsa_verify_finalize(struct ec_verify_context *ctx)
 	u8 e_buf[MAX_DIGEST_SIZE];
 	u8 hsize, p_len;
 	const u8 *r;
-	int ret;
+	int ret, iszero;
+
+	tmp.magic = tmp2.magic = e.magic = 0;
+	sG.magic = eY.magic = Wprime.magic = Wprime_aff.magic = 0;
 
 	/*
 	 * First, verify context has been initialized and public
 	 * part too. This guarantees the context is an ECFSDSA
 	 * verification one and we do not finalize() before init().
 	 */
-	SIG_VERIFY_CHECK_INITIALIZED(ctx);
-	ECFSDSA_VERIFY_CHECK_INITIALIZED(&(ctx->verify_data.ecfsdsa));
+	ret = sig_verify_check_initialized(ctx); EG(ret, err);
+	ECFSDSA_VERIFY_CHECK_INITIALIZED(&(ctx->verify_data.ecfsdsa), ret, err);
 
 	/* Zero init points */
 	local_memset(&sG, 0, sizeof(prj_pt));
@@ -626,11 +571,8 @@ int _ecfsdsa_verify_finalize(struct ec_verify_context *ctx)
 
 	/* 3. Compute h = H(r||m) */
 	/* Since we call a callback, sanity check our mapping */
-	if(hash_mapping_callbacks_sanity_check(ctx->h)){
-		ret = -1;
-		goto err;
-	}
-	ctx->h->hfunc_finalize(&(ctx->verify_data.ecfsdsa.h_ctx), e_buf);
+	ret = hash_mapping_callbacks_sanity_check(ctx->h); EG(ret, err);
+	ret = ctx->h->hfunc_finalize(&(ctx->verify_data.ecfsdsa.h_ctx), e_buf); EG(ret, err);
 
 	/*
 	 * 4. Convert h to an integer and then compute e = -h mod q
@@ -638,37 +580,41 @@ int _ecfsdsa_verify_finalize(struct ec_verify_context *ctx)
 	 * Because we only support positive integers, we compute
 	 * e = q - (h mod q) (except when h is 0).
 	 */
-	nn_init_from_buf(&tmp, e_buf, hsize);
+	ret = nn_init_from_buf(&tmp, e_buf, hsize); EG(ret, err);
 	local_memset(e_buf, 0, hsize);
-	nn_mod(&tmp2, &tmp, q);
-	nn_uninit(&tmp);
-	if (nn_iszero(&tmp2)) {
-		nn_zero(&e);
+	ret = nn_mod(&tmp2, &tmp, q); EG(ret, err);
+
+	ret = nn_iszero(&tmp2, &iszero); EG(ret, err);
+	if (iszero) {
+		ret = nn_zero(&e); EG(ret, err);
 	} else {
-		nn_sub(&e, q, &tmp2);
+		ret = nn_sub(&e, q, &tmp2); EG(ret, err);
 	}
-	nn_uninit(&tmp2);
 
 	/* 5. compute W' = (W'_x,W'_y) = sG + tY, where Y is the public key */
-	prj_pt_mul_monty(&sG, s, G);
-	prj_pt_mul_monty(&eY, &e, Y);
-	nn_uninit(&e);
-	prj_pt_add_monty(&Wprime, &sG, &eY);
-	prj_pt_uninit(&sG);
-	prj_pt_uninit(&eY);
-	prj_pt_to_aff(&Wprime_aff, &Wprime);
-	prj_pt_uninit(&Wprime);
+	ret = prj_pt_mul_monty(&sG, s, G); EG(ret, err);
+	ret = prj_pt_mul_monty(&eY, &e, Y); EG(ret, err);
+	ret = prj_pt_add_monty(&Wprime, &sG, &eY); EG(ret, err);
+	ret = prj_pt_to_aff(&Wprime_aff, &Wprime); EG(ret, err);
 
 	/* 6. Compute r' = FE2OS(W'_x)||FE2OS(W'_y) */
-	fp_export_to_buf(r_prime, p_len, &(Wprime_aff.x));
-	fp_export_to_buf(r_prime + p_len, p_len, &(Wprime_aff.y));
-	aff_pt_uninit(&Wprime_aff);
+	ret = fp_export_to_buf(r_prime, p_len, &(Wprime_aff.x)); EG(ret, err);
+	ret = fp_export_to_buf(r_prime + p_len, p_len, &(Wprime_aff.y)); EG(ret, err);
 
 	dbg_buf_print("r_prime: ", r_prime, r_len);
 
 	/* 7. Accept the signature if and only if r equals r' */
 	ret = are_equal(r, r_prime, r_len) ? 0 : -1;
 	local_memset(r_prime, 0, r_len);
+
+err:
+	nn_uninit(&tmp);
+	nn_uninit(&tmp2);
+	nn_uninit(&e);
+	prj_pt_uninit(&sG);
+	prj_pt_uninit(&eY);
+	prj_pt_uninit(&Wprime);
+	aff_pt_uninit(&Wprime_aff);
 
 	/*
 	 * We can now clear data part of the context. This will clear
@@ -687,7 +633,6 @@ int _ecfsdsa_verify_finalize(struct ec_verify_context *ctx)
 	VAR_ZEROIFY(r_len);
 	VAR_ZEROIFY(hsize);
 
-err:
 	return ret;
 }
 
