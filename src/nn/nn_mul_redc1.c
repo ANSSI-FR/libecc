@@ -33,17 +33,22 @@
  *
  * Aliasing of outputs with the input is possible since p_in is
  * copied in local p at the beginning of the function.
+ *
+ * The function returns 0 on success, -1 on error. out parameters 'r',
+ * 'r_square' and 'mpinv' are only meaningful on success.
  */
-word_t nn_compute_redc1_coefs(nn_t r, nn_t r_square, nn_src_t p_in)
+int nn_compute_redc1_coefs(nn_t r, nn_t r_square, nn_src_t p_in, word_t *mpinv)
 {
 	bitcnt_t p_rounded_bitlen;
 	nn p, tmp_nn1, tmp_nn2;
-	word_t mpinv;
+	word_t _mpinv;
+	int ret, isodd;
+	p.magic = tmp_nn1.magic = tmp_nn2.magic = 0;
 
-	nn_check_initialized(p_in);
-
-	nn_init(&p, 0);
-	nn_copy(&p, p_in);
+	ret = nn_check_initialized(p_in); EG(ret, err);
+	ret = nn_init(&p, 0); EG(ret, err);
+	ret = nn_copy(&p, p_in); EG(ret, err);
+	MUST_HAVE((mpinv != NULL), ret, err);
 
 	/*
 	 * In order for our reciprocal division routines to work, it is
@@ -52,29 +57,30 @@ word_t nn_compute_redc1_coefs(nn_t r, nn_t r_square, nn_src_t p_in)
 	 * of a word size.
 	 */
 	if (p.wlen < 2) {
-		nn_set_wlen(&p, 2);
+		ret = nn_set_wlen(&p, 2); EG(ret, err);
 	}
 
-	nn_init(r, 0);
-	nn_init(r_square, 0);
-	nn_init(&tmp_nn1, 0);
-	nn_init(&tmp_nn2, 0);
+	ret = nn_init(r, 0); EG(ret, err);
+	ret = nn_init(r_square, 0); EG(ret, err);
+	ret = nn_init(&tmp_nn1, 0); EG(ret, err);
+	ret = nn_init(&tmp_nn2, 0); EG(ret, err);
 
 	/* p_rounded_bitlen = bitlen of p rounded to word size */
 	p_rounded_bitlen = WORD_BITS * p.wlen;
 
-	/* mpinv = 2^wlen - (modinv(prime, 2^wlen)) */
-	nn_set_wlen(&tmp_nn1, 2);
+	/* _mpinv = 2^wlen - (modinv(prime, 2^wlen)) */
+	ret = nn_set_wlen(&tmp_nn1, 2); EG(ret, err);
 	tmp_nn1.val[1] = WORD(1);
-	nn_copy(&tmp_nn2, &tmp_nn1);
-	nn_modinv_2exp(&tmp_nn1, &p, WORD_BITS);
-	nn_sub(&tmp_nn1, &tmp_nn2, &tmp_nn1);
-	mpinv = tmp_nn1.val[0];
+	ret = nn_copy(&tmp_nn2, &tmp_nn1); EG(ret, err);
+	ret = nn_modinv_2exp(&tmp_nn1, &p, WORD_BITS, &isodd); EG(ret, err);
+	/* XXX FIXME: verify why we do not check isodd after previous call */
+	ret = nn_sub(&tmp_nn1, &tmp_nn2, &tmp_nn1); EG(ret, err);
+	_mpinv = tmp_nn1.val[0];
 
 	/* r = (0x1 << p_rounded_bitlen) (p) */
-	nn_one(r);
-	nn_lshift(r, r, p_rounded_bitlen);
-	nn_mod(r, r, &p);
+	ret = nn_one(r); EG(ret, err);
+	ret = nn_lshift(r, r, p_rounded_bitlen); EG(ret, err);
+	ret = nn_mod(r, r, &p); EG(ret, err);
 
 	/*
 	 * r_square = (0x1 << (2*p_rounded_bitlen)) (p)
@@ -85,15 +91,19 @@ word_t nn_compute_redc1_coefs(nn_t r, nn_t r_square, nn_src_t p_in)
 	 * constants!)
 	 */
 	/* Check we have indeed enough space for our r_square computation */
-	MUST_HAVE(NN_MAX_BIT_LEN >= (2 * p_rounded_bitlen));
-	nn_sqr(r_square, r);
-	nn_mod(r_square, r_square, &p);
+	MUST_HAVE(!(NN_MAX_BIT_LEN < (2 * p_rounded_bitlen)), ret, err);
 
+	ret = nn_sqr(r_square, r); EG(ret, err);
+	ret = nn_mod(r_square, r_square, &p); EG(ret, err);
+
+	*mpinv = _mpinv;
+
+err:
 	nn_uninit(&p);
 	nn_uninit(&tmp_nn1);
 	nn_uninit(&tmp_nn2);
 
-	return mpinv;
+	return ret;
 }
 
 /*
@@ -106,18 +116,21 @@ word_t nn_compute_redc1_coefs(nn_t r, nn_t r_square, nn_src_t p_in)
  *
  * The p input is the modulo number of the Montgomery multiplication,
  * and mpinv is -p^(-1) mod (2^WORDSIZE).
+ *
+ * The function does not check input parameters are initialized. This
+ * MUST be done by the caller.
+ *
+ * The function returns 0 on success, -1 on error.
  */
-static void _nn_mul_redc1(nn_t out, nn_src_t in1, nn_src_t in2, nn_src_t p,
-			  word_t mpinv)
+static int _nn_mul_redc1(nn_t out, nn_src_t in1, nn_src_t in2, nn_src_t p,
+			 word_t mpinv)
 {
 	word_t prod_high, prod_low, carry, acc, m;
 	unsigned int i, j, len, len_mul;
 	/* a and b inputs such that len(b) <= len(a) */
 	nn_src_t a, b;
-
-	nn_check_initialized(in1);
-	nn_check_initialized(in2);
-	nn_check_initialized(p);
+	int ret, cmp;
+	u8 old_wlen;
 
 	/*
 	 * These comparisons are input hypothesis and does not "break"
@@ -125,10 +138,11 @@ static void _nn_mul_redc1(nn_t out, nn_src_t in1, nn_src_t in2, nn_src_t p,
 	 * when this check is always done, this is why we use our
 	 * SHOULD_HAVE primitive.
 	 */
-	SHOULD_HAVE(nn_cmp(in1, p) < 0);
-	SHOULD_HAVE(nn_cmp(in2, p) < 0);
+	SHOULD_HAVE((!nn_cmp(in1, p, &cmp)) && (cmp < 0), ret, err);
+	SHOULD_HAVE((!nn_cmp(in2, p, &cmp)) && (cmp < 0), ret, err);
 
-	nn_init(out, 0);
+	ret = nn_init(out, 0); EG(ret, err);
+
 	/* Check which one of in1 or in2 is the biggest */
 	a = (in1->wlen <= in2->wlen) ? in2 : in1;
 	b = (in1->wlen <= in2->wlen) ? in1 : in2;
@@ -140,7 +154,7 @@ static void _nn_mul_redc1(nn_t out, nn_src_t in1, nn_src_t in2, nn_src_t p,
 	 * out prime p real bit size. Thus, we expand the output
 	 * size to the size of p.
 	 */
-	nn_set_wlen(out, p->wlen);
+	ret = nn_set_wlen(out, p->wlen); EG(ret, err);
 
 	len = out->wlen;
 	len_mul = b->wlen;
@@ -148,8 +162,9 @@ static void _nn_mul_redc1(nn_t out, nn_src_t in1, nn_src_t in2, nn_src_t p,
 	 * We extend out to store carries. We first check that we
 	 * do not have an overflow on the NN size.
 	 */
-	MUST_HAVE(NN_MAX_BIT_LEN >= (WORD_BITS * (out->wlen + 1)));
-	out->wlen += 1;
+	MUST_HAVE(((WORD_BITS * (out->wlen + 1)) <= NN_MAX_BIT_LEN), ret, err);
+	old_wlen = out->wlen;
+	out->wlen += (u8)1;
 
 	/*
 	 * This can be skipped if the first iteration of the for loop
@@ -193,25 +208,59 @@ static void _nn_mul_redc1(nn_t out, nn_src_t in1, nn_src_t in2, nn_src_t p,
 	 * Note that at this stage the msw of out is either 0 or 1.
 	 * If out > p we need to subtract p from out.
 	 */
-	nn_cnd_sub(nn_cmp(out, p) >= 0, out, out, p);
-	MUST_HAVE(nn_cmp(out, p) < 0);
+	ret = nn_cmp(out, p, &cmp); EG(ret, err);
+	ret = nn_cnd_sub(cmp >= 0, out, out, p); EG(ret, err);
+	MUST_HAVE(!nn_cmp(out, p, &cmp) && (cmp < 0), ret, err);
 	/* We restore out wlen. */
-	out->wlen -= 1;
+	out->wlen = old_wlen;
+
+err:
+	return ret;
 }
 
-void nn_mul_redc1(nn_t out, nn_src_t in1, nn_src_t in2, nn_src_t p,
-		  word_t mpinv)
+/*
+ * Wrapper for previous function handling aliasing of one of the input
+ * paramter with out, through a copy. The function does not check
+ * input parameters are initialized. This MUST be done by the caller.
+ */
+static int _nn_mul_redc1_aliased(nn_t out, nn_src_t in1, nn_src_t in2,
+				 nn_src_t p, word_t mpinv)
 {
-	/* Handle output aliasing */
+	nn out_cpy;
+	int ret;
+	out_cpy.magic = 0;
+
+	ret = _nn_mul_redc1(&out_cpy, in1, in2, p, mpinv); EG(ret, err);
+	ret = nn_init(out, out_cpy.wlen); EG(ret, err);
+	ret = nn_copy(out, &out_cpy);
+
+err:
+	nn_uninit(&out_cpy);
+	return ret;
+}
+
+/*
+ * Public version, handling possible aliasing of out parameter with
+ * one of the input parameters.
+ */
+int nn_mul_redc1(nn_t out, nn_src_t in1, nn_src_t in2, nn_src_t p,
+		 word_t mpinv)
+{
+	int ret;
+
+	ret = nn_check_initialized(in1); EG(ret, err);
+	ret = nn_check_initialized(in2); EG(ret, err);
+	ret = nn_check_initialized(p); EG(ret, err);
+
+	/* Handle possible output aliasing */
 	if ((out == in1) || (out == in2) || (out == p)) {
-		nn out_cpy;
-		_nn_mul_redc1(&out_cpy, in1, in2, p, mpinv);
-		nn_init(out, out_cpy.wlen);
-		nn_copy(out, &out_cpy);
-		nn_uninit(&out_cpy);
+		ret = _nn_mul_redc1_aliased(out, in1, in2, p, mpinv);
 	} else {
-		_nn_mul_redc1(out, in1, in2, p, mpinv);
+		ret = _nn_mul_redc1(out, in1, in2, p, mpinv);
 	}
+
+err:
+	return ret;
 }
 
 /*
@@ -228,17 +277,21 @@ void nn_mul_redc1(nn_t out, nn_src_t in1, nn_src_t in2, nn_src_t p,
  *
  * but the modular reduction is done progressively during
  * Montgomery reduction.
+ *
+ * The function returns 0 on success, -1 on error.
  */
-void nn_mul_mod(nn_t out, nn_src_t in1, nn_src_t in2, nn_src_t p_in)
+int nn_mul_mod(nn_t out, nn_src_t in1, nn_src_t in2, nn_src_t p_in)
 {
 	nn r, r_square;
 	nn in1_tmp, in2_tmp, tmp;
 	word_t mpinv;
 	nn one;
 	nn p;
+	int ret;
+	tmp.magic = one.magic = p.magic = 0;
 
-	nn_init(&p, 0);
-	nn_copy(&p, p_in);
+	ret = nn_init(&p, 0); EG(ret, err);
+	ret = nn_copy(&p, p_in); EG(ret, err);
 
 	/*
 	 * In order for our reciprocal division routines to work, it is
@@ -247,27 +300,32 @@ void nn_mul_mod(nn_t out, nn_src_t in1, nn_src_t in2, nn_src_t p_in)
 	 * of a word size.
 	 */
 	if (p.wlen < 2) {
-		nn_set_wlen(&p, 2);
+		ret = nn_set_wlen(&p, 2); EG(ret, err);
 	}
 
 	/* Compute Mongtomery coefs */
-	mpinv = nn_compute_redc1_coefs(&r, &r_square, &p);
+	ret = nn_compute_redc1_coefs(&r, &r_square, &p, &mpinv); EG(ret, err);
 	nn_uninit(&r);
 
 	/* redcify in1 and in2 */
-	nn_mul_redc1(&in1_tmp, in1, &r_square, &p, mpinv);
-	nn_mul_redc1(&in2_tmp, in2, &r_square, &p, mpinv);
+	ret = nn_mul_redc1(&in1_tmp, in1, &r_square, &p, mpinv); EG(ret, err);
+	ret = nn_mul_redc1(&in2_tmp, in2, &r_square, &p, mpinv); EG(ret, err);
 
 	/* Compute in1 * in2 mod p in montgomery world */
-	nn_mul_redc1(&tmp, &in1_tmp, &in2_tmp, &p, mpinv);
+	ret = nn_mul_redc1(&tmp, &in1_tmp, &in2_tmp, &p, mpinv); EG(ret, err);
+
 	nn_uninit(&in1_tmp);
 	nn_uninit(&in2_tmp);
 
 	/* Come back to real world by unredcifying result */
-	nn_init(&one, 0);
-	nn_one(&one);
-	nn_mul_redc1(out, &tmp, &one, &p, mpinv);
+	ret = nn_init(&one, 0); EG(ret, err);
+	ret = nn_one(&one); EG(ret, err);
+	ret = nn_mul_redc1(out, &tmp, &one, &p, mpinv); EG(ret, err);
+
+err:
 	nn_uninit(&tmp);
 	nn_uninit(&one);
 	nn_uninit(&p);
+
+	return ret;
 }
