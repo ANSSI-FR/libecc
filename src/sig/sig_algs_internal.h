@@ -40,24 +40,6 @@
 #error "It seems you disabled all signature schemes in lib_ecc_config.h"
 #endif
 
-/* Sanity check to ensure our sig mapping does not contain
- * NULL pointers
- */
-#define SIG_MAPPING_SANITY_CHECK(A)			\
-	MUST_HAVE(((A) != NULL) &&			\
-		  ((A)->name != NULL) &&		\
-		  ((A)->siglen != NULL) &&		\
-		  ((A)->gen_priv_key != NULL) &&	\
-		  ((A)->init_pub_key != NULL) &&	\
-		  ((A)->sign_init != NULL) &&		\
-		  ((A)->sign_update != NULL) &&		\
-		  ((A)->sign_finalize != NULL) &&	\
-		  ((A)->sign != NULL) &&		\
-		  ((A)->verify_init != NULL) &&		\
-		  ((A)->verify_update != NULL) &&	\
-		  ((A)->verify_finalize != NULL) &&	\
-		  ((A)->verify != NULL))		\
-
 /*
  * All the signature algorithms we support are abstracted using the following
  * structure (and following map) which provides for each hash alg its
@@ -67,7 +49,7 @@ typedef struct {
 	ec_sig_alg_type type;
 	const char *name;
 
-	u8 (*siglen) (u16 p_bit_len, u16 q_bit_len, u8 hsize, u8 blocksize);
+	int (*siglen) (u16 p_bit_len, u16 q_bit_len, u8 hsize, u8 blocksize, u8 *siglen);
 
 	int (*gen_priv_key) (ec_priv_key *priv_key);
 	int (*init_pub_key) (ec_pub_key *pub_key, const ec_priv_key *priv_key);
@@ -91,6 +73,27 @@ typedef struct {
 	      const u8 *m, u32 mlen, ec_sig_alg_type sig_type,
 	      hash_alg_type hash_type, const u8 *adata, u16 adata_len);
 } ec_sig_mapping;
+
+/* Sanity check to ensure our sig mapping does not contain
+ * NULL pointers
+ */
+static inline int sig_mapping_sanity_check(const ec_sig_mapping *sm)
+{
+	int ret;
+
+	MUST_HAVE(!((sm == NULL) || (sm->name == NULL) || (sm->siglen == NULL) ||
+		    (sm->gen_priv_key == NULL) || (sm->init_pub_key == NULL) ||
+		    (sm->sign_init == NULL) || (sm->sign_update == NULL) ||
+		    (sm->sign_finalize == NULL) || (sm->sign == NULL) ||
+		    (sm->verify_init == NULL) || (sm->verify_update == NULL) ||
+		    (sm->verify_finalize == NULL) || (sm->verify == NULL)),
+		   ret, err);
+
+	ret = 0;
+
+err:
+	return ret;
+}
 
 /*
  * Each specific signature scheme need to maintain some specific
@@ -154,8 +157,10 @@ struct ec_sign_context {
 };
 
 #define SIG_SIGN_MAGIC ((word_t)(0x4ed73cfe4594dfd3ULL))
-#define SIG_SIGN_CHECK_INITIALIZED(A) \
-	MUST_HAVE(((A) != NULL) && ((A)->ctx_magic == SIG_SIGN_MAGIC))
+static inline int sig_sign_check_initialized(struct ec_sign_context *ctx)
+{
+	return (((ctx == NULL) || (ctx->ctx_magic != SIG_SIGN_MAGIC)) ? -1 : 0);
+}
 
 typedef union {
 #ifdef WITH_SIG_ECDSA		/* ECDSA */
@@ -204,8 +209,10 @@ struct ec_verify_context {
 };
 
 #define SIG_VERIFY_MAGIC ((word_t)(0x7e0d42d13e3159baULL))
-#define SIG_VERIFY_CHECK_INITIALIZED(A) \
-	MUST_HAVE(((A) != NULL) &&	((A)->ctx_magic == SIG_VERIFY_MAGIC))
+static inline int sig_verify_check_initialized(struct ec_verify_context *ctx)
+{
+	return (((ctx == NULL) || (ctx->ctx_magic != SIG_VERIFY_MAGIC)) ? -1 : 0);
+}
 
 /* Generic signature and verification APIs that will in fact call init / update / finalize in
  * backend. Used for signature and verification functions that support these streaming APIs.
