@@ -849,26 +849,6 @@ int read_string(int fd, char *buf, unsigned int *buflen)
 	return 0;
 }
 
-/* Some mockup code to be able to compile in CRYPTOFUZZ mode although
- * setjmp/longjmp are used.
- */
-#if defined(USE_CRYPTOFUZZ) /* CRYPTOFUZZ mode */
-sigjmp_buf cryptofuzz_jmpbuf;
-unsigned char cryptofuzz_longjmp_triggered;
-#define cryptofuzz_save() do {                                                                  \
-        if(sigsetjmp(cryptofuzz_jmpbuf, 1) && (cryptofuzz_longjmp_triggered == 0)){             \
-                exit(-1);                                                                       \
-        }                                                                                       \
-        if(cryptofuzz_longjmp_triggered == 1){                                                  \
-                ext_printf("ASSERT error caught through cryptofuzz_jmpbuf\n");                  \
-                exit(-1);                                                                       \
-        }                                                                                       \
-} while(0);                                                                                     
-#include <string.h>
-#include <stdlib.h>
-#include <stdio.h>
-#endif
-
 
 /*
  * Parse a test file and perform the tests it provides, one
@@ -876,14 +856,6 @@ unsigned char cryptofuzz_longjmp_triggered;
  */
 int main(int argc, char *argv[])
 {
-        /* Some mockup code to be able to compile in CRYPTOFUZZ mode although
-         * setjmp/longjmp are used.
-         */
-#if defined(USE_CRYPTOFUZZ) /* CRYPTOFUZZ mode */
-        /* Save our context */
-        cryptofuzz_save()
-#endif
-
 	nn fp_ctx_modulus, fp_ctx_r, fp_ctx_r_square, fp_ctx_mpinv;
 	nn fp_ctx_pshift, fp_ctx_pnorm, fp_ctx_prec;
 	fp_ctx fp_ctx_param;

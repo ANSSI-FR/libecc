@@ -213,36 +213,8 @@ err:
 }
 
 #ifdef CURVE_ECDH
-/* Some mockup code to be able to compile in CRYPTOFUZZ mode although
- * setjmp/longjmp are used.
- */
-#if defined(USE_CRYPTOFUZZ) /* CRYPTOFUZZ mode */
-sigjmp_buf cryptofuzz_jmpbuf;
-unsigned char cryptofuzz_longjmp_triggered;
-#define cryptofuzz_save() do {                                                                  \
-        if(sigsetjmp(cryptofuzz_jmpbuf, 1) && (cryptofuzz_longjmp_triggered == 0)){             \
-                exit(-1);                                                                       \
-        }                                                                                       \
-        if(cryptofuzz_longjmp_triggered == 1){                                                  \
-                ext_printf("ASSERT error caught through cryptofuzz_jmpbuf\n");                  \
-                exit(-1);                                                                       \
-        }                                                                                       \
-} while(0);
-#include <string.h>
-#include <stdlib.h>
-#include <stdio.h>
-#endif
-
 int main()
 {
-        /* Some mockup code to be able to compile in CRYPTOFUZZ mode although
-         * setjmp/longjmp are used.
-         */
-#if defined(USE_CRYPTOFUZZ) /* CRYPTOFUZZ mode */
-        /* Save our context */
-        cryptofuzz_save()
-#endif
-
 	unsigned int i;
 	u8 curve_name[MAX_CURVE_NAME_LEN] = { 0 };
 

@@ -77,34 +77,6 @@
 #define SHOULD_HAVE(x)
 #define KNOWN_FACT(x)
 
-/****** CRYPTOFUZZ specific case ***********************************/
-#elif defined(USE_CRYPTOFUZZ) /* CRYPTOFUZZ mode */
-/*
- * In CRYPTOFUZZ mode, we use the setjmp/longjmp paradigm in MUST_HAVE
- * to avoid libfuzzer spurious bug detection.
- */
-#ifndef WITH_STDLIB
-#error "CRYPTOFUZZ Fuzzing needs the STDLIB!"
-#endif
-#ifndef _POSIX_SOURCE
-#define _POSIX_SOURCE /* sig versions of set/longjmp need POSIX */
-#endif
-#include <setjmp.h>
-#if defined(WIN32) || defined(__MINGW32__) || defined(__MINGW64__)
-/* NOTE: in WIN32 environments, there is no sigsetjmp:
- * emulate it with plain setjmp
- */
-#define sigjmp_buf jmp_buf
-#define sigsetjmp(x,y) setjmp(x)
-#define siglongjmp longjmp
-#define sigjmp_buf jmp_buf
-#endif
-extern sigjmp_buf cryptofuzz_jmpbuf;
-extern unsigned char cryptofuzz_longjmp_triggered;
-#define MUST_HAVE(x)
-#define SHOULD_HAVE(x)
-#define KNOWN_FACT(x)
-
 /****** Regular DEBUG and production modes cases  ****************/
 #else /* DEBUG and production modes */
 #if defined(DEBUG)

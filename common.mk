@@ -209,7 +209,7 @@ endif
 # which is DANGEROUS. Do not activate in production
 # mode!
 ifeq ($(CRYPTOFUZZ), 1)
-CFLAGS += -DUSE_CRYPTOFUZZ -ffreestanding
+CFLAGS += -DUSE_CRYPTOFUZZ
 endif
 
 ifeq ($(ASSERT_PRINT), 1)

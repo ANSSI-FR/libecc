@@ -17,26 +17,6 @@
 #include "../utils/utils.h"
 #include "../libsig.h"
 
-/* Some mockup code to be able to compile in CRYPTOFUZZ mode although
- * setjmp/longjmp are used.
- */
-#if defined(USE_CRYPTOFUZZ) /* CRYPTOFUZZ mode */
-sigjmp_buf cryptofuzz_jmpbuf;
-unsigned char cryptofuzz_longjmp_triggered;
-#define cryptofuzz_save() do {                                                                  \
-        if(sigsetjmp(cryptofuzz_jmpbuf, 1) && (cryptofuzz_longjmp_triggered == 0)){             \
-                exit(-1);                                                                       \
-        }                                                                                       \
-        if(cryptofuzz_longjmp_triggered == 1){                                                  \
-                ext_printf("ASSERT error caught through cryptofuzz_jmpbuf\n");                  \
-                exit(-1);                                                                       \
-        }                                                                                       \
-} while(0);
-#include <string.h>
-#include <stdlib.h>
-#include <stdio.h>
-#endif
-
 /*
  * Use extern declarations to avoid including
  * ec_self_tests_core.h, which has all fixed
@@ -165,14 +145,6 @@ static void print_help(const char *bad_arg)
 
 int main(int argc, char *argv[])
 {
-        /* Some mockup code to be able to compile in CRYPTOFUZZ mode although
-         * setjmp/longjmp are used.
-         */
-#if defined(USE_CRYPTOFUZZ) /* CRYPTOFUZZ mode */
-        /* Save our context */
-        cryptofuzz_save()
-#endif
-
 	int ret;
 	unsigned int tests_to_do;
 	const char *sign_filters[MAX_FILTERS]  = { NULL };
