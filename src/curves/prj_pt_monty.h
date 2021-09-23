@@ -18,14 +18,10 @@
 
 #include "prj_pt.h"
 
-void prj_pt_add_monty(prj_pt_t sum, prj_pt_src_t in1, prj_pt_src_t in2);
-
-void prj_pt_dbl_monty(prj_pt_t dbl, prj_pt_src_t in);
-
-void prj_pt_mul_ltr_monty(prj_pt_t out, nn_src_t m, prj_pt_src_t in);
-
-void prj_pt_mul_monty(prj_pt_t out, nn_src_t m, prj_pt_src_t in);
-
+int prj_pt_add_monty(prj_pt_t sum, prj_pt_src_t in1, prj_pt_src_t in2);
+int prj_pt_dbl_monty(prj_pt_t dbl, prj_pt_src_t in);
+int prj_pt_mul_ltr_monty(prj_pt_t out, nn_src_t m, prj_pt_src_t in);
+int prj_pt_mul_monty(prj_pt_t out, nn_src_t m, prj_pt_src_t in);
 int prj_pt_mul_monty_blind(prj_pt_t out, nn_src_t m, prj_pt_src_t in);
 
 int check_prj_pt_order(prj_pt_src_t in_shortw, nn_src_t in_isorder);
