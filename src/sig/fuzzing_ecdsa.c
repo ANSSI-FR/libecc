@@ -35,16 +35,11 @@
  */
 
 #define ECDSA_SIGN_MAGIC ((word_t)(0x80299a2bf630945bULL))
-#define ECDSA_SIGN_CHECK_INITIALIZED(A) \
-        MUST_HAVE((((void *)(A)) != NULL) && ((A)->magic == ECDSA_SIGN_MAGIC))
+#define ECDSA_SIGN_CHECK_INITIALIZED(A, ret, err) \
+        MUST_HAVE((((void *)(A)) != NULL) && ((A)->magic == ECDSA_SIGN_MAGIC), ret, err)
 
 int ecdsa_sign_raw(struct ec_sign_context *ctx, const u8 *input, u8 inputlen, u8 *sig, u8 siglen, const u8 *nonce, u8 noncelen)
 {
-	nn k, r, e, tmp, tmp2, s, kinv;
-#ifdef USE_SIG_BLINDING
-        /* b is the blinding mask */
-        nn b;
-#endif
 	const ec_priv_key *priv_key;
 	prj_pt_src_t G;
 	/* NOTE: hash here is not really a hash ... */
@@ -54,15 +49,24 @@ int ecdsa_sign_raw(struct ec_sign_context *ctx, const u8 *input, u8 inputlen, u8
 	aff_pt W;
 	nn_src_t q, x;
 	u8 hsize, q_len;
-	int ret;
+	int ret, iszero, cmp;
+	nn k, r, e, tmp, tmp2, s, kinv;
+#ifdef USE_SIG_BLINDING
+        /* b is the blinding mask */
+        nn b;
+	b.magic = 0;
+#endif
+	k.magic = r.magic = e.magic = 0;
+	tmp.magic = tmp2.magic = s.magic = kinv.magic = 0;
+	kG.magic = W.magic = 0;
 
 	/*
 	 * First, verify context has been initialized and private
 	 * part too. This guarantees the context is an ECDSA
 	 * signature one and we do not finalize() before init().
 	 */
-	SIG_SIGN_CHECK_INITIALIZED(ctx);
-	ECDSA_SIGN_CHECK_INITIALIZED(&(ctx->sign_data.ecdsa));
+	ret = sig_sign_check_initialized(ctx); EG(ret, err);
+	ECDSA_SIGN_CHECK_INITIALIZED(&(ctx->sign_data.ecdsa), ret, err);
 
 	/* Zero init out poiny */
 	local_memset(&kG, 0, sizeof(prj_pt));
@@ -83,20 +87,15 @@ int ecdsa_sign_raw(struct ec_sign_context *ctx, const u8 *input, u8 inputlen, u8
 	dbg_pub_key_print("Y", &(ctx->key_pair->pub_key));
 
 	/* Check given signature buffer length has the expected size */
-	if (siglen != ECDSA_SIGLEN(q_bit_len)) {
-		ret = -1;
-		goto err;
-	}
+	MUST_HAVE(siglen == ECDSA_SIGLEN(q_bit_len), ret, err);
 
 	/* 1. Compute h = H(m) */
 	/* NOTE: here we have raw ECDSA, this is the raw input */
-	if((input == NULL) || (inputlen > sizeof(hash))){
-		ret = -1;
-		goto err;
-	}
+	MUST_HAVE((input != NULL) && (inputlen <= sizeof(hash)), ret, err);
+
 	local_memset(hash, 0, sizeof(hash));
 	local_memcpy(hash, input, hsize);
-	
+
 	dbg_buf_print("h", hash, hsize);
 
 	/*
@@ -117,14 +116,14 @@ int ecdsa_sign_raw(struct ec_sign_context *ctx, const u8 *input, u8 inputlen, u8
 	 * 3. Compute e = OS2I(h) mod q, i.e. by converting h to an
 	 *    integer and reducing it mod q
 	 */
-	nn_init_from_buf(&tmp2, hash, hsize);
+	ret = nn_init_from_buf(&tmp2, hash, hsize); EG(ret, err);
 	local_memset(hash, 0, hsize);
 	dbg_nn_print("h initial import as nn", &tmp2);
 	if (rshift) {
-		nn_rshift_fixedlen(&tmp2, &tmp2, rshift);
+		ret = nn_rshift_fixedlen(&tmp2, &tmp2, rshift); EG(ret, err);
 	}
 	dbg_nn_print("h   final import as nn", &tmp2);
-	nn_mod(&e, &tmp2, q);
+	ret = nn_mod(&e, &tmp2, q); EG(ret, err);
 	dbg_nn_print("e", &e);
 
 /*
@@ -137,54 +136,39 @@ int ecdsa_sign_raw(struct ec_sign_context *ctx, const u8 *input, u8 inputlen, u8
 	if(nonce != NULL){
                 if(noncelen > (u8)(BYTECEIL(q_bit_len))){
 			ret = -1;
+			goto err;
 		}
 		else{
-			nn_init_from_buf(&k, nonce, noncelen);
-			ret = 0;
+			ret = nn_init_from_buf(&k, nonce, noncelen); EG(ret, err);
 		}
 	}
 	else{
-		ret = ctx->rand(&k, q);
-	}
-	if (ret) {
-		nn_uninit(&tmp2);
-		nn_uninit(&e);
-		ret = -1;
-		goto err;
+		ret = ctx->rand(&k, q); EG(ret, err);
 	}
 	dbg_nn_print("k", &k);
 
 #ifdef USE_SIG_BLINDING
 	/* Note: if we use blinding, r and e are multiplied by
 	 * a random value b in ]0,q[ */
-        ret = nn_get_random_mod(&b, q);
-        if (ret) {
-		nn_uninit(&tmp2);
-		nn_uninit(&e);
-		ret = -1;
-                goto err;
-        }
+        ret = nn_get_random_mod(&b, q); EG(ret, err);
         dbg_nn_print("b", &b);
 #endif /* USE_SIG_BLINDING */
 
 
 	/* 5. Compute W = (W_x,W_y) = kG */
 #ifdef USE_SIG_BLINDING
-	if(prj_pt_mul_monty_blind(&kG, &k, G)){
-		ret = -1;
-		goto err;
-	}
+	ret = prj_pt_mul_monty_blind(&kG, &k, G); EG(ret, err);
 #else
-        prj_pt_mul_monty(&kG, &k, G);
+ 	ret = prj_pt_mul_monty(&kG, &k, G); EG(ret, err);
 #endif /* USE_SIG_BLINDING */
-	prj_pt_to_aff(&W, &kG);
+	ret = prj_pt_to_aff(&W, &kG); EG(ret, err);
 	prj_pt_uninit(&kG);
 
 	dbg_nn_print("W_x", &(W.x.fp_val));
 	dbg_nn_print("W_y", &(W.y.fp_val));
 
 	/* 6. Compute r = W_x mod q */
-	nn_mod(&r, &(W.x.fp_val), q);
+	ret = nn_mod(&r, &(W.x.fp_val), q); EG(ret, err);
 	aff_pt_uninit(&W);
 	dbg_nn_print("r", &r);
 
@@ -192,51 +176,53 @@ int ecdsa_sign_raw(struct ec_sign_context *ctx, const u8 *input, u8 inputlen, u8
 	/* NOTE: for the CRYPTOFUZZ mode, we do not restart
 	 * the procedure but throw an assert exception instead.
 	 */
-	MUST_HAVE(!nn_iszero(&r));
+	ret = nn_iszero(&r, &iszero); EG(ret, err);
+	MUST_HAVE(!iszero, ret, err);
 
 	/* Export r */
-	nn_export_to_buf(sig, q_len, &r);
+	ret = nn_export_to_buf(sig, q_len, &r); EG(ret, err);
 
 #ifdef USE_SIG_BLINDING
 	/* Blind r with b */
-	nn_mul_mod(&r, &r, &b, q);
+	ret = nn_mul_mod(&r, &r, &b, q); EG(ret, err);
 
 	/* Blind the message e */
-	nn_mul_mod(&e, &e, &b, q);
+	ret = nn_mul_mod(&e, &e, &b, q); EG(ret, err);
 #endif /* USE_SIG_BLINDING */
 
 	/* tmp = xr mod q */
-	nn_mul_mod(&tmp, x, &r, q);
+	ret = nn_mul_mod(&tmp, x, &r, q); EG(ret, err);
 	dbg_nn_print("x*r mod q", &tmp);
 
 	/* 8. If e == rx, restart the process at step 4. */
 	/* NOTE: for the CRYPTOFUZZ mode, we do not restart
 	 * the procedure but throw an assert exception instead.
 	 */
-	MUST_HAVE(nn_cmp(&e, &tmp));
+	ret = nn_cmp(&e, &tmp, &cmp); EG(ret, err);
+	MUST_HAVE(cmp, ret, err);
 
 	/* 9. Compute s = k^-1 * (xr + e) mod q */
 
 	/* tmp2 = (e + xr) mod q */
-	nn_mod_add(&tmp2, &tmp, &e, q);
+	ret = nn_mod_add(&tmp2, &tmp, &e, q); EG(ret, err);
 	nn_uninit(&e);
 	nn_uninit(&tmp);
 	dbg_nn_print("(xr + e) mod q", &tmp2);
 
 #ifdef USE_SIG_BLINDING
-	/* In case of blinding, we compute (b*k)^-1, and 
+	/* In case of blinding, we compute (b*k)^-1, and
 	 * b^-1 will automatically unblind (r*x) in the following
 	 */
-	nn_mul_mod(&k, &k, &b, q);
+	ret = nn_mul_mod(&k, &k, &b, q); EG(ret, err);
 #endif
 	/* Compute k^-1 mod q */
-	nn_modinv(&kinv, &k, q);
+	ret = nn_modinv(&kinv, &k, q); EG(ret, err);
 	nn_uninit(&k);
 
 	dbg_nn_print("k^-1 mod q", &kinv);
 
 	/* s = k^-1 * tmp2 mod q */
-	nn_mul_mod(&s, &tmp2, &kinv, q);
+	ret = nn_mul_mod(&s, &tmp2, &kinv, q); EG(ret, err);
 	nn_uninit(&kinv);
 	nn_uninit(&tmp2);
 
@@ -246,15 +232,19 @@ int ecdsa_sign_raw(struct ec_sign_context *ctx, const u8 *input, u8 inputlen, u8
 	/* NOTE: for the CRYPTOFUZZ mode, we do not restart
 	 * the procedure but throw an assert exception instead.
 	 */
-	MUST_HAVE(!nn_iszero(&s));
+	ret = nn_iszero(&s, &iszero); EG(ret, err);
+	MUST_HAVE(!iszero, ret, err);
 
 	/* 11. return (r,s) */
-	nn_export_to_buf(sig + q_len, q_len, &s);
+	ret = nn_export_to_buf(sig + q_len, q_len, &s); EG(ret, err);
 
 	nn_uninit(&r);
 	nn_uninit(&s);
 
  err:
+
+	nn_uninit(&tmp2);
+	nn_uninit(&e);
 
 	/*
 	 * We can now clear data part of the context. This will clear
@@ -273,9 +263,7 @@ int ecdsa_sign_raw(struct ec_sign_context *ctx, const u8 *input, u8 inputlen, u8
 	VAR_ZEROIFY(hsize);
 
 #ifdef USE_SIG_BLINDING
-        if(nn_is_initialized(&b)){
-                nn_uninit(&b);
-        }
+	nn_uninit(&b);
 #endif /* USE_SIG_BLINDING */
 
 	return ret;
@@ -283,8 +271,8 @@ int ecdsa_sign_raw(struct ec_sign_context *ctx, const u8 *input, u8 inputlen, u8
 
 /******************************/
 #define ECDSA_VERIFY_MAGIC ((word_t)(0x5155fe73e7fd51beULL))
-#define ECDSA_VERIFY_CHECK_INITIALIZED(A) \
-        MUST_HAVE((((void *)(A)) != NULL) && ((A)->magic == ECDSA_VERIFY_MAGIC))
+#define ECDSA_VERIFY_CHECK_INITIALIZED(A, ret, err) \
+        MUST_HAVE((((void *)(A)) != NULL) && ((A)->magic == ECDSA_VERIFY_MAGIC), ret, err)
 
 int ecdsa_verify_raw(struct ec_verify_context *ctx, const u8 *input, u8 inputlen)
 {
@@ -298,15 +286,19 @@ int ecdsa_verify_raw(struct ec_verify_context *ctx, const u8 *input, u8 inputlen
 	nn_src_t q;
 	nn *s, *r;
 	u8 hsize;
-	int ret;
+	int ret, iszero, cmp;
+
+	e.magic = tmp.magic = sinv.magic = u.magic = 0;
+	v.magic = r_prime.magic = 0;
+	uG.magic = vY.magic = W_prime.magic = W_prime_aff.magic = 0;
 
 	/*
 	 * First, verify context has been initialized and public
 	 * part too. This guarantees the context is an ECDSA
 	 * verification one and we do not finalize() before init().
 	 */
-	SIG_VERIFY_CHECK_INITIALIZED(ctx);
-	ECDSA_VERIFY_CHECK_INITIALIZED(&(ctx->verify_data.ecdsa));
+	ret = sig_verify_check_initialized(ctx); EG(ret, err);
+	ECDSA_VERIFY_CHECK_INITIALIZED(&(ctx->verify_data.ecdsa), ret, err);
 
 	/* Zero init points */
 	local_memset(&uG, 0, sizeof(prj_pt));
@@ -323,13 +315,11 @@ int ecdsa_verify_raw(struct ec_verify_context *ctx, const u8 *input, u8 inputlen
 
 	/* 2. Compute h = H(m) */
 	/* NOTE: here we have raw ECDSA, this is the raw input */
-	if((input == NULL) || (inputlen > sizeof(hash))){
-		ret = -1;
-		goto err;
-	}
+	MUST_HAVE((input != NULL) && (inputlen <= sizeof(hash)), ret, err);
+
 	local_memset(hash, 0, sizeof(hash));
 	local_memcpy(hash, input, hsize);
-	
+
 	dbg_buf_print("h = H(m)", hash, hsize);
 
 	/*
@@ -350,7 +340,7 @@ int ecdsa_verify_raw(struct ec_verify_context *ctx, const u8 *input, u8 inputlen
 	 * 4. Compute e = OS2I(h) mod q, by converting h to an integer
 	 * and reducing it mod q
 	 */
-	nn_init_from_buf(&tmp, hash, hsize);
+	ret = nn_init_from_buf(&tmp, hash, hsize); EG(ret, err);
 	local_memset(hash, 0, hsize);
 	dbg_nn_print("h initial import as nn", &tmp);
 	if (rshift) {
@@ -358,56 +348,55 @@ int ecdsa_verify_raw(struct ec_verify_context *ctx, const u8 *input, u8 inputlen
 	}
 	dbg_nn_print("h   final import as nn", &tmp);
 
-	nn_mod(&e, &tmp, q);
+	ret = nn_mod(&e, &tmp, q); EG(ret, err);
 	nn_uninit(&tmp);
 	dbg_nn_print("e", &e);
 
 	/* Compute s^-1 mod q */
-	nn_modinv(&sinv, s, q);
+	ret = nn_modinv(&sinv, s, q); EG(ret, err);
 	dbg_nn_print("s", s);
 	dbg_nn_print("sinv", &sinv);
 	nn_uninit(s);
 
 	/* 5. Compute u = (s^-1)e mod q */
-	nn_mul(&tmp, &e, &sinv);
+	ret = nn_mul(&tmp, &e, &sinv); EG(ret, err);
 	nn_uninit(&e);
-	nn_mod(&u, &tmp, q);
+	ret = nn_mod(&u, &tmp, q); EG(ret, err);
 	dbg_nn_print("u = (s^-1)e mod q", &u);
 
 	/* 6. Compute v = (s^-1)r mod q */
-	nn_mul_mod(&v, r, &sinv, q);
+	ret = nn_mul_mod(&v, r, &sinv, q); EG(ret, err);
 	dbg_nn_print("v = (s^-1)r mod q", &v);
 	nn_uninit(&sinv);
 	nn_uninit(&tmp);
 
 	/* 7. Compute W' = uG + vY */
-	prj_pt_mul_monty(&uG, &u, G);
-	prj_pt_mul_monty(&vY, &v, Y);
-	prj_pt_add_monty(&W_prime, &uG, &vY);
+	ret = prj_pt_mul_monty(&uG, &u, G); EG(ret, err);
+	ret = prj_pt_mul_monty(&vY, &v, Y); EG(ret, err);
+	ret = prj_pt_add_monty(&W_prime, &uG, &vY); EG(ret, err);
 	prj_pt_uninit(&uG);
 	prj_pt_uninit(&vY);
 	nn_uninit(&u);
 	nn_uninit(&v);
 
 	/* 8. If W' is the point at infinity, reject the signature. */
-	if (prj_pt_iszero(&W_prime)) {
-		ret = -1;
-		goto err;
-	}
+	ret = prj_pt_iszero(&W_prime, &iszero); EG(ret, err);
+	MUST_HAVE(!iszero, ret, err);
 
 	/* 9. Compute r' = W'_x mod q */
-	prj_pt_to_aff(&W_prime_aff, &W_prime);
+	ret = prj_pt_to_aff(&W_prime_aff, &W_prime); EG(ret, err);
 	dbg_nn_print("W'_x", &(W_prime_aff.x.fp_val));
 	dbg_nn_print("W'_y", &(W_prime_aff.y.fp_val));
-	nn_mod(&r_prime, &(W_prime_aff.x.fp_val), q);
+	ret = nn_mod(&r_prime, &(W_prime_aff.x.fp_val), q); EG(ret, err);
 	prj_pt_uninit(&W_prime);
 	aff_pt_uninit(&W_prime_aff);
 
 	/* 10. Accept the signature if and only if r equals r' */
-	ret = (nn_cmp(&r_prime, r) != 0) ? -1 : 0;
-	nn_uninit(&r_prime);
+	ret = nn_cmp(&r_prime, r, &cmp); EG(ret, err);
+	ret = (cmp != 0) ? -1 : 0;
 
  err:
+	nn_uninit(&r_prime);
 	/*
 	 * We can now clear data part of the context. This will clear
 	 * magic and avoid further reuse of the whole context.
