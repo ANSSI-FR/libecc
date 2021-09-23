@@ -16,56 +16,78 @@
 #include "fp_mul_redc1.h"
 
 /*
- * Perform Montgomery multiplication.
+ * Internal helper performing Montgomery multiplication, without checking input
+ * parameters. Those checks are left to the caller. The function returns 0 on
+ * success, -1 on error.
  */
-static inline void _fp_mul_redc1(nn_t out, nn_src_t in1, nn_src_t in2,
+static inline int _fp_mul_redc1(nn_t out, nn_src_t in1, nn_src_t in2,
 				 fp_ctx_src_t ctx)
 {
-	nn_mul_redc1(out, in1, in2, &(ctx->p), ctx->mpinv);
-}
-
-void fp_mul_redc1(fp_t out, fp_src_t in1, fp_src_t in2)
-{
-	fp_check_initialized(in1);
-	fp_check_initialized(in2);
-	fp_check_initialized(out);
-
-	MUST_HAVE(out->ctx == in1->ctx);
-	MUST_HAVE(out->ctx == in2->ctx);
-
-	_fp_mul_redc1(&(out->fp_val), &(in1->fp_val), &(in2->fp_val),
-		      out->ctx);
-}
-
-void fp_sqr_redc1(fp_t out, fp_src_t in)
-{
-	fp_mul_redc1(out, in, in);
+	return nn_mul_redc1(out, in1, in2, &(ctx->p), ctx->mpinv);
 }
 
 /*
- * redcify could be done by shifting and division by p.
+ * Exported version based on previous one, that sanity checks input parameters.
+ * The function returns 0 on success, -1 on error.
  */
-void fp_redcify(fp_t out, fp_src_t in)
+int fp_mul_redc1(fp_t out, fp_src_t in1, fp_src_t in2)
 {
-	fp_check_initialized(in);
-	fp_check_initialized(out);
+	int ret;
 
-	MUST_HAVE(out->ctx == in->ctx);
-	_fp_mul_redc1(&(out->fp_val), &(in->fp_val), &(out->ctx->r_square),
-		      out->ctx);
+	ret = fp_check_initialized(in1); EG(ret, err);
+	ret = fp_check_initialized(in2); EG(ret, err);
+	ret = fp_check_initialized(out); EG(ret, err);
+
+	MUST_HAVE((out->ctx == in1->ctx), ret, err);
+	MUST_HAVE((out->ctx == in2->ctx), ret, err);
+
+	ret = _fp_mul_redc1(&(out->fp_val), &(in1->fp_val), &(in2->fp_val),
+			    out->ctx);
+
+err:
+	return ret;
 }
 
-void fp_unredcify(fp_t out, fp_src_t in)
+int fp_sqr_redc1(fp_t out, fp_src_t in)
 {
+	return fp_mul_redc1(out, in, in);
+}
+
+/*
+ * redcify could be done by shifting and division by p. The function returns 0
+ * on success, -1 on error.
+ */
+int fp_redcify(fp_t out, fp_src_t in)
+{
+	int ret;
+
+	ret = fp_check_initialized(in); EG(ret, err);
+	ret = fp_check_initialized(out); EG(ret, err);
+
+	MUST_HAVE((out->ctx == in->ctx), ret, err);
+
+	ret = _fp_mul_redc1(&(out->fp_val), &(in->fp_val), &(out->ctx->r_square),
+			    out->ctx);
+
+err:
+	return ret;
+}
+
+/* The function returns 0 on success, -1 on error. */
+int fp_unredcify(fp_t out, fp_src_t in)
+{
+	int ret;
 	nn one;
+	one.magic = 0;
 
-	fp_check_initialized(in);
-	fp_check_initialized(out);
+	ret = fp_check_initialized(in); EG(ret, err);
+	ret = fp_check_initialized(out); EG(ret, err);
+	ret = nn_init(&one, 0);  EG(ret, err);
+	ret = nn_one(&one); EG(ret, err);
+	ret = _fp_mul_redc1(&(out->fp_val), &(in->fp_val), &one, out->ctx);
 
-	nn_init(&one, 0);
-	nn_one(&one);
-
-	_fp_mul_redc1(&(out->fp_val), &(in->fp_val), &one, out->ctx);
-
+err:
 	nn_uninit(&one);
+
+	return ret;
 }
