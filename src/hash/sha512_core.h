@@ -39,9 +39,8 @@ typedef struct {
 } sha512_core_context;
 
 
-void sha512_core_update(sha512_core_context *ctx, const u8 *input, u32 ilen);
-
-void sha512_core_final(sha512_core_context *ctx, u8 *output, u32 output_size);
+int sha512_core_update(sha512_core_context *ctx, const u8 *input, u32 ilen);
+int sha512_core_final(sha512_core_context *ctx, u8 *output, u32 output_size);
 
 #endif /* __SHA512_CORE_H__ */
 #endif /* WITH_HASH_SHA512 */
