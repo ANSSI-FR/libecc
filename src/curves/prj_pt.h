@@ -34,73 +34,46 @@ typedef struct {
 typedef prj_pt *prj_pt_t;
 typedef const prj_pt *prj_pt_src_t;
 
-void prj_pt_check_initialized(prj_pt_src_t in);
-
-int prj_pt_is_initialized(prj_pt_src_t in);
-
-void prj_pt_init(prj_pt_t in, ec_shortw_crv_src_t curve);
-
-void prj_pt_init_from_coords(prj_pt_t in,
-			     ec_shortw_crv_src_t curve,
-			     fp_src_t xcoord,
-			     fp_src_t ycoord, fp_src_t zcoord);
-
+int prj_pt_check_initialized(prj_pt_src_t in);
+int prj_pt_init(prj_pt_t in, ec_shortw_crv_src_t curve);
+int prj_pt_init_from_coords(prj_pt_t in,
+			    ec_shortw_crv_src_t curve,
+			    fp_src_t xcoord,
+			    fp_src_t ycoord, fp_src_t zcoord);
 void prj_pt_uninit(prj_pt_t in);
-
-void prj_pt_zero(prj_pt_t out);
-
-int prj_pt_iszero(prj_pt_src_t in);
-
-int prj_pt_is_on_curve(prj_pt_src_t in);
-
-void prj_pt_copy(prj_pt_t out, prj_pt_src_t in);
-
-void prj_pt_to_aff(aff_pt_t out, prj_pt_src_t in);
-
-void prj_pt_unique(prj_pt_t out, prj_pt_src_t in);
-
-void ec_shortw_aff_to_prj(prj_pt_t out, aff_pt_src_t in);
-
-int prj_pt_cmp(prj_pt_src_t in1, prj_pt_src_t in2);
-
-int prj_pt_eq_or_opp(prj_pt_src_t in1, prj_pt_src_t in2);
-
-void prj_pt_neg(prj_pt_t out, prj_pt_src_t in);
-
+int prj_pt_zero(prj_pt_t out);
+int prj_pt_iszero(prj_pt_src_t in, int *iszero);
+int prj_pt_is_on_curve(prj_pt_src_t in, int *on_curve);
+int prj_pt_copy(prj_pt_t out, prj_pt_src_t in);
+int prj_pt_to_aff(aff_pt_t out, prj_pt_src_t in);
+int prj_pt_unique(prj_pt_t out, prj_pt_src_t in);
+int ec_shortw_aff_to_prj(prj_pt_t out, aff_pt_src_t in);
+int prj_pt_cmp(prj_pt_src_t in1, prj_pt_src_t in2, int *cmp);
+int prj_pt_eq_or_opp(prj_pt_src_t in1, prj_pt_src_t in2, int *eq_or_opp);
+int prj_pt_neg(prj_pt_t out, prj_pt_src_t in);
 int prj_pt_import_from_buf(prj_pt_t pt,
 			   const u8 *pt_buf,
 			   u16 pt_buf_len, ec_shortw_crv_src_t crv);
-
 int prj_pt_import_from_aff_buf(prj_pt_t pt,
-                           const u8 *pt_buf,
-                           u16 pt_buf_len, ec_shortw_crv_src_t crv);
-
+			   const u8 *pt_buf,
+			   u16 pt_buf_len, ec_shortw_crv_src_t crv);
 int prj_pt_export_to_buf(prj_pt_src_t pt, u8 *pt_buf, u32 pt_buf_len);
-
 int prj_pt_export_to_aff_buf(prj_pt_src_t pt, u8 *pt_buf, u32 pt_buf_len);
-
-void prj_pt_add(prj_pt_t sum, prj_pt_src_t in1, prj_pt_src_t in2);
-
-void prj_pt_dbl(prj_pt_t dbl, prj_pt_src_t in);
-
-void prj_pt_mul(prj_pt_t out, nn_src_t m, prj_pt_src_t in);
-
+int prj_pt_add(prj_pt_t sum, prj_pt_src_t in1, prj_pt_src_t in2);
+int prj_pt_dbl(prj_pt_t dbl, prj_pt_src_t in);
+int prj_pt_mul(prj_pt_t out, nn_src_t m, prj_pt_src_t in);
 int prj_pt_mul_blind(prj_pt_t out, nn_src_t m, prj_pt_src_t in);
-
-void aff_pt_edwards_to_prj_pt_shortw(aff_pt_edwards_src_t in_edwards,
-				     ec_shortw_crv_src_t shortw_crv,
-				     prj_pt_t out_shortw, fp_src_t alpha);
-
-void aff_pt_montgomery_to_prj_pt_shortw(aff_pt_montgomery_src_t in_montgomery,
-					ec_shortw_crv_src_t shortw_crv,
-					prj_pt_t out_shortw);
-
-void prj_pt_shortw_to_aff_pt_edwards(prj_pt_src_t in_shortw,
-				     ec_edwards_crv_src_t edwards_crv,
-				     aff_pt_edwards_t out_edwards,
-				     fp_src_t alpha);
-
-void prj_pt_shortw_to_aff_pt_montgomery(prj_pt_src_t in_shortw,
-					ec_montgomery_crv_src_t montgomery_crv,
-					aff_pt_montgomery_t out_montgomery);
+int aff_pt_edwards_to_prj_pt_shortw(aff_pt_edwards_src_t in_edwards,
+				    ec_shortw_crv_src_t shortw_crv,
+				    prj_pt_t out_shortw, fp_src_t alpha);
+int aff_pt_montgomery_to_prj_pt_shortw(aff_pt_montgomery_src_t in_montgomery,
+				       ec_shortw_crv_src_t shortw_crv,
+				       prj_pt_t out_shortw);
+int prj_pt_shortw_to_aff_pt_edwards(prj_pt_src_t in_shortw,
+				    ec_edwards_crv_src_t edwards_crv,
+				    aff_pt_edwards_t out_edwards,
+				    fp_src_t alpha);
+int prj_pt_shortw_to_aff_pt_montgomery(prj_pt_src_t in_shortw,
+				       ec_montgomery_crv_src_t montgomery_crv,
+				       aff_pt_montgomery_t out_montgomery);
 #endif /* __PRJ_PT_H__ */
