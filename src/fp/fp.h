@@ -59,13 +59,12 @@ typedef struct {
 typedef fp_ctx *fp_ctx_t;
 typedef const fp_ctx *fp_ctx_src_t;
 
-void fp_ctx_check_initialized(fp_ctx_src_t ctx);
-int fp_ctx_is_initialized(fp_ctx_src_t ctx);
-void fp_ctx_init(fp_ctx_t ctx, nn_src_t p, bitcnt_t p_bitlen,
-		 nn_src_t r, nn_src_t r_square,
-		 word_t mpinv,
-		 bitcnt_t p_shift, nn_src_t p_normalized, word_t p_reciprocal);
-void fp_ctx_init_from_p(fp_ctx_t ctx, nn_src_t p);
+int fp_ctx_check_initialized(fp_ctx_src_t ctx);
+int fp_ctx_init(fp_ctx_t ctx, nn_src_t p, bitcnt_t p_bitlen,
+		nn_src_t r, nn_src_t r_square,
+		word_t mpinv,
+		bitcnt_t p_shift, nn_src_t p_normalized, word_t p_reciprocal);
+int fp_ctx_init_from_p(fp_ctx_t ctx, nn_src_t p);
 
 /*
  * Then the definition of our Fp elements
@@ -80,21 +79,20 @@ typedef struct {
 typedef fp *fp_t;
 typedef const fp *fp_src_t;
 
-void fp_check_initialized(fp_src_t in);
-int fp_is_initialized(fp_src_t in);
-void fp_init(fp_t A, fp_ctx_src_t fpctx);
-void fp_init_from_buf(fp_t A, fp_ctx_src_t fpctx, const u8 *buf, u16 buflen);
+int fp_check_initialized(fp_src_t in);
+int fp_init(fp_t A, fp_ctx_src_t fpctx);
+int fp_init_from_buf(fp_t A, fp_ctx_src_t fpctx, const u8 *buf, u16 buflen);
 void fp_uninit(fp_t A);
-void fp_set_nn(fp_t out, nn_src_t in);
-void fp_zero(fp_t out);
-void fp_one(fp_t out);
-void fp_set_word_value(fp_t out, word_t val);
-int fp_cmp(fp_src_t in1, fp_src_t in2);
-int fp_iszero(fp_src_t in);
-void fp_copy(fp_t out, fp_src_t in);
-void fp_tabselect(fp_t out, u8 idx, fp_src_t *tab, u8 tabsize);
-int fp_eq_or_opp(fp_src_t in1, fp_src_t in2);
-void fp_import_from_buf(fp_t out_fp, const u8 *buf, u16 buflen);
-void fp_export_to_buf(u8 *buf, u16 buflen, fp_src_t in_fp);
+int fp_set_nn(fp_t out, nn_src_t in);
+int fp_zero(fp_t out);
+int fp_one(fp_t out);
+int fp_set_word_value(fp_t out, word_t val);
+int fp_cmp(fp_src_t in1, fp_src_t in2, int *cmp);
+int fp_iszero(fp_src_t in, int *iszero);
+int fp_copy(fp_t out, fp_src_t in);
+int fp_tabselect(fp_t out, u8 idx, fp_src_t *tab, u8 tabsize);
+int fp_eq_or_opp(fp_src_t in1, fp_src_t in2, int *eq_or_opp);
+int fp_import_from_buf(fp_t out_fp, const u8 *buf, u16 buflen);
+int fp_export_to_buf(u8 *buf, u16 buflen, fp_src_t in_fp);
 
 #endif /* __FP_H__ */

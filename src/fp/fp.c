@@ -23,21 +23,17 @@
 
 /*
  * Verify given Fp context has been correctly initialized, by checking
- * given pointer is valid and structure magic has expected value.
+ * given pointer is valid and structure's magic has expected value.
+ * Returns 0 on success, -1 on error.
  */
-void fp_ctx_check_initialized(fp_ctx_src_t ctx)
+int fp_ctx_check_initialized(fp_ctx_src_t ctx)
 {
-	MUST_HAVE((ctx != NULL) && (ctx->magic == FP_CTX_MAGIC));
-}
+	int ret = 0;
 
-/*
- * Verify given Fp context has been correctly initialized, by checking
- * given pointer is valid and structure magic has expected value.
- * Returns 0 or 1.
- */
-int fp_ctx_is_initialized(fp_ctx_src_t ctx)
-{
-	return !!((ctx != NULL) && (ctx->magic == FP_CTX_MAGIC));
+	MUST_HAVE(((ctx != NULL) && (ctx->magic == FP_CTX_MAGIC)), ret, err);
+
+err:
+	return ret;
 }
 
 /*
@@ -50,49 +46,58 @@ int fp_ctx_is_initialized(fp_ctx_src_t ctx)
  *    or 64).
  *  - p_shift, p_normalized and p_reciprocal are precomputed
  *    division parameters (see ec_params_external.h for details).
+ *
+ * Returns 0 on success, -1 on error.
  */
-void fp_ctx_init(fp_ctx_t ctx, nn_src_t p, bitcnt_t p_bitlen,
-		 nn_src_t r, nn_src_t r_square,
-		 word_t mpinv,
-		 bitcnt_t p_shift, nn_src_t p_normalized, word_t p_reciprocal)
+int fp_ctx_init(fp_ctx_t ctx, nn_src_t p, bitcnt_t p_bitlen,
+		nn_src_t r, nn_src_t r_square,
+		word_t mpinv,
+		bitcnt_t p_shift, nn_src_t p_normalized, word_t p_reciprocal)
 {
-	nn_check_initialized(p);
-	nn_check_initialized(r);
-	nn_check_initialized(r_square);
-	nn_check_initialized(p_normalized);
+	int ret;
 
-	MUST_HAVE(ctx != NULL);
-	nn_copy(&(ctx->p), p);
+	MUST_HAVE((ctx != NULL), ret, err);
+	ret = nn_check_initialized(p); EG(ret, err);
+	ret = nn_check_initialized(r); EG(ret, err);
+	ret = nn_check_initialized(r_square); EG(ret, err);
+	ret = nn_check_initialized(p_normalized); EG(ret, err);
+
+	ret = nn_copy(&(ctx->p), p); EG(ret, err);
 	ctx->p_bitlen = p_bitlen;
-	nn_copy(&(ctx->r), r);
-	nn_copy(&(ctx->r_square), r_square);
 	ctx->mpinv = mpinv;
 	ctx->p_shift = p_shift;
-	nn_copy(&(ctx->p_normalized), p_normalized);
 	ctx->p_reciprocal = p_reciprocal;
+	ret = nn_copy(&(ctx->p_normalized), p_normalized); EG(ret, err);
+	ret = nn_copy(&(ctx->r), r); EG(ret, err);
+	ret = nn_copy(&(ctx->r_square), r_square); EG(ret, err);
 	ctx->magic = FP_CTX_MAGIC;
+
+err:
+	return ret;
 }
 
 /*
  * Initialize pointed Fp context structure only from the prime p.
  * The Montgomery related parameters are dynamically computed
- * using our redc1 helpers from the NN layer.
+ * using our redc1 helpers from the NN layer. Returns 0 on success,
+ * -1 on error.
  */
-void fp_ctx_init_from_p(fp_ctx_t ctx, nn_src_t p_in)
+int fp_ctx_init_from_p(fp_ctx_t ctx, nn_src_t p_in)
 {
 	nn p, r, r_square, p_normalized;
 	word_t mpinv, p_shift, p_reciprocal;
 	bitcnt_t p_bitlen;
+	int ret;
+	p.magic = r.magic = r_square.magic = p_normalized.magic = 0;
 
-	nn_check_initialized(p_in);
-	MUST_HAVE(ctx != NULL);
+	MUST_HAVE(!(ctx == NULL), ret, err);
+	ret = nn_check_initialized(p_in); EG(ret, err);
 
-	nn_init(&p, 0);
-	nn_copy(&p, p_in);
-
-	nn_init(&r, 0);
-	nn_init(&r_square, 0);
-	nn_init(&p_normalized, 0);
+	ret = nn_init(&p, 0); EG(ret, err);
+	ret = nn_copy(&p, p_in); EG(ret, err);
+	ret = nn_init(&r, 0); EG(ret, err);
+	ret = nn_init(&r_square, 0); EG(ret, err);
+	ret = nn_init(&p_normalized, 0); EG(ret, err);
 
 	/*
 	 * In order for our reciprocal division routines to work, it is
@@ -101,20 +106,22 @@ void fp_ctx_init_from_p(fp_ctx_t ctx, nn_src_t p_in)
 	 * of a word size.
 	 */
 	if (p.wlen < 2) {
-		nn_set_wlen(&p, 2);
+		ret = nn_set_wlen(&p, 2); EG(ret, err);
 	}
 
-	mpinv = nn_compute_redc1_coefs(&r, &r_square, &p);
-	nn_compute_div_coefs(&p_normalized, &p_shift, &p_reciprocal, &p);
+	ret = nn_compute_redc1_coefs(&r, &r_square, &p, &mpinv); EG(ret, err);
+	ret = nn_compute_div_coefs(&p_normalized, &p_shift, &p_reciprocal, &p); EG(ret, err);
+	ret = nn_bitlen(p_in, &p_bitlen); EG(ret, err);
+	ret = fp_ctx_init(ctx, &p, p_bitlen, &r, &r_square,
+			mpinv, (bitcnt_t)p_shift, &p_normalized, p_reciprocal);
 
-	p_bitlen = nn_bitlen(p_in);
-	fp_ctx_init(ctx, &p, p_bitlen, &r, &r_square,
-		    mpinv, (bitcnt_t)p_shift, &p_normalized, p_reciprocal);
-
+err:
 	nn_uninit(&p);
 	nn_uninit(&r);
 	nn_uninit(&r_square);
 	nn_uninit(&p_normalized);
+
+	return ret;
 }
 
 #define FP_MAGIC ((word_t)(0x14e96c8ab28221efULL))
@@ -122,47 +129,53 @@ void fp_ctx_init_from_p(fp_ctx_t ctx, nn_src_t p_in)
 /*
  * Verify given Fp element has been correctly intialized, by checking
  * given pointer is valid and structure magic has expected value.
+ * Returns 0 on success, -1 on error.
  */
-void fp_check_initialized(fp_src_t in)
+int fp_check_initialized(fp_src_t in)
 {
-	MUST_HAVE((in != NULL) && (in->magic == FP_MAGIC)
-		  && (in->ctx != NULL));
-}
+	int ret = 0;
 
-/*
- * Verify given Fp element has been correctly intialized, by checking
- * given pointer is valid and structure magic has expected value.
- * Return 0 or 1.
- */
-int fp_is_initialized(fp_src_t in)
-{
-	return !!((in != NULL) && (in->magic == FP_MAGIC) &&
-		   (in->ctx != NULL));
+	MUST_HAVE(((in != NULL) && (in->magic == FP_MAGIC) && (in->ctx != NULL)), ret, err);
+
+err:
+	return ret;
 }
 
 /*
  * Initialilize pointed Fp element structure with given Fp context. Initial
- * value of Fp element is set to 0.
+ * value of Fp element is set to 0.Returns 0 on success, -1 on error.
  */
-void fp_init(fp_t in, fp_ctx_src_t fpctx)
+int fp_init(fp_t in, fp_ctx_src_t fpctx)
 {
-	MUST_HAVE(in != NULL);
-	fp_ctx_check_initialized(fpctx);
-	nn_init(&in->fp_val, fpctx->p.wlen * WORD_BYTES);
+	int ret;
+
+	MUST_HAVE((in != NULL), ret, err);
+
+	ret = fp_ctx_check_initialized(fpctx); EG(ret, err);
+	ret = nn_init(&in->fp_val, fpctx->p.wlen * WORD_BYTES); EG(ret, err);
+
 	in->ctx = fpctx;
 	in->magic = FP_MAGIC;
+
+err:
+	return ret;
 }
 
 /*
  * Same as above but providing the element an initial value given by 'buf'
  * content (in big endian order) of size 'buflen'. Content of 'buf' must
- * be less than p.
+ * be less than p. Returns 0 on success, -1 on error.
  */
-void fp_init_from_buf(fp_t in, fp_ctx_src_t fpctx, const u8 *buf, u16 buflen)
+int fp_init_from_buf(fp_t in, fp_ctx_src_t fpctx, const u8 *buf, u16 buflen)
 {
-	fp_ctx_check_initialized(fpctx);
-	fp_init(in, fpctx);
-	fp_import_from_buf(in, buf, buflen);
+	int ret;
+
+	ret = fp_ctx_check_initialized(fpctx); EG(ret, err);
+	ret = fp_init(in, fpctx); EG(ret, err);
+	ret = fp_import_from_buf(in, buf, buflen);
+
+err:
+	return ret;
 }
 
 /*
@@ -173,62 +186,95 @@ void fp_init_from_buf(fp_t in, fp_ctx_src_t fpctx, const u8 *buf, u16 buflen)
  */
 void fp_uninit(fp_t in)
 {
-	fp_check_initialized(in);
-	nn_uninit(&in->fp_val);
-	in->ctx = NULL;
-	in->magic = WORD(0);
+	if((in != NULL) && (in->magic == FP_MAGIC) && (in->ctx != NULL)){
+		nn_uninit(&in->fp_val);
+
+		in->ctx = NULL;
+		in->magic = WORD(0);
+	}
+
+	return;
 }
 
 /*
  * Set value of given Fp element to that of given nn. The value of
  * given nn must be less than that of p, i.e. no reduction modulo
- * p is performed by the function.
+ * p is performed by the function. Returns 0 on success, -1 on error.
  */
-void fp_set_nn(fp_t out, nn_src_t in)
+int fp_set_nn(fp_t out, nn_src_t in)
 {
-	nn_check_initialized(in);
+	int ret, cmp;
 
-	nn_copy(&(out->fp_val), in);
+	ret = nn_check_initialized(in); EG(ret, err);
+	ret = nn_copy(&(out->fp_val), in); EG(ret, err);
+	ret = nn_cmp(&(out->fp_val), &(out->ctx->p), &cmp); EG(ret, err);
 
-	MUST_HAVE(nn_cmp(&(out->fp_val), &(out->ctx->p)) < 0);
+	MUST_HAVE((cmp < 0), ret, err);
 
 	/* Set the wlen to the length of p */
-	nn_set_wlen(&(out->fp_val), out->ctx->p.wlen);
+	ret = nn_set_wlen(&(out->fp_val), out->ctx->p.wlen);
+
+err:
+	return ret;
 }
 
-/* Set 'out' to the element 0 of Fp (neutral element for addition) */
-void fp_zero(fp_t out)
+/*
+ * Set 'out' to the element 0 of Fp (neutral element for addition). Returns 0
+ * on success, -1 on error.
+ */
+int fp_zero(fp_t out)
 {
-	fp_check_initialized(out);
+	int ret;
 
-	nn_set_word_value(&(out->fp_val), 0);
+	ret = fp_check_initialized(out); EG(ret, err);
+	ret = nn_set_word_value(&(out->fp_val), 0); EG(ret, err);
 	/* Set the wlen to the length of p */
-	nn_set_wlen(&(out->fp_val), out->ctx->p.wlen);
+	ret = nn_set_wlen(&(out->fp_val), out->ctx->p.wlen);
+
+err:
+	return ret;
 }
 
-/* Set out to the element 1 of Fp (neutral element for multiplication) */
-void fp_one(fp_t out)
+/*
+ * Set out to the element 1 of Fp (neutral element for multiplication). Returns
+ * 0 on success, -1 on error.
+ */
+int fp_one(fp_t out)
 {
-	fp_check_initialized(out);
+	int ret, isone;
+	word_t val;
 
+	ret = fp_check_initialized(out); EG(ret, err);
 	/* One is indeed 1 except if p = 1 where it is 0 */
-	word_t val = nn_isone(&(out->ctx->p)) ? 0 : 1;
-	nn_set_word_value(&(out->fp_val), val);
+	ret = nn_isone(&(out->ctx->p), &isone); EG(ret, err);
+
+	val = isone ? WORD(0) : WORD(1);
+
+	ret = nn_set_word_value(&(out->fp_val), val); EG(ret, err);
 
 	/* Set the wlen to the length of p */
-	nn_set_wlen(&(out->fp_val), out->ctx->p.wlen);
+	ret = nn_set_wlen(&(out->fp_val), out->ctx->p.wlen);
+
+err:
+	return ret;
 }
 
 /* Set out to the asked word: the value must be < p */
-void fp_set_word_value(fp_t out, word_t val)
+int fp_set_word_value(fp_t out, word_t val)
 {
-	fp_check_initialized(out);
+	int ret, cmp;
+
+	ret = fp_check_initialized(out); EG(ret, err);
 
 	/* Check that our value is indeed < p */
-	MUST_HAVE(nn_cmp_word(&(out->ctx->p), val) > 0);
+	ret = nn_cmp_word(&(out->ctx->p), val, &cmp); EG(ret, err);
+	MUST_HAVE(cmp > 0, ret, err);
 
 	/* Set the word in the NN layer */
-	nn_set_word_value(&(out->fp_val), val);	
+	ret = nn_set_word_value(&(out->fp_val), val);
+
+err:
+	return ret;
 }
 
 
@@ -237,46 +283,60 @@ void fp_set_word_value(fp_t out, word_t val)
  * less than that of in2, 0 if they are equal and 1 if the value of in2 is
  * more than that of in1. Obviously, both parameters must be initialized and
  * belong to the same field (i.e. must have been initialized from the same
- * context).
+ * context). Returns 0 on success, -1 on error.
  */
-int fp_cmp(fp_src_t in1, fp_src_t in2)
+int fp_cmp(fp_src_t in1, fp_src_t in2, int *cmp)
 {
-	fp_check_initialized(in1);
-	fp_check_initialized(in2);
+	int ret;
 
-	MUST_HAVE(in1->ctx == in2->ctx);
+	ret = fp_check_initialized(in1); EG(ret, err);
+	ret = fp_check_initialized(in2); EG(ret, err);
 
-	return nn_cmp(&(in1->fp_val), &(in2->fp_val));
+	MUST_HAVE((in1->ctx == in2->ctx), ret, err);
+
+	ret = nn_cmp(&(in1->fp_val), &(in2->fp_val), cmp);
+
+err:
+	return ret;
 }
 
-/* Check if given Fp element has value 0 */
-int fp_iszero(fp_src_t in)
+/* Check if given Fp element has value 0. Returns 0 on success, -1 on error. */
+int fp_iszero(fp_src_t in, int *iszero)
 {
-	fp_check_initialized(in);
+	int ret;
 
-	return nn_iszero(&(in->fp_val));
+	ret = fp_check_initialized(in); EG(ret, err);
+	ret = nn_iszero(&(in->fp_val), iszero);
+
+err:
+	return ret;
 }
 
 
 /*
- * Copy value of pointed Fp element (in) into pointed Fp element (out).
- * If output is already initialized, check that the Fp contexts are consistent.
- * Else, output is initialized with the same field context as input.
+ * Copy value of pointed Fp element (in) into pointed Fp element (out). If
+ * output is already initialized, check that the Fp contexts are consistent.
+ * Else, output is initialized with the same field context as input. Returns 0
+ * on success, -1 on error.
  */
-void fp_copy(fp_t out, fp_src_t in)
+int fp_copy(fp_t out, fp_src_t in)
 {
-        fp_check_initialized(in);
-        MUST_HAVE(out != NULL);
+	int ret;
 
-        if((out != NULL) && (out->magic == FP_MAGIC)
-                  && (out->ctx != NULL)){
-                MUST_HAVE(out->ctx == in->ctx);
-        }
-        else{
-                fp_init(out, in->ctx);
-        }
+	ret = fp_check_initialized(in); EG(ret, err);
 
-        nn_copy(&(out->fp_val), &(in->fp_val));
+	MUST_HAVE((out != NULL), ret, err);
+
+	if ((out->magic == FP_MAGIC) && (out->ctx != NULL)) {
+		MUST_HAVE((out->ctx == in->ctx), ret, err);
+	} else {
+		ret = fp_init(out, in->ctx); EG(ret, err);
+	}
+
+	ret = nn_copy(&(out->fp_val), &(in->fp_val));
+
+err:
+	return ret;
 }
 
 
@@ -289,30 +349,35 @@ void fp_copy(fp_t out, fp_src_t in)
  * Note that the main copying loop is done on the |p| bits for all
  * Fp elements and not based on the specific effective size of each
  * Fp elements in 'tab'
+ *
+ * Returns 0 on success, -1 on error.
  */
-void fp_tabselect(fp_t out, u8 idx, fp_src_t *tab, u8 tabsize)
+int fp_tabselect(fp_t out, u8 idx, fp_src_t *tab, u8 tabsize)
 {
 	u8 i, k, p_wlen;
 	word_t mask;
 	nn_src_t p;
+	int ret;
 
 	/* Basic sanity checks */
-	MUST_HAVE((((void *)(tab)) != NULL) && (idx < tabsize));
-	fp_check_initialized(out);
+	MUST_HAVE(((((void *)(tab)) != NULL) && (idx < tabsize)), ret, err);
+
+	ret = fp_check_initialized(out); EG(ret, err);
 
 	/* Make things more readable */
 	p = &(out->ctx->p);
-	MUST_HAVE(p != NULL);
+	MUST_HAVE((p != NULL), ret, err);
 	p_wlen = p->wlen;
 
 	/* Zeroize out and enforce its size. */
-	nn_zero(&(out->fp_val));
+	ret = nn_zero(&(out->fp_val)); EG(ret, err);
 	out->fp_val.wlen = p_wlen;
 
 	for (k = 0; k < tabsize; k++) {
 		/* Check current element is initialized and from Fp */
-		fp_check_initialized(tab[k]);
-		MUST_HAVE((&(tab[k]->ctx->p)) == p);
+		ret = fp_check_initialized(tab[k]); EG(ret, err);
+
+		MUST_HAVE(((&(tab[k]->ctx->p)) == p), ret, err);
 
 		mask = WORD_MASK_IFNOTZERO(idx == k);
 
@@ -320,27 +385,37 @@ void fp_tabselect(fp_t out, u8 idx, fp_src_t *tab, u8 tabsize)
 			out->fp_val.val[i] |= (tab[k]->fp_val.val[i] & mask);
 		}
 	}
+
+err:
+	return ret;
 }
 
 /*
- * Return 1 if in1 and in2 parameters are equal or opposite (in Fp).
- * Return 0 otherwise.
+ * The function tests if in1 and in2 parameters are equal or opposite in
+ * Fp. In that case, 'eq_or_opp' out parameter is set to 1. When in1 and
+ * in2 are not equal or opposite, 'eq_or_opp' is set to 0. The function
+ * returns 0 on success and -1 on error. 'eq_or_opp' is only meaningful
+ * on success, i.e. if the return value is 0.
  */
-int fp_eq_or_opp(fp_src_t in1, fp_src_t in2)
+int fp_eq_or_opp(fp_src_t in1, fp_src_t in2, int *eq_or_opp)
 {
-	int ret;
+	int ret, cmp_eq, cmp_opp;
 	fp opp;
+	opp.magic = 0;
 
-	fp_check_initialized(in1);
-	fp_check_initialized(in2);
-	MUST_HAVE(in1->ctx == in2->ctx);
+	MUST_HAVE((eq_or_opp != NULL), ret, err);
+	ret = fp_check_initialized(in1); EG(ret, err);
+	ret = fp_check_initialized(in2); EG(ret, err);
+	MUST_HAVE((in1->ctx == in2->ctx), ret, err);
 
-	fp_init(&opp, in1->ctx);
+	ret = fp_init(&opp, in1->ctx); EG(ret, err);
+	ret = fp_neg(&opp, in2); EG(ret, err);
+	ret = nn_cmp(&(in1->fp_val), &(in2->fp_val), &cmp_eq); EG(ret, err);
+	ret = nn_cmp(&(in1->fp_val), &(opp.fp_val), &cmp_opp); EG(ret, err);
 
-	fp_neg(&opp, in2);
-	ret = (nn_cmp(&(in1->fp_val), &(in2->fp_val)) == 0);
-	ret |= (nn_cmp(&(in1->fp_val), &(opp.fp_val)) == 0);
+	*eq_or_opp = (cmp_eq == 0) | (cmp_opp == 0);
 
+err:
 	fp_uninit(&opp);
 
 	return ret;
@@ -350,22 +425,33 @@ int fp_eq_or_opp(fp_src_t in1, fp_src_t in2)
  * Import given buffer of length buflen as a value for out_fp. Buffer is
  * expected to be in big endian format. out_fp is expected to be already
  * initialized w/ a proper Fp context, providing a value for p. The value
- * in buf is also expected to be less than the one of p.
+ * in buf is also expected to be less than the one of p. The function
+ * returns 0 on success and -1 on error.
  */
-void fp_import_from_buf(fp_t out_fp, const u8 *buf, u16 buflen)
+int fp_import_from_buf(fp_t out_fp, const u8 *buf, u16 buflen)
 {
-	fp_check_initialized(out_fp);
+	int ret, cmp;
 
-	nn_init_from_buf(&(out_fp->fp_val), buf, buflen);
+	ret = fp_check_initialized(out_fp); EG(ret, err);
+	ret = nn_init_from_buf(&(out_fp->fp_val), buf, buflen); EG(ret, err);
+	ret = nn_cmp(&(out_fp->fp_val), &(out_fp->ctx->p), &cmp); EG(ret, err);
+	MUST_HAVE((cmp < 0), ret, err);
 
-	MUST_HAVE(nn_cmp(&(out_fp->fp_val), &(out_fp->ctx->p)) < 0);
+err:
+	return ret;
 }
 
 /*
- * Export an element from Fp to a buffer using the underlying
- * NN export primitive.
+ * Export an element from Fp to a buffer using the underlying NN export
+ * primitive. The function returns 0 on sucess, -1 on error.
  */
-void fp_export_to_buf(u8 *buf, u16 buflen, fp_src_t in_fp)
+int fp_export_to_buf(u8 *buf, u16 buflen, fp_src_t in_fp)
 {
-	nn_export_to_buf(buf, buflen, &(in_fp->fp_val));
+	int ret;
+
+	ret = fp_check_initialized(in_fp); EG(ret, err);
+	ret = nn_export_to_buf(buf, buflen, &(in_fp->fp_val));
+
+err:
+	return ret;
 }
