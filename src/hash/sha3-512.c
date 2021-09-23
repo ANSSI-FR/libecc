@@ -18,54 +18,90 @@
 
 #include "sha3-512.h"
 
-void sha3_512_init(sha3_512_context *ctx)
+/* Init hash function. Returns 0 on success, -1 on error. */
+int sha3_512_init(sha3_512_context *ctx)
 {
-	_sha3_init(ctx, SHA3_512_DIGEST_SIZE);
+	int ret;
+
+	ret = _sha3_init(ctx, SHA3_512_DIGEST_SIZE); EG(ret, err);
 
 	/* Tell that we are initialized */
 	ctx->magic = SHA3_512_HASH_MAGIC;
+
+err:
+	return ret;
 }
 
-void sha3_512_update(sha3_512_context *ctx, const u8 *input, u32 ilen)
+/* Update hash function. Returns 0 on success, -1 on error. */
+int sha3_512_update(sha3_512_context *ctx, const u8 *input, u32 ilen)
 {
-	SHA3_512_HASH_CHECK_INITIALIZED(ctx);
+	int ret;
 
-	_sha3_update((sha3_context *)ctx, input, ilen);
+	SHA3_512_HASH_CHECK_INITIALIZED(ctx, ret, err);
+
+	ret = _sha3_update((sha3_context *)ctx, input, ilen); EG(ret, err);
+
+err:
+	return ret;
 }
 
-void sha3_512_final(sha3_512_context *ctx, u8 output[SHA3_512_DIGEST_SIZE])
+/* Finalize hash function. Returns 0 on success, -1 on error. */
+int sha3_512_final(sha3_512_context *ctx, u8 output[SHA3_512_DIGEST_SIZE])
 {
-	SHA3_512_HASH_CHECK_INITIALIZED(ctx);
+	int ret;
 
-	_sha3_finalize((sha3_context *)ctx, output);
+	SHA3_512_HASH_CHECK_INITIALIZED(ctx, ret, err);
+
+	ret = _sha3_finalize((sha3_context *)ctx, output); EG(ret, err);
 
 	/* Tell that we are uninitialized */
 	ctx->magic = 0;
+	ret = 0;
+
+err:
+	return ret;
 }
 
-void sha3_512_scattered(const u8 **inputs, const u32 *ilens,
+/*
+ * Scattered version performing init/update/finalize on a vector of buffers
+ * 'inputs' with the length of each buffer passed via 'ilens'. The function
+ * loops on pointers in 'inputs' until it finds a NULL pointer. The function
+ * returns 0 on success, -1 on error.
+ */
+int sha3_512_scattered(const u8 **inputs, const u32 *ilens,
 			u8 output[SHA3_512_DIGEST_SIZE])
 {
 	sha3_512_context ctx;
-	int pos = 0;
+	int ret, pos = 0;
 
-	sha3_512_init(&ctx);
+	ret = sha3_512_init(&ctx); EG(ret, err);
 
 	while (inputs[pos] != NULL) {
-		sha3_512_update(&ctx, inputs[pos], ilens[pos]);
+		ret = sha3_512_update(&ctx, inputs[pos], ilens[pos]); EG(ret, err);
 		pos += 1;
 	}
 
-	sha3_512_final(&ctx, output);
+	ret = sha3_512_final(&ctx, output); EG(ret, err);
+
+err:
+	return ret;
 }
 
-void sha3_512(const u8 *input, u32 ilen, u8 output[SHA3_512_DIGEST_SIZE])
+/*
+ * Single call version performing init/update/final on given input.
+ * Returns 0 on success, -1 on error.
+ */
+int sha3_512(const u8 *input, u32 ilen, u8 output[SHA3_512_DIGEST_SIZE])
 {
 	sha3_512_context ctx;
+	int ret;
 
-	sha3_512_init(&ctx);
-	sha3_512_update(&ctx, input, ilen);
-	sha3_512_final(&ctx, output);
+	ret = sha3_512_init(&ctx); EG(ret, err);
+	ret = sha3_512_update(&ctx, input, ilen); EG(ret, err);
+	ret = sha3_512_final(&ctx, output); EG(ret, err);
+
+err:
+	return ret;
 }
 
 #else /* WITH_HASH_SHA3_512 */
