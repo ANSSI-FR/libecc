@@ -18,42 +18,41 @@
 /*
  * From a null-terminated string 'ec_name' of exact length 'ec_name_len'
  * (including final null character), the function returns a pointer
- * to the parameters for that curve if it is known, or NULL if the
- * curve is not known.
+ * to the parameters for that curve via 'ec_params'. The function returns
+ * -1 on error or if the search was unsuccessful. It returns 0 on success.
+ * 'ec_params' is not meaningful on error.
  */
-const ec_str_params *ec_get_curve_params_by_name(const u8 *ec_name,
-						 u8 ec_name_len)
+int ec_get_curve_params_by_name(const u8 *ec_name, u8 ec_name_len,
+				const ec_str_params **ec_params)
 {
-	const ec_str_params *ret = NULL, *params;
+	const ec_str_params *params;
 	u8 comp_len, name_len;
 	const ec_mapping *map;
 	const u8 *name;
 	unsigned int i;
+	int ret;
 
-	MUST_HAVE(ec_name != NULL);
-
-	/* No need to bother w/ obvious crap */
-	if ((ec_name_len <= 2) || (ec_name_len > MAX_CURVE_NAME_LEN)) {
-		goto err;
-	}
+	MUST_HAVE((ec_name != NULL), ret, err);
+	MUST_HAVE((ec_params != NULL), ret, err);
+	MUST_HAVE(((ec_name_len > 2) && (ec_name_len <= MAX_CURVE_NAME_LEN)), ret, err);
 
 	/*
 	 * User has been warned ec_name_len is expected to include final
 	 * null character.
 	 */
 	comp_len = (u8)local_strnlen((const char *)ec_name, ec_name_len);
-	if ((comp_len + 1) != ec_name_len) {
-		goto err;
-	}
+	MUST_HAVE(((comp_len + 1) == ec_name_len), ret, err);
 
 	/* Iterate on our list of curves */
+	ret = -1;
 	for (i = 0; i < EC_CURVES_NUM; i++) {
 		map = &ec_maps[i];
 		params = map->params;
 
-		MUST_HAVE(params != NULL);
-		MUST_HAVE(params->name != NULL);
-		MUST_HAVE(params->name->buf != NULL);
+		MUST_HAVE((params != NULL), ret, err);
+		MUST_HAVE((params->name != NULL), ret, err);
+		MUST_HAVE((params->name->buf != NULL), ret, err);
+
 		name = params->name->buf;
 		name_len = params->name->buflen;
 
@@ -62,7 +61,8 @@ const ec_str_params *ec_get_curve_params_by_name(const u8 *ec_name,
 		}
 
 		if (are_str_equal((const char *)ec_name, (const char *)name)) {
-			ret = params;
+			*ec_params = params;
+			ret = 0;
 			break;
 		}
 	}
@@ -72,77 +72,88 @@ const ec_str_params *ec_get_curve_params_by_name(const u8 *ec_name,
 }
 
 /*
- * From a given curve type, the function returns a pointer to the
- * parameters for that curve if it is known, or NULL if the curve
- * is not known.
+ * From given curve type 'ec_type', the function provides a pointer to the
+ * parameters for that curve if it is known, using 'ec_params' out parameter.
+ * On error, or if the curve is unknown, the function returns -1, in which
+ * case 'ec_params' is not meaningful. The function returns 0 on success.
  */
-const ec_str_params *ec_get_curve_params_by_type(ec_curve_type ec_type)
+int ec_get_curve_params_by_type(ec_curve_type ec_type,
+				const ec_str_params **ec_params)
 {
-	const ec_str_params *ret = NULL, *params;
+	const ec_str_params *params;
 	const ec_mapping *map;
 	const u8 *name;
 	u8 name_len;
 	unsigned int i;
+	int ret;
 
+	MUST_HAVE((ec_params != NULL), ret, err);
+
+	ret = -1;
 	for (i = 0; i < EC_CURVES_NUM; i++) {
 		map = &ec_maps[i];
 		params = map->params;
 
-		MUST_HAVE(params != NULL);
+		MUST_HAVE((params != NULL), ret, err);
 
 		if (ec_type == map->type) {
 			/* Do some sanity check before returning */
-			MUST_HAVE(params->name != NULL);
-			MUST_HAVE(params->name->buf != NULL);
+			MUST_HAVE((params->name != NULL), ret, err);
+			MUST_HAVE((params->name->buf != NULL), ret, err);
+
 			name = params->name->buf;
 			name_len = (u8)local_strlen((const char *)name);
-			MUST_HAVE(params->name->buflen == (name_len + 1));
 
-			ret = params;
+			MUST_HAVE((params->name->buflen == (name_len + 1)), ret, err);
+
+			*ec_params = params;
+			ret = 0;
 			break;
 		}
 	}
 
+err:
 	return ret;
 }
 
 /*
  * From a null-terminated string 'ec_name' of exact length 'ec_name_len'
  * (including final null character), the function returns the curve type
- * if it is known. If the name does not match any known curve,
- * UNKNOWN_CURVE is returned.
+ * via 'ec_type'. The function returns -1 on error or if the search was
+ * unsuccessful. It returns 0 on success. 'ec_types' is not meaningful
+ * on error.
  */
-ec_curve_type ec_get_curve_type_by_name(const u8 *ec_name, u8 ec_name_len)
+int ec_get_curve_type_by_name(const u8 *ec_name, u8 ec_name_len,
+			      ec_curve_type *ec_type)
 {
-	ec_curve_type ret = UNKNOWN_CURVE;
 	const ec_str_params *params;
 	u8 name_len, comp_len;
 	const ec_mapping *map;
 	const u8 *name;
 	unsigned int i;
+	int ret;
 
 	/* No need to bother w/ obvious crap */
-	if ((ec_name_len <= 2) || (ec_name_len > MAX_CURVE_NAME_LEN)) {
-		goto err;
-	}
+	MUST_HAVE(((ec_name_len > 2) && (ec_name_len <= MAX_CURVE_NAME_LEN)), ret, err);
+	MUST_HAVE(ec_type != NULL, ret, err);
 
 	/*
 	 * User has been warned ec_name_len is expected to include final
 	 * null character.
 	 */
 	comp_len = (u8)local_strnlen((const char *)ec_name, ec_name_len);
-	if ((comp_len + 1) != ec_name_len) {
-		goto err;
-	}
+	MUST_HAVE(((comp_len + 1) == ec_name_len), ret, err);
 
 	/* Iterate on our list of curves */
+	ret = -1;
 	for (i = 0; i < EC_CURVES_NUM; i++) {
 		map = &ec_maps[i];
 		params = map->params;
 
-		MUST_HAVE(params != NULL);
-		MUST_HAVE(params->name != NULL);
-		MUST_HAVE(params->name->buf != NULL);
+		MUST_HAVE((params != NULL), ret, err);
+		MUST_HAVE((params->name != NULL), ret, err);
+		MUST_HAVE((params->name->buf != NULL), ret, err);
+
 		name = params->name->buf;
 		name_len = params->name->buflen;
 
@@ -151,7 +162,8 @@ ec_curve_type ec_get_curve_type_by_name(const u8 *ec_name, u8 ec_name_len)
 		}
 
 		if (are_str_equal((const char *)ec_name, (const char *)name)) {
-			ret = map->type;
+			*ec_type = map->type;
+			ret = 0;
 			break;
 		}
 	}
@@ -170,28 +182,25 @@ int ec_get_curve_name_by_type(const ec_curve_type ec_type, u8 *out, u8 outlen)
 	const ec_str_params *by_type;
 	const u8 *name;
 	u8 name_len;
-	int ret = -1;
+	int ret;
+
+	MUST_HAVE(out != NULL, ret, err);
 
 	/* Let's first do the lookup by type */
-	by_type = ec_get_curve_params_by_type(ec_type);
-	if (!by_type) {
-		goto err;
-	}
+	ret =  ec_get_curve_params_by_type(ec_type, &by_type); EG(ret, err);
 
 	/* Found a curve for that type. Let's check name matches. */
-	MUST_HAVE(by_type->name != NULL);
-	MUST_HAVE(by_type->name->buf != NULL);
+	MUST_HAVE(by_type != NULL, ret, err);
+	MUST_HAVE((by_type->name != NULL), ret, err);
+	MUST_HAVE((by_type->name->buf != NULL), ret, err);
+
 	name_len = by_type->name->buflen;
 	name = by_type->name->buf;
 
-	/* Not enough room to copy curve name */
-	if (name_len > outlen) {
-		goto err;
-	}
+	/* Not enough room to copy curve name? */
+	MUST_HAVE((name_len <= outlen), ret, err);
 
 	local_memcpy(out, name, name_len);
-
-	ret = 0;
 
  err:
 	return ret;
@@ -210,34 +219,30 @@ int ec_check_curve_type_and_name(const ec_curve_type ec_type,
 	const ec_str_params *by_type;
 	const u8 *name;
 	u8 name_len;
-	int ret = -1;
+	int ret;
 
 	/* No need to bother w/ obvious crap */
-	if ((ec_name_len <= 2) || (ec_name_len > MAX_CURVE_NAME_LEN)) {
-		goto err;
-	}
+	MUST_HAVE((ec_name != NULL), ret, err);
+	MUST_HAVE(((ec_name_len > 2) && (ec_name_len <= MAX_CURVE_NAME_LEN)), ret, err);
 
 	/* Let's first do the lookup by type */
-	by_type = ec_get_curve_params_by_type(ec_type);
-	if (!by_type) {
-		goto err;
-	}
+	ret = ec_get_curve_params_by_type(ec_type, &by_type); EG(ret, err);
 
 	/* Found a curve for that type. Let's check name matches. */
-	MUST_HAVE(by_type->name != NULL);
-	MUST_HAVE(by_type->name->buf != NULL);
+	MUST_HAVE(by_type != NULL, ret, err);
+	MUST_HAVE((by_type->name != NULL), ret, err);
+	MUST_HAVE((by_type->name->buf != NULL), ret, err);
+
 	name = by_type->name->buf;
 	name_len = by_type->name->buflen;
 
-	if (name_len != ec_name_len) {
-		goto err;
-	}
+	MUST_HAVE((name_len == ec_name_len), ret, err);
 
 	if (!are_str_equal((const char *)ec_name, (const char *)name)) {
+		ret = -1;
 		goto err;
 	}
 
-	ret = 0;
- err:
+err:
 	return ret;
 }
