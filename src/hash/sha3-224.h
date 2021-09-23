@@ -44,17 +44,17 @@
 #endif
 
 #define SHA3_224_HASH_MAGIC ((word_t)(0x1234563273932916ULL))
-#define SHA3_224_HASH_CHECK_INITIALIZED(A) \
-	MUST_HAVE((((void *)(A)) != NULL) && ((A)->magic == SHA3_224_HASH_MAGIC))
+#define SHA3_224_HASH_CHECK_INITIALIZED(A, ret, err) \
+	MUST_HAVE((((void *)(A)) != NULL) && ((A)->magic == SHA3_224_HASH_MAGIC), ret, err)
 
 typedef sha3_context sha3_224_context;
 
-void sha3_224_init(sha3_224_context *ctx);
-void sha3_224_update(sha3_224_context *ctx, const u8 *input, u32 ilen);
-void sha3_224_final(sha3_224_context *ctx, u8 output[SHA3_224_DIGEST_SIZE]);
-void sha3_224_scattered(const u8 **inputs, const u32 *ilens,
-			u8 output[SHA3_224_DIGEST_SIZE]);
-void sha3_224(const u8 *input, u32 ilen, u8 output[SHA3_224_DIGEST_SIZE]);
+int sha3_224_init(sha3_224_context *ctx);
+int sha3_224_update(sha3_224_context *ctx, const u8 *input, u32 ilen);
+int sha3_224_final(sha3_224_context *ctx, u8 output[SHA3_224_DIGEST_SIZE]);
+int sha3_224_scattered(const u8 **inputs, const u32 *ilens,
+		       u8 output[SHA3_224_DIGEST_SIZE]);
+int sha3_224(const u8 *input, u32 ilen, u8 output[SHA3_224_DIGEST_SIZE]);
 
 #endif /* __SHA3_224_H__ */
 #endif /* WITH_HASH_SHA3_224 */
