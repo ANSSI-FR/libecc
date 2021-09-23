@@ -190,12 +190,17 @@ ifeq ($(ADALWAYS), 0)
 CFLAGS += -DUSE_MONTY_LADDER
 endif
 
-# Force Double and Add always usage
+# Force Montgomery Ladder always usage
 ifeq ($(LADDER), 1)
 CFLAGS += -DUSE_MONTY_LADDER
 endif
 ifeq ($(LADDER), 0)
 CFLAGS += -DUSE_DOUBLE_ADD_ALWAYS
+endif
+
+# Force small stack usage
+ifeq ($(SMALLSTACK), 1)
+CFLAGS += -DUSE_SMALL_STACK
 endif
 
 # Are we sure we will not execute known

@@ -141,7 +141,11 @@ static void print_help(const char *bad_arg)
 	ext_printf("\n");
 }
 
+#if defined(USE_SMALL_STACK)
+#define MAX_FILTERS 1
+#else
 #define MAX_FILTERS 100
+#endif
 
 int main(int argc, char *argv[])
 {

@@ -123,12 +123,11 @@ int _ecfsdsa_sign_init(struct ec_sign_context *ctx)
 	nn *k;
 	u8 *r;
 	prj_pt kG;
-	aff_pt W;
 	const ec_priv_key *priv_key;
 	bitcnt_t p_bit_len;
 	u8 i, p_len, r_len;
 	int ret;
-	kG.magic = W.magic = 0;
+	kG.magic = 0;
 
 	/* First, verify context has been initialized */
 	ret = sig_sign_check_initialized(ctx); EG(ret, err);
@@ -180,14 +179,14 @@ int _ecfsdsa_sign_init(struct ec_sign_context *ctx)
 #else
 	ret = prj_pt_mul(&kG, k, G); EG(ret, err);
 #endif
-	ret = prj_pt_to_aff(&W, &kG); EG(ret, err);
+	ret = prj_pt_unique(&kG, &kG); EG(ret, err);
 
-	dbg_nn_print("Wx", &(W.x.fp_val));
-	dbg_nn_print("Wy", &(W.y.fp_val));
+	dbg_nn_print("Wx", &(kG.X.fp_val));
+	dbg_nn_print("Wy", &(kG.Y.fp_val));
 
 	/*  3. Compute r = FE2OS(W_x)||FE2OS(W_y) */
-	ret = fp_export_to_buf(r, p_len, &(W.x)); EG(ret, err);
-	ret = fp_export_to_buf(r + p_len, p_len, &(W.y)); EG(ret, err);
+	ret = fp_export_to_buf(r, p_len, &(kG.X)); EG(ret, err);
+	ret = fp_export_to_buf(r + p_len, p_len, &(kG.Y)); EG(ret, err);
 	dbg_buf_print("r: ", r, r_len);
 
 	/*  4. If r is an all zero string, restart the process at step 1. */
@@ -215,7 +214,6 @@ int _ecfsdsa_sign_init(struct ec_sign_context *ctx)
 	ctx->sign_data.ecfsdsa.magic = ECFSDSA_SIGN_MAGIC;
 
  err:
-	aff_pt_uninit(&W);
 	prj_pt_uninit(&kG);
 
 	PTR_NULLIFY(G);
@@ -256,7 +254,7 @@ err:
 int _ecfsdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 {
 	nn_src_t q, x;
-	nn tmp, s, e, ex, *k;
+	nn s, e, ex, *k;
 	const ec_priv_key *priv_key;
 	u8 e_buf[MAX_DIGEST_SIZE];
 	bitcnt_t p_bit_len, q_bit_len;
@@ -270,7 +268,7 @@ int _ecfsdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	b.magic = binv.magic = 0;
 #endif /* USE_SIG_BLINDING */
 
-	tmp.magic = s.magic = e.magic = ex.magic = 0;
+	s.magic = e.magic = ex.magic = 0;
 
 	/*
 	 * First, verify context has been initialized and private
@@ -316,9 +314,9 @@ int _ecfsdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	dbg_buf_print("h(R||m)", e_buf, hsize);
 
 	/*  6. Compute e by converting h to an integer and reducing it mod q */
-	ret = nn_init_from_buf(&tmp, e_buf, hsize); EG(ret, err);
+	ret = nn_init_from_buf(&e, e_buf, hsize); EG(ret, err);
 	ret = local_memset(e_buf, 0, hsize); EG(ret, err);
-	ret = nn_mod(&e, &tmp, q); EG(ret, err);
+	ret = nn_mod(&e, &e, q); EG(ret, err);
 
 #ifdef USE_SIG_BLINDING
 	/* Blind e with b */
@@ -357,7 +355,6 @@ int _ecfsdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	nn_uninit(&s);
 	nn_uninit(&e);
 	nn_uninit(&ex);
-	nn_uninit(&tmp);
 #ifdef USE_SIG_BLINDING
 	nn_uninit(&b);
 	nn_uninit(&binv);
@@ -535,18 +532,21 @@ int _ecfsdsa_verify_finalize(struct ec_verify_context *ctx)
 {
 	prj_pt_src_t G, Y;
 	nn_src_t q;
-	nn tmp, tmp2, e, *s;
-	prj_pt sG, eY, Wprime;
+	nn tmp, e, *s;
+	prj_pt sG, eY;
+	prj_pt_t Wprime;
 	bitcnt_t p_bit_len, r_len;
-	aff_pt Wprime_aff;
 	u8 r_prime[2 * NN_MAX_BYTE_LEN];
 	u8 e_buf[MAX_DIGEST_SIZE];
 	u8 hsize, p_len;
 	const u8 *r;
 	int ret, iszero, check;
 
-	tmp.magic = tmp2.magic = e.magic = 0;
-	sG.magic = eY.magic = Wprime.magic = Wprime_aff.magic = 0;
+	tmp.magic = e.magic = 0;
+	sG.magic = eY.magic = 0;
+
+	/* NOTE: we reuse sG for Wprime to optimize local variables */
+	Wprime = &sG;
 
 	/*
 	 * First, verify context has been initialized and public
@@ -584,24 +584,24 @@ int _ecfsdsa_verify_finalize(struct ec_verify_context *ctx)
 	 */
 	ret = nn_init_from_buf(&tmp, e_buf, hsize); EG(ret, err);
 	ret = local_memset(e_buf, 0, hsize); EG(ret, err);
-	ret = nn_mod(&tmp2, &tmp, q); EG(ret, err);
+	ret = nn_mod(&tmp, &tmp, q); EG(ret, err);
 
-	ret = nn_iszero(&tmp2, &iszero); EG(ret, err);
+	ret = nn_iszero(&tmp, &iszero); EG(ret, err);
 	if (iszero) {
 		ret = nn_zero(&e); EG(ret, err);
 	} else {
-		ret = nn_sub(&e, q, &tmp2); EG(ret, err);
+		ret = nn_sub(&e, q, &tmp); EG(ret, err);
 	}
 
 	/* 5. compute W' = (W'_x,W'_y) = sG + tY, where Y is the public key */
 	ret = prj_pt_mul(&sG, s, G); EG(ret, err);
 	ret = prj_pt_mul(&eY, &e, Y); EG(ret, err);
-	ret = prj_pt_add(&Wprime, &sG, &eY); EG(ret, err);
-	ret = prj_pt_to_aff(&Wprime_aff, &Wprime); EG(ret, err);
+	ret = prj_pt_add(Wprime, &sG, &eY); EG(ret, err);
+	ret = prj_pt_unique(Wprime, Wprime); EG(ret, err);
 
 	/* 6. Compute r' = FE2OS(W'_x)||FE2OS(W'_y) */
-	ret = fp_export_to_buf(r_prime, p_len, &(Wprime_aff.x)); EG(ret, err);
-	ret = fp_export_to_buf(r_prime + p_len, p_len, &(Wprime_aff.y)); EG(ret, err);
+	ret = fp_export_to_buf(r_prime, p_len, &(Wprime->X)); EG(ret, err);
+	ret = fp_export_to_buf(r_prime + p_len, p_len, &(Wprime->Y)); EG(ret, err);
 
 	dbg_buf_print("r_prime: ", r_prime, r_len);
 
@@ -613,12 +613,9 @@ err:
 	IGNORE_RET_VAL(local_memset(r_prime, 0, sizeof(r_prime)));
 
 	nn_uninit(&tmp);
-	nn_uninit(&tmp2);
 	nn_uninit(&e);
 	prj_pt_uninit(&sG);
 	prj_pt_uninit(&eY);
-	prj_pt_uninit(&Wprime);
-	aff_pt_uninit(&Wprime_aff);
 
 	/*
 	 * We can now clear data part of the context. This will clear
@@ -628,6 +625,7 @@ err:
 		     sizeof(ecfsdsa_verify_data)));
 
 	/* Clean what remains on the stack */
+	PTR_NULLIFY(Wprime);
 	PTR_NULLIFY(G);
 	PTR_NULLIFY(Y);
 	PTR_NULLIFY(q);

@@ -782,6 +782,12 @@ ATTRIBUTE_WARN_UNUSED_RET static int rand_sig_verif_test_one(const ec_sig_mappin
 	int ret;
 	u32 len;
 
+#if defined(WITH_SIG_EDDSA25519) || defined(WITH_SIG_SM2)
+	u8 rand_adata[255] = { 0 };
+	/* The case of EDDSA25519CTX and SM2 needs a non NULL context (ancillary data).
+	 * Create a random string of size <= 255 for this.
+	 */
+#endif
 	MUST_HAVE(sig != NULL, ret, err);
 	MUST_HAVE(hash != NULL, ret, err);
 	MUST_HAVE(ec != NULL, ret, err);
@@ -797,7 +803,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int rand_sig_verif_test_one(const ec_sig_mappin
 	ret = local_strncat(test_name, hash->name, tn_size - len); EG(ret, err);
 	ret = local_strlen(test_name, &len); EG(ret, err);
 	ret = local_strncat(test_name, "/", tn_size - len); EG(ret, err);
-	ret =  local_strlen(test_name, &len); EG(ret, err);
+	ret = local_strlen(test_name, &len); EG(ret, err);
 	ret = local_strncat(test_name, crv_name, tn_size - len); EG(ret, err);
 
 	/* Create a test */
@@ -813,10 +819,6 @@ ATTRIBUTE_WARN_UNUSED_RET static int rand_sig_verif_test_one(const ec_sig_mappin
 	t.exp_sig = NULL;
 	t.exp_siglen = 0;
 #if defined(WITH_SIG_EDDSA25519) || defined(WITH_SIG_SM2)
-	u8 rand_adata[255] = { 0 };
-	/* The case of EDDSA25519CTX and SM2 needs a non NULL context (ancillary data).
-	 * Create a random string of size <= 255 for this.
-	 */
 #if defined(WITH_SIG_EDDSA25519) && !defined(WITH_SIG_SM2)
 	if(sig->type == EDDSA25519CTX)
 #endif
@@ -1081,7 +1083,12 @@ ATTRIBUTE_WARN_UNUSED_RET static int perf_test_one(const ec_sig_mapping *sig, co
 	ec_test_case t;
 	int ret;
 	u32 len;
-
+#if defined(WITH_SIG_EDDSA25519) || defined(WITH_SIG_SM2)
+	u8 rand_adata[255] = { 0 };
+	/* The case of EDDSA25519CTX and SM2 needs a non NULL context (ancillary data).
+	 * Create a random string of size <= 255 for this.
+	 */
+#endif
 	MUST_HAVE(sig != NULL, ret, err);
 	MUST_HAVE(hash != NULL, ret, err);
 	MUST_HAVE(ec != NULL, ret, err);
@@ -1113,10 +1120,6 @@ ATTRIBUTE_WARN_UNUSED_RET static int perf_test_one(const ec_sig_mapping *sig, co
 	t.exp_sig = NULL;
 	t.exp_siglen = 0;
 #if defined(WITH_SIG_EDDSA25519) || defined(WITH_SIG_SM2)
-	u8 rand_adata[255] = { 0 };
-	/* The case of EDDSA25519CTX and SM2 needs a non NULL context (ancillary data).
-	 * Create a random string of size <= 255 for this.
-	 */
 #if defined(WITH_SIG_EDDSA25519) && !defined(WITH_SIG_SM2)
 	if(sig->type == EDDSA25519CTX)
 #endif

@@ -282,15 +282,12 @@ err:
  */
 int nn_mul_mod(nn_t out, nn_src_t in1, nn_src_t in2, nn_src_t p_in)
 {
-	nn r, r_square;
-	nn in1_tmp, in2_tmp, tmp;
+	nn r_square, p;
+	nn in1_tmp, in2_tmp;
 	word_t mpinv;
-	nn one;
-	nn p;
 	int ret;
-	tmp.magic = one.magic = p.magic = 0;
+	r_square.magic = in1_tmp.magic = in2_tmp.magic = p.magic = 0;
 
-	ret = nn_init(&p, 0); EG(ret, err);
 	ret = nn_copy(&p, p_in); EG(ret, err);
 
 	/*
@@ -303,29 +300,30 @@ int nn_mul_mod(nn_t out, nn_src_t in1, nn_src_t in2, nn_src_t p_in)
 		ret = nn_set_wlen(&p, 2); EG(ret, err);
 	}
 
-	/* Compute Mongtomery coefs */
-	ret = nn_compute_redc1_coefs(&r, &r_square, &p, &mpinv); EG(ret, err);
-	nn_uninit(&r);
+	/* Compute Mongtomery coefs.
+	 * NOTE: in1_tmp holds a dummy value here after the operation.
+	 */
+	ret = nn_compute_redc1_coefs(&in1_tmp, &r_square, &p, &mpinv); EG(ret, err);
 
 	/* redcify in1 and in2 */
 	ret = nn_mul_redc1(&in1_tmp, in1, &r_square, &p, mpinv); EG(ret, err);
 	ret = nn_mul_redc1(&in2_tmp, in2, &r_square, &p, mpinv); EG(ret, err);
 
-	/* Compute in1 * in2 mod p in montgomery world */
-	ret = nn_mul_redc1(&tmp, &in1_tmp, &in2_tmp, &p, mpinv); EG(ret, err);
-
-	nn_uninit(&in1_tmp);
-	nn_uninit(&in2_tmp);
+	/* Compute in1 * in2 mod p in montgomery world.
+	 * NOTE: r_square holds the result after the operation.
+	 */
+	ret = nn_mul_redc1(&r_square, &in1_tmp, &in2_tmp, &p, mpinv); EG(ret, err);
 
 	/* Come back to real world by unredcifying result */
-	ret = nn_init(&one, 0); EG(ret, err);
-	ret = nn_one(&one); EG(ret, err);
-	ret = nn_mul_redc1(out, &tmp, &one, &p, mpinv); EG(ret, err);
+	ret = nn_init(&in1_tmp, 0); EG(ret, err);
+	ret = nn_one(&in1_tmp); EG(ret, err);
+	ret = nn_mul_redc1(out, &r_square, &in1_tmp, &p, mpinv); EG(ret, err);
 
 err:
-	nn_uninit(&tmp);
-	nn_uninit(&one);
 	nn_uninit(&p);
+	nn_uninit(&r_square);
+	nn_uninit(&in1_tmp);
+	nn_uninit(&in2_tmp);
 
 	return ret;
 }

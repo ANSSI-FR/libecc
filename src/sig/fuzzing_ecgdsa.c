@@ -48,7 +48,6 @@ int ecgdsa_sign_raw(struct ec_sign_context *ctx, const u8 *input, u8 inputlen, u
         u8 hsize, r_len, s_len, p_len;
         bitcnt_t q_bit_len, p_bit_len, rshift;
         prj_pt kG;
-        aff_pt W;
         int ret, iszero;
         nn tmp, tmp2, s, e, kr, k, r;
 #ifdef USE_SIG_BLINDING
@@ -58,7 +57,7 @@ int ecgdsa_sign_raw(struct ec_sign_context *ctx, const u8 *input, u8 inputlen, u
 #endif
 	tmp.magic = tmp2.magic = s.magic = e.magic = 0;
 	kr.magic = k.magic = r.magic = 0;
-	kG.magic = W.magic = 0;
+	kG.magic = 0;
 
 	/*
 	 * First, verify context has been initialized and private
@@ -172,13 +171,13 @@ int ecgdsa_sign_raw(struct ec_sign_context *ctx, const u8 *input, u8 inputlen, u
 #else
 	ret = prj_pt_mul(&kG, &k, G); EG(ret, err);
 #endif /* USE_SIG_BLINDING */
-	ret = prj_pt_to_aff(&W, &kG); EG(ret, err);
+	ret = prj_pt_unique(&kG, &kG); EG(ret, err);
 
-	dbg_nn_print("W_x", &(W.x.fp_val));
-	dbg_nn_print("W_y", &(W.y.fp_val));
+	dbg_nn_print("W_x", &(kG.X.fp_val));
+	dbg_nn_print("W_y", &(kG.Y.fp_val));
 
 	/* 5. Compute r = Wx mod q */
-	ret = nn_mod(&r, &(W.x.fp_val), q); EG(ret, err);
+	ret = nn_mod(&r, &(kG.X.fp_val), q); EG(ret, err);
 	dbg_nn_print("r", &r);
 
 	/* 6. If r is 0, restart the process at step 4. */
@@ -227,7 +226,6 @@ int ecgdsa_sign_raw(struct ec_sign_context *ctx, const u8 *input, u8 inputlen, u
 	nn_uninit(&k);
 
 	prj_pt_uninit(&kG);
-	aff_pt_uninit(&W);
 
 	/*
 	 * We can now clear data part of the context. This will clear
@@ -263,9 +261,9 @@ int ecgdsa_sign_raw(struct ec_sign_context *ctx, const u8 *input, u8 inputlen, u
 
 int ecgdsa_verify_raw(struct ec_verify_context *ctx, const u8 *input, u8 inputlen)
 {
-	nn tmp, e, r_prime, rinv, u, v, *r, *s;
-	prj_pt uG, vY, Wprime;
-	aff_pt Wprime_aff;
+	nn tmp, e, r_prime, rinv, uv, *r, *s;
+	prj_pt uG, vY;
+	prj_pt_t Wprime;
 	prj_pt_src_t G, Y;
         /* NOTE: hash here is not really a hash ... */
         u8 e_buf[BIT_LEN_WORDS(NN_MAX_BIT_LEN) * (WORDSIZE / 8)];
@@ -274,9 +272,11 @@ int ecgdsa_verify_raw(struct ec_verify_context *ctx, const u8 *input, u8 inputle
         bitcnt_t q_bit_len, rshift;
 	int ret, cmp;
 
-	tmp.magic = e.magic = r_prime.magic = rinv.magic = 0;
-	u.magic = v.magic = 0;
-	uG.magic = vY.magic = Wprime.magic = Wprime_aff.magic = 0;
+	tmp.magic = e.magic = r_prime.magic = rinv.magic = uv.magic = 0;
+	uG.magic = vY.magic = 0;
+
+	/* NOTE: we reuse uG for Wprime to optimize local variables */
+	Wprime = &uG;
 
 	/*
 	 * First, verify context has been initialized and public
@@ -330,22 +330,22 @@ int ecgdsa_verify_raw(struct ec_verify_context *ctx, const u8 *input, u8 inputle
 	/* 4. Compute u = (r^-1)e mod q */
 	ret = nn_modinv(&rinv, r, q); EG(ret, err); /* r^-1 */
 	ret = nn_mul(&tmp, &rinv, &e); EG(ret, err); /* r^-1 * e */
-	ret = nn_mod(&u, &tmp, q); EG(ret, err); /* (r^-1 * e) mod q */
+	ret = nn_mod(&uv, &tmp, q); EG(ret, err); /* (r^-1 * e) mod q */
+	ret = prj_pt_mul(&uG, &uv, G); EG(ret, err);
 
 	/* 5. Compute v = (r^-1)s mod q */
 	ret = nn_mul(&tmp, &rinv, s); EG(ret, err); /*  r^-1 * s */
-	ret = nn_mod(&v, &tmp, q); EG(ret, err); /* (r^-1 * s) mod q */
+	ret = nn_mod(&uv, &tmp, q); EG(ret, err); /* (r^-1 * s) mod q */
+	ret = prj_pt_mul(&vY, &uv, Y); EG(ret, err);
 
 	/* 6. Compute W' = uG + vY */
-	ret = prj_pt_mul(&uG, &u, G); EG(ret, err);
-	ret = prj_pt_mul(&vY, &v, Y); EG(ret, err);
-	ret = prj_pt_add(&Wprime, &uG, &vY); EG(ret, err);
+	ret = prj_pt_add(Wprime, &uG, &vY); EG(ret, err);
 
 	/* 7. Compute r' = W'_x mod q */
-	ret = prj_pt_to_aff(&Wprime_aff, &Wprime); EG(ret, err);
-	dbg_nn_print("W'_x", &(Wprime_aff.x.fp_val));
-	dbg_nn_print("W'_y", &(Wprime_aff.y.fp_val));
-	ret = nn_mod(&r_prime, &(Wprime_aff.x.fp_val), q); EG(ret, err);
+	ret = prj_pt_unique(Wprime, Wprime); EG(ret, err);
+	dbg_nn_print("W'_x", &(Wprime->X.fp_val));
+	dbg_nn_print("W'_y", &(Wprime->Y.fp_val));
+	ret = nn_mod(&r_prime, &(Wprime->X.fp_val), q); EG(ret, err);
 
 	/* 8. Accept the signature if and only if r equals r' */
 	ret = nn_cmp(r, &r_prime, &cmp); EG(ret, err);
@@ -354,15 +354,12 @@ int ecgdsa_verify_raw(struct ec_verify_context *ctx, const u8 *input, u8 inputle
 err:
 	nn_uninit(&r_prime);
 	nn_uninit(&e);
-	nn_uninit(&u);
-	nn_uninit(&v);
+	nn_uninit(&uv);
 	nn_uninit(&tmp);
 	nn_uninit(&rinv);
 
 	prj_pt_uninit(&uG);
 	prj_pt_uninit(&vY);
-	prj_pt_uninit(&Wprime);
-	aff_pt_uninit(&Wprime_aff);
 
 	/*
 	 * We can now clear data part of the context. This will clear
@@ -371,6 +368,7 @@ err:
 	IGNORE_RET_VAL(local_memset(&(ctx->verify_data.ecgdsa), 0,
 		     sizeof(ecgdsa_verify_data)));
 
+	PTR_NULLIFY(Wprime);
 	PTR_NULLIFY(r);
 	PTR_NULLIFY(s);
 	PTR_NULLIFY(G);

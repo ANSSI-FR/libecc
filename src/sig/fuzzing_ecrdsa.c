@@ -87,7 +87,6 @@ int ecrdsa_sign_raw(struct ec_sign_context *ctx, const u8 *input, u8 inputlen, u
         u8 h_buf[BIT_LEN_WORDS(NN_MAX_BIT_LEN) * (WORDSIZE / 8)];
 	prj_pt_src_t G;
 	prj_pt kG;
-	aff_pt W;
 	nn_src_t q, x;
 	u8 hsize, r_len, s_len;
 	int ret, iszero;
@@ -100,7 +99,7 @@ int ecrdsa_sign_raw(struct ec_sign_context *ctx, const u8 *input, u8 inputlen, u
 
 	tmp.magic = s.magic = rx.magic = ke.magic = 0;
 	k.magic = r.magic = e.magic = 0;
-	kG.magic = W.magic = 0;
+	kG.magic = 0;
 
 	/*
 	 * First, verify context has been initialized and private
@@ -172,12 +171,12 @@ int ecrdsa_sign_raw(struct ec_sign_context *ctx, const u8 *input, u8 inputlen, u
 #else
         ret = prj_pt_mul(&kG, &k, G); EG(ret, err);
 #endif /* USE_SIG_BLINDING */
-	ret = prj_pt_to_aff(&W, &kG); EG(ret, err);
-	dbg_nn_print("W_x", &(W.x.fp_val));
-	dbg_nn_print("W_y", &(W.y.fp_val));
+	ret = prj_pt_unique(&kG, &kG); EG(ret, err);
+	dbg_nn_print("W_x", &(kG.X.fp_val));
+	dbg_nn_print("W_y", &(kG.Y.fp_val));
 
 	/* 4. Compute r = Wx mod q */
-	ret = nn_mod(&r, &(W.x.fp_val), q); EG(ret, err);
+	ret = nn_mod(&r, &(kG.X.fp_val), q); EG(ret, err);
 
 	/* 5. If r is 0, restart the process at step 2. */
         /* NOTE: for the CRYPTOFUZZ mode, we do not restart
@@ -252,7 +251,6 @@ int ecrdsa_sign_raw(struct ec_sign_context *ctx, const u8 *input, u8 inputlen, u
 	nn_uninit(&k);
 	nn_uninit(&e);
 	prj_pt_uninit(&kG);
-	aff_pt_uninit(&W);
 
 	/*
 	 * We can now clear data part of the context. This will clear
@@ -290,8 +288,8 @@ int ecrdsa_verify_raw(struct ec_verify_context *ctx, const u8 *input, u8 inputle
 	prj_pt_src_t G, Y;
 	nn_src_t q;
 	nn tmp, h, r_prime, e, v, u;
-	prj_pt vY, uG, Wprime;
-	aff_pt Wprime_aff;
+	prj_pt vY, uG;
+	prj_pt_t Wprime;
         /* NOTE: hash here is not really a hash ... */
         u8 h_buf[BIT_LEN_WORDS(NN_MAX_BIT_LEN) * (WORDSIZE / 8)];
 	nn *r, *s;
@@ -300,7 +298,10 @@ int ecrdsa_verify_raw(struct ec_verify_context *ctx, const u8 *input, u8 inputle
 
 	tmp.magic = h.magic = r_prime.magic = e.magic = 0;
 	v.magic = u.magic = 0;
-	vY.magic = uG.magic = Wprime.magic = Wprime_aff.magic = 0;
+	vY.magic = uG.magic = 0;
+
+	/* NOTE: we reuse uG for Wprime to optimize local variables */
+	Wprime = &uG;
 
 	/*
 	 * First, verify context has been initialized and public
@@ -367,13 +368,13 @@ int ecrdsa_verify_raw(struct ec_verify_context *ctx, const u8 *input, u8 inputle
 	/* 6. Compute W' = uG + vY = (W'_x, W'_y) */
 	ret = prj_pt_mul(&uG, &u, G); EG(ret, err);
 	ret = prj_pt_mul(&vY, &v, Y); EG(ret, err);
-	ret = prj_pt_add(&Wprime, &uG, &vY); EG(ret, err);
-	ret = prj_pt_to_aff(&Wprime_aff, &Wprime); EG(ret, err);
-	dbg_nn_print("W'_x", &(Wprime_aff.x.fp_val));
-	dbg_nn_print("W'_y", &(Wprime_aff.y.fp_val));
+	ret = prj_pt_add(Wprime, &uG, &vY); EG(ret, err);
+	ret = prj_pt_unique(Wprime, Wprime); EG(ret, err);
+	dbg_nn_print("W'_x", &(Wprime->X.fp_val));
+	dbg_nn_print("W'_y", &(Wprime->Y.fp_val));
 
 	/* 7. Compute r' = W'_x mod q */
-	ret = nn_mod(&r_prime, &(Wprime_aff.x.fp_val), q); EG(ret, err);
+	ret = nn_mod(&r_prime, &(Wprime->X.fp_val), q); EG(ret, err);
 
 	/* 8. Check r and r' are the same */
 	ret = nn_cmp(r, &r_prime, &cmp); EG(ret, err);
@@ -388,8 +389,6 @@ err:
 	nn_uninit(&v);
 	prj_pt_uninit(&vY);
 	prj_pt_uninit(&uG);
-	prj_pt_uninit(&Wprime);
-	aff_pt_uninit(&Wprime_aff);
 
 	/*
 	 * We can now clear data part of the context. This will clear
@@ -399,6 +398,7 @@ err:
 		     sizeof(ecrdsa_verify_data)));
 
 	/* Clean what remains on the stack */
+	PTR_NULLIFY(Wprime);
 	PTR_NULLIFY(G);
 	PTR_NULLIFY(Y);
 	PTR_NULLIFY(q);

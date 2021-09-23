@@ -324,10 +324,9 @@ int __ecdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen,
 	u8 hash[MAX_DIGEST_SIZE];
 	bitcnt_t rshift, q_bit_len;
 	prj_pt kG;
-	aff_pt W;
 	nn_src_t q, x;
 	u8 hsize, q_len;
-	nn k, r, e, tmp, tmp2, s, kinv;
+	nn k, r, e, tmp, s, kinv;
 #ifdef USE_SIG_BLINDING
 	/* b is the blinding mask */
 	nn b;
@@ -335,8 +334,8 @@ int __ecdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen,
 #endif
 
 	k.magic = r.magic = e.magic = 0;
-	tmp.magic = tmp2.magic = s.magic = kinv.magic = 0;
-	kG.magic = W.magic = 0;
+	tmp.magic = s.magic = kinv.magic = 0;
+	kG.magic = 0;
 
 	/*
 	 * First, verify context has been initialized and private
@@ -405,13 +404,13 @@ int __ecdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen,
 	 * 3. Compute e = OS2I(h) mod q, i.e. by converting h to an
 	 *    integer and reducing it mod q
 	 */
-	ret = nn_init_from_buf(&tmp2, hash, hsize); EG(ret, err);
-	dbg_nn_print("h initial import as nn", &tmp2);
+	ret = nn_init_from_buf(&e, hash, hsize); EG(ret, err);
+	dbg_nn_print("h initial import as nn", &e);
 	if (rshift) {
-		ret = nn_rshift_fixedlen(&tmp2, &tmp2, rshift); EG(ret, err);
+		ret = nn_rshift_fixedlen(&e, &e, rshift); EG(ret, err);
 	}
-	dbg_nn_print("h	  final import as nn", &tmp2);
-	ret = nn_mod(&e, &tmp2, q); EG(ret, err);
+	dbg_nn_print("h	  final import as nn", &e);
+	ret = nn_mod(&e, &e, q); EG(ret, err);
 	dbg_nn_print("e", &e);
 
  restart:
@@ -479,13 +478,13 @@ int __ecdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen,
 #else
 	ret = prj_pt_mul(&kG, &k, G); EG(ret, err);
 #endif /* USE_SIG_BLINDING */
-	ret = prj_pt_to_aff(&W, &kG); EG(ret, err);
+	ret = prj_pt_unique(&kG, &kG); EG(ret, err);
 
-	dbg_nn_print("W_x", &(W.x.fp_val));
-	dbg_nn_print("W_y", &(W.y.fp_val));
+	dbg_nn_print("W_x", &(kG.X.fp_val));
+	dbg_nn_print("W_y", &(kG.Y.fp_val));
 
 	/* 6. Compute r = W_x mod q */
-	ret = nn_mod(&r, &(W.x.fp_val), q); EG(ret, err);
+	ret = nn_mod(&r, &(kG.X.fp_val), q); EG(ret, err);
 	dbg_nn_print("r", &r);
 
 	/* 7. If r is 0, restart the process at step 4. */
@@ -520,9 +519,9 @@ int __ecdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen,
 
 	/* 9. Compute s = k^-1 * (xr + e) mod q */
 
-	/* tmp2 = (e + xr) mod q */
-	ret = nn_mod_add(&tmp2, &tmp, &e, q); EG(ret, err);
-	dbg_nn_print("(xr + e) mod q", &tmp2);
+	/* tmp = (e + xr) mod q */
+	ret = nn_mod_add(&tmp, &tmp, &e, q); EG(ret, err);
+	dbg_nn_print("(xr + e) mod q", &tmp);
 
 #ifdef USE_SIG_BLINDING
 	/*
@@ -537,7 +536,7 @@ int __ecdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen,
 	dbg_nn_print("k^-1 mod q", &kinv);
 
 	/* s = k^-1 * tmp2 mod q */
-	ret = nn_mul_mod(&s, &tmp2, &kinv, q); EG(ret, err);
+	ret = nn_mul_mod(&s, &tmp, &kinv, q); EG(ret, err);
 
 	dbg_nn_print("s", &s);
 
@@ -555,11 +554,9 @@ err:
 	nn_uninit(&r);
 	nn_uninit(&e);
 	nn_uninit(&tmp);
-	nn_uninit(&tmp2);
 	nn_uninit(&s);
 	nn_uninit(&kinv);
 	prj_pt_uninit(&kG);
-	aff_pt_uninit(&W);
 #ifdef USE_SIG_BLINDING
 	nn_uninit(&b);
 #endif
@@ -700,9 +697,9 @@ err:
 int __ecdsa_verify_finalize(struct ec_verify_context *ctx,
 			    ec_sig_alg_type key_type)
 {
-	prj_pt uG, vY, W_prime;
-	nn e, tmp, sinv, u, v, r_prime;
-	aff_pt W_prime_aff;
+	prj_pt uG, vY;
+	prj_pt_t W_prime;
+	nn e, sinv, uv, r_prime;
 	prj_pt_src_t G, Y;
 	u8 hash[MAX_DIGEST_SIZE];
 	bitcnt_t rshift, q_bit_len;
@@ -711,8 +708,11 @@ int __ecdsa_verify_finalize(struct ec_verify_context *ctx,
 	u8 hsize;
 	int ret, iszero, cmp;
 
-	uG.magic = vY.magic = W_prime.magic = W_prime_aff.magic = 0;
-	e.magic = tmp.magic = sinv.magic = u.magic = v.magic = r_prime.magic = 0;
+	uG.magic = vY.magic = 0;
+	e.magic = sinv.magic = uv.magic = r_prime.magic = 0;
+
+	/* NOTE: we reuse uG for W_prime to optimize local variables */
+	W_prime = &uG;
 
 	/*
 	 * First, verify context has been initialized and public
@@ -761,15 +761,15 @@ int __ecdsa_verify_finalize(struct ec_verify_context *ctx,
 	 * 4. Compute e = OS2I(h) mod q, by converting h to an integer
 	 * and reducing it mod q
 	 */
-	ret = nn_init_from_buf(&tmp, hash, hsize); EG(ret, err);
+	ret = nn_init_from_buf(&e, hash, hsize); EG(ret, err);
 	ret = local_memset(hash, 0, hsize); EG(ret, err);
 	dbg_nn_print("h initial import as nn", &tmp);
 	if (rshift) {
-		ret = nn_rshift_fixedlen(&tmp, &tmp, rshift); EG(ret, err);
+		ret = nn_rshift_fixedlen(&e, &e, rshift); EG(ret, err);
 	}
-	dbg_nn_print("h	  final import as nn", &tmp);
+	dbg_nn_print("h	  final import as nn", &e);
 
-	ret = nn_mod(&e, &tmp, q); EG(ret, err);
+	ret = nn_mod(&e, &e, q); EG(ret, err);
 	dbg_nn_print("e", &e);
 
 	/* Compute s^-1 mod q */
@@ -778,28 +778,27 @@ int __ecdsa_verify_finalize(struct ec_verify_context *ctx,
 	dbg_nn_print("sinv", &sinv);
 
 	/* 5. Compute u = (s^-1)e mod q */
-	ret = nn_mul(&tmp, &e, &sinv); EG(ret, err);
-	ret = nn_mod(&u, &tmp, q); EG(ret, err);
-	dbg_nn_print("u = (s^-1)e mod q", &u);
+	ret = nn_mul_mod(&uv, &e, &sinv, q); EG(ret, err);
+	dbg_nn_print("u = (s^-1)e mod q", &uv);
+	ret = prj_pt_mul(&uG, &uv, G); EG(ret, err);
 
 	/* 6. Compute v = (s^-1)r mod q */
-	ret = nn_mul_mod(&v, r, &sinv, q); EG(ret, err);
-	dbg_nn_print("v = (s^-1)r mod q", &v);
+	ret = nn_mul_mod(&uv, r, &sinv, q); EG(ret, err);
+	dbg_nn_print("v = (s^-1)r mod q", &uv);
+	ret = prj_pt_mul(&vY, &uv, Y); EG(ret, err);
 
 	/* 7. Compute W' = uG + vY */
-	ret = prj_pt_mul(&uG, &u, G); EG(ret, err);
-	ret = prj_pt_mul(&vY, &v, Y); EG(ret, err);
-	ret = prj_pt_add(&W_prime, &uG, &vY); EG(ret, err);
+	ret = prj_pt_add(W_prime, &uG, &vY); EG(ret, err);
 
 	/* 8. If W' is the point at infinity, reject the signature. */
-	ret = prj_pt_iszero(&W_prime, &iszero); EG(ret, err);
+	ret = prj_pt_iszero(W_prime, &iszero); EG(ret, err);
 	MUST_HAVE(!iszero, ret, err);
 
 	/* 9. Compute r' = W'_x mod q */
-	ret = prj_pt_to_aff(&W_prime_aff, &W_prime); EG(ret, err);
-	dbg_nn_print("W'_x", &(W_prime_aff.x.fp_val));
-	dbg_nn_print("W'_y", &(W_prime_aff.y.fp_val));
-	ret = nn_mod(&r_prime, &(W_prime_aff.x.fp_val), q); EG(ret, err);
+	ret = prj_pt_unique(W_prime, W_prime); EG(ret, err);
+	dbg_nn_print("W'_x", &(W_prime->X.fp_val));
+	dbg_nn_print("W'_y", &(W_prime->Y.fp_val));
+	ret = nn_mod(&r_prime, &(W_prime->X.fp_val), q); EG(ret, err);
 
 	/* 10. Accept the signature if and only if r equals r' */
 	ret = nn_cmp(&r_prime, r, &cmp); EG(ret, err);
@@ -808,13 +807,9 @@ int __ecdsa_verify_finalize(struct ec_verify_context *ctx,
  err:
 	prj_pt_uninit(&uG);
 	prj_pt_uninit(&vY);
-	prj_pt_uninit(&W_prime);
-	aff_pt_uninit(&W_prime_aff);
 	nn_uninit(&e);
-	nn_uninit(&tmp);
 	nn_uninit(&sinv);
-	nn_uninit(&u);
-	nn_uninit(&v);
+	nn_uninit(&uv);
 	nn_uninit(&r_prime);
 
 	/*
@@ -824,6 +819,7 @@ int __ecdsa_verify_finalize(struct ec_verify_context *ctx,
 	IGNORE_RET_VAL(local_memset(&(ctx->verify_data.ecdsa), 0, sizeof(ecdsa_verify_data)));
 
 	/* Clean what remains on the stack */
+	PTR_NULLIFY(W_prime);
 	PTR_NULLIFY(G);
 	PTR_NULLIFY(Y);
 	VAR_ZEROIFY(rshift);

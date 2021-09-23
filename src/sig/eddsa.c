@@ -12,6 +12,13 @@
 #if defined(WITH_SIG_EDDSA25519) || defined(WITH_SIG_EDDSA448)
 
 /*
+ * XXX: EdDSA is incompatible with small stack devices for now ...
+ */
+#if defined(USE_SMALL_STACK)
+#error "Error: EDDSA25519 and EDDSA448 are incompatible with USE_SMALL_STACK (devices low on memory)"
+#endif
+
+/*
  * Sanity checks on the hash functions and curves depending on the EdDSA variant.
  */
 /* EDDSA25519 used SHA-512 as a fixed hash function and WEI25519 as a fixed

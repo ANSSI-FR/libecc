@@ -144,45 +144,41 @@ err:
 int prj_pt_is_on_curve(prj_pt_src_t in,  int *on_curve)
 {
 	int ret, iszero, _on_curve;
-	prj_pt in1, in2;
-	aff_pt in_aff;
-	in1.magic = in2.magic = in_aff.magic = 0;
+
+ 	fp X, Y;
+	fp_src_t dummy_Z;
+ 	X.magic = Y.magic = 0;
 
 	ret = prj_pt_check_initialized(in); EG(ret, err);
 	MUST_HAVE((on_curve != NULL), ret, err);
 
-	/* Point at infinity is trivially on the curve.
-	 * However, we do not want to leak that we are testing it,
-	 * and hence we test a dummy value if necessary.
-	 * The dummy point is not on the curve, but computations
-	 * are performed anyways!
+	ret = fp_iszero(&(in->Z), &iszero); EG(ret, err);
+
+	/* Go back to affine and avoid leaking the point
+	 * at infinity. Dummy operations are performed
+	 * tentatively in constant time when we have to
+	 * deal with the point at infinity.
 	 */
-	ret = prj_pt_init(&in1, in->crv); EG(ret, err);
-	ret = prj_pt_copy(&in1, in); EG(ret, err);
-	ret = prj_pt_init(&in2, in->crv); EG(ret, err);
-	ret = nn_copy(&(in2.X.fp_val), &((in2.crv)->a.fp_val)); EG(ret, err);
-	ret = nn_copy(&(in2.Y.fp_val), &((in2.crv)->b.fp_val)); EG(ret, err);
-	ret = nn_copy(&(in2.Z.fp_val), &((in2.crv)->order)); EG(ret, err);
+	dummy_Z = iszero ? &(in->crv->a) : &(in->Z);
 
-	ret = prj_pt_iszero(in, &iszero); EG(ret, err);
-	ret = nn_cnd_swap(iszero, &(in1.X.fp_val), &(in2.X.fp_val)); EG(ret, err);
-	ret = nn_cnd_swap(iszero, &(in1.Y.fp_val), &(in2.Y.fp_val)); EG(ret, err);
-	ret = nn_cnd_swap(iszero, &(in1.Z.fp_val), &(in2.Z.fp_val)); EG(ret, err);
+ 	ret = fp_init(&X, in->X.ctx); EG(ret, err);
+	ret = fp_init(&Y, in->X.ctx); EG(ret, err);
 
-	/* Move to the affine unique representation */
-	ret = prj_pt_to_aff(&in_aff, &in1); EG(ret, err);
+ 	ret = fp_inv(&X, dummy_Z); EG(ret, err);
+ 	ret = fp_mul(&Y, &(in->Y), &X); EG(ret, err);
+	ret = fp_mul(&X, &(in->X), &X); EG(ret, err);
 
-	/* Check that the affine coordinates are on the curve */
-	ret = aff_pt_is_on_curve(&in_aff, &_on_curve);
+ 	/* Now check if we satisfy the curve equation */
+	ret = is_on_shortw_curve(&X, &Y, in->crv, &_on_curve);
 
 	if(!ret){
 		*on_curve = (iszero | _on_curve);
 	}
 
 err:
-	aff_pt_uninit(&in_aff);
-	prj_pt_uninit(&in2);
-	prj_pt_uninit(&in1);
+	PTR_NULLIFY(dummy_Z);
+	fp_uninit(&X);
+	fp_uninit(&Y);
 
 	return ret;
 }
@@ -216,8 +212,6 @@ err:
 int prj_pt_to_aff(aff_pt_t out, prj_pt_src_t in)
 {
 	int ret, iszero;
-	fp inv;
-	inv.magic = 0;
 
 	ret = prj_pt_check_initialized(in); EG(ret, err);
 
@@ -225,15 +219,12 @@ int prj_pt_to_aff(aff_pt_t out, prj_pt_src_t in)
 	MUST_HAVE((!iszero), ret, err);
 
 	ret = aff_pt_init(out, in->crv); EG(ret, err);
-	ret = fp_init(&inv, (in->X).ctx); EG(ret, err);
 
-	ret = fp_inv(&inv, &(in->Z)); EG(ret, err);
-	ret = fp_mul(&(out->x), &(in->X), &inv); EG(ret, err);
-	ret = fp_mul(&(out->y), &(in->Y), &inv);
+	ret = fp_inv(&(out->x), &(in->Z)); EG(ret, err);
+	ret = fp_mul(&(out->y), &(in->Y), &(out->x)); EG(ret, err);
+	ret = fp_mul(&(out->x), &(in->X), &(out->x));
 
 err:
-	fp_uninit(&inv);
-
 	return ret;
 }
 
@@ -244,26 +235,34 @@ err:
 int prj_pt_unique(prj_pt_t out, prj_pt_src_t in)
 {
 	int ret, iszero;
-	fp inv;
-	inv.magic = 0;
 
 	ret = prj_pt_check_initialized(in); EG(ret, err);
 	ret = prj_pt_iszero(in, &iszero); EG(ret, err);
 	MUST_HAVE((!iszero), ret, err);
 
-	if(out != in){
-		ret = prj_pt_init(out, in->crv); EG(ret, err);
-	}
-	ret = fp_init(&inv, (in->X).ctx); EG(ret, err);
+	if(out == in){
+		/* Aliasing case */
+		fp tmp;
+		tmp.magic = 0;
 
-	ret = fp_inv(&inv, &(in->Z)); EG(ret, err);
-	ret = fp_mul(&(out->X), &(in->X), &inv); EG(ret, err);
-	ret = fp_mul(&(out->Y), &(in->Y), &inv); EG(ret, err);
-	ret = fp_one(&(out->Z));
+		ret = fp_init(&tmp, (in->Z).ctx); EG(ret, err);
+		ret = fp_inv(&tmp, &(in->Z)); EG(ret, err1);
+		ret = fp_mul(&(out->Y), &(in->Y), &tmp); EG(ret, err1);
+		ret = fp_mul(&(out->X), &(in->X), &tmp); EG(ret, err1);
+		ret = fp_one(&(out->Z)); EG(ret, err1);
+err1:
+		fp_uninit(&tmp); EG(ret, err);
+	}
+	else{
+	        ret = prj_pt_init(out, in->crv); EG(ret, err);
+		ret = fp_inv(&(out->X), &(in->Z)); EG(ret, err);
+		ret = fp_mul(&(out->Y), &(in->Y), &(out->X)); EG(ret, err);
+		ret = fp_mul(&(out->X), &(in->X), &(out->X)); EG(ret, err);
+		ret = fp_one(&(out->Z)); EG(ret, err);
+	}
+
 
 err:
-	fp_uninit(&inv);
-
 	return ret;
 }
 
@@ -342,6 +341,60 @@ err:
 	return ret;
 }
 
+/*
+ * NOTE: this internal functions assumes that upper layer have checked that in1 and in2
+ * are initialized, and that cmp is not NULL.
+ */
+ATTRIBUTE_WARN_UNUSED_RET static inline int _prj_pt_eq_or_opp_X(prj_pt_src_t in1, prj_pt_src_t in2, int *cmp)
+{
+	int ret;
+	fp X1, X2;
+	X1.magic = X2.magic = 0;
+
+	/*
+	 * Montgomery multiplication is used as it is faster than
+	 * usual multiplication and the spurious multiplicative
+	 * factor does not matter.
+	 */
+	ret = fp_init(&X1, (in1->X).ctx); EG(ret, err);
+	ret = fp_init(&X2, (in2->X).ctx); EG(ret, err);
+	ret = fp_mul_redc1(&X1, &(in1->X), &(in2->Z)); EG(ret, err);
+	ret = fp_mul_redc1(&X2, &(in2->X), &(in1->Z)); EG(ret, err);
+	ret = fp_cmp(&X1, &X2, cmp);
+
+err:
+	fp_uninit(&X1);
+	fp_uninit(&X2);
+	return ret;
+}
+
+/*
+ * NOTE: this internal functions assumes that upper layer have checked that in1 and in2
+ * are initialized, and that eq_or_opp is not NULL.
+ */
+ATTRIBUTE_WARN_UNUSED_RET static inline int _prj_pt_eq_or_opp_Y(prj_pt_src_t in1, prj_pt_src_t in2, int *eq_or_opp)
+{
+	int ret;
+	fp Y1, Y2;
+	Y1.magic = Y2.magic = 0;
+
+	/*
+	 * Montgomery multiplication is used as it is faster than
+	 * usual multiplication and the spurious multiplicative
+	 * factor does not matter.
+	 */
+	ret = fp_init(&Y1, (in1->Y).ctx); EG(ret, err);
+	ret = fp_init(&Y2, (in2->Y).ctx); EG(ret, err);
+	ret = fp_mul_redc1(&Y1, &(in1->Y), &(in2->Z)); EG(ret, err);
+	ret = fp_mul_redc1(&Y2, &(in2->Y), &(in1->Z)); EG(ret, err);
+	ret = fp_eq_or_opp(&Y1, &Y2, eq_or_opp);
+
+err:
+	fp_uninit(&Y1);
+	fp_uninit(&Y2);
+	return ret;
+}
+
  /*
  * The functions tests if given projective points 'in1' and 'in2' are equal or
  * opposite. On success, the result of the comparison is given via 'eq_or_opp'
@@ -350,43 +403,21 @@ err:
  */
 int prj_pt_eq_or_opp(prj_pt_src_t in1, prj_pt_src_t in2, int *eq_or_opp)
 {
-	fp X1, X2, Y1, Y2;
 	int ret, cmp, _eq_or_opp;
-	X1.magic = X2.magic = Y1.magic = Y2.magic = 0;
 
 	ret = prj_pt_check_initialized(in1); EG(ret, err);
 	ret = prj_pt_check_initialized(in2); EG(ret, err);
 	MUST_HAVE((in1->crv == in2->crv), ret, err);
 	MUST_HAVE((eq_or_opp != NULL), ret, err);
 
-	ret = fp_init(&X1, (in1->X).ctx); EG(ret, err);
-	ret = fp_init(&X2, (in2->X).ctx); EG(ret, err);
-	ret = fp_init(&Y1, (in1->Y).ctx); EG(ret, err);
-	ret = fp_init(&Y2, (in2->Y).ctx); EG(ret, err);
-
-	/*
-	 * Montgomery multiplication is used as it is faster than
-	 * usual multiplication and the spurious multiplicative
-	 * factor does not matter.
-	 */
-	ret = fp_mul_redc1(&X1, &(in1->X), &(in2->Z)); EG(ret, err);
-	ret = fp_mul_redc1(&X2, &(in2->X), &(in1->Z)); EG(ret, err);
-	ret = fp_mul_redc1(&Y1, &(in1->Y), &(in2->Z)); EG(ret, err);
-	ret = fp_mul_redc1(&Y2, &(in2->Y), &(in1->Z)); EG(ret, err);
-
-	ret = fp_cmp(&X1, &X2, &cmp); EG(ret, err);
-	ret = fp_eq_or_opp(&Y1, &Y2, &_eq_or_opp);
+	ret = _prj_pt_eq_or_opp_X(in1, in2, &cmp); EG(ret, err);
+	ret = _prj_pt_eq_or_opp_Y(in1, in2, &_eq_or_opp);
 
 	if (!ret) {
 		*eq_or_opp = ((cmp == 0) & _eq_or_opp);
 	}
 
 err:
-	fp_uninit(&Y2);
-	fp_uninit(&Y1);
-	fp_uninit(&X2);
-	fp_uninit(&X1);
-
 	return ret;
 }
 
@@ -404,7 +435,7 @@ int prj_pt_neg(prj_pt_t out, prj_pt_src_t in)
 		ret = prj_pt_copy(out, in); EG(ret, err);
 	}
 
-	/* Then, negates Y */
+	/* Then, negate Y */
 	ret = fp_neg(&(out->Y), &(out->Y));
 
 err:
@@ -789,7 +820,7 @@ err:
  * Public version of the addition w/o complete formulas to handle the case
  * where the inputs are zero or opposite. Returns 0 on success, -1 on error.
  */
-int __prj_pt_add_monty_no_cf(prj_pt_t out, prj_pt_src_t in1, prj_pt_src_t in2)
+ATTRIBUTE_WARN_UNUSED_RET static int __prj_pt_add_monty_no_cf(prj_pt_t out, prj_pt_src_t in1, prj_pt_src_t in2)
 {
 	int ret, iszero, eq_or_opp, cmp;
 
@@ -1157,30 +1188,24 @@ err:
 	return ret;
 }
 
-/****** Scalar multiplication algorithms *****/
-
-/* If nothing is specified regarding the scalar multiplication algorithm, we use
- * the Montgomery Ladder
- */
-#if !defined(USE_DOUBLE_ADD_ALWAYS) && !defined(USE_MONTY_LADDER)
-#define USE_MONTY_LADDER
-#endif
-
-#if defined(USE_DOUBLE_ADD_ALWAYS) && defined(USE_MONTY_LADDER)
-#error "You can either choose USE_DOUBLE_ADD_ALWAYS or USE_MONTY_LADDER, not both!"
-#endif
-
-#ifdef USE_DOUBLE_ADD_ALWAYS
-/* Double-and-Add-Always masked using Itoh et al. anti-ADPA
+/*******************************************************************************/
+/****** Scalar multiplication algorithms ***************************************/
+/***********/
+/*
+ * The description below summarizes the following algorithms.
+ *
+ * Double-and-Add-Always and Montgomery Ladder masked using Itoh et al. anti-ADPA
  * (Address-bit DPA) countermeasure.
  * See "A Practical Countermeasure against Address-Bit Differential Power Analysis"
  * by Itoh, Izu and Takenaka for more information.
  *
- * NOTE: this masked variant of the Double-and-Add-Always algorithm is always
- * used as it has a very small impact on performance and is inherently more
- * robust againt DPA.
+ * NOTE: these masked variants of the Double-and-Add-Always and Montgomery Ladder algorithms
+ * are used by default as Itoh et al. countermeasure has a very small impact on performance
+ * and is inherently more robust againt DPA. The only case where we use another variant is
+ * for devices with low memory as Itoh requires many temporary variables that consume many
+ * temporary stack space.
  *
- * NOTE: the Double-and-Add-Always algorithm inherently depends on the MSB of the
+ * NOTE: the algorithms inherently depend on the MSB of the
  * scalar. In order to avoid leaking this MSB and fall into HNP (Hidden Number
  * Problem) issues, we use the trick described in https://eprint.iacr.org/2011/232.pdf
  * to have the MSB always set. However, since the scalar m might be less or bigger than
@@ -1202,6 +1227,62 @@ err:
  *      anyways). In the two first cases, Double-and-Add-Always is performed in constant
  *      time wrt the size of the scalar m.
  */
+/***********/
+/*
+ * Internal point blinding function: as it is internal, in is supposed to be initialized and
+ * aliasing is NOT supported.
+ */
+ATTRIBUTE_WARN_UNUSED_RET static int _blind_projective_point(prj_pt_t out, prj_pt_src_t in)
+{
+	int ret;
+
+	/* Random for projective coordinates masking */
+	/* NOTE: to limit stack usage, we reuse out->Z as a temporary
+	 * variable. This does not work if in == out, hence the check.
+	 */
+	MUST_HAVE(in != out, ret, err);
+
+	ret = prj_pt_init(out, in->crv); EG(ret, err);
+
+	/* Get a random value l in Fp */
+	ret = fp_get_random(&(out->Z), in->X.ctx); EG(ret, err);
+
+	/*
+	 * Blind the point with projective coordinates
+	 * (X, Y, Z) => (l*X, l*Y, l*Z)
+	 */
+	ret = fp_mul_monty(&(out->X), &(in->X), &(out->Z)); EG(ret, err);
+	ret = fp_mul_monty(&(out->Y), &(in->Y), &(out->Z)); EG(ret, err);
+	ret = fp_mul_monty(&(out->Z), &(in->Z), &(out->Z));
+
+err:
+	return ret;
+}
+
+/* If nothing is specified regarding the scalar multiplication algorithm, we use
+ * the Montgomery Ladder. For the specific case of small stack devices, we release
+ * some pressure on the stack by explicitly using double and always WITHOUT the Itoh
+ * et al. countermeasure against A-DPA as it is quite consuming.
+ */
+#if defined(USE_SMALL_STACK) && defined(USE_MONTY_LADDER)
+#error "Small stack is only compatible with USE_DOUBLE_ADD_ALWAYS while USE_MONTY_LADDER has been explicitly asked!"
+#endif
+
+#if defined(USE_SMALL_STACK)
+#ifndef USE_DOUBLE_ADD_ALWAYS
+#define USE_DOUBLE_ADD_ALWAYS
+#endif
+#endif
+
+#if !defined(USE_DOUBLE_ADD_ALWAYS) && !defined(USE_MONTY_LADDER)
+#define USE_MONTY_LADDER
+#endif
+
+#if defined(USE_DOUBLE_ADD_ALWAYS) && defined(USE_MONTY_LADDER)
+#error "You can either choose USE_DOUBLE_ADD_ALWAYS or USE_MONTY_LADDER, not both!"
+#endif
+
+#if defined(USE_DOUBLE_ADD_ALWAYS) && !defined(USE_SMALL_STACK)
 ATTRIBUTE_WARN_UNUSED_RET static int _prj_pt_mul_ltr_monty_dbl_add_always(prj_pt_t out, nn_src_t m, prj_pt_src_t in)
 {
 	/* We use Itoh et al. notations here for T and the random r */
@@ -1210,8 +1291,6 @@ ATTRIBUTE_WARN_UNUSED_RET static int _prj_pt_mul_ltr_monty_dbl_add_always(prj_pt
 	u8 mbit, rbit;
 	/* Random for masking the Double and Add Always algorithm */
 	nn r;
-	/* Random for projective coordinates masking */
-	fp l;
 	/* The new scalar we will use with MSB fixed to 1 (noted m' above).
 	 * This helps dealing with constant time.
 	 */
@@ -1219,7 +1298,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int _prj_pt_mul_ltr_monty_dbl_add_always(prj_pt
 	nn_src_t curve_order;
 	nn curve_order_square;
 	int ret, on_curve, cmp;
-	r.magic = l.magic = m_msb_fixed.magic = curve_order_square.magic = 0;
+	r.magic = m_msb_fixed.magic = curve_order_square.magic = 0;
 	T[0].magic = T[1].magic = T[2].magic = 0;
 
 	/* Check that the input is on the curve */
@@ -1265,9 +1344,6 @@ ATTRIBUTE_WARN_UNUSED_RET static int _prj_pt_mul_ltr_monty_dbl_add_always(prj_pt
 	/* Get a random r with the same size of m_msb_fixed */
 	ret = nn_get_random_len(&r, m_msb_fixed.wlen * WORD_BYTES); EG(ret, err);
 
-	/* Get a random value l in Fp */
-	ret = fp_get_random(&l, in->X.ctx); EG(ret, err);
-
 	ret = nn_getbit(&r, mlen, &rbit); EG(ret, err);
 
 	/* Initialize points */
@@ -1279,10 +1355,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int _prj_pt_mul_ltr_monty_dbl_add_always(prj_pt
 	 * Blind the point with projective coordinates
 	 * (X, Y, Z) => (l*X, l*Y, l*Z)
 	 */
-	ret = prj_pt_init(&T[2], in->crv); EG(ret, err);
-	ret = fp_mul_monty(&(T[2].X), &(in->X), &l); EG(ret, err);
-	ret = fp_mul_monty(&(T[2].Y), &(in->Y), &l); EG(ret, err);
-	ret = fp_mul_monty(&(T[2].Z), &(in->Z), &l); EG(ret, err);
+	ret = _blind_projective_point(&T[2], in); EG(ret, err);
 
 	/*  T[r[n-1]] = T[2] */
 	ret = prj_pt_copy(&T[rbit], &T[2]); EG(ret, err);
@@ -1304,12 +1377,12 @@ ATTRIBUTE_WARN_UNUSED_RET static int _prj_pt_mul_ltr_monty_dbl_add_always(prj_pt
 		 * addition for doubling, incurring a small performance hit
 		 * for better SCA resistance.
 		 */
-		ret = prj_pt_add_monty(&T[rbit], &T[rbit], &T[rbit]); EG(ret, err);
+		ret = prj_pt_add(&T[rbit], &T[rbit], &T[rbit]); EG(ret, err);
 #else
-		ret = prj_pt_dbl_monty(&T[rbit], &T[rbit]); EG(ret, err);
+		ret = prj_pt_dbl(&T[rbit], &T[rbit]); EG(ret, err);
 #endif
 		/* Add:  T[1-r[i+1]] = ECADD(T[r[i+1]],T[2]) */
-		ret = prj_pt_add_monty(&T[1-rbit], &T[rbit], &T[2]); EG(ret, err);
+		ret = prj_pt_add(&T[1-rbit], &T[rbit], &T[2]); EG(ret, err);
 
 		/*
 		 * T[r[i]] = T[d[i] ^ r[i+1]]
@@ -1337,7 +1410,6 @@ err:
 	prj_pt_uninit(&T[1]);
 	prj_pt_uninit(&T[2]);
 	nn_uninit(&r);
-	fp_uninit(&l);
 	nn_uninit(&m_msb_fixed);
 	nn_uninit(&curve_order_square);
 
@@ -1345,38 +1417,117 @@ err:
 }
 #endif
 
-#ifdef USE_MONTY_LADDER
-/* Montgomery Ladder masked using Itoh et al. anti-ADPA
- * (Address-bit DPA) countermeasure.
- * See "A Practical Countermeasure against Address-Bit Differential Power Analysis"
- * by Itoh, Izu and Takenaka for more information.
- *
- * NOTE: this masked variant of the Montgomery Ladder algorithm is always
- * used as it has a very small impact on performance and is inherently more
- * robust againt DPA.
- *
- * NOTE: the Montgomery Ladder algorithm inherently depends on the MSB of the
- * scalar. In order to avoid leaking this MSB and fall into HNP (Hidden Number
- * Problem) issues, we use the trick described in https://eprint.iacr.org/2011/232.pdf
- * to have the MSB always set. However, since the scalar m might be less or bigger than
- * the order q of the curve, we distinguish three situations:
- *     - The scalar m is < q (the order), in this case we compute:
- *         -
- *        | m' = m + (2 * q) if [log(k + q)] == [log(q)],
- *        | m' = m + q otherwise.
- *         -
- *     - The scalar m is >= q and < q**2, in this case we compute:
- *         -
- *        | m' = m + (2 * (q**2)) if [log(k + (q**2))] == [log(q**2)],
- *        | m' = m + (q**2) otherwise.
- *         -
- *     - The scalar m is >= (q**2), in this case m == m'
- *
- *   => We only deal with 0 <= m < (q**2) using the countermeasure. When m >= (q**2),
- *      we stick with m' = m, accepting MSB issues (not much can be done in this case
- *      anyways). In the two first cases, Montgomery Ladder is performed in constant
- *      time wrt the size of the scalar m.
+#if defined(USE_DOUBLE_ADD_ALWAYS) && defined(USE_SMALL_STACK)
+/* NOTE: in small stack case where we compile for low memory devices, we do not use Itoh et al. countermeasure
+ * as it requires too much temporary space on the stack.
  */
+ATTRIBUTE_WARN_UNUSED_RET static int _prj_pt_mul_ltr_monty_dbl_add_always(prj_pt_t out, nn_src_t m, prj_pt_src_t in)
+{
+	int ret;
+
+	ret = _blind_projective_point(out, in); EG(ret, err);
+
+	/*******************/
+	{
+		bitcnt_t mlen;
+		u8 mbit;
+		/* The new scalar we will use with MSB fixed to 1 (noted m' above).
+		 * This helps dealing with constant time.
+		 */
+		nn m_msb_fixed;
+		nn_src_t curve_order;
+		int cmp;
+		m_msb_fixed.magic = 0;
+
+		{
+			nn curve_order_square;
+			curve_order_square.magic = 0;
+
+			/* Compute m' from m depending on the rule described above */
+			curve_order = &(in->crv->order);
+			/* First compute q**2 */
+			ret = nn_sqr(&curve_order_square, curve_order); EG(ret, err1);
+			/* Then compute m' depending on m size */
+			ret = nn_cmp(m, curve_order, &cmp); EG(ret, err1);
+			if (cmp < 0){
+				bitcnt_t msb_bit_len, order_bitlen;
+
+				/* Case where m < q */
+				ret = nn_add(&m_msb_fixed, m, curve_order); EG(ret, err1);
+				ret = nn_bitlen(&m_msb_fixed, &msb_bit_len); EG(ret, err1);
+				ret = nn_bitlen(curve_order, &order_bitlen); EG(ret, err1);
+				ret = nn_cnd_add((msb_bit_len == order_bitlen), &m_msb_fixed,
+					  &m_msb_fixed, curve_order); EG(ret, err1);
+			} else {
+				ret = nn_cmp(m, &curve_order_square, &cmp); EG(ret, err1);
+				if (cmp < 0) {
+					bitcnt_t msb_bit_len, curve_order_square_bitlen;
+
+					/* Case where m >= q and m < (q**2) */
+					ret = nn_add(&m_msb_fixed, m, &curve_order_square); EG(ret, err1);
+					ret = nn_bitlen(&m_msb_fixed, &msb_bit_len); EG(ret, err1);
+					ret = nn_bitlen(&curve_order_square, &curve_order_square_bitlen); EG(ret, err1);
+					ret = nn_cnd_add((msb_bit_len == curve_order_square_bitlen),
+							&m_msb_fixed, &m_msb_fixed, &curve_order_square); EG(ret, err1);
+				} else {
+					/* Case where m >= (q**2) */
+					ret = nn_copy(&m_msb_fixed, m); EG(ret, err1);
+				}
+			}
+err1:
+			nn_uninit(&curve_order_square); EG(ret, err);
+		}
+
+		ret = nn_bitlen(&m_msb_fixed, &mlen); EG(ret, err);
+		if (mlen == 0){
+			ret = -1;
+			goto err;
+		}
+		mlen--;
+
+		{
+			prj_pt dbl;
+			dbl.magic = 0;
+
+			/* Initialize temporary point */
+			ret = prj_pt_init(&dbl, in->crv); EG(ret, err2);
+
+			/* Main loop of Double and Add Always */
+			while (mlen > 0) {
+				--mlen;
+				/* mbit is m[i] */
+				ret = nn_getbit(&m_msb_fixed, mlen, &mbit); EG(ret, err2);
+
+#ifndef NO_USE_COMPLETE_FORMULAS
+				/*
+				 * NOTE: in case of complete formulas, we use the
+				 * addition for doubling, incurring a small performance hit
+				 * for better SCA resistance.
+				 */
+				ret = prj_pt_add(&dbl, out, out); EG(ret, err2);
+#else
+				ret = prj_pt_dbl(&dbl, out); EG(ret, err2);
+#endif
+				ret = prj_pt_add(out, &dbl, in); EG(ret, err2);
+				/* Swap */
+				ret = nn_cnd_swap(!mbit, &(out->X.fp_val), &(dbl.X.fp_val)); EG(ret, err2);
+				ret = nn_cnd_swap(!mbit, &(out->Y.fp_val), &(dbl.Y.fp_val)); EG(ret, err2);
+				ret = nn_cnd_swap(!mbit, &(out->Z.fp_val), &(dbl.Z.fp_val)); EG(ret, err2);
+			}
+err2:
+			prj_pt_uninit(&dbl); EG(ret, err);
+		}
+
+err:
+		nn_uninit(&m_msb_fixed);
+	}
+
+	return ret;
+}
+#endif
+
+
+#ifdef USE_MONTY_LADDER
 ATTRIBUTE_WARN_UNUSED_RET static int _prj_pt_mul_ltr_monty_ladder(prj_pt_t out, nn_src_t m, prj_pt_src_t in)
 {
 	/* We use Itoh et al. notations here for T and the random r */
@@ -1385,8 +1536,6 @@ ATTRIBUTE_WARN_UNUSED_RET static int _prj_pt_mul_ltr_monty_ladder(prj_pt_t out, 
 	u8 mbit, rbit;
 	/* Random for masking the Montgomery Ladder algorithm */
 	nn r;
-	/* Random for projective coordinates masking */
-	fp l;
 	/* The new scalar we will use with MSB fixed to 1 (noted m' above).
 	 * This helps dealing with constant time.
 	 */
@@ -1394,7 +1543,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int _prj_pt_mul_ltr_monty_ladder(prj_pt_t out, 
 	nn_src_t curve_order;
 	nn curve_order_square;
 	int ret, cmp, on_curve;
-	r.magic = l.magic = m_msb_fixed.magic = curve_order_square.magic = 0;
+	r.magic = m_msb_fixed.magic = curve_order_square.magic = 0;
 	T[0].magic = T[1].magic = T[2].magic = 0;
 
 	/* Check that the input is on the curve */
@@ -1445,9 +1594,6 @@ ATTRIBUTE_WARN_UNUSED_RET static int _prj_pt_mul_ltr_monty_ladder(prj_pt_t out, 
 	/* Get a random r with the same size of m_msb_fixed */
 	ret = nn_get_random_len(&r, m_msb_fixed.wlen * WORD_BYTES); EG(ret, err);
 
-	/* Get a random value l in Fp */
-	ret = fp_get_random(&l, in->X.ctx); EG(ret, err);
-
 	ret = nn_getbit(&r, mlen, &rbit); EG(ret, err);
 
 	/* Initialize points */
@@ -1456,15 +1602,11 @@ ATTRIBUTE_WARN_UNUSED_RET static int _prj_pt_mul_ltr_monty_ladder(prj_pt_t out, 
 	ret = prj_pt_init(&T[2], in->crv); EG(ret, err);
 
 	/* Initialize T[r[n-1]] to input point */
-	ret = prj_pt_copy(&T[rbit], in); EG(ret, err);
-
 	/*
 	 * Blind the point with projective coordinates
 	 * (X, Y, Z) => (l*X, l*Y, l*Z)
 	 */
-	ret = fp_mul_monty(&(T[rbit].X), &(T[rbit].X), &l); EG(ret, err);
-	ret = fp_mul_monty(&(T[rbit].Y), &(T[rbit].Y), &l); EG(ret, err);
-	ret = fp_mul_monty(&(T[rbit].Z), &(T[rbit].Z), &l); EG(ret, err);
+	ret = _blind_projective_point(&T[rbit], in); EG(ret, err);
 
 	/* Initialize T[1-r[n-1]] with ECDBL(T[r[n-1]])) */
 #ifndef NO_USE_COMPLETE_FORMULAS
@@ -1535,7 +1677,6 @@ err:
 	prj_pt_uninit(&T[1]);
 	prj_pt_uninit(&T[2]);
 	nn_uninit(&r);
-	fp_uninit(&l);
 	nn_uninit(&m_msb_fixed);
 	nn_uninit(&curve_order_square);
 
@@ -1650,30 +1791,7 @@ err:
 	return ret;
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+/*****************************************************************************/
 
 /*
  * Map points from Edwards to short Weierstrass projective points through Montgomery (composition mapping).

@@ -200,19 +200,18 @@ int _ecrdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	u8 h_buf[MAX_DIGEST_SIZE];
 	prj_pt_src_t G;
 	prj_pt kG;
-	aff_pt W;
 	nn_src_t q, x;
 	u8 hsize, r_len, s_len;
 	int ret, iszero, cmp;
-	nn tmp, s, rx, ke, k, r, e;
+	nn s, rx, ke, k, r, e;
 #ifdef USE_SIG_BLINDING
 	/* b is the blinding mask */
 	nn b, binv;
 	b.magic = binv.magic = 0;
 #endif /* USE_SIG_BLINDING */
 
-	kG.magic = W.magic = 0;
-	tmp.magic = s.magic = rx.magic = ke.magic = 0;
+	kG.magic = 0;
+	s.magic = rx.magic = ke.magic = 0;
 	k.magic = r.magic = e.magic = 0;
 
 	/*
@@ -282,12 +281,12 @@ int _ecrdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 #else
 	ret = prj_pt_mul(&kG, &k, G); EG(ret, err);
 #endif /* USE_SIG_BLINDING */
-	ret = prj_pt_to_aff(&W, &kG); EG(ret, err);
-	dbg_nn_print("W_x", &(W.x.fp_val));
-	dbg_nn_print("W_y", &(W.y.fp_val));
+	ret = prj_pt_unique(&kG, &kG); EG(ret, err);
+	dbg_nn_print("W_x", &(kG.X.fp_val));
+	dbg_nn_print("W_y", &(kG.Y.fp_val));
 
 	/* 4. Compute r = Wx mod q */
-	ret = nn_mod(&r, &(W.x.fp_val), q); EG(ret, err);
+	ret = nn_mod(&r, &(kG.X.fp_val), q); EG(ret, err);
 
 	/* 5. If r is 0, restart the process at step 2. */
 	ret = nn_iszero(&r, &iszero); EG(ret, err);
@@ -311,9 +310,9 @@ int _ecrdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 #ifndef USE_ISO14888_3_ECRDSA
 	ret = _reverse_endianness(h_buf, hsize); EG(ret, err);
 #endif
-	ret = nn_init_from_buf(&tmp, h_buf, hsize); EG(ret, err);
+	ret = nn_init_from_buf(&e, h_buf, hsize); EG(ret, err);
 	ret = local_memset(h_buf, 0, hsize); EG(ret, err);
-	ret = nn_mod(&e, &tmp, q); EG(ret, err);
+	ret = nn_mod(&e, &e, q); EG(ret, err);
 	ret = nn_iszero(&e, &iszero); EG(ret, err);
 	if (iszero) {
 		ret = nn_inc(&e, &e); EG(ret, err);
@@ -349,10 +348,8 @@ int _ecrdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 
  err:
 	prj_pt_uninit(&kG);
-	aff_pt_uninit(&W);
 	nn_uninit(&r);
 	nn_uninit(&s);
-	nn_uninit(&tmp);
 	nn_uninit(&s);
 	nn_uninit(&rx);
 	nn_uninit(&ke);
@@ -505,16 +502,19 @@ int _ecrdsa_verify_finalize(struct ec_verify_context *ctx)
 {
 	prj_pt_src_t G, Y;
 	nn_src_t q;
-	nn tmp, h, r_prime, e, v, u;
-	prj_pt vY, uG, Wprime;
-	aff_pt Wprime_aff;
+	nn h, r_prime, e, v, u;
+	prj_pt vY, uG;
+	prj_pt_t Wprime;
 	u8 h_buf[MAX_DIGEST_SIZE];
 	nn *r, *s;
 	u8 hsize;
 	int ret, iszero, cmp;
 
-	tmp.magic = h.magic = r_prime.magic = e.magic = v.magic = u.magic = 0;
-	vY.magic = uG.magic = Wprime.magic = Wprime_aff.magic = 0;
+	h.magic = r_prime.magic = e.magic = v.magic = u.magic = 0;
+	vY.magic = uG.magic = 0;
+
+	/* NOTE: we reuse uG for Wprime to optimize local variables */
+	Wprime = &uG;
 
 	/*
 	 * First, verify context has been initialized and public
@@ -550,9 +550,9 @@ int _ecrdsa_verify_finalize(struct ec_verify_context *ctx)
 #endif
 
 	/* 3. Compute e = OS2I(h)^-1 mod q */
-	ret = nn_init_from_buf(&tmp, h_buf, hsize); EG(ret, err);
+	ret = nn_init_from_buf(&h, h_buf, hsize); EG(ret, err);
 	ret = local_memset(h_buf, 0, hsize); EG(ret, err);
-	ret = nn_mod(&h, &tmp, q); EG(ret, err); /* h = OS2I(h) mod q */
+	ret = nn_mod(&h, &h, q); EG(ret, err); /* h = OS2I(h) mod q */
 	ret = nn_iszero(&h, &iszero); EG(ret, err);
 	if (iszero) {	/* If h is equal to 0, set it to 1 */
 		ret = nn_inc(&h, &h); EG(ret, err);
@@ -560,40 +560,39 @@ int _ecrdsa_verify_finalize(struct ec_verify_context *ctx)
 	ret = nn_modinv(&e, &h, q); EG(ret, err); /* e = h^-1 mod q */
 
 	/* 4. Compute u = es mod q */
-	ret = nn_mul(&tmp, &e, s); EG(ret, err);
-	ret = nn_mod(&u, &tmp, q); EG(ret, err);
+	ret = nn_mul_mod(&u, &e, s, q); EG(ret, err);
 
 	/* 5. Compute v = -er mod q
 	 *
 	 * Because we only support positive integers, we compute
 	 * v = -er mod q = q - (er mod q) (except when er is 0).
+	 * NOTE: we reuse e for er computation to avoid losing
+	 * a variable.
 	 */
-	ret = nn_mul(&tmp, &e, r); EG(ret, err); /* tmp = er */
-	ret = nn_mod(&tmp, &tmp, q); EG(ret, err); /* tmp = er mod q */
-	ret = nn_iszero(&tmp, &iszero); EG(ret, err);
+	ret = nn_mul_mod(&e, &e, r, q); EG(ret, err);
+	ret = nn_iszero(&e, &iszero); EG(ret, err);
 	if (iszero) {
 		ret = nn_zero(&v); EG(ret, err);
 	} else {
-		ret = nn_sub(&v, q, &tmp); EG(ret, err);
+		ret = nn_sub(&v, q, &e); EG(ret, err);
 	}
 
 	/* 6. Compute W' = uG + vY = (W'_x, W'_y) */
 	ret = prj_pt_mul(&uG, &u, G); EG(ret, err);
 	ret = prj_pt_mul(&vY, &v, Y); EG(ret, err);
-	ret = prj_pt_add(&Wprime, &uG, &vY); EG(ret, err);
-	ret = prj_pt_to_aff(&Wprime_aff, &Wprime); EG(ret, err);
-	dbg_nn_print("W'_x", &(Wprime_aff.x.fp_val));
-	dbg_nn_print("W'_y", &(Wprime_aff.y.fp_val));
+	ret = prj_pt_add(Wprime, &uG, &vY); EG(ret, err);
+	ret = prj_pt_unique(Wprime, Wprime); EG(ret, err);
+	dbg_nn_print("W'_x", &(Wprime->X.fp_val));
+	dbg_nn_print("W'_y", &(Wprime->Y.fp_val));
 
 	/* 7. Compute r' = W'_x mod q */
-	ret = nn_mod(&r_prime, &(Wprime_aff.x.fp_val), q); EG(ret, err);
+	ret = nn_mod(&r_prime, &(Wprime->X.fp_val), q); EG(ret, err);
 
 	/* 8. Check r and r' are the same */
 	ret = nn_cmp(r, &r_prime, &cmp); EG(ret, err);
 	ret = (cmp == 0) ? 0 : -1;
 
 err:
-	nn_uninit(&tmp);
 	nn_uninit(&h);
 	nn_uninit(&r_prime);
 	nn_uninit(&e);
@@ -601,8 +600,6 @@ err:
 	nn_uninit(&u);
 	prj_pt_uninit(&vY);
 	prj_pt_uninit(&uG);
-	prj_pt_uninit(&Wprime);
-	aff_pt_uninit(&Wprime_aff);
 
 	/*
 	 * We can now clear data part of the context. This will clear
@@ -612,6 +609,7 @@ err:
 		     sizeof(ecrdsa_verify_data)));
 
 	/* Clean what remains on the stack */
+	PTR_NULLIFY(Wprime);
 	PTR_NULLIFY(G);
 	PTR_NULLIFY(Y);
 	PTR_NULLIFY(q);

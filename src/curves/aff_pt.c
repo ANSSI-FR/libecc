@@ -100,10 +100,9 @@ void aff_pt_uninit(aff_pt_t in)
  */
 int is_on_shortw_curve(fp_src_t x, fp_src_t y, ec_shortw_crv_src_t curve, int *on_curve)
 {
-	fp y2, ax, x3, x2, tmp, tmp2;
+	fp tmp1, tmp2;
 	int ret, cmp;
-	y2.magic = ax.magic = x3.magic = x2.magic = 0;
-	tmp.magic = tmp2.magic = 0;
+	tmp1.magic = tmp2.magic = 0;
 
 	ret = ec_shortw_crv_check_initialized(curve); EG(ret, err);
 	ret = fp_check_initialized(x);  EG(ret, err);
@@ -113,31 +112,31 @@ int is_on_shortw_curve(fp_src_t x, fp_src_t y, ec_shortw_crv_src_t curve, int *o
 	MUST_HAVE((x->ctx == y->ctx), ret, err);
 	MUST_HAVE((x->ctx == curve->a.ctx), ret, err);
 
-	ret = fp_init(&y2, x->ctx); EG(ret, err);
-	ret = fp_sqr(&y2, y); EG(ret, err);
-	ret = fp_init(&ax, x->ctx); EG(ret, err);
-	ret = fp_mul(&ax, &(curve->a), x); EG(ret, err);
-	ret = fp_init(&x2, x->ctx); EG(ret, err);
-	ret = fp_sqr(&x2, x); EG(ret, err);
-	ret = fp_init(&x3, x->ctx); EG(ret, err);
-	ret = fp_mul(&x3, &x2, x); EG(ret, err);
-	ret = fp_init(&tmp, x->ctx); EG(ret, err);
-	ret = fp_add(&tmp, &ax, &curve->b); EG(ret, err);
+	/* Note: to optimize local variables, we instead check that
+	 * (y^2 - b) = (x^2 + a) * x
+	 */
+
+	/* Compute y^2 - b */
+	ret = fp_init(&tmp1, x->ctx); EG(ret, err);
+	ret = fp_sqr(&tmp1, y); EG(ret, err);
+	ret = fp_sub(&tmp1, &tmp1, &(curve->b)); EG(ret, err);
+
+	/* Compute (x^2 + a) * x */
 	ret = fp_init(&tmp2, x->ctx); EG(ret, err);
-	ret = fp_add(&tmp2, &x3, &tmp); EG(ret, err);
-	ret = fp_cmp(&y2, &tmp2, &cmp); EG(ret, err);
+	ret = fp_sqr(&tmp2, x); EG(ret, err);
+	ret = fp_add(&tmp2, &tmp2, &(curve->a)); EG(ret, err);
+	ret = fp_mul(&tmp2, &tmp2, x); EG(ret, err);
+
+	/* Now check*/
+	ret = fp_cmp(&tmp1, &tmp2, &cmp); EG(ret, err);
 
 	(*on_curve) = (!cmp);
 
 err:
-	fp_uninit(&y2);
-	fp_uninit(&ax);
-	fp_uninit(&x3);
-	fp_uninit(&x2);
-	fp_uninit(&tmp);
-	fp_uninit(&tmp2);
+	fp_uninit(&tmp1);
+        fp_uninit(&tmp2);
 
-	return ret;
+        return ret;
 }
 
 /*

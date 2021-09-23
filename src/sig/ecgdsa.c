@@ -184,18 +184,17 @@ int _ecgdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	u8 hsize, r_len, s_len, p_len;
 	bitcnt_t q_bit_len, p_bit_len, rshift;
 	prj_pt kG;
-	aff_pt W;
 	int ret, cmp, iszero;
-	nn tmp, tmp2, s, e, kr, k, r;
+	nn tmp, s, e, kr, k, r;
 #ifdef USE_SIG_BLINDING
 	/* b is the blinding mask */
 	nn b, binv;
 	b.magic = binv.magic = 0;
 #endif
 
-	tmp.magic = tmp2.magic = s.magic = e.magic = 0;
+	tmp.magic = s.magic = e.magic = 0;
 	kr.magic = k.magic = r.magic = 0;
-	kG.magic = W.magic = 0;
+	kG.magic = 0;
 
 	/*
 	 * First, verify context has been initialized and private
@@ -268,13 +267,13 @@ int _ecgdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	 * Because we only support positive integers, we compute
 	 * e = q - (h mod q) (except when h is 0).
 	 */
-	ret = nn_mod(&tmp2, &tmp, q); EG(ret, err);
-	ret = nn_iszero(&tmp2, &iszero); EG(ret, err);
+	ret = nn_mod(&tmp, &tmp, q); EG(ret, err);
+	ret = nn_iszero(&tmp, &iszero); EG(ret, err);
 	if (iszero) {
 		ret = nn_init(&e, 0); EG(ret, err);
 		ret = nn_zero(&e); EG(ret, err);
 	} else {
-		ret = nn_sub(&e, q, &tmp2); EG(ret, err);
+		ret = nn_sub(&e, q, &tmp); EG(ret, err);
 	}
 
  restart:
@@ -305,13 +304,13 @@ int _ecgdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 #else
 	ret = prj_pt_mul(&kG, &k, G); EG(ret, err);
 #endif /* USE_SIG_BLINDING */
-	ret = prj_pt_to_aff(&W, &kG); EG(ret, err);
+	ret = prj_pt_unique(&kG, &kG); EG(ret, err);
 
-	dbg_nn_print("W_x", &(W.x.fp_val));
-	dbg_nn_print("W_y", &(W.y.fp_val));
+	dbg_nn_print("W_x", &(kG.X.fp_val));
+	dbg_nn_print("W_y", &(kG.Y.fp_val));
 
 	/* 5. Compute r = Wx mod q */
-	ret = nn_mod(&r, &(W.x.fp_val), q); EG(ret, err);
+	ret = nn_mod(&r, &(kG.X.fp_val), q); EG(ret, err);
 	dbg_nn_print("r", &r);
 
 	/* 6. If r is 0, restart the process at step 4. */
@@ -330,8 +329,8 @@ int _ecgdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 #endif /* USE_SIG_BLINDING */
 	/* 7. Compute s = x(kr + e) mod q */
 	ret = nn_mul_mod(&kr, &k, &r, q); EG(ret, err);
-	ret = nn_mod_add(&tmp2, &kr, &e, q); EG(ret, err);
-	ret = nn_mul_mod(&s, x, &tmp2, q); EG(ret, err);
+	ret = nn_mod_add(&tmp, &kr, &e, q); EG(ret, err);
+	ret = nn_mul_mod(&s, x, &tmp, q); EG(ret, err);
 #ifdef USE_SIG_BLINDING
 	/* Unblind s */
 	ret = nn_modinv(&binv, &b, q); EG(ret, err);
@@ -350,14 +349,12 @@ int _ecgdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 
  err:
 	nn_uninit(&tmp);
-	nn_uninit(&tmp2);
 	nn_uninit(&s);
 	nn_uninit(&e);
 	nn_uninit(&kr);
 	nn_uninit(&k);
 	nn_uninit(&r);
 	prj_pt_uninit(&kG);
-	aff_pt_uninit(&W);
 #ifdef USE_SIG_BLINDING
 	nn_uninit(&b);
 	nn_uninit(&binv);
@@ -506,9 +503,9 @@ err:
 
 int _ecgdsa_verify_finalize(struct ec_verify_context *ctx)
 {
-	nn tmp, e, r_prime, rinv, u, v, *r, *s;
-	prj_pt uG, vY, Wprime;
-	aff_pt Wprime_aff;
+	nn e, r_prime, rinv, uv, *r, *s;
+	prj_pt uG, vY;
+	prj_pt_t Wprime;
 	prj_pt_src_t G, Y;
 	u8 e_buf[MAX_DIGEST_SIZE];
 	nn_src_t q;
@@ -516,9 +513,12 @@ int _ecgdsa_verify_finalize(struct ec_verify_context *ctx)
 	bitcnt_t q_bit_len, rshift;
 	int ret, cmp;
 
-	tmp.magic = e.magic = r_prime.magic = 0;
-	rinv.magic = u.magic = v.magic = 0;
-	uG.magic = vY.magic = Wprime.magic = Wprime_aff.magic = 0;
+	e.magic = r_prime.magic = 0;
+	rinv.magic = uv.magic = 0;
+	uG.magic = vY.magic = 0;
+
+	/* NOTE: we reuse uG for Wprime to optimize local variables */
+	Wprime = &uG;
 
 	/*
 	 * First, verify context has been initialized and public
@@ -556,51 +556,45 @@ int _ecgdsa_verify_finalize(struct ec_verify_context *ctx)
 	if ((hsize * 8) > q_bit_len) {
 		rshift = (hsize * 8) - q_bit_len;
 	}
-	ret = nn_init_from_buf(&tmp, e_buf, hsize); EG(ret, err);
+	ret = nn_init_from_buf(&e, e_buf, hsize); EG(ret, err);
 	ret = local_memset(e_buf, 0, hsize); EG(ret, err);
 	if (rshift) {
-		ret = nn_rshift_fixedlen(&tmp, &tmp, rshift); EG(ret, err);
+		ret = nn_rshift_fixedlen(&e, &e, rshift); EG(ret, err);
 	}
-	dbg_nn_print("H(m) truncated as nn", &tmp);
+	dbg_nn_print("H(m) truncated as nn", &e);
 
 	/* 3. Compute e by converting h to an integer and reducing it mod q */
-	ret = nn_mod(&e, &tmp, q); EG(ret, err);
+	ret = nn_mod(&e, &e, q); EG(ret, err);
 
 	/* 4. Compute u = (r^-1)e mod q */
 	ret = nn_modinv(&rinv, r, q); EG(ret, err); /* r^-1 */
-	ret = nn_mul(&tmp, &rinv, &e); EG(ret, err); /* r^-1 * e */
-	ret = nn_mod(&u, &tmp, q); EG(ret, err); /* (r^-1 * e) mod q */
+	ret = nn_mul_mod(&uv, &rinv, &e, q); EG(ret, err);
+	ret = prj_pt_mul(&uG, &uv, G); EG(ret, err);
 
 	/* 5. Compute v = (r^-1)s mod q */
-	ret = nn_mul(&tmp, &rinv, s); EG(ret, err); /*  r^-1 * s */
-	ret = nn_mod(&v, &tmp, q); EG(ret, err); /* (r^-1 * s) mod q */
+	ret = nn_mul_mod(&uv, &rinv, s, q); EG(ret, err);
+	ret = prj_pt_mul(&vY, &uv, Y); EG(ret, err);
 
 	/* 6. Compute W' = uG + vY */
-	ret = prj_pt_mul(&uG, &u, G); EG(ret, err);
-	ret = prj_pt_mul(&vY, &v, Y); EG(ret, err);
-	ret = prj_pt_add(&Wprime, &uG, &vY); EG(ret, err);
+	ret = prj_pt_add(Wprime, &uG, &vY); EG(ret, err);
 
 	/* 7. Compute r' = W'_x mod q */
-	ret = prj_pt_to_aff(&Wprime_aff, &Wprime); EG(ret, err);
-	dbg_nn_print("W'_x", &(Wprime_aff.x.fp_val));
-	dbg_nn_print("W'_y", &(Wprime_aff.y.fp_val));
-	ret = nn_mod(&r_prime, &(Wprime_aff.x.fp_val), q); EG(ret, err);
+	ret = prj_pt_unique(Wprime, Wprime); EG(ret, err);
+	dbg_nn_print("W'_x", &(Wprime->X.fp_val));
+	dbg_nn_print("W'_y", &(Wprime->Y.fp_val));
+	ret = nn_mod(&r_prime, &(Wprime->X.fp_val), q); EG(ret, err);
 
 	/* 8. Accept the signature if and only if r equals r' */
 	ret = nn_cmp(r, &r_prime, &cmp); EG(ret, err);
 	ret = (cmp != 0) ? -1 : 0;
 
 err:
-	nn_uninit(&tmp);
 	nn_uninit(&e);
 	nn_uninit(&r_prime);
 	nn_uninit(&rinv);
-	nn_uninit(&u);
-	nn_uninit(&v);
+	nn_uninit(&uv);
 	prj_pt_uninit(&uG);
 	prj_pt_uninit(&vY);
-	prj_pt_uninit(&Wprime);
-	aff_pt_uninit(&Wprime_aff);
 
 	/*
 	 * We can now clear data part of the context. This will clear
@@ -609,6 +603,7 @@ err:
 	IGNORE_RET_VAL(local_memset(&(ctx->verify_data.ecgdsa), 0,
 		     sizeof(ecgdsa_verify_data)));
 
+	PTR_NULLIFY(Wprime);
 	PTR_NULLIFY(r);
 	PTR_NULLIFY(s);
 	PTR_NULLIFY(G);

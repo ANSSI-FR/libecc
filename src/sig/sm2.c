@@ -314,7 +314,6 @@ int _sm2_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	prj_pt_src_t G;
 	nn_src_t q, x;
 	prj_pt kG;
-	aff_pt W;
 	int ret, iszero, cmp;
 	nn k, r, s, tmp, tmp2, tmp3;
 #ifdef USE_SIG_BLINDING
@@ -322,7 +321,7 @@ int _sm2_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	b.magic = 0;
 #endif
 
-	kG.magic = W.magic = 0;
+	kG.magic = 0;
 	k.magic = r.magic = s.magic = tmp.magic = tmp2.magic = tmp3.magic = 0;
 
 	/*
@@ -383,16 +382,16 @@ int _sm2_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 #else
 	ret = prj_pt_mul(&kG, &k, G); EG(ret, err);
 #endif /* USE_SIG_BLINDING */
-	ret = prj_pt_to_aff(&W, &kG); EG(ret, err);
+	ret = prj_pt_unique(&kG, &kG); EG(ret, err);
 
-	dbg_nn_print("W_x", &(W.x.fp_val));
-	dbg_nn_print("W_y", &(W.y.fp_val));
+	dbg_nn_print("W_x", &(kG.X.fp_val));
+	dbg_nn_print("W_y", &(kG.Y.fp_val));
 
 	/* 5. Compute r = (OS2I(H) + Wx) mod q */
 	ret = nn_init_from_buf(&tmp, hash, hsize); EG(ret, err);
 	ret = local_memset(hash, 0, hsize); EG(ret, err);
 	dbg_nn_print("OS2I(H)", &tmp);
-	ret = nn_add(&tmp2, &tmp, &(W.x.fp_val)); EG(ret, err);
+	ret = nn_add(&tmp2, &tmp, &(kG.X.fp_val)); EG(ret, err);
 	ret = nn_mod(&r, &tmp2, q); EG(ret, err);
 	dbg_nn_print("r", &r);
 
@@ -449,7 +448,6 @@ int _sm2_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 
 err:
 	prj_pt_uninit(&kG);
-	aff_pt_uninit(&W);
 	nn_uninit(&k);
 	nn_uninit(&r);
 	nn_uninit(&s);
@@ -609,9 +607,9 @@ err:
 
 int _sm2_verify_finalize(struct ec_verify_context *ctx)
 {
-	prj_pt sG, tY, W_prime;
+	prj_pt sG, tY;
+	prj_pt_t W_prime;
 	nn e, tmp, r_prime;
-	aff_pt W_prime_aff;
 	prj_pt_src_t G, Y;
 	u8 hash[MAX_DIGEST_SIZE];
 	nn_src_t q;
@@ -621,7 +619,10 @@ int _sm2_verify_finalize(struct ec_verify_context *ctx)
 	int ret, iszero, cmp;
 
 	e.magic = tmp.magic = r_prime.magic = t.magic = 0;
-	sG.magic = tY.magic = W_prime.magic = W_prime_aff.magic = 0;
+	sG.magic = tY.magic = 0;
+
+	/* NOTE: we reuse sG for W_prime to optimize local variables */
+	W_prime = &sG;
 
 	/*
 	 * First, verify context has been initialized and public
@@ -666,19 +667,19 @@ int _sm2_verify_finalize(struct ec_verify_context *ctx)
 	/* 6. Compute W' = sG + tY */
 	ret = prj_pt_mul(&sG, s, G); EG(ret, err);
 	ret = prj_pt_mul(&tY, &t, Y); EG(ret, err);
-	ret = prj_pt_add(&W_prime, &sG, &tY); EG(ret, err);
+	ret = prj_pt_add(W_prime, &sG, &tY); EG(ret, err);
 
 	/* 7. If W' is the point at infinity, reject the signature. */
-	ret = prj_pt_iszero(&W_prime, &iszero); EG(ret, err);
+	ret = prj_pt_iszero(W_prime, &iszero); EG(ret, err);
 	MUST_HAVE(!iszero, ret, err);
 
 	/* 8. Compute r' = (e + W'_x) mod q */
-	ret = prj_pt_to_aff(&W_prime_aff, &W_prime); EG(ret, err);
-	dbg_nn_print("W'_x", &(W_prime_aff.x.fp_val));
-	dbg_nn_print("W'_y", &(W_prime_aff.y.fp_val));
+	ret = prj_pt_unique(W_prime, W_prime); EG(ret, err);
+	dbg_nn_print("W'_x", &(W_prime->X.fp_val));
+	dbg_nn_print("W'_y", &(W_prime->Y.fp_val));
 
 	/* First, reduce W'_x mod q */
-	ret = nn_mod(&r_prime, &(W_prime_aff.x.fp_val), q); EG(ret, err);
+	ret = nn_mod(&r_prime, &(W_prime->X.fp_val), q); EG(ret, err);
 	/* Then compute r' = (e + W'_x) mod q */
 	ret = nn_mod_add(&r_prime, &e, &r_prime, q); EG(ret, err);
 
@@ -693,8 +694,6 @@ int _sm2_verify_finalize(struct ec_verify_context *ctx)
 	nn_uninit(&t);
 	prj_pt_uninit(&sG);
 	prj_pt_uninit(&tY);
-	prj_pt_uninit(&W_prime);
-	aff_pt_uninit(&W_prime_aff);
 
 	/*
 	 * We can now clear data part of the context. This will clear
@@ -703,6 +702,7 @@ int _sm2_verify_finalize(struct ec_verify_context *ctx)
 	IGNORE_RET_VAL(local_memset(&(ctx->verify_data.sm2), 0, sizeof(sm2_verify_data)));
 
 	/* Clean what remains on the stack */
+	PTR_NULLIFY(W_prime);
 	PTR_NULLIFY(G);
 	PTR_NULLIFY(Y);
 	PTR_NULLIFY(q);

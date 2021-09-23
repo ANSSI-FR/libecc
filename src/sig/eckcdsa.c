@@ -298,9 +298,8 @@ int _eckcdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	prj_pt_src_t G;
 	nn_src_t q, x;
 	prj_pt kG;
-	aff_pt W;
 	unsigned int i;
-	nn e, tmp, tmp2, s, k;
+	nn e, tmp, s, k;
 	u8 hzm[MAX_DIGEST_SIZE];
 	u8 r[MAX_DIGEST_SIZE];
 	u8 tmp_buf[BYTECEIL(CURVES_MAX_P_BIT_LEN)];
@@ -315,8 +314,8 @@ int _eckcdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	b.magic = binv.magic = 0;
 #endif /* USE_SIG_BLINDING */
 
-	kG.magic = W.magic = 0;
-	e.magic = tmp.magic = tmp2.magic = s.magic = k.magic = 0;
+	kG.magic = 0;
+	e.magic = tmp.magic = s.magic = k.magic = 0;
 
 	/*
 	 * First, verify context has been initialized and private
@@ -402,13 +401,13 @@ int _eckcdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 #else
 	ret = prj_pt_mul(&kG, &k, G); EG(ret, err);
 #endif /* USE_SIG_BLINDING */
-	ret = prj_pt_to_aff(&W, &kG); EG(ret, err);
-	dbg_nn_print("W_x", &(W.x.fp_val));
-	dbg_nn_print("W_y", &(W.y.fp_val));
+	ret = prj_pt_unique(&kG, &kG); EG(ret, err);
+	dbg_nn_print("W_x", &(kG.X.fp_val));
+	dbg_nn_print("W_y", &(kG.Y.fp_val));
 
 	/* 5 Compute r = h(FE2OS(W_x)). */
 	ret = local_memset(tmp_buf, 0, sizeof(tmp_buf)); EG(ret, err);
-	ret = fp_export_to_buf(tmp_buf, p_len, &(W.x)); EG(ret, err);
+	ret = fp_export_to_buf(tmp_buf, p_len, &(kG.X)); EG(ret, err);
 	/* Since we call a callback, sanity check our mapping */
 	ret = hash_mapping_callbacks_sanity_check(ctx->h); EG(ret, err);
 	ret = ctx->h->hfunc_init(&r_ctx); EG(ret, err);
@@ -459,8 +458,8 @@ int _eckcdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	 * safely call nn_sub().
 	 */
 	ret = nn_sub(&tmp, q, &e); EG(ret, err);
-	ret = nn_mod_add(&tmp2, &k, &tmp, q); EG(ret, err);
-	ret = nn_mul_mod(&s, x, &tmp2, q); EG(ret, err);
+	ret = nn_mod_add(&tmp, &k, &tmp, q); EG(ret, err);
+	ret = nn_mul_mod(&s, x, &tmp, q); EG(ret, err);
 #ifdef USE_SIG_BLINDING
 	/* Unblind s with b^-1 */
 	ret = nn_mul_mod(&s, &s, &binv, q); EG(ret, err);
@@ -481,10 +480,8 @@ int _eckcdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 
  err:
 	prj_pt_uninit(&kG);
-	aff_pt_uninit(&W);
 	nn_uninit(&e);
 	nn_uninit(&tmp);
-	nn_uninit(&tmp2);
 	nn_uninit(&s);
 	nn_uninit(&k);
 #ifdef USE_SIG_BLINDING
@@ -709,8 +706,8 @@ int _eckcdsa_verify_finalize(struct ec_verify_context *ctx)
 	u8 tmp_buf[BYTECEIL(CURVES_MAX_P_BIT_LEN)];
 	bitcnt_t q_bit_len, p_bit_len;
 	u8 p_len, r_len;
-	prj_pt sY, eG, Wprime;
-	aff_pt Wprime_aff;
+	prj_pt sY, eG;
+	prj_pt_t Wprime;
 	prj_pt_src_t G, Y;
 	u8 r_prime[MAX_DIGEST_SIZE];
 	const ec_pub_key *pub_key;
@@ -724,8 +721,11 @@ int _eckcdsa_verify_finalize(struct ec_verify_context *ctx)
 	u8 *r;
 	nn *s;
 
-	sY.magic = eG.magic = Wprime.magic = Wprime_aff.magic = 0;
+	sY.magic = eG.magic = 0;
 	e.magic = tmp.magic = 0;
+
+	/* NOTE: we reuse eG for Wprime to optimize local variables */
+	Wprime = &eG;
 
 	/*
 	 * First, verify context has been initialized and public
@@ -781,14 +781,14 @@ int _eckcdsa_verify_finalize(struct ec_verify_context *ctx)
 	/* 6. Compute W' = sY + eG, where Y is the public key */
 	ret = prj_pt_mul(&sY, s, Y); EG(ret, err);
 	ret = prj_pt_mul(&eG, &e, G); EG(ret, err);
-	ret = prj_pt_add(&Wprime, &sY, &eG); EG(ret, err);
-	ret = prj_pt_to_aff(&Wprime_aff, &Wprime); EG(ret, err);
-	dbg_nn_print("W'_x", &(Wprime_aff.x.fp_val));
-	dbg_nn_print("W'_y", &(Wprime_aff.y.fp_val));
+	ret = prj_pt_add(Wprime, &sY, &eG); EG(ret, err);
+	ret = prj_pt_unique(Wprime, Wprime); EG(ret, err);
+	dbg_nn_print("W'_x", &(Wprime->X.fp_val));
+	dbg_nn_print("W'_y", &(Wprime->Y.fp_val));
 
 	/* 7. Compute r' = h(W'x) */
 	ret = local_memset(tmp_buf, 0, sizeof(tmp_buf)); EG(ret, err);
-	ret = fp_export_to_buf(tmp_buf, p_len, &(Wprime_aff.x)); EG(ret, err);
+	ret = fp_export_to_buf(tmp_buf, p_len, &(Wprime->X)); EG(ret, err);
 	/* Since we call a callback, sanity check our mapping */
 	ret = hash_mapping_callbacks_sanity_check(ctx->h); EG(ret, err);
 	ret = ctx->h->hfunc_init(&r_prime_ctx); EG(ret, err);
@@ -819,8 +819,6 @@ int _eckcdsa_verify_finalize(struct ec_verify_context *ctx)
 err:
 	prj_pt_uninit(&sY);
 	prj_pt_uninit(&eG);
-	prj_pt_uninit(&Wprime);
-	aff_pt_uninit(&Wprime_aff);
 	nn_uninit(&e);
 	nn_uninit(&tmp);
 
@@ -833,6 +831,7 @@ err:
 
 	/* Let's also clear what remains on the stack */
 	VAR_ZEROIFY(i);
+	PTR_NULLIFY(Wprime);
 	PTR_NULLIFY(G);
 	PTR_NULLIFY(Y);
 	PTR_NULLIFY(q);

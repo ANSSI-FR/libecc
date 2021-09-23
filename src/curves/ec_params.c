@@ -135,6 +135,7 @@ int import_params(ec_params *out_params, const ec_str_params *in_str_params)
 				&(out_params->ec_curve),
 				&tmp_gx, &tmp_gy, &tmp_gz); EG(ret, err);
 
+#if !defined(USE_SMALL_STACK)
 	/* Let's get the optional alpha transfert coefficients */
 	ret = fp_init_from_buf(&(out_params->ec_alpha_montgomery), &(out_params->ec_fp),
 			 PARAM_BUF_PTR(in_str_params->alpha_montgomery),
@@ -146,6 +147,7 @@ int import_params(ec_params *out_params, const ec_str_params *in_str_params)
 	ret = fp_init_from_buf(&(out_params->ec_alpha_edwards), &(out_params->ec_fp),
 			 PARAM_BUF_PTR(in_str_params->alpha_edwards),
 			 PARAM_BUF_LEN(in_str_params->alpha_edwards)); EG(ret, err);
+#endif
 
 	/* Import a local copy of curve OID */
 	MUST_HAVE(in_str_params->oid->buflen < MAX_CURVE_OID_LEN, ret, err);

@@ -51,23 +51,19 @@ int fp_sqr_monty(fp_t out, fp_src_t in)
 int fp_div_monty(fp_t out, fp_src_t in1, fp_src_t in2)
 {
 	int ret, iszero;
-	fp tmp;
-	tmp.magic = 0;
 
 	ret = fp_check_initialized(in1); EG(ret, err);
 	ret = fp_check_initialized(in2); EG(ret, err);
 	ret = fp_check_initialized(out); EG(ret, err);
-	ret = fp_init(&tmp, out->ctx); EG(ret, err);
 
 	MUST_HAVE((out->ctx == in1->ctx), ret, err);
 	MUST_HAVE((out->ctx == in2->ctx), ret, err);
-	(void)iszero; /* silence warning when macro results in nothing */
+        FORCE_USED_VAR(iszero); /* silence warning when macro results in nothing */
 	MUST_HAVE(!fp_iszero(in2, &iszero) && (!iszero), ret, err);
 
-	ret = fp_div(&tmp, in1, in2); EG(ret, err);
-	ret = fp_redcify(out, &tmp);
+	ret = fp_div(out, in1, in2); EG(ret, err);
+	ret = fp_redcify(out, out);
 
 err:
-	fp_uninit(&tmp);
 	return ret;
 }

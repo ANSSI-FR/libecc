@@ -148,11 +148,10 @@ int __ecsdsa_sign_init(struct ec_sign_context *ctx,
 	bitcnt_t p_bit_len;
 	u8 p_len;
 	prj_pt kG;
-	aff_pt W_aff;
 	nn_src_t q;
 	int ret;
 	nn k;
-	kG.magic = W_aff.magic = k.magic = 0;
+	kG.magic = k.magic = 0;
 
 	/* First, verify context has been initialized */
 	ret = sig_sign_check_initialized(ctx); EG(ret, err);
@@ -203,9 +202,9 @@ int __ecsdsa_sign_init(struct ec_sign_context *ctx,
 #else
 	ret = prj_pt_mul(&kG, &k, G); EG(ret, err);
 #endif
-	ret = prj_pt_to_aff(&W_aff, &kG); EG(ret, err);
-	dbg_nn_print("W_x", &(W_aff.x.fp_val));
-	dbg_nn_print("W_y", &(W_aff.y.fp_val));
+	ret = prj_pt_unique(&kG, &kG); EG(ret, err);
+	dbg_nn_print("W_x", &(kG.X.fp_val));
+	dbg_nn_print("W_y", &(kG.Y.fp_val));
 
 	/*
 	 * 3. Compute r = H(Wx [|| Wy] || m)
@@ -216,12 +215,12 @@ int __ecsdsa_sign_init(struct ec_sign_context *ctx,
 	/* Since we call a callback, sanity check our mapping */
 	ret = hash_mapping_callbacks_sanity_check(ctx->h); EG(ret, err);
 	ret = ctx->h->hfunc_init(&(ctx->sign_data.ecsdsa.h_ctx)); EG(ret, err);
-	ret = fp_export_to_buf(Wx, p_len, &(W_aff.x)); EG(ret, err);
+	ret = fp_export_to_buf(Wx, p_len, &(kG.X)); EG(ret, err);
 	/* Since we call a callback, sanity check our mapping */
 	ret = hash_mapping_callbacks_sanity_check(ctx->h); EG(ret, err);
 	ret = ctx->h->hfunc_update(&(ctx->sign_data.ecsdsa.h_ctx), Wx, p_len); EG(ret, err);
 	if (!optimized) {
-		ret = fp_export_to_buf(Wy, p_len, &(W_aff.y)); EG(ret, err);
+		ret = fp_export_to_buf(Wy, p_len, &(kG.Y)); EG(ret, err);
 		/* Since we call a callback, sanity check our mapping */
 		ret = hash_mapping_callbacks_sanity_check(ctx->h); EG(ret, err);
 		ret = ctx->h->hfunc_update(&(ctx->sign_data.ecsdsa.h_ctx), Wy,
@@ -236,7 +235,6 @@ int __ecsdsa_sign_init(struct ec_sign_context *ctx,
 
  err:
 	prj_pt_uninit(&kG);
-	aff_pt_uninit(&W_aff);
 	nn_uninit(&k);
 
 	PTR_NULLIFY(priv_key);
@@ -282,7 +280,7 @@ err:
 int __ecsdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 {
 	nn_src_t q, x;
-	nn tmp, s, e, ex;
+	nn s, e, ex;
 	u8 r[MAX_DIGEST_SIZE];
 	const ec_priv_key *priv_key;
 	bitcnt_t q_bit_len;
@@ -296,7 +294,7 @@ int __ecsdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	b.magic = binv.magic = 0;
 #endif /* USE_SIG_BLINDING */
 
-	tmp.magic = s.magic = e.magic = ex.magic = 0;
+	s.magic = e.magic = ex.magic = 0;
 
 	/*
 	 * First, verify context has been initialized and private
@@ -332,8 +330,8 @@ int __ecsdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	dbg_buf_print("r", r, r_len);
 
 	/* 4. Compute e = OS2I(r) mod q */
-	ret = nn_init_from_buf(&tmp, r, r_len); EG(ret, err);
-	ret = nn_mod(&e, &tmp, q); EG(ret, err);
+	ret = nn_init_from_buf(&e, r, r_len); EG(ret, err);
+	ret = nn_mod(&e, &e, q); EG(ret, err);
 	dbg_nn_print("e", &e);
 
 	/*
@@ -380,7 +378,6 @@ int __ecsdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	ret = nn_export_to_buf(sig + r_len, s_len, &s);
 
  err:
-	nn_uninit(&tmp);
 	nn_uninit(&s);
 	nn_uninit(&e);
 	nn_uninit(&ex);
@@ -438,17 +435,20 @@ int __ecsdsa_verify_init(struct ec_verify_context *ctx,
 	const ec_pub_key *pub_key;
 	nn_src_t q;
 	nn rmodq, e, r, s;
-	prj_pt sG, eY, Wprime;
+	prj_pt sG, eY;
+	prj_pt_t Wprime;
 	u8 Wprimex[BYTECEIL(CURVES_MAX_P_BIT_LEN)];
 	u8 Wprimey[BYTECEIL(CURVES_MAX_P_BIT_LEN)];
 	u8 p_len, r_len, s_len;
 	bitcnt_t q_bit_len;
-	aff_pt Wprime_aff;
 	u8 hsize;
 	int ret, iszero, cmp;
 
 	rmodq.magic = e.magic = r.magic = s.magic = 0;
-	sG.magic = eY.magic = Wprime.magic = Wprime_aff.magic = 0;
+	sG.magic = eY.magic = 0;
+
+	/* NOTE: we reuse sG for Wprime to optimize local variables */
+	Wprime = &sG;
 
 	/* First, verify context has been initialized */
 	ret = sig_verify_check_initialized(ctx); EG(ret, err);
@@ -510,8 +510,8 @@ int __ecsdsa_verify_init(struct ec_verify_context *ctx,
 	/* 4. Compute W' = sG + eY */
 	ret = prj_pt_mul(&sG, &s, G); EG(ret, err);
 	ret = prj_pt_mul(&eY, &e, Y); EG(ret, err);
-	ret = prj_pt_add(&Wprime, &sG, &eY); EG(ret, err);
-	ret = prj_pt_to_aff(&Wprime_aff, &Wprime); EG(ret, err);
+	ret = prj_pt_add(Wprime, &sG, &eY); EG(ret, err);
+	ret = prj_pt_unique(Wprime, Wprime); EG(ret, err);
 
 	/*
 	 * 5. Compute r' = H(W'x [|| W'y] || m)
@@ -522,12 +522,12 @@ int __ecsdsa_verify_init(struct ec_verify_context *ctx,
 	/* Since we call a callback, sanity check our mapping */
 	ret = hash_mapping_callbacks_sanity_check(ctx->h); EG(ret, err);
 	ret = ctx->h->hfunc_init(&(ctx->verify_data.ecsdsa.h_ctx)); EG(ret, err);
-	ret = fp_export_to_buf(Wprimex, p_len, &(Wprime_aff.x)); EG(ret, err);
+	ret = fp_export_to_buf(Wprimex, p_len, &(Wprime->X)); EG(ret, err);
 	/* Since we call a callback, sanity check our mapping */
 	ret = hash_mapping_callbacks_sanity_check(ctx->h); EG(ret, err);
 	ret = ctx->h->hfunc_update(&(ctx->verify_data.ecsdsa.h_ctx), Wprimex, p_len); EG(ret, err);
 	if (!optimized) {
-		ret = fp_export_to_buf(Wprimey, p_len, &(Wprime_aff.y)); EG(ret, err);
+		ret = fp_export_to_buf(Wprimey, p_len, &(Wprime->Y)); EG(ret, err);
 		/* Since we call a callback, sanity check our mapping */
 		ret =  hash_mapping_callbacks_sanity_check(ctx->h); EG(ret, err);
 		ret = ctx->h->hfunc_update(&(ctx->verify_data.ecsdsa.h_ctx),
@@ -549,10 +549,9 @@ int __ecsdsa_verify_init(struct ec_verify_context *ctx,
 	nn_uninit(&s);
 	prj_pt_uninit(&sG);
 	prj_pt_uninit(&eY);
-	prj_pt_uninit(&Wprime);
-	aff_pt_uninit(&Wprime_aff);
 
 	/* Clean what remains on the stack */
+	PTR_NULLIFY(Wprime);
 	PTR_NULLIFY(G);
 	PTR_NULLIFY(Y);
 	PTR_NULLIFY(pub_key);
