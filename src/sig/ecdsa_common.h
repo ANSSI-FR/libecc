@@ -54,7 +54,7 @@ struct ec_sign_context;
 
 int __ecdsa_init_pub_key(ec_pub_key *out_pub, const ec_priv_key *in_priv, ec_sig_alg_type key_type);
 
-u8 __ecdsa_siglen(u16 p_bit_len, u16 q_bit_len, u8 hsize, u8 blocksize);
+int __ecdsa_siglen(u16 p_bit_len, u16 q_bit_len, u8 hsize, u8 blocksize, u8 *siglen);
 
 int __ecdsa_sign_init(struct ec_sign_context *ctx, ec_sig_alg_type key_type);
 
