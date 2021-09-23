@@ -39,7 +39,20 @@
 #include "known/ec_params_wei448.h"
 #include "known/ec_params_gost_R3410_2012_256_paramSetA.h"
 #include "known/ec_params_secp256k1.h"
-
+#include "known/ec_params_gost_R3410_2001_TestParamSet.h"
+#include "known/ec_params_gost_R3410_2001_CryptoPro_A_ParamSet.h"
+#include "known/ec_params_gost_R3410_2001_CryptoPro_B_ParamSet.h"
+#include "known/ec_params_gost_R3410_2001_CryptoPro_C_ParamSet.h"
+#include "known/ec_params_gost_R3410_2001_CryptoPro_XchA_ParamSet.h"
+#include "known/ec_params_gost_R3410_2001_CryptoPro_XchB_ParamSet.h"
+#include "known/ec_params_gost_R3410_2012_256_paramSetA.h"
+#include "known/ec_params_gost_R3410_2012_256_paramSetB.h"
+#include "known/ec_params_gost_R3410_2012_256_paramSetC.h"
+#include "known/ec_params_gost_R3410_2012_256_paramSetD.h"
+#include "known/ec_params_gost_R3410_2012_512_paramSetTest.h"
+#include "known/ec_params_gost_R3410_2012_512_paramSetA.h"
+#include "known/ec_params_gost_R3410_2012_512_paramSetB.h"
+#include "known/ec_params_gost_R3410_2012_512_paramSetC.h"
 /* ADD curves header here */
 /* XXX: Do not remove the comment above, as it is
  * used by external tools as a placeholder to add or
@@ -130,6 +143,48 @@ static const ec_mapping ec_maps[] = {
 #ifdef WITH_CURVE_SECP256K1
 	{.type = SECP256K1,.params = &secp256k1_str_params},
 #endif /* WITH_CURVE_SECP256K1 */
+#ifdef WITH_CURVE_GOST_R3410_2001_TESTPARAMSET
+	{ .type = GOST_R3410_2001_TESTPARAMSET, .params = &gost_R3410_2001_TestParamSet_str_params },
+#endif /* WITH_CURVE_GOST_R3410_2001_TESTPARAMSET */
+#ifdef WITH_CURVE_GOST_R3410_2001_CRYPTOPRO_A_PARAMSET
+	{ .type = GOST_R3410_2001_CRYPTOPRO_A_PARAMSET, .params = &gost_R3410_2001_CryptoPro_A_ParamSet_str_params },
+#endif /* WITH_CURVE_GOST_R3410_2001_CRYPTOPRO_A_PARAMSET */
+#ifdef WITH_CURVE_GOST_R3410_2001_CRYPTOPRO_B_PARAMSET
+	{ .type = GOST_R3410_2001_CRYPTOPRO_B_PARAMSET, .params = &gost_R3410_2001_CryptoPro_B_ParamSet_str_params },
+#endif /* WITH_CURVE_GOST_R3410_2001_CRYPTOPRO_B_PARAMSET */
+#ifdef WITH_CURVE_GOST_R3410_2001_CRYPTOPRO_C_PARAMSET
+	{ .type = GOST_R3410_2001_CRYPTOPRO_C_PARAMSET, .params = &gost_R3410_2001_CryptoPro_C_ParamSet_str_params },
+#endif /* WITH_CURVE_GOST_R3410_2001_CRYPTOPRO_C_PARAMSET */
+#ifdef WITH_CURVE_GOST_R3410_2001_CRYPTOPRO_XCHA_PARAMSET
+	{ .type = GOST_R3410_2001_CRYPTOPRO_XCHA_PARAMSET, .params = &gost_R3410_2001_CryptoPro_XchA_ParamSet_str_params },
+#endif /* WITH_CURVE_GOST_R3410_2001_CRYPTOPRO_XCHA_PARAMSET */
+#ifdef WITH_CURVE_GOST_R3410_2001_CRYPTOPRO_XCHB_PARAMSET
+	{ .type = GOST_R3410_2001_CRYPTOPRO_XCHB_PARAMSET, .params = &gost_R3410_2001_CryptoPro_XchB_ParamSet_str_params },
+#endif /* WITH_CURVE_GOST_R3410_2001_CRYPTOPRO_XCHB_PARAMSET */
+#ifdef WITH_CURVE_GOST_R3410_2012_256_PARAMSETA
+	{ .type = GOST_R3410_2012_256_PARAMSETA, .params = &gost_R3410_2012_256_paramSetA_str_params },
+#endif /* WITH_CURVE_GOST_R3410_2012_256_PARAMSETA */
+#ifdef WITH_CURVE_GOST_R3410_2012_256_PARAMSETB
+	{ .type = GOST_R3410_2012_256_PARAMSETB, .params = &gost_R3410_2012_256_paramSetB_str_params },
+#endif /* WITH_CURVE_GOST_R3410_2012_256_PARAMSETB */
+#ifdef WITH_CURVE_GOST_R3410_2012_256_PARAMSETC
+	{ .type = GOST_R3410_2012_256_PARAMSETC, .params = &gost_R3410_2012_256_paramSetC_str_params },
+#endif /* WITH_CURVE_GOST_R3410_2012_256_PARAMSETC */
+#ifdef WITH_CURVE_GOST_R3410_2012_256_PARAMSETD
+	{ .type = GOST_R3410_2012_256_PARAMSETD, .params = &gost_R3410_2012_256_paramSetD_str_params },
+#endif /* WITH_CURVE_GOST_R3410_2012_256_PARAMSETD */
+#ifdef WITH_CURVE_GOST_R3410_2012_512_PARAMSETTEST
+	{ .type = GOST_R3410_2012_512_PARAMSETTEST, .params = &gost_R3410_2012_512_paramSetTest_str_params },
+#endif /* WITH_CURVE_GOST_R3410_2012_512_PARAMSETTEST */
+#ifdef WITH_CURVE_GOST_R3410_2012_512_PARAMSETA
+	{ .type = GOST_R3410_2012_512_PARAMSETA, .params = &gost_R3410_2012_512_paramSetA_str_params },
+#endif /* WITH_CURVE_GOST_R3410_2012_512_PARAMSETA */
+#ifdef WITH_CURVE_GOST_R3410_2012_512_PARAMSETB
+	{ .type = GOST_R3410_2012_512_PARAMSETB, .params = &gost_R3410_2012_512_paramSetB_str_params },
+#endif /* WITH_CURVE_GOST_R3410_2012_512_PARAMSETB */
+#ifdef WITH_CURVE_GOST_R3410_2012_512_PARAMSETC
+	{ .type = GOST_R3410_2012_512_PARAMSETC, .params = &gost_R3410_2012_512_paramSetC_str_params },
+#endif /* WITH_CURVE_GOST_R3410_2012_512_PARAMSETC */
 /* ADD curves mapping here */
 /* XXX: Do not remove the comment above, as it is
  * used by external tools as a placeholder to add or
