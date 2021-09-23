@@ -16,60 +16,115 @@
 #include "fp_add.h"
 #include "../nn/nn_add.h"
 
-/* Compute out = in1 + in2 mod p */
-void fp_add(fp_t out, fp_src_t in1, fp_src_t in2)
+/*
+ * Compute out = in1 + in2 mod p. 'out' parameter must have been initialized
+ * by the caller. Returns 0 on success, -1 on error.
+ */
+int fp_add(fp_t out, fp_src_t in1, fp_src_t in2)
 {
-	fp_check_initialized(out);
-	fp_check_initialized(in1);
-	fp_check_initialized(in2);
-	MUST_HAVE((&(in1->ctx->p)) == (&(in2->ctx->p)));
-	MUST_HAVE((&(in1->ctx->p)) == (&(out->ctx->p)));
-	SHOULD_HAVE(nn_cmp(&in1->fp_val, &(in1->ctx->p)) < 0);
-	SHOULD_HAVE(nn_cmp(&in2->fp_val, &(in2->ctx->p)) < 0);
-	nn_mod_add(&(out->fp_val), &(in1->fp_val),
-		   &(in2->fp_val), &(in1->ctx->p));
+	int ret, cmp;
+
+	ret = fp_check_initialized(out); EG(ret, err);
+	ret = fp_check_initialized(in1); EG(ret, err);
+	ret = fp_check_initialized(in2); EG(ret, err);
+
+	MUST_HAVE(((&(in1->ctx->p)) == (&(in2->ctx->p))), ret, err);
+	MUST_HAVE(((&(in1->ctx->p)) == (&(out->ctx->p))), ret, err);
+	(void)cmp; /* silence warning when macro results in nothing */
+	SHOULD_HAVE(!nn_cmp(&in1->fp_val, &(in1->ctx->p), &cmp) && (cmp < 0), ret, err);
+	SHOULD_HAVE(!nn_cmp(&in2->fp_val, &(in2->ctx->p), &cmp) && (cmp < 0), ret, err);
+
+	ret = nn_mod_add(&(out->fp_val), &(in1->fp_val),
+			 &(in2->fp_val), &(in1->ctx->p));
+
+err:
+	return ret;
 }
 
-/* Compute out = in + 1 mod p */
-void fp_inc(fp_t out, fp_src_t in)
+/*
+ * Compute out = in + 1 mod p. 'out' parameter must have been initialized
+ * by the caller. Returns 0 on success, -1 on error.
+ */
+int fp_inc(fp_t out, fp_src_t in)
 {
-	fp_check_initialized(in);
-	fp_check_initialized(out);
-	MUST_HAVE((&(in->ctx->p)) == (&(out->ctx->p)));
-	SHOULD_HAVE(nn_cmp(&in->fp_val, &(in->ctx->p)) < 0);
-	nn_mod_inc(&(out->fp_val), &(in->fp_val), &(in->ctx->p));
+	int ret, cmp;
+
+	ret = fp_check_initialized(in); EG(ret, err);
+	ret = fp_check_initialized(out); EG(ret, err);
+
+	MUST_HAVE(((&(in->ctx->p)) == (&(out->ctx->p))), ret, err);
+	(void)cmp; /* silence warning when macro results in nothing */
+	SHOULD_HAVE(!nn_cmp(&in->fp_val, &(in->ctx->p), &cmp) && (cmp < 0), ret, err);
+
+	ret = nn_mod_inc(&(out->fp_val), &(in->fp_val), &(in->ctx->p));
+
+err:
+	return ret;
 }
 
-/* Compute out = in1 - in2 mod p */
-void fp_sub(fp_t out, fp_src_t in1, fp_src_t in2)
+/*
+ * Compute out = in1 - in2 mod p. 'out' parameter must have been initialized
+ * by the caller. Returns 0 on success, -1 on error.
+ */
+int fp_sub(fp_t out, fp_src_t in1, fp_src_t in2)
 {
-	fp_check_initialized(out);
-	fp_check_initialized(in1);
-	fp_check_initialized(in2);
-	MUST_HAVE((&(in1->ctx->p)) == (&(in2->ctx->p)));
-	MUST_HAVE((&(in1->ctx->p)) == (&(out->ctx->p)));
-	SHOULD_HAVE(nn_cmp(&in1->fp_val, &(in1->ctx->p)) < 0);
-	SHOULD_HAVE(nn_cmp(&in2->fp_val, &(in2->ctx->p)) < 0);
-	nn_mod_sub(&(out->fp_val), &(in1->fp_val),
-		   &(in2->fp_val), &(in1->ctx->p));
+	int ret, cmp;
+
+	ret = fp_check_initialized(out); EG(ret, err);
+	ret = fp_check_initialized(in1); EG(ret, err);
+	ret = fp_check_initialized(in2); EG(ret, err);
+
+	MUST_HAVE(((&(in1->ctx->p)) == (&(in2->ctx->p))), ret, err);
+	MUST_HAVE(((&(in1->ctx->p)) == (&(out->ctx->p))), ret, err);
+	(void)cmp; /* silence warning when macro results in nothing */
+	SHOULD_HAVE(!nn_cmp(&in1->fp_val, &(in1->ctx->p), &cmp) && (cmp < 0), ret, err);
+	SHOULD_HAVE(!nn_cmp(&in2->fp_val, &(in2->ctx->p), &cmp) && (cmp < 0), ret, err);
+
+	ret = nn_mod_sub(&(out->fp_val), &(in1->fp_val),
+			 &(in2->fp_val), &(in1->ctx->p));
+
+err:
+	return ret;
 }
 
-/* Compute out = in - 1 mod p */
-void fp_dec(fp_t out, fp_src_t in)
+/*
+ * Compute out = in - 1 mod p. 'out' parameter must have been initialized
+ * by the caller. Returns 0 on success, -1 on error.
+ */
+int fp_dec(fp_t out, fp_src_t in)
 {
-	fp_check_initialized(out);
-	fp_check_initialized(in);
-	MUST_HAVE((&(in->ctx->p)) == (&(out->ctx->p)));
-	SHOULD_HAVE(nn_cmp(&in->fp_val, &(in->ctx->p)) < 0);
-	nn_mod_dec(&(out->fp_val), &(in->fp_val), &(in->ctx->p));
+	int ret, cmp;
+
+	ret = fp_check_initialized(out); EG(ret, err);
+	ret = fp_check_initialized(in); EG(ret, err);
+
+	MUST_HAVE(((&(in->ctx->p)) == (&(out->ctx->p))), ret, err);
+	(void)cmp; /* silence warning when macro results in nothing */
+	SHOULD_HAVE(!nn_cmp(&in->fp_val, &(in->ctx->p), &cmp) && (cmp < 0), ret, err);
+
+	ret = nn_mod_dec(&(out->fp_val), &(in->fp_val), &(in->ctx->p));
+
+err:
+	return ret;
 }
 
-/* Compute out = -in mod p = (p - in) mod p */
-void fp_neg(fp_t out, fp_src_t in)
+/*
+ * Compute out = -in mod p = (p - in) mod p. 'out' parameter must have been
+ * initialized by the caller. Returns 0 on success, -1 on error.
+ */
+int fp_neg(fp_t out, fp_src_t in)
 {
-	fp_check_initialized(in);
-	fp_check_initialized(out);
-	MUST_HAVE((&(in->ctx->p)) == (&(out->ctx->p)));
-	SHOULD_HAVE(nn_cmp(&in->fp_val, &(in->ctx->p)) < 0);
-	nn_sub(&(out->fp_val), &(in->ctx->p), &(in->fp_val));
+	int ret, cmp;
+
+	ret = fp_check_initialized(in); EG(ret, err);
+	ret = fp_check_initialized(out); EG(ret, err);
+
+	MUST_HAVE(((&(in->ctx->p)) == (&(out->ctx->p))), ret, err);
+	(void)cmp; /* silence warning when macro results in nothing */
+	SHOULD_HAVE(!nn_cmp(&in->fp_val, &(in->ctx->p), &cmp) && (cmp < 0), ret, err);
+
+	ret = nn_sub(&(out->fp_val), &(in->ctx->p), &(in->fp_val));
+
+err:
+	return ret;
 }
