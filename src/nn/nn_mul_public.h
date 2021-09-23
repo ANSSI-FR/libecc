@@ -17,8 +17,8 @@
 #define __NN_MUL_PUBLIC_H__
 #include "nn.h"
 
-void nn_mul(nn_t out, nn_src_t in1, nn_src_t in2);
-void nn_sqr(nn_t out, nn_src_t in);
-void nn_mul_word(nn_t out, nn_src_t in, word_t w);
+int nn_mul(nn_t out, nn_src_t in1, nn_src_t in2);
+int nn_sqr(nn_t out, nn_src_t in);
+int nn_mul_word(nn_t out, nn_src_t in, word_t w);
 
 #endif /* __NN_MUL_PUBLIC_H__ */
