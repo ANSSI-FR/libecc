@@ -233,6 +233,15 @@ int check_curve(const u8 *curve_name)
 			ret = -1;
 			goto err;
 		}
+		/**/
+		ret = prj_pt_mul_blind(&TMP, &(curve_params.ec_gen_order), &A); EG(ret, err);
+		ret = prj_pt_iszero(&TMP, &iszero); EG(ret, err);
+		if (!iszero) {
+			ext_printf("Error: qA is not 0! (regular blind mul)\n");
+			ret = -1;
+			goto err;
+		}
+		/**/
 		ret = prj_pt_mul_monty(&TMP, &(curve_params.ec_gen_order), &A); EG(ret, err);
 		ret = prj_pt_iszero(&TMP, &iszero); EG(ret, err);
 		if (!iszero) {
@@ -240,6 +249,15 @@ int check_curve(const u8 *curve_name)
 			ret = -1;
 			goto err;
 		}
+		/**/
+		ret = prj_pt_mul_monty_blind(&TMP, &(curve_params.ec_gen_order), &A); EG(ret, err);
+		ret = prj_pt_iszero(&TMP, &iszero); EG(ret, err);
+		if (!iszero) {
+			ext_printf("Error: qA is not 0! (Montgomery blind mul)\n");
+			ret = -1;
+			goto err;
+		}
+		/**/
 		ret = prj_pt_mul(&TMP, &(curve_params.ec_gen_order), &B); EG(ret, err);
 		ret = prj_pt_iszero(&TMP, &iszero); EG(ret, err);
 		if (!iszero) {
@@ -247,6 +265,15 @@ int check_curve(const u8 *curve_name)
 			ret = -1;
 			goto err;
 		}
+		/**/
+		ret = prj_pt_mul_blind(&TMP, &(curve_params.ec_gen_order), &B); EG(ret, err);
+		ret = prj_pt_iszero(&TMP, &iszero); EG(ret, err);
+		if (!iszero) {
+			ext_printf("Error: qB is not 0! (regular blind mul)\n");
+			ret = -1;
+			goto err;
+		}
+		/**/
 		ret = prj_pt_mul_monty(&TMP, &(curve_params.ec_gen_order), &B); EG(ret, err);
 		ret = prj_pt_iszero(&TMP, &iszero); EG(ret, err);
 		if (!iszero) {
@@ -254,6 +281,15 @@ int check_curve(const u8 *curve_name)
 			ret = -1;
 			goto err;
 		}
+		/**/
+		ret = prj_pt_mul_monty_blind(&TMP, &(curve_params.ec_gen_order), &B); EG(ret, err);
+		ret = prj_pt_iszero(&TMP, &iszero); EG(ret, err);
+		if (!iszero) {
+			ext_printf("Error: qB is not 0! (Montgomery blind mul)\n");
+			ret = -1;
+			goto err;
+		}
+		/**/
 		ret = prj_pt_mul(&TMP, &(curve_params.ec_gen_order), &C); EG(ret, err);
 		ret = prj_pt_iszero(&TMP, &iszero); EG(ret, err);
 		if (!iszero) {
@@ -261,6 +297,15 @@ int check_curve(const u8 *curve_name)
 			ret = -1;
 			goto err;
 		}
+		/**/
+		ret = prj_pt_mul_blind(&TMP, &(curve_params.ec_gen_order), &C); EG(ret, err);
+		ret = prj_pt_iszero(&TMP, &iszero); EG(ret, err);
+		if (!iszero) {
+			ext_printf("Error: qC is not 0! (regular bind mul)\n");
+			ret = -1;
+			goto err;
+		}
+		/**/
 		ret = prj_pt_mul_monty(&TMP, &(curve_params.ec_gen_order), &C); EG(ret, err);
 		ret = prj_pt_iszero(&TMP, &iszero); EG(ret, err);
 		if (!iszero) {
@@ -268,6 +313,15 @@ int check_curve(const u8 *curve_name)
 			ret = -1;
 			goto err;
 		}
+		/**/
+		ret = prj_pt_mul_monty_blind(&TMP, &(curve_params.ec_gen_order), &C); EG(ret, err);
+		ret = prj_pt_iszero(&TMP, &iszero); EG(ret, err);
+		if (!iszero) {
+			ext_printf("Error: qC is not 0! (Montgomery blind mul)\n");
+			ret = -1;
+			goto err;
+		}
+		/**/
 		ret = prj_pt_mul(&TMP, &(curve_params.ec_gen_order), &D); EG(ret, err);
 		ret = prj_pt_iszero(&TMP, &iszero); EG(ret, err);
 		if (!iszero) {
@@ -275,10 +329,27 @@ int check_curve(const u8 *curve_name)
 			ret = -1;
 			goto err;
 		}
+		/**/
+		ret = prj_pt_mul_blind(&TMP, &(curve_params.ec_gen_order), &D); EG(ret, err);
+		ret = prj_pt_iszero(&TMP, &iszero); EG(ret, err);
+		if (!iszero) {
+			ext_printf("Error: qD is not 0! (regular blind mul)\n");
+			ret = -1;
+			goto err;
+		}
+		/**/
 		ret = prj_pt_mul_monty(&TMP, &(curve_params.ec_gen_order), &D); EG(ret, err);
 		ret = prj_pt_iszero(&TMP, &iszero); EG(ret, err);
 		if (!iszero) {
 			ext_printf("Error: qD is not 0! (Montgomery mul)\n");
+			ret = -1;
+			goto err;
+		}
+		/**/
+		ret = prj_pt_mul_monty_blind(&TMP, &(curve_params.ec_gen_order), &D); EG(ret, err);
+		ret = prj_pt_iszero(&TMP, &iszero); EG(ret, err);
+		if (!iszero) {
+			ext_printf("Error: qD is not 0! (Montgomery blind mul)\n");
 			ret = -1;
 			goto err;
 		}
@@ -290,6 +361,7 @@ int check_curve(const u8 *curve_name)
 	 * is indeed on the curve.
 	 */
 	ret = nn_init(&nn_k, 0); EG(ret, err);
+	/**/
 	if (get_ms_time(&t1)) {
 		ext_printf("Error: cannot get time with get_ms_time\n");
 		ret = -1;
@@ -326,6 +398,44 @@ int check_curve(const u8 *curve_name)
 	ext_printf("  [*] Regular EC scalar multiplication took %f seconds "
 		   "on average\n",
 		   (double)(t2 - t1) / (double)(PERF_SCALAR_MUL * 1000ULL));
+	/**/
+	if (get_ms_time(&t1)) {
+		ext_printf("Error: cannot get time with get_ms_time\n");
+		ret = -1;
+		goto err;
+	}
+	for (i = 0; i < PERF_SCALAR_MUL; i++) {
+		/* k = random mod (q) */
+		ret = nn_get_random_mod(&nn_k, &(curve_params.ec_gen_order)); EG(ret, err);
+		/* Compute kA with regular add/double formulas */
+		ret = prj_pt_mul_blind(&TMP, &nn_k, &A); EG(ret, err);
+		ret = prj_pt_to_aff(&T, &TMP); EG(ret, err);
+		ret = prj_pt_is_on_curve(&TMP, &is_oncurve); EG(ret, err);
+		if (!is_oncurve) {
+			ext_printf("Error: kA is not on the %s curve!\n",
+				   curve_params.curve_name);
+			nn_print("k=", &nn_k);
+			ret = -1;
+			goto err;
+		}
+		ret = aff_pt_is_on_curve(&T, &is_oncurve); EG(ret, err);
+		if (!is_oncurve) {
+			ext_printf("Error: kA is not on the %s curve!\n",
+				   curve_params.curve_name);
+			nn_print("k=", &nn_k);
+			ret = -1;
+			goto err;
+		}
+	}
+	if (get_ms_time(&t2)) {
+		ext_printf("Error: cannot get time with get_ms_time\n");
+		ret = -1;
+		goto err;
+	}
+	ext_printf("  [*] Regular blind EC scalar multiplication took %f seconds "
+		   "on average\n",
+		   (double)(t2 - t1) / (double)(PERF_SCALAR_MUL * 1000ULL));
+	/**/
 	if (get_ms_time(&t1)) {
 		ext_printf("Error: cannot get time with get_ms_time\n");
 		ret = -1;
@@ -360,6 +470,43 @@ int check_curve(const u8 *curve_name)
 		goto err;
 	}
 	ext_printf("  [*] Montgomery EC scalar multiplication took %f seconds "
+		   "on average\n",
+		   (double)(t2 - t1) / (double)(PERF_SCALAR_MUL * 1000ULL));
+	/**/
+	if (get_ms_time(&t1)) {
+		ext_printf("Error: cannot get time with get_ms_time\n");
+		ret = -1;
+		goto err;
+	}
+	for (i = 0; i < PERF_SCALAR_MUL; i++) {
+		/* k = random mod (q) */
+		ret = nn_get_random_mod(&nn_k, &(curve_params.ec_gen_order)); EG(ret, err);
+		/* Compute kA with Montgomery add/double formulas */
+		ret = prj_pt_mul_monty_blind(&TMP, &nn_k, &A); EG(ret, err);
+		ret = prj_pt_to_aff(&T, &TMP); EG(ret, err);
+		ret = prj_pt_is_on_curve(&TMP, &is_oncurve); EG(ret, err);
+		if (!is_oncurve) {
+			ext_printf("Error: kA is not on the %s curve!\n",
+				   curve_params.curve_name);
+			nn_print("k=", &nn_k);
+			ret = -1;
+			goto err;
+		}
+		ret = aff_pt_is_on_curve(&T, &is_oncurve); EG(ret, err);
+		if (!is_oncurve) {
+			ext_printf("Error: kA is not on the %s curve!\n",
+				   curve_params.curve_name);
+			nn_print("k=", &nn_k);
+			ret = -1;
+			goto err;
+		}
+	}
+	if (get_ms_time(&t2)) {
+		ext_printf("Error: cannot get time with get_ms_time\n");
+		ret = -1;
+		goto err;
+	}
+	ext_printf("  [*] Montgomery blind EC scalar multiplication took %f seconds "
 		   "on average\n",
 		   (double)(t2 - t1) / (double)(PERF_SCALAR_MUL * 1000ULL));
 
