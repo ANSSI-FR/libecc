@@ -34,7 +34,10 @@ u8 are_equal(const void *a, const void *b, u32 len)
 	return ret;
 }
 
-/* This function is a simple (non-optimized) reimplementation of memcpy() */
+/*
+ * This function is a simple (non-optimized) reimplementation of memcpy()
+ * XXX we do not check anything regarding pointers.
+ */
 void local_memcpy(void *dst, const void *src, u32 n)
 {
 	const u8 *lsrc = (const u8*)src;
@@ -48,7 +51,10 @@ void local_memcpy(void *dst, const void *src, u32 n)
 	}
 }
 
-/* This function is a simple (non-optimized) reimplementation of memset() */
+/*
+ * This function is a simple (non-optimized) reimplementation of memset()
+ * XXX we do not check anything regarding pointers.
+ */
 void local_memset(void *v, u8 c, u32 n)
 {
 	volatile u8 *p = (volatile u8*)v;
@@ -60,7 +66,10 @@ void local_memset(void *v, u8 c, u32 n)
 	}
 }
 
-/* This function returns 1 if strings are equal and 0 otherise */
+/*
+ * This function returns 1 if strings are equal and 0 otherwise
+ * XXX we do not check anything regarding pointers.
+ */
 u8 are_str_equal(const char *s1, const char *s2)
 {
 	const char *ls1 = s1, *ls2 = s2;
@@ -73,7 +82,10 @@ u8 are_str_equal(const char *s1, const char *s2)
 	return *ls1 == *ls2;
 }
 
-/* This function returns 1 if strings are equal and 0 otherise, with maximum length */
+/*
+ * This function returns 1 if strings are equal up to maxlen and 0 otherwise
+ * XXX we do not check anything regarding pointers.
+ */
 u8 are_str_equal_nlen(const char *s1, const char *s2, u32 maxlen)
 {
 	const char *ls1 = s1, *ls2 = s2;
@@ -90,7 +102,10 @@ u8 are_str_equal_nlen(const char *s1, const char *s2, u32 maxlen)
 
 
 
-/* This function is a simple (non-optimized) reimplementation of strlen() */
+/*
+ * This function is a simple (non-optimized) reimplementation of strlen()
+ * XXX we do not check anything regarding pointers.
+ */
 u32 local_strlen(const char *s)
 {
 	u32 i = 0;
@@ -102,7 +117,10 @@ u32 local_strlen(const char *s)
 	return i;
 }
 
-/* This function is a simple (non-optimized) reimplementation of strnlen() */
+/*
+ * This function is a simple (non-optimized) reimplementation of strnlen()
+ * XXX we do not check anything regarding pointers.
+ */
 u32 local_strnlen(const char *s, u32 maxlen)
 {
 	u32 i = 0;
@@ -114,7 +132,10 @@ u32 local_strnlen(const char *s, u32 maxlen)
 	return i;
 }
 
-/* This functin is a simple (non-optimized) reimplementation of strncpy() */
+/*
+ * This functin is a simple (non-optimized) reimplementation of strncpy()
+ * XXX we do not check anything regarding pointers.
+ */
 char *local_strncpy(char *dst, const char *src, u32 n)
 {
 	u32 i;
@@ -129,7 +150,10 @@ char *local_strncpy(char *dst, const char *src, u32 n)
 	return dst;
 }
 
-/* This functin is a simple (non-optimized) reimplementation of strncat() */
+/*
+ * This functin is a simple (non-optimized) reimplementation of strncat()
+ * XXX we do not check anything regarding pointers.
+ */
 char *local_strncat(char *dst, const char *src, u32 n)
 {
 	u32 dst_len, i;

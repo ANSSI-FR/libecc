@@ -49,18 +49,31 @@
  * those conditions explicit.
  */
 
+/*
+ * We known it is BAD BAD BAD to define macro with goto inside them
+ * but this is the best way we found to avoid making the code
+ * unreadable with tests of error conditions when implementing
+ * error handling in the project.
+ *
+ * EG stands for Error Goto, which represents the purpose of the
+ * macro, i.e. test a condition cond, and if false goto label
+ * lbl.
+ */
+#define EG(cond,lbl) do { if (cond) { goto lbl ; } } while (0)
+
 /****** AFL and other general purpose fuzzers case *******************/
 #if (defined(__AFL_COMPILER) || defined(FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION)) && !defined(USE_CRYPTOFUZZ)
-/* When we use AFL (American Fuzzy Lop) style fuzzing, we do not 
- * want asserts resulting in SIGABRT interpreted as a 'crash', 
- * or while(1) interpreted as a 'hang'. Hence we force an exit(-1) 
- * to remove all this false positive 'pollution'.
+/*
+ * When we use AFL (American Fuzzy Lop) style fuzzing, we do not want asserts
+ * resulting in SIGABRT interpreted as a 'crash', or while(1) interpreted as a
+ * 'hang'. Hence we force an exit(-1) to remove all this false positive
+ * 'pollution'.
  */
 #ifndef WITH_STDLIB
 #error "AFL Fuzzing needs the STDLIB!"
 #endif
 #include <stdlib.h>
-#define MUST_HAVE(x) do { if (!(x)) { exit(-1); } } while(0)
+#define MUST_HAVE(x)
 #define SHOULD_HAVE(x)
 #define KNOWN_FACT(x)
 
@@ -88,38 +101,68 @@
 #endif
 extern sigjmp_buf cryptofuzz_jmpbuf;
 extern unsigned char cryptofuzz_longjmp_triggered;
-#define MUST_HAVE(x) do { if (!(x)) { cryptofuzz_longjmp_triggered = 1;  siglongjmp(cryptofuzz_jmpbuf, 1); } } while (0)
+#define MUST_HAVE(x)
 #define SHOULD_HAVE(x)
 #define KNOWN_FACT(x)
 
 /****** Regular DEBUG and production modes cases  ****************/
 #else /* DEBUG and production modes */
 #if defined(DEBUG)
+
 /*
- * In DEBUG mode, we enforce a regular assert in MUST_HAVE, SHOULD_HAVE and
- * KNOWN_FACT.
+ * In DEBUG mode, we enforce a regular assert() in MUST_HAVE,
+ * SHOULD_HAVE and KNOWN_FACT, i.e. they are all the same.
  */
-#include <assert.h>
-#define MUST_HAVE(x) assert(x)
-#define SHOULD_HAVE(x) assert(x)
-#define KNOWN_FACT(x) assert(x)
-#else
-/* 
- * In regular production mode, SHOULD_HAVE and KNOWN_FACT are void for
- * performance reasons. MUST_HAVE is either a while(1) endless loop,
- * or an ext_printf with a while(1) for tracing the origin of the error
- * when necessary (if USE_ASSERT_PRINT is specified by the user).
- */
+
+#define MUST_HAVE(cond, ret, lbl) do {	\
+	assert((cond));			\
+	if (0) { /* silence unused	\
+		    label warning  */	\
+		ret = -1;		\
+		goto lbl;		\
+	}				\
+}  while (0)
+
+#define SHOULD_HAVE(cond, ret, lbl) MUST_HAVE(cond, ret, lbl)
+
+#define KNOWN_FACT(cond, ret, lbl) MUST_HAVE(cond, ret, lbl)
+
+#else /* defined(DEBUG) */
+
 #if defined(USE_ASSERT_PRINT)
-#include "../external_deps/print.h"
-/* Print some information and exit if we are asked to */
-#define MUST_HAVE(x) do { if (!(x)) { ext_printf("MUST_HAVE error: %s at %d\n", __FILE__,__LINE__); while(1){}; } } while (0)
+#define MUST_HAVE_EXT_PRINT do {					\
+	ext_printf("MUST_HAVE error: %s at %d\n", __FILE__,__LINE__);	\
+} while (0)
 #else
-#define MUST_HAVE(x) do { if (!(x)) { while (1); } } while (0)
+#define MUST_HAVE_EXT_PRINT
 #endif
-#define SHOULD_HAVE(x)
-#define KNOWN_FACT(x)
-#endif
+
+/*
+ * In regular production mode, SHOULD_HAVE and KNOWN_FACT are void for
+ * performance reasons. MUST_HAVE includes an ext_printf call for
+ * tracing the origin of the error when necessary (if USE_ASSERT_PRINT
+ * is specified by the user).
+ */
+/* Print some information and exit if we are asked to */
+#define MUST_HAVE(cond, ret, lbl) do {		\
+	if (!(cond)) {				\
+		MUST_HAVE_EXT_PRINT;		\
+		ret = -1;			\
+		goto lbl;			\
+	}					\
+}  while (0)
+
+#define SHOULD_HAVE(cond, ret, lbl) do { \
+	if (0) { /* silence unused	 \
+		    label warning  */	 \
+		ret = -1;		 \
+		goto lbl;		 \
+	}				 \
+}  while (0)
+
+#define KNOWN_FACT(cond, ret, lbl) SHOULD_HAVE(cond, ret, lbl);
+
+#endif  /* defined(DEBUG) */
 #endif
 
 #define LOCAL_MAX(x, y) (((x) > (y)) ? (x) : (y))
