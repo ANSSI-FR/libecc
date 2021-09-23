@@ -160,7 +160,7 @@ int ECDH_helper(const u8 *curve_name, const u8 *role)
 	ret = nn_get_random_mod(d, &(curve_params.ec_gen_order)); EG(ret, err);
 
 	/* Q = dG */
-	ret = prj_pt_mul_monty(&Q, d, &(curve_params.ec_gen)); EG(ret, err);
+	ret = prj_pt_mul(&Q, d, &(curve_params.ec_gen)); EG(ret, err);
 
 	/* Now send the public value Q to the other party, get the other party
 	 * public value and compute the shared secret.
@@ -191,7 +191,7 @@ int ECDH_helper(const u8 *curve_name, const u8 *role)
 			       2 * BYTECEIL(curve_params.ec_fp.p_bitlen),
 			       &(curve_params.ec_curve)); EG(ret, err);
 	/* Compute the shared value = first coordinate of dQ */
-	ret = prj_pt_mul_monty(&Q, d, &Q); EG(ret, err);
+	ret = prj_pt_mul(&Q, d, &Q); EG(ret, err);
 	/* Move to the unique representation */
 	/* Compute the affine coordinates to get the unique (x, y) representation
 	 * (projective points are equivalent by a z scalar)

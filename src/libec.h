@@ -23,7 +23,6 @@
 #include "curves/curves_list.h"
 #include "curves/ec_shortw.h"
 #include "curves/prj_pt.h"
-#include "curves/prj_pt_monty.h"
 #include "curves/aff_pt.h"
 
 #include "utils/print_curves.h"

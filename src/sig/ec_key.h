@@ -23,7 +23,7 @@
 #include "../nn/nn_rand.h"
 #include "../nn/nn_add.h"
 #include "../nn/nn_logical.h"
-#include "../curves/prj_pt_monty.h"
+#include "../curves/prj_pt.h"
 #include "../hash/hash_algs.h"
 
 /* Enum for exported keys */

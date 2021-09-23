@@ -51,7 +51,7 @@ int ecgdsa_init_pub_key(ec_pub_key *out_pub, const ec_priv_key *in_priv)
 	G = &(in_priv->params->ec_gen);
 	ret = nn_modinv(&xinv, &(in_priv->x), &(in_priv->params->ec_gen_order)); EG(ret, err);
 	/* Use blinding with scalar_b when computing point scalar multiplication */
-	ret = prj_pt_mul_monty_blind(&(out_pub->y), &xinv, G); EG(ret, err);
+	ret = prj_pt_mul_blind(&(out_pub->y), &xinv, G); EG(ret, err);
 
 	out_pub->key_type = ECGDSA;
 	out_pub->params = in_priv->params;
@@ -301,9 +301,9 @@ int _ecgdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	/* 4. Compute W = kG = (Wx, Wy) */
 #ifdef USE_SIG_BLINDING
 	/* We use blinding for the scalar multiplication */
-	ret = prj_pt_mul_monty_blind(&kG, &k, G); EG(ret, err);
+	ret = prj_pt_mul_blind(&kG, &k, G); EG(ret, err);
 #else
-	ret = prj_pt_mul_monty(&kG, &k, G); EG(ret, err);
+	ret = prj_pt_mul(&kG, &k, G); EG(ret, err);
 #endif /* USE_SIG_BLINDING */
 	ret = prj_pt_to_aff(&W, &kG); EG(ret, err);
 
@@ -576,9 +576,9 @@ int _ecgdsa_verify_finalize(struct ec_verify_context *ctx)
 	ret = nn_mod(&v, &tmp, q); EG(ret, err); /* (r^-1 * s) mod q */
 
 	/* 6. Compute W' = uG + vY */
-	ret = prj_pt_mul_monty(&uG, &u, G); EG(ret, err);
-	ret = prj_pt_mul_monty(&vY, &v, Y); EG(ret, err);
-	ret = prj_pt_add_monty(&Wprime, &uG, &vY); EG(ret, err);
+	ret = prj_pt_mul(&uG, &u, G); EG(ret, err);
+	ret = prj_pt_mul(&vY, &v, Y); EG(ret, err);
+	ret = prj_pt_add(&Wprime, &uG, &vY); EG(ret, err);
 
 	/* 7. Compute r' = W'_x mod q */
 	ret = prj_pt_to_aff(&Wprime_aff, &Wprime); EG(ret, err);

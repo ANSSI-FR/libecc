@@ -1479,9 +1479,9 @@ ATTRIBUTE_WARN_UNUSED_RET static int ec_scalar_mult(const char *ec_name,
 	/* NB: we use a blind scalar multiplication here since we do not want our
 	 * private d to leak ...
 	 */
-	ret = prj_pt_mul_monty_blind(&Q, &d, &Q); EG(ret, err);
+	ret = prj_pt_mul_blind(&Q, &d, &Q); EG(ret, err);
 #else
-	ret = prj_pt_mul_monty(&Q, &d, &Q); EG(ret, err);
+	ret = prj_pt_mul(&Q, &d, &Q); EG(ret, err);
 #endif
 	/* Get the unique representation of the point */
 	ret = prj_pt_unique(&Q, &Q); EG(ret, err);

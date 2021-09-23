@@ -51,6 +51,11 @@ ATTRIBUTE_WARN_UNUSED_RET int ec_shortw_aff_to_prj(prj_pt_t out, aff_pt_src_t in
 ATTRIBUTE_WARN_UNUSED_RET int prj_pt_cmp(prj_pt_src_t in1, prj_pt_src_t in2, int *cmp);
 ATTRIBUTE_WARN_UNUSED_RET int prj_pt_eq_or_opp(prj_pt_src_t in1, prj_pt_src_t in2, int *eq_or_opp);
 ATTRIBUTE_WARN_UNUSED_RET int prj_pt_neg(prj_pt_t out, prj_pt_src_t in);
+ATTRIBUTE_WARN_UNUSED_RET int prj_pt_add(prj_pt_t sum, prj_pt_src_t in1, prj_pt_src_t in2);
+ATTRIBUTE_WARN_UNUSED_RET int prj_pt_dbl(prj_pt_t dbl, prj_pt_src_t in);
+ATTRIBUTE_WARN_UNUSED_RET int prj_pt_mul(prj_pt_t out, nn_src_t m, prj_pt_src_t in);
+ATTRIBUTE_WARN_UNUSED_RET int prj_pt_mul_blind(prj_pt_t out, nn_src_t m, prj_pt_src_t in);
+ATTRIBUTE_WARN_UNUSED_RET int check_prj_pt_order(prj_pt_src_t in_shortw, nn_src_t in_isorder);
 ATTRIBUTE_WARN_UNUSED_RET int prj_pt_import_from_buf(prj_pt_t pt,
 			   const u8 *pt_buf,
 			   u16 pt_buf_len, ec_shortw_crv_src_t crv);
@@ -59,10 +64,6 @@ ATTRIBUTE_WARN_UNUSED_RET int prj_pt_import_from_aff_buf(prj_pt_t pt,
 			   u16 pt_buf_len, ec_shortw_crv_src_t crv);
 ATTRIBUTE_WARN_UNUSED_RET int prj_pt_export_to_buf(prj_pt_src_t pt, u8 *pt_buf, u32 pt_buf_len);
 ATTRIBUTE_WARN_UNUSED_RET int prj_pt_export_to_aff_buf(prj_pt_src_t pt, u8 *pt_buf, u32 pt_buf_len);
-ATTRIBUTE_WARN_UNUSED_RET int prj_pt_add(prj_pt_t sum, prj_pt_src_t in1, prj_pt_src_t in2);
-ATTRIBUTE_WARN_UNUSED_RET int prj_pt_dbl(prj_pt_t dbl, prj_pt_src_t in);
-ATTRIBUTE_WARN_UNUSED_RET int prj_pt_mul(prj_pt_t out, nn_src_t m, prj_pt_src_t in);
-ATTRIBUTE_WARN_UNUSED_RET int prj_pt_mul_blind(prj_pt_t out, nn_src_t m, prj_pt_src_t in);
 ATTRIBUTE_WARN_UNUSED_RET int aff_pt_edwards_to_prj_pt_shortw(aff_pt_edwards_src_t in_edwards,
 				    ec_shortw_crv_src_t shortw_crv,
 				    prj_pt_t out_shortw, fp_src_t alpha);

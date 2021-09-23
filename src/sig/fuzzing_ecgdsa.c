@@ -168,9 +168,9 @@ int ecgdsa_sign_raw(struct ec_sign_context *ctx, const u8 *input, u8 inputlen, u
 	/* 4. Compute W = kG = (Wx, Wy) */
 #ifdef USE_SIG_BLINDING
         /* We use blinding for the scalar multiplication */
-        ret = prj_pt_mul_monty_blind(&kG, &k, G); EG(ret, err);
+        ret = prj_pt_mul_blind(&kG, &k, G); EG(ret, err);
 #else
-	ret = prj_pt_mul_monty(&kG, &k, G); EG(ret, err);
+	ret = prj_pt_mul(&kG, &k, G); EG(ret, err);
 #endif /* USE_SIG_BLINDING */
 	ret = prj_pt_to_aff(&W, &kG); EG(ret, err);
 
@@ -337,9 +337,9 @@ int ecgdsa_verify_raw(struct ec_verify_context *ctx, const u8 *input, u8 inputle
 	ret = nn_mod(&v, &tmp, q); EG(ret, err); /* (r^-1 * s) mod q */
 
 	/* 6. Compute W' = uG + vY */
-	ret = prj_pt_mul_monty(&uG, &u, G); EG(ret, err);
-	ret = prj_pt_mul_monty(&vY, &v, Y); EG(ret, err);
-	ret = prj_pt_add_monty(&Wprime, &uG, &vY); EG(ret, err);
+	ret = prj_pt_mul(&uG, &u, G); EG(ret, err);
+	ret = prj_pt_mul(&vY, &v, Y); EG(ret, err);
+	ret = prj_pt_add(&Wprime, &uG, &vY); EG(ret, err);
 
 	/* 7. Compute r' = W'_x mod q */
 	ret = prj_pt_to_aff(&Wprime_aff, &Wprime); EG(ret, err);

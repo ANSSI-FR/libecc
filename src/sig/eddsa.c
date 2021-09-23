@@ -839,7 +839,7 @@ int eddsa_init_pub_key(ec_pub_key *out_pub, const ec_priv_key *in_priv)
 		ret = nn_rshift(&s, &s, 2); EG(ret, err);
 	}
 #endif
-	ret = prj_pt_mul_monty_blind(&(out_pub->y), &s, G); EG(ret, err);
+	ret = prj_pt_mul_blind(&(out_pub->y), &s, G); EG(ret, err);
 
 	out_pub->key_type = in_priv->key_type;
 	out_pub->params = in_priv->params;
@@ -918,7 +918,7 @@ int eddsa_import_pub_key(ec_pub_key *pub_key, const u8 *buf, u16 buflen,
 		 */
 		ret = nn_init(&tmp, 0); EG(ret, err1);
 		ret = nn_modinv_word(&tmp, WORD(4), gen_order); EG(ret, err1);
-		ret = prj_pt_mul_monty(&(pub_key->y), &tmp, pub_key_y); EG(ret, err1);
+		ret = prj_pt_mul(&(pub_key->y), &tmp, pub_key_y); EG(ret, err1);
 err1:
 		nn_uninit(&tmp);
 		PTR_NULLIFY(gen_order);
@@ -1364,9 +1364,9 @@ int _eddsa_sign_finalize_pre_hash(struct ec_sign_context *ctx, u8 *sig, u8 sigle
 		ret = nn_modinv_word(&r_tmp, WORD(4), q); EG(ret, err);
 		ret = nn_mul_mod(&r_tmp, &r_tmp, &r, q); EG(ret, err);
 #ifdef USE_SIG_BLINDING
-		ret = prj_pt_mul_monty_blind(&R, &r_tmp, G); EG(ret, err);
+		ret = prj_pt_mul_blind(&R, &r_tmp, G); EG(ret, err);
 #else
-		ret = prj_pt_mul_monty(&R, &r_tmp, G); EG(ret, err);
+		ret = prj_pt_mul(&R, &r_tmp, G); EG(ret, err);
 #endif
 		nn_uninit(&r_tmp);
 	}
@@ -1374,9 +1374,9 @@ int _eddsa_sign_finalize_pre_hash(struct ec_sign_context *ctx, u8 *sig, u8 sigle
 #endif /* !defined(WITH_SIG_EDDSA448) */
 	{
 #ifdef USE_SIG_BLINDING
-		ret = prj_pt_mul_monty_blind(&R, &r, G); EG(ret, err);
+		ret = prj_pt_mul_blind(&R, &r, G); EG(ret, err);
 #else
-		ret = prj_pt_mul_monty(&R, &r, G); EG(ret, err);
+		ret = prj_pt_mul(&R, &r, G); EG(ret, err);
 #endif
 	}
 
@@ -1683,9 +1683,9 @@ int _eddsa_sign(u8 *sig, u8 siglen, const ec_key_pair *key_pair,
 		ret = nn_modinv_word(&r_tmp, WORD(4), q); EG(ret, err);
 		ret = nn_mul_mod(&r_tmp, &r_tmp, &r, q); EG(ret, err);
 #ifdef USE_SIG_BLINDING
-		ret = prj_pt_mul_monty_blind(&R, &r_tmp, G); EG(ret, err);
+		ret = prj_pt_mul_blind(&R, &r_tmp, G); EG(ret, err);
 #else
-		ret = prj_pt_mul_monty(&R, &r_tmp, G); EG(ret, err);
+		ret = prj_pt_mul(&R, &r_tmp, G); EG(ret, err);
 #endif
 		nn_uninit(&r_tmp);
 	}
@@ -1693,9 +1693,9 @@ int _eddsa_sign(u8 *sig, u8 siglen, const ec_key_pair *key_pair,
 #endif /* !defined(WITH_SIG_EDDSA448) */
 	{
 #ifdef USE_SIG_BLINDING
-		ret = prj_pt_mul_monty_blind(&R, &r, G); EG(ret, err);
+		ret = prj_pt_mul_blind(&R, &r, G); EG(ret, err);
 #else
-		ret = prj_pt_mul_monty(&R, &r, G); EG(ret, err);
+		ret = prj_pt_mul(&R, &r, G); EG(ret, err);
 #endif
 	}
 	/* Now compute S = (r + H(R || PubKey || PH(m)) * secret) mod q */
@@ -1855,9 +1855,9 @@ ATTRIBUTE_WARN_UNUSED_RET static int _eddsa_cofactor_scalar_mult(prj_pt_t out, p
 	while (explen > 0) {
 		explen -= (bitcnt_t)1;
 		ret = nn_getbit(cofactor, explen, &expbit); EG(ret, err);
-		ret = prj_pt_dbl_monty(out, out); EG(ret, err);
+		ret = prj_pt_dbl(out, out); EG(ret, err);
 		if(expbit){
-			ret = prj_pt_add_monty(out, out, in); EG(ret, err);
+			ret = prj_pt_add(out, out, in); EG(ret, err);
 		}
 	}
 
@@ -2184,12 +2184,12 @@ int _eddsa_verify_finalize(struct ec_verify_context *ctx)
 	}
 #endif
 	/* 4. Compute (S * G) - R - (h * A)  */
-	ret = prj_pt_mul_monty(&_Tmp1, S, G); EG(ret, err);
+	ret = prj_pt_mul(&_Tmp1, S, G); EG(ret, err);
 	ret = prj_pt_neg(&_Tmp2, _R); EG(ret, err);
-	ret = prj_pt_add_monty(&_Tmp1, &_Tmp1, &_Tmp2); EG(ret, err);
-	ret = prj_pt_mul_monty(&_Tmp2, &h, A); EG(ret, err);
+	ret = prj_pt_add(&_Tmp1, &_Tmp1, &_Tmp2); EG(ret, err);
+	ret = prj_pt_mul(&_Tmp2, &h, A); EG(ret, err);
 	ret = prj_pt_neg(&_Tmp2, &_Tmp2); EG(ret, err);
-	ret = prj_pt_add_monty(&_Tmp1, &_Tmp1, &_Tmp2); EG(ret, err);
+	ret = prj_pt_add(&_Tmp1, &_Tmp1, &_Tmp2); EG(ret, err);
 
 	/* 5. We use cofactored multiplication, so multiply by the cofactor:
 	 *    since this is a public verification, we use a basic double and add

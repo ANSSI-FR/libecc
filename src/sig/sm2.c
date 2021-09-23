@@ -81,7 +81,7 @@ int sm2_init_pub_key(ec_pub_key *out_pub, const ec_priv_key *in_priv)
 	ret = local_memset(out_pub, 0, sizeof(ec_pub_key)); EG(ret, err);
 
 	/* Use blinding with scalar_b when computing point scalar multiplication */
-	ret = prj_pt_mul_monty_blind(&(out_pub->y), &(in_priv->x), G); EG(ret, err);
+	ret = prj_pt_mul_blind(&(out_pub->y), &(in_priv->x), G); EG(ret, err);
 
 	out_pub->key_type = SM2;
 	out_pub->params = in_priv->params;
@@ -379,9 +379,9 @@ int _sm2_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 
 	/* 4. Compute W = (W_x,W_y) = kG */
 #ifdef USE_SIG_BLINDING
-	ret = prj_pt_mul_monty_blind(&kG, &k, G); EG(ret, err);
+	ret = prj_pt_mul_blind(&kG, &k, G); EG(ret, err);
 #else
-	ret = prj_pt_mul_monty(&kG, &k, G); EG(ret, err);
+	ret = prj_pt_mul(&kG, &k, G); EG(ret, err);
 #endif /* USE_SIG_BLINDING */
 	ret = prj_pt_to_aff(&W, &kG); EG(ret, err);
 
@@ -664,9 +664,9 @@ int _sm2_verify_finalize(struct ec_verify_context *ctx)
 	dbg_nn_print("e", &e);
 
 	/* 6. Compute W' = sG + tY */
-	ret = prj_pt_mul_monty(&sG, s, G); EG(ret, err);
-	ret = prj_pt_mul_monty(&tY, &t, Y); EG(ret, err);
-	ret = prj_pt_add_monty(&W_prime, &sG, &tY); EG(ret, err);
+	ret = prj_pt_mul(&sG, s, G); EG(ret, err);
+	ret = prj_pt_mul(&tY, &t, Y); EG(ret, err);
+	ret = prj_pt_add(&W_prime, &sG, &tY); EG(ret, err);
 
 	/* 7. If W' is the point at infinity, reject the signature. */
 	ret = prj_pt_iszero(&W_prime, &iszero); EG(ret, err);

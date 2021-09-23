@@ -158,9 +158,9 @@ int ecdsa_sign_raw(struct ec_sign_context *ctx, const u8 *input, u8 inputlen, u8
 
 	/* 5. Compute W = (W_x,W_y) = kG */
 #ifdef USE_SIG_BLINDING
-	ret = prj_pt_mul_monty_blind(&kG, &k, G); EG(ret, err);
+	ret = prj_pt_mul_blind(&kG, &k, G); EG(ret, err);
 #else
- 	ret = prj_pt_mul_monty(&kG, &k, G); EG(ret, err);
+ 	ret = prj_pt_mul(&kG, &k, G); EG(ret, err);
 #endif /* USE_SIG_BLINDING */
 	ret = prj_pt_to_aff(&W, &kG); EG(ret, err);
 
@@ -366,9 +366,9 @@ int ecdsa_verify_raw(struct ec_verify_context *ctx, const u8 *input, u8 inputlen
 	dbg_nn_print("v = (s^-1)r mod q", &v);
 
 	/* 7. Compute W' = uG + vY */
-	ret = prj_pt_mul_monty(&uG, &u, G); EG(ret, err);
-	ret = prj_pt_mul_monty(&vY, &v, Y); EG(ret, err);
-	ret = prj_pt_add_monty(&W_prime, &uG, &vY); EG(ret, err);
+	ret = prj_pt_mul(&uG, &u, G); EG(ret, err);
+	ret = prj_pt_mul(&vY, &v, Y); EG(ret, err);
+	ret = prj_pt_add(&W_prime, &uG, &vY); EG(ret, err);
 
 	/* 8. If W' is the point at infinity, reject the signature. */
 	ret = prj_pt_iszero(&W_prime, &iszero); EG(ret, err);
