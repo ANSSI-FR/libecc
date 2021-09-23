@@ -38,8 +38,8 @@ typedef struct {
 typedef ec_shortw_crv *ec_shortw_crv_t;
 typedef const ec_shortw_crv *ec_shortw_crv_src_t;
 
-int ec_shortw_crv_check_initialized(ec_shortw_crv_src_t crv);
-int ec_shortw_crv_init(ec_shortw_crv_t crv, fp_src_t a, fp_src_t b, nn_src_t order);
+ATTRIBUTE_WARN_UNUSED_RET int ec_shortw_crv_check_initialized(ec_shortw_crv_src_t crv);
+ATTRIBUTE_WARN_UNUSED_RET int ec_shortw_crv_init(ec_shortw_crv_t crv, fp_src_t a, fp_src_t b, nn_src_t order);
 void ec_shortw_crv_uninit(ec_shortw_crv_t crv);
 
 #endif /* __EC_SHORTW_H__ */

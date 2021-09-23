@@ -41,7 +41,7 @@
  * on error or if x has no reciprocal. On error, out is not meaningful.
  *
  */
-static int nn_modinv_odd(nn_t out, nn_src_t x, nn_src_t m)
+ATTRIBUTE_WARN_UNUSED_RET static int nn_modinv_odd(nn_t out, nn_src_t x, nn_src_t m)
 {
 	int isodd, swap, smaller, ret,  cmp, iszero, tmp_isodd;
 	nn a, b, u, tmp, mp1d2;
@@ -275,7 +275,7 @@ err:
  * Compute (A - B) % 2^(storagebitsizeof(B) + 1). No assumption on A and B such
  * as A >= B. Done in *constant time*. Returns 0 on success, -1 on error.
  */
-static inline int nn_sub_mod_2exp(nn_t A, nn_src_t B)
+ATTRIBUTE_WARN_UNUSED_RET static inline int nn_sub_mod_2exp(nn_t A, nn_src_t B)
 {
 	u8 Awlen = A->wlen;
 	int ret;

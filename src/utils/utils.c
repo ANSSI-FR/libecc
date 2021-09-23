@@ -16,80 +16,117 @@
 #include "utils.h"
 
 /*
- * Return 1 if first 'len' bytes of both buffers a and b are equal. It
- * returns 0 otherwise. The test is done in constant time.
+ * Return 1 in 'check' if first 'len' bytes of both buffers a and b are equal, 0 otherwise.
+ * It returns 0 if success, -1 on error. 'check' is only relevant on success.
+ *
+ * The test is done in constant time.
  */
-u8 are_equal(const void *a, const void *b, u32 len)
+int are_equal(const void *a, const void *b, u32 len, int *check)
 {
 	const u8 *la = (const u8*)a, *lb = (const u8*)b;
-	u8 ret = 1;
+	int ret;
 	u32 i;
 
+	MUST_HAVE((a != NULL) && (b != NULL) && (check != NULL), ret, err);
+
+	*check = 1;
 	for (i = 0; i < len; i++) {
-		ret &= (*la == *lb);
+		(*check) &= (*la == *lb);
 		la++;
 		lb++;
 	}
 
+	ret = 0;
+
+err:
 	return ret;
 }
 
 /*
  * This function is a simple (non-optimized) reimplementation of memcpy()
- * XXX we do not check anything regarding pointers.
+ * Returns 0 on success, -1 on error.
  */
-void local_memcpy(void *dst, const void *src, u32 n)
+int local_memcpy(void *dst, const void *src, u32 n)
 {
 	const u8 *lsrc = (const u8*)src;
 	u8 *ldst = (u8*)dst;
 	u32 i;
+	int ret;
+
+	MUST_HAVE((dst != NULL) && (src != NULL), ret, err);
 
 	for (i = 0; i < n; i++) {
 		*ldst = *lsrc;
 		ldst++;
 		lsrc++;
 	}
+
+	ret = 0;
+
+err:
+	return ret;
 }
 
 /*
  * This function is a simple (non-optimized) reimplementation of memset()
- * XXX we do not check anything regarding pointers.
+ * Returns 0 on success, -1 on error.
  */
-void local_memset(void *v, u8 c, u32 n)
+int local_memset(void *v, u8 c, u32 n)
 {
 	volatile u8 *p = (volatile u8*)v;
 	u32 i;
+	int ret;
+
+	MUST_HAVE((v != NULL), ret, err);
 
 	for (i = 0; i < n; i++) {
 		*p = c;
 		p++;
 	}
+
+	ret = 0;
+
+err:
+	return ret;
 }
 
 /*
- * This function returns 1 if strings are equal and 0 otherwise
- * XXX we do not check anything regarding pointers.
+ * Return 1 in 'check' if strings are equal, 0 otherwise.
+ * It returns 0 if success, -1 on error. 'check' is only relevant on success.
+ *
  */
-u8 are_str_equal(const char *s1, const char *s2)
+int are_str_equal(const char *s1, const char *s2, int *check)
 {
 	const char *ls1 = s1, *ls2 = s2;
+	int ret;
+
+	MUST_HAVE((s1 != NULL) && (s2 != NULL) && (check != NULL), ret, err);
 
 	while (*ls1 && (*ls1 == *ls2)) {
 		ls1++;
 		ls2++;
 	}
 
-	return *ls1 == *ls2;
+	(*check) = (*ls1 == *ls2);
+
+	ret = 0;
+
+err:
+	return ret;
 }
 
 /*
- * This function returns 1 if strings are equal up to maxlen and 0 otherwise
- * XXX we do not check anything regarding pointers.
+ * Return 1 in 'check' if strings are equal up to maxlen, 0 otherwise.
+ * It returns 0 if success, -1 on error. 'check' is only relevant on success.
+ *
  */
-u8 are_str_equal_nlen(const char *s1, const char *s2, u32 maxlen)
+int are_str_equal_nlen(const char *s1, const char *s2, u32 maxlen, int *check)
 {
 	const char *ls1 = s1, *ls2 = s2;
 	u32 i = 0;
+	int ret;
+
+	MUST_HAVE((s1 != NULL) && (s2 != NULL) && (check != NULL), ret, err);
 
 	while (*ls1 && (*ls1 == *ls2) && (i < maxlen)) {
 		ls1++;
@@ -97,48 +134,70 @@ u8 are_str_equal_nlen(const char *s1, const char *s2, u32 maxlen)
 		i++;
 	}
 
-	return *ls1 == *ls2;
+	(*check) = (*ls1 == *ls2);
+	ret = 0;
+
+err:
+	return ret;
 }
 
 
 
 /*
  * This function is a simple (non-optimized) reimplementation of strlen()
- * XXX we do not check anything regarding pointers.
+ * Returns the lenth in 'len'.
+ * It returns 0 if success, -1 on error. 'len' is only relevant on success.
  */
-u32 local_strlen(const char *s)
+int local_strlen(const char *s, u32 *len)
 {
 	u32 i = 0;
+	int ret;
+
+	MUST_HAVE((s != NULL) && (len != NULL), ret, err);
 
 	while (s[i]) {
 		i++;
 	}
+	(*len) = i;
 
-	return i;
+	ret = 0;
+
+err:
+	return ret;
 }
 
 /*
  * This function is a simple (non-optimized) reimplementation of strnlen()
- * XXX we do not check anything regarding pointers.
+ * Returns the lenth in 'len'.
+ * It returns 0 if success, -1 on error. 'len' is only relevant on success.
  */
-u32 local_strnlen(const char *s, u32 maxlen)
+int local_strnlen(const char *s, u32 maxlen, u32 *len)
 {
 	u32 i = 0;
+	int ret;
+
+	MUST_HAVE((s != NULL) && (len != NULL), ret, err);
 
 	while ((i < maxlen) && s[i]) {
 		i++;
 	}
+	(*len) = i;
 
-	return i;
+	ret = 0;
+
+err:
+	return ret;
 }
 
 /*
  * This functin is a simple (non-optimized) reimplementation of strncpy()
- * XXX we do not check anything regarding pointers.
  */
-char *local_strncpy(char *dst, const char *src, u32 n)
+int local_strncpy(char *dst, const char *src, u32 n)
 {
 	u32 i;
+	int ret;
+
+	MUST_HAVE((dst != NULL) && (src != NULL), ret, err);
 
 	for (i = 0; (i < n) && src[i]; i++) {
 		dst[i] = src[i];
@@ -147,22 +206,28 @@ char *local_strncpy(char *dst, const char *src, u32 n)
 		dst[i] = 0;
 	}
 
-	return dst;
+	ret = 0;
+err:
+	return ret;
 }
 
 /*
  * This functin is a simple (non-optimized) reimplementation of strncat()
- * XXX we do not check anything regarding pointers.
  */
-char *local_strncat(char *dst, const char *src, u32 n)
+int local_strncat(char *dst, const char *src, u32 n)
 {
 	u32 dst_len, i;
+	int ret;
 
-	dst_len = local_strlen(dst);
+	MUST_HAVE((dst != NULL) && (src != NULL), ret, err);
+
+	ret = local_strlen(dst, &dst_len); EG(ret, err);
 	for (i = 0; (i < n) && src[i]; i++) {
 		dst[dst_len + i] = src[i];
 	}
 	dst[dst_len + i] = 0;
 
-	return dst;
+	ret = 0;
+err:
+	return ret;
 }

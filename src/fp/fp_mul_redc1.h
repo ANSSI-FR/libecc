@@ -17,9 +17,9 @@
 #define __FP_MUL_REDC1_H__
 #include "fp.h"
 
-int fp_mul_redc1(fp_t out, fp_src_t in1, fp_src_t in2);
-int fp_sqr_redc1(fp_t out, fp_src_t in);
-int fp_redcify(fp_t out, fp_src_t in);
-int fp_unredcify(fp_t out, fp_src_t in);
+ATTRIBUTE_WARN_UNUSED_RET int fp_mul_redc1(fp_t out, fp_src_t in1, fp_src_t in2);
+ATTRIBUTE_WARN_UNUSED_RET int fp_sqr_redc1(fp_t out, fp_src_t in);
+ATTRIBUTE_WARN_UNUSED_RET int fp_redcify(fp_t out, fp_src_t in);
+ATTRIBUTE_WARN_UNUSED_RET int fp_unredcify(fp_t out, fp_src_t in);
 
 #endif /* __FP_MUL_REDC1_H__ */

@@ -23,9 +23,9 @@
  * test vectors definitions. We only need the
  * three functions below.
  */
-extern int perform_known_test_vectors_test(const char *sig, const char *hash, const char *curve);
-extern int perform_random_sig_verif_test(const char *sig, const char *hash, const char *curve);
-extern int perform_performance_test(const char *sig, const char *hash, const char *curve);
+extern ATTRIBUTE_WARN_UNUSED_RET int perform_known_test_vectors_test(const char *sig, const char *hash, const char *curve);
+extern ATTRIBUTE_WARN_UNUSED_RET int perform_random_sig_verif_test(const char *sig, const char *hash, const char *curve);
+extern ATTRIBUTE_WARN_UNUSED_RET int perform_performance_test(const char *sig, const char *hash, const char *curve);
 
 /* Tests kinds */
 #define KNOWN_TEST_VECTORS	(1)
@@ -56,7 +56,7 @@ static const test_type test_types[] = {
 	 },
 };
 
-static int perform_tests(unsigned int tests, const char *sig, const char *hash, const char *curve)
+ATTRIBUTE_WARN_UNUSED_RET static int perform_tests(unsigned int tests, const char *sig, const char *hash, const char *curve)
 {
 	/* KNOWN_TEST_VECTORS tests */
 	if (tests & KNOWN_TEST_VECTORS) {
@@ -159,46 +159,53 @@ int main(int argc, char *argv[])
 	/* Sanity check */
 	if(MAX_FILTERS < 1){
 		ext_printf("Error: MAX_FILTERS too small\n");
-		return -1;
+		ret = -1;
+		goto err;
 	}
 
 	/* If we have one or more arguments, only perform specific test */
 	if (argc > 1) {
 		unsigned char found = 0, found_filter = 0;
 		unsigned int found_ops = 0;
+		int check;
+		u32 len;
 		/* Check of the args */
 		for (i = 1; i < argc; i++) {
 			found = found_filter = 0;
 			for (j = 0;
 			     j < (int)(sizeof(test_types) / sizeof(test_type));
 			     j++) {
-				if (are_equal
-				    (argv[i], test_types[j].type_name,
-				     local_strlen(test_types[j].type_name) +
-				     1)) {
+				ret = local_strlen(test_types[j].type_name, &len); EG(ret, err);
+				ret = are_equal(argv[i], test_types[j].type_name, len + 1, &check); EG(ret, err);
+				if (check) {
 					found_ops++;
 					found = 1;
 					break;
 				}
-				if(are_equal(argv[i], "sign=", sizeof("sign=")-1)){
+				ret = are_equal(argv[i], "sign=", sizeof("sign=")-1, &check); EG(ret, err);
+				if(check){
 					if(sign_filters_num >= MAX_FILTERS){
 						ext_printf("Maximum number of sign filters %d exceeded!\n", sign_filters_num);
-						return -1;
+						ret = -1;
+						goto err;
 					}
 					sign_filters[sign_filters_num++] = argv[i]+sizeof("sign=")-1;
 					found_filter = 1;
 					break;
 				}
-				if(are_equal(argv[i], "hash=", sizeof("hash=")-1)){
+				ret = are_equal(argv[i], "hash=", sizeof("hash=")-1, &check); EG(ret, err);
+				if(check){
 					if(hash_filters_num >= MAX_FILTERS){
 						ext_printf("Maximum number of hash filters %d exceeded!\n", hash_filters_num);
-						return -1;
+						ret = -1;
+						goto err;
 					}
 					hash_filters[hash_filters_num++] = argv[i]+sizeof("hash=")-1;
 					found_filter = 1;
 					break;
 				}
-				if(are_equal(argv[i], "curve=", sizeof("curve=")-1)){
+				ret = are_equal(argv[i], "curve=", sizeof("curve=")-1, &check); EG(ret, err);
+				if(check){
 					if(curve_filters_num >= MAX_FILTERS){
 						ext_printf("Maximum number of curve filters %d exceeded!\n", curve_filters_num);
 						return -1;
@@ -210,14 +217,16 @@ int main(int argc, char *argv[])
 			}
 			if ((found == 0) && (found_filter == 0)) {
 				print_help(argv[i]);
-				return -1;
+				ret = -1;
+				goto err;
 			}
 		}
 		if (found_ops == 0) {
 			if(found_filter == 0){
 				ext_printf("Error: no operation asked ...\n");
 				print_help(NULL);
-				return -1;
+				ret = -1;
+				goto err;
 			}
 		}
 		else{
@@ -226,10 +235,9 @@ int main(int argc, char *argv[])
 				for (j = 0;
 				     j < (int)(sizeof(test_types) / sizeof(test_type));
 				     j++) {
-					if (are_equal
-					    (argv[i], test_types[j].type_name,
-					     local_strlen(test_types[j].type_name) +
-					     1)) {
+					ret = local_strlen(test_types[j].type_name, &len); EG(ret, err);
+					ret = are_equal(argv[i], test_types[j].type_name, len + 1, &check); EG(ret, err);
+					if (check){
 						tests_to_do |= test_types[j].type_mask;
 					}
 				}
@@ -252,7 +260,7 @@ int main(int argc, char *argv[])
 	for(i = 0; i < sign_filters_num; i++){
 		for(j = 0; j < hash_filters_num; j++){
 			for(k = 0; k < curve_filters_num; k++){
-				if((ret = perform_tests(tests_to_do, sign_filters[i], hash_filters[j], curve_filters[k]))){
+				if(perform_tests(tests_to_do, sign_filters[i], hash_filters[j], curve_filters[k])){
 					const char *curr_sign_filters = sign_filters[i];
 					const char *curr_hash_filters = hash_filters[j];
 					const char *curr_curve_filters = curve_filters[k];
@@ -267,10 +275,15 @@ int main(int argc, char *argv[])
 						curr_curve_filters = all;
 					}
 					ext_printf("Test for sign=%s/hash=%s/curve=%s failed!\n", curr_sign_filters, curr_hash_filters, curr_curve_filters);
-					return ret;
+					ret = -1;
+					goto err;
 				}
 			}
 		}
 	}
-	return 0;
+
+	ret = 0;
+
+err:
+	return ret;
 }

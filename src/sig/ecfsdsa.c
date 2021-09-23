@@ -36,7 +36,7 @@ int ecfsdsa_init_pub_key(ec_pub_key *out_pub, const ec_priv_key *in_priv)
 	MUST_HAVE(out_pub != NULL, ret, err);
 
 	/* Zero init public key to be generated */
-	local_memset(out_pub, 0, sizeof(ec_pub_key));
+	ret = local_memset(out_pub, 0, sizeof(ec_pub_key)); EG(ret, err);
 
 	ret = priv_key_check_initialized_and_type(in_priv, ECFSDSA); EG(ret, err);
 	q = &(in_priv->params->ec_gen_order);
@@ -134,7 +134,7 @@ int _ecfsdsa_sign_init(struct ec_sign_context *ctx)
 	ret = sig_sign_check_initialized(ctx); EG(ret, err);
 
 	/* Zero init points */
-	local_memset(&kG, 0, sizeof(prj_pt));
+	ret = local_memset(&kG, 0, sizeof(prj_pt)); EG(ret, err);
 
 	/* Additional sanity checks on input params from context */
 	ret = key_pair_check_initialized_and_type(ctx->key_pair, ECFSDSA); EG(ret, err);
@@ -316,7 +316,7 @@ int _ecfsdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 
 	/*  6. Compute e by converting h to an integer and reducing it mod q */
 	ret = nn_init_from_buf(&tmp, e_buf, hsize); EG(ret, err);
-	local_memset(e_buf, 0, hsize);
+	ret = local_memset(e_buf, 0, hsize); EG(ret, err);
 	ret = nn_mod(&e, &tmp, q); EG(ret, err);
 
 #ifdef USE_SIG_BLINDING
@@ -348,8 +348,8 @@ int _ecfsdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	MUST_HAVE(!nn_iszero(&s, &iszero) && !iszero, ret, err);
 
 	/*  9. Return (r,s) */
-	local_memcpy(sig, r, r_len);
-	local_memset(r, 0, r_len);
+	ret = local_memcpy(sig, r, r_len); EG(ret, err);
+	ret = local_memset(r, 0, r_len); EG(ret, err);
 	ret = nn_export_to_buf(sig + r_len, s_len, &s);
 
  err:
@@ -366,7 +366,7 @@ int _ecfsdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	 * We can now clear data part of the context. This will clear
 	 * magic and avoid further reuse of the whole context.
 	 */
-	local_memset(&(ctx->sign_data.ecfsdsa), 0, sizeof(ecfsdsa_sign_data));
+	IGNORE_RET_VAL(local_memset(&(ctx->sign_data.ecfsdsa), 0, sizeof(ecfsdsa_sign_data)));
 
 	PTR_NULLIFY(q);
 	PTR_NULLIFY(x);
@@ -468,7 +468,7 @@ int _ecfsdsa_verify_init(struct ec_verify_context *ctx,
 	/* 3. Compute h = H(r||m) */
 
 	/* Initialize the verify context */
-	local_memcpy(&(ctx->verify_data.ecfsdsa.r), r, r_len);
+	ret = local_memcpy(&(ctx->verify_data.ecfsdsa.r), r, r_len); EG(ret, err);
 	/* Since we call a callback, sanity check our mapping */
 	ret = hash_mapping_callbacks_sanity_check(ctx->h); EG(ret, err);
 	ret = ctx->h->hfunc_init(&(ctx->verify_data.ecfsdsa.h_ctx)); EG(ret, err);
@@ -489,8 +489,8 @@ int _ecfsdsa_verify_init(struct ec_verify_context *ctx,
 		 * This will clear magic and avoid further reuse of the
 		 * whole context.
 		 */
-		local_memset(&(ctx->verify_data.ecfsdsa), 0,
-			     sizeof(ecfsdsa_verify_data));
+		IGNORE_RET_VAL(local_memset(&(ctx->verify_data.ecfsdsa), 0,
+			     sizeof(ecfsdsa_verify_data)));
 	}
 
 	VAR_ZEROIFY(p_len);
@@ -541,7 +541,7 @@ int _ecfsdsa_verify_finalize(struct ec_verify_context *ctx)
 	u8 e_buf[MAX_DIGEST_SIZE];
 	u8 hsize, p_len;
 	const u8 *r;
-	int ret, iszero;
+	int ret, iszero, check;
 
 	tmp.magic = tmp2.magic = e.magic = 0;
 	sG.magic = eY.magic = Wprime.magic = Wprime_aff.magic = 0;
@@ -555,8 +555,8 @@ int _ecfsdsa_verify_finalize(struct ec_verify_context *ctx)
 	ECFSDSA_VERIFY_CHECK_INITIALIZED(&(ctx->verify_data.ecfsdsa), ret, err);
 
 	/* Zero init points */
-	local_memset(&sG, 0, sizeof(prj_pt));
-	local_memset(&eY, 0, sizeof(prj_pt));
+	ret = local_memset(&sG, 0, sizeof(prj_pt)); EG(ret, err);
+	ret = local_memset(&eY, 0, sizeof(prj_pt)); EG(ret, err);
 
 	/* Make things more readable */
 	G = &(ctx->pub_key->params->ec_gen);
@@ -581,7 +581,7 @@ int _ecfsdsa_verify_finalize(struct ec_verify_context *ctx)
 	 * e = q - (h mod q) (except when h is 0).
 	 */
 	ret = nn_init_from_buf(&tmp, e_buf, hsize); EG(ret, err);
-	local_memset(e_buf, 0, hsize);
+	ret = local_memset(e_buf, 0, hsize); EG(ret, err);
 	ret = nn_mod(&tmp2, &tmp, q); EG(ret, err);
 
 	ret = nn_iszero(&tmp2, &iszero); EG(ret, err);
@@ -604,10 +604,12 @@ int _ecfsdsa_verify_finalize(struct ec_verify_context *ctx)
 	dbg_buf_print("r_prime: ", r_prime, r_len);
 
 	/* 7. Accept the signature if and only if r equals r' */
-	ret = are_equal(r, r_prime, r_len) ? 0 : -1;
-	local_memset(r_prime, 0, r_len);
+	ret = are_equal(r, r_prime, r_len, &check); EG(ret, err);
+	ret = check ? 0 : -1;
 
 err:
+	IGNORE_RET_VAL(local_memset(r_prime, 0, sizeof(r_prime)));
+
 	nn_uninit(&tmp);
 	nn_uninit(&tmp2);
 	nn_uninit(&e);
@@ -620,8 +622,8 @@ err:
 	 * We can now clear data part of the context. This will clear
 	 * magic and avoid further reuse of the whole context.
 	 */
-	local_memset(&(ctx->verify_data.ecfsdsa), 0,
-		     sizeof(ecfsdsa_verify_data));
+	IGNORE_RET_VAL(local_memset(&(ctx->verify_data.ecfsdsa), 0,
+		     sizeof(ecfsdsa_verify_data)));
 
 	/* Clean what remains on the stack */
 	PTR_NULLIFY(G);

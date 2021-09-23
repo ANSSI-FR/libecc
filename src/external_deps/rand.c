@@ -32,7 +32,7 @@
  * Copy file content to buffer. Return 0 on success, i.e. if the request
  * size has been read and copied to buffer and -1 otherwise.
  */
-static int fimport(unsigned char *buf, u16 buflen, const char *path)
+ATTRIBUTE_WARN_UNUSED_RET static int fimport(unsigned char *buf, u16 buflen, const char *path)
 {
 	u16 rem = buflen, copied = 0;
 	ssize_t ret;

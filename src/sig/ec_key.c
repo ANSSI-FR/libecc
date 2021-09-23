@@ -322,6 +322,7 @@ int ec_structured_priv_key_import_from_buf(ec_priv_key *priv_key,
 {
 	u8 metadata_len = (3 * sizeof(u8));
 	u8 crv_name_len;
+	u32 len;
 	int ret;
 
 	/* We first pull the metadata, consisting of:
@@ -341,7 +342,11 @@ int ec_structured_priv_key_import_from_buf(ec_priv_key *priv_key,
 	MUST_HAVE((ec_key_alg == priv_key_buf[1]), ret, err);
 
 	/* Pull and check the curve type */
-	crv_name_len = (u8)local_strlen((const char *)params->curve_name) + 1;
+	ret = local_strlen((const char *)params->curve_name, &len); EG(ret, err);
+	len += 1;
+	MUST_HAVE(len < 256, ret, err);
+	crv_name_len = (u8)len;
+
 	ret = ec_check_curve_type_and_name((ec_curve_type) (priv_key_buf[2]),
 					params->curve_name, crv_name_len); EG(ret, err);
 	ret = ec_priv_key_import_from_buf(priv_key, params,
@@ -364,6 +369,7 @@ int ec_structured_priv_key_export_to_buf(const ec_priv_key *priv_key,
 	u8 metadata_len = (3 * sizeof(u8));
 	const u8 *curve_name;
 	u8 curve_name_len;
+	u32 len;
 	ec_curve_type curve_type;
 	int ret;
 
@@ -388,7 +394,12 @@ int ec_structured_priv_key_export_to_buf(const ec_priv_key *priv_key,
 
 	/* Push the curve type */
 	curve_name = priv_key->params->curve_name;
-	curve_name_len = (u8)local_strlen((const char *)curve_name) + 1;
+
+	ret = local_strlen((const char *)curve_name, &len); EG(ret, err);
+	len += 1;
+	MUST_HAVE(len < 256, ret, err);
+	curve_name_len = (u8)len;
+
 	ret = ec_get_curve_type_by_name(curve_name, curve_name_len, &curve_type); EG(ret, err);
 	priv_key_buf[2] = (u8)curve_type;
 
@@ -412,6 +423,7 @@ int ec_structured_pub_key_import_from_buf(ec_pub_key *pub_key,
 {
 	u8 metadata_len = (3 * sizeof(u8));
 	u8 crv_name_len;
+	u32 len;
 	int ret;
 
 	MUST_HAVE((pub_key_buf != NULL), ret, err);
@@ -439,7 +451,11 @@ int ec_structured_pub_key_import_from_buf(ec_pub_key *pub_key,
 	}
 
 	/* Pull and check the curve type */
-	crv_name_len =(u8)local_strlen((const char *)params->curve_name) + 1;
+	ret = local_strlen((const char *)params->curve_name, &len); EG(ret, err);
+	len += 1;
+	MUST_HAVE(len < 256, ret, err);
+	crv_name_len = (u8)len;
+
 	ret = ec_check_curve_type_and_name((ec_curve_type) (pub_key_buf[2]),
 					   params->curve_name, crv_name_len); EG(ret, err);
 	ret = ec_pub_key_import_from_buf(pub_key, params,
@@ -461,6 +477,7 @@ int ec_structured_pub_key_export_to_buf(const ec_pub_key *pub_key,
 	u8 metadata_len = (3 * sizeof(u8));
 	const u8 *curve_name;
 	u8 curve_name_len;
+	u32 len;
 	ec_curve_type curve_type;
 	int ret;
 
@@ -485,7 +502,12 @@ int ec_structured_pub_key_export_to_buf(const ec_pub_key *pub_key,
 
 	/* Push the curve type */
 	curve_name = pub_key->params->curve_name;
-	curve_name_len = (u8)local_strlen((const char *)curve_name) + 1;
+
+	ret = local_strlen((const char *)curve_name, &len); EG(ret, err);
+	len += 1;
+	MUST_HAVE(len < 256, ret, err);
+	curve_name_len = (u8)len;
+
 	ret = ec_get_curve_type_by_name(curve_name, curve_name_len, &curve_type); EG(ret, err);
 	pub_key_buf[2] = (u8)curve_type;
 
@@ -509,6 +531,7 @@ int ec_structured_key_pair_import_from_priv_key_buf(ec_key_pair *kp,
 {
 	u8 metadata_len = (3 * sizeof(u8));
 	u8 crv_name_len;
+	u32 len;
 	int ret;
 
 	MUST_HAVE((priv_key_buf != NULL), ret, err);
@@ -535,7 +558,11 @@ int ec_structured_key_pair_import_from_priv_key_buf(ec_key_pair *kp,
 	}
 
 	/* Pull and check the curve type */
-	crv_name_len = (u8)local_strlen((const char *)params->curve_name) + 1;
+	ret = local_strlen((const char *)params->curve_name, &len); EG(ret, err);
+	len += 1;
+	MUST_HAVE(len < 256, ret, err);
+	crv_name_len = (u8)len;
+
 	ret = ec_check_curve_type_and_name((ec_curve_type) (priv_key_buf[2]),
 					params->curve_name, crv_name_len); EG(ret, err);
 	ret = ec_key_pair_import_from_priv_key_buf(kp, params,

@@ -122,7 +122,7 @@ err:
  *
  * The function returns 0 on success, -1 on error.
  */
-static int _nn_mul_redc1(nn_t out, nn_src_t in1, nn_src_t in2, nn_src_t p,
+ATTRIBUTE_WARN_UNUSED_RET static int _nn_mul_redc1(nn_t out, nn_src_t in1, nn_src_t in2, nn_src_t p,
 			 word_t mpinv)
 {
 	word_t prod_high, prod_low, carry, acc, m;
@@ -223,7 +223,7 @@ err:
  * paramter with out, through a copy. The function does not check
  * input parameters are initialized. This MUST be done by the caller.
  */
-static int _nn_mul_redc1_aliased(nn_t out, nn_src_t in1, nn_src_t in2,
+ATTRIBUTE_WARN_UNUSED_RET static int _nn_mul_redc1_aliased(nn_t out, nn_src_t in1, nn_src_t in2,
 				 nn_src_t p, word_t mpinv)
 {
 	nn out_cpy;

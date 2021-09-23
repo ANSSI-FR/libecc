@@ -30,7 +30,7 @@
  * http://www.hyperelliptic.org/EFD/g1p/auto-shortw-projective.html#addition-add-1998-cmo-2
  */
 #ifndef NO_USE_COMPLETE_FORMULAS
-static int __prj_pt_add_monty(prj_pt_t out, prj_pt_src_t in1,
+ATTRIBUTE_WARN_UNUSED_RET static int __prj_pt_add_monty(prj_pt_t out, prj_pt_src_t in1,
 			      prj_pt_src_t in2)
 {
 	fp t0, t1, t2, t3, t4, t5;
@@ -112,7 +112,7 @@ err:
 	return ret;
 }
 #else
-static int __prj_pt_add_monty(prj_pt_t out, prj_pt_src_t in1,
+ATTRIBUTE_WARN_UNUSED_RET static int __prj_pt_add_monty(prj_pt_t out, prj_pt_src_t in1,
 			      prj_pt_src_t in2)
 {
 	fp Y1Z2, X1Z2, Z1Z2, u, uu, v, vv, vvv, R, A;
@@ -215,7 +215,7 @@ err:
  * Internal version that handle aliasing of either 'in1' or 'in2' with 'out'.
  * Sanity checks on parameters must be done by caller.
  */
-static int __prj_pt_add_monty_aliased(prj_pt_t out,
+ATTRIBUTE_WARN_UNUSED_RET static int __prj_pt_add_monty_aliased(prj_pt_t out,
 				      prj_pt_src_t in1, prj_pt_src_t in2)
 {
 	prj_pt out_cpy;
@@ -233,7 +233,7 @@ err:
 }
 
 /* Aliased version. Returns 0 on success, -1 on error.  */
-static int _prj_pt_add_monty(prj_pt_t out, prj_pt_src_t in1, prj_pt_src_t in2)
+ATTRIBUTE_WARN_UNUSED_RET static int _prj_pt_add_monty(prj_pt_t out, prj_pt_src_t in1, prj_pt_src_t in2)
 {
 	int ret;
 
@@ -279,7 +279,7 @@ int prj_pt_add_monty(prj_pt_t out, prj_pt_src_t in1, prj_pt_src_t in2)
 			if (eq_or_opp) {
 				ret = prj_pt_cmp(in1, in2, &cmp); EG(ret, err);
 				if (cmp == 0) {
-					prj_pt_dbl_monty(out, in1);
+					ret = prj_pt_dbl_monty(out, in1); EG(ret, err);
 				} else {
 					ret = prj_pt_init(out, in1->crv); EG(ret, err);
 					ret = prj_pt_zero(out); EG(ret, err);
@@ -314,7 +314,7 @@ err:
  * http://www.hyperelliptic.org/EFD/g1p/auto-shortw-projective.html#doubling-dbl-2007-bl
  */
 #ifndef NO_USE_COMPLETE_FORMULAS
-static int __prj_pt_dbl_monty(prj_pt_t out, prj_pt_src_t in)
+ATTRIBUTE_WARN_UNUSED_RET static int __prj_pt_dbl_monty(prj_pt_t out, prj_pt_src_t in)
 {
 	fp t0, t1, t2, t3;
 	int ret;
@@ -377,7 +377,7 @@ err:
 	return ret;
 }
 #else
-static int __prj_pt_dbl_monty(prj_pt_t out, prj_pt_src_t in)
+ATTRIBUTE_WARN_UNUSED_RET static int __prj_pt_dbl_monty(prj_pt_t out, prj_pt_src_t in)
 {
 	fp XX, ZZ, w, s, ss, sss, R, RR, B, h;
 	int ret, iszero;
@@ -473,7 +473,7 @@ err:
  * by using a temporary copy. Sanity checks on parameters must
  * be done by caller.
  */
-static int __prj_pt_dbl_monty_aliased(prj_pt_t val)
+ATTRIBUTE_WARN_UNUSED_RET static int __prj_pt_dbl_monty_aliased(prj_pt_t val)
 {
 	prj_pt out_cpy;
 	int ret;
@@ -489,7 +489,7 @@ err:
 }
 
 /* Aliased version. Returns 0 on success, -1 on error. */
-static int _prj_pt_dbl_monty(prj_pt_t out, prj_pt_src_t in)
+ATTRIBUTE_WARN_UNUSED_RET static int _prj_pt_dbl_monty(prj_pt_t out, prj_pt_src_t in)
 {
 	int ret;
 
@@ -584,7 +584,7 @@ err:
  *      anyways). In the two first cases, Double-and-Add-Always is performed in constant
  *      time wrt the size of the scalar m.
  */
-static int _prj_pt_mul_ltr_monty_dbl_add_always(prj_pt_t out, nn_src_t m, prj_pt_src_t in)
+ATTRIBUTE_WARN_UNUSED_RET static int _prj_pt_mul_ltr_monty_dbl_add_always(prj_pt_t out, nn_src_t m, prj_pt_src_t in)
 {
 	/* We use Itoh et al. notations here for T and the random r */
 	prj_pt T[3];
@@ -759,7 +759,7 @@ err:
  *      anyways). In the two first cases, Montgomery Ladder is performed in constant
  *      time wrt the size of the scalar m.
  */
-static int _prj_pt_mul_ltr_monty_ladder(prj_pt_t out, nn_src_t m, prj_pt_src_t in)
+ATTRIBUTE_WARN_UNUSED_RET static int _prj_pt_mul_ltr_monty_ladder(prj_pt_t out, nn_src_t m, prj_pt_src_t in)
 {
 	/* We use Itoh et al. notations here for T and the random r */
 	prj_pt T[3];
@@ -929,7 +929,7 @@ err:
  * Depending on the preprocessing options, we use either the
  * Double and Add Always algorithm, or the Montgomery Ladder one.
  */
-static int _prj_pt_mul_ltr_monty(prj_pt_t out, nn_src_t m, prj_pt_src_t in){
+ATTRIBUTE_WARN_UNUSED_RET static int _prj_pt_mul_ltr_monty(prj_pt_t out, nn_src_t m, prj_pt_src_t in){
 #if defined(USE_DOUBLE_ADD_ALWAYS)
 	return _prj_pt_mul_ltr_monty_dbl_add_always(out, m, in);
 #elif defined(USE_MONTY_LADDER)
@@ -940,7 +940,7 @@ static int _prj_pt_mul_ltr_monty(prj_pt_t out, nn_src_t m, prj_pt_src_t in){
 }
 
 /* version with 'm' passed via 'out'. */
-static int _prj_pt_mul_ltr_monty_aliased(prj_pt_t out, nn_src_t m, prj_pt_src_t in)
+ATTRIBUTE_WARN_UNUSED_RET static int _prj_pt_mul_ltr_monty_aliased(prj_pt_t out, nn_src_t m, prj_pt_src_t in)
 {
 	prj_pt out_cpy;
 	int ret;

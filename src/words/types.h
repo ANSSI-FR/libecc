@@ -23,11 +23,27 @@
 #define ATTRIBUTE_USED __attribute__((used))
 #define ATTRIBUTE_PACKED __attribute__((packed))
 #define ATTRIBUTE_SECTION(a) __attribute__((__section__((a))))
+#ifdef USE_WARN_UNUSED_RET
+  #define ATTRIBUTE_WARN_UNUSED_RET __attribute__((warn_unused_result))
+  static inline void ignore_result(int unused_result) {
+    (void) unused_result;
+  }
+  /* NOTE: this trick using a dummy function call is here
+   * to explicitly avoid "unused return values" when we know
+   * what we are doing!
+   */
+  #define IGNORE_RET_VAL(a) ignore_result((int)(a))
+#else
+  #define ATTRIBUTE_WARN_UNUSED_RET
+  #define IGNORE_RET_VAL(a) (a)
+#endif /* USE_WARN_UNUSED_RET */
 #else
 #define ATTRIBUTE_UNUSED
 #define ATTRIBUTE_USED
 #define ATTRIBUTE_PACKED
 #define ATTRIBUTE_SECTION(a)
+#define ATTRIBUTE_WARN_UNUSED_RET
+#define IGNORE_RET_VAL(a) (a)
 #endif
 
 /* Macro to trick the compiler of thinking a variable is used.

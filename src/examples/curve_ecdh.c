@@ -69,10 +69,10 @@ static const u8 Alice[] = "Alice";
 static const u8 Bob[] = "Bob";
 #define CHECK_SIZE LOCAL_MIN(sizeof(Alice), sizeof(Bob))
 
-int ECDH_helper(const u8 *curve_name, const u8 *role);
+ATTRIBUTE_WARN_UNUSED_RET int ECDH_helper(const u8 *curve_name, const u8 *role);
 int ECDH_helper(const u8 *curve_name, const u8 *role)
 {
-	int ret;
+	int ret, check1, check2;
 	/* The projective point we will use */
 	prj_pt Q;
 	/* The private scalar value for Alice and Bob, as well as their
@@ -87,6 +87,7 @@ int ECDH_helper(const u8 *curve_name, const u8 *role)
 	const char *x_str;
 	/* Pointers to the communication buffers */
 	u8 *our_public_buffer, *other_public_buffer;
+	u32 len;
 
 	const ec_str_params *the_curve_const_parameters;
 	/* libecc internal structure holding the curve parameters */
@@ -95,8 +96,9 @@ int ECDH_helper(const u8 *curve_name, const u8 *role)
 	Q.magic = 0;
 
 	/****** Alice => Bob *********************************************************/
-	if (are_equal
-	    (role, Alice, CHECK_SIZE)) {
+	ret = are_equal(role, Alice, CHECK_SIZE, &check1); EG(ret, err);
+	ret = are_equal(role, Bob, CHECK_SIZE, &check2); EG(ret, err);
+	if (check1) {
 		our_public_buffer = Alice_to_Bob;
 		other_public_buffer = Bob_to_Alice;
 		d = &d_Alice;
@@ -104,14 +106,14 @@ int ECDH_helper(const u8 *curve_name, const u8 *role)
 		x_str = "  x_Alice";
 	}
 	/****** Bob => Alice *********************************************************/
-	else if (are_equal
-		 (role, Bob, CHECK_SIZE)) {
+	else if (check2) {
 		our_public_buffer = Bob_to_Alice;
 		other_public_buffer = Alice_to_Bob;
 		d = &d_Bob;
 		x = &x_Bob;
 		x_str = "  x_Bob  ";
-	} else {
+	}
+	else {
 		/* Unknown role, get out */
 		ext_printf("  Error: unknown role %s for ECDH\n", role);
 		ret = -1;
@@ -122,11 +124,11 @@ int ECDH_helper(const u8 *curve_name, const u8 *role)
 	 * buffers describing it:
 	 * It is possible to import a curve set of parameters by its name.
 	 */
+	ret = local_strnlen((const char *)curve_name, MAX_CURVE_NAME_LEN, &len); EG(ret, err);
+	len += 1;
+	MUST_HAVE(len < 256, ret, err);
 	ret =	ec_get_curve_params_by_name(curve_name,
-					    (u8)local_strnlen((const char *)
-							      curve_name,
-							      MAX_CURVE_NAME_LEN)
-					    + 1, &the_curve_const_parameters); EG(ret, err);
+					    (u8)len, &the_curve_const_parameters); EG(ret, err);
 	/* Get out if getting the parameters went wrong */
 	if (the_curve_const_parameters == NULL) {
 		ext_printf("  Error: error when importing curve %s "
@@ -139,7 +141,8 @@ int ECDH_helper(const u8 *curve_name, const u8 *role)
 
 	/* Initialize our projective point with the curve parameters */
 	ret = prj_pt_init(&Q, &(curve_params.ec_curve)); EG(ret, err);
-	if (!are_equal(our_public_buffer, zero, sizeof(zero))) {
+	ret = are_equal(our_public_buffer, zero, sizeof(zero), &check1); EG(ret, err);
+	if (!check1) {
 		/* We have already generated and sent our parameters, skip to
 		 * the state where we wait for the other party to generate and
 		 * send us data.
@@ -167,7 +170,8 @@ int ECDH_helper(const u8 *curve_name, const u8 *role)
 
  generate_shared_secret:
 	/* Now (non blocking) wait for the other party to send us its public value */
-	if (are_equal(other_public_buffer, zero, sizeof(zero))) {
+	ret = are_equal(other_public_buffer, zero, sizeof(zero), &check1); EG(ret, err);
+	if (check1) {
 		/* Other party has not sent its public value yet! */
 		ret = 0;
 		goto err;
@@ -217,30 +221,51 @@ int main()
 {
 	unsigned int i;
 	u8 curve_name[MAX_CURVE_NAME_LEN] = { 0 };
+	int ret;
 
 	/* Traverse all the possible curves we have at our disposal (known curves and
 	 * user defined curves).
 	 */
 	for (i = 0; i < EC_CURVES_NUM; i++) {
-		local_memset(Alice_to_Bob, 0, sizeof(Alice_to_Bob));
-		local_memset(Bob_to_Alice, 0, sizeof(Bob_to_Alice));
+		ret = local_memset(Alice_to_Bob, 0, sizeof(Alice_to_Bob)); EG(ret, err);
+		ret = local_memset(Bob_to_Alice, 0, sizeof(Bob_to_Alice)); EG(ret, err);
 		/* All our possible curves are in ../curves/curves_list.h
 		 * We can get the curve name from its internal type.
 		 */
-		ec_get_curve_name_by_type(ec_maps[i].type, curve_name,
-					  sizeof(curve_name));
+		if(ec_get_curve_name_by_type(ec_maps[i].type, curve_name,
+					  sizeof(curve_name))){
+			ret = -1;
+			ext_printf("Error: error when treating %s\n", curve_name);
+			goto err;
+		}
 		/* Perform ECDH between Alice and Bob! */
 		ext_printf("[+] ECDH on curve %s\n", curve_name);
-		ECDH_helper(curve_name, Alice);
-		ECDH_helper(curve_name, Bob);
+		if(ECDH_helper(curve_name, Alice) != 0){
+			ret = -1;
+			ext_printf("Error: error in ECDH_helper\n");
+			goto err;
+		}
+		if(ECDH_helper(curve_name, Bob) != 1){
+			ret = -1;
+			ext_printf("Error: error in ECDH_helper\n");
+			goto err;
+		}
 		/* We have to call our ECDH helper again for Alice
 		 * since she was waiting for Bob to send his public data.
 		 * This is our loose way of dealing with 'concurrency'
 		 * without threads ...
 		 */
-		ECDH_helper(curve_name, Alice);
+		if(ECDH_helper(curve_name, Alice) != 1){
+			ret = -1;
+			ext_printf("Error: error in ECDH_helper\n");
+			goto err;
+		}
 		ext_printf("==================================\n");
 	}
-	return 0;
+
+	ret = 0;
+
+err:
+	return ret;
 }
 #endif /* CURVE_ECDH */

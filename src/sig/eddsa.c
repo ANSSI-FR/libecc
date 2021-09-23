@@ -46,7 +46,7 @@
 #include "../utils/dbg_sig.h"
 
 
-static inline int dom(u16 x, const u8 *y, u16 olen_y, const hash_mapping *h,
+ATTRIBUTE_WARN_UNUSED_RET static inline int dom(u16 x, const u8 *y, u16 olen_y, const hash_mapping *h,
 		      hash_context *h_ctx, u8 dom_type){
 	u8 tmp[2];
 	int ret;
@@ -88,7 +88,7 @@ err:
  *                of at most 255 octets.  "SigEd25519 no Ed25519
  *                collisions" is in ASCII (32 octets).
  */
-static inline int dom2(u16 x, const u8 *y, u16 olen_y, const hash_mapping *h,
+ATTRIBUTE_WARN_UNUSED_RET static inline int dom2(u16 x, const u8 *y, u16 olen_y, const hash_mapping *h,
 		       hash_context *h_ctx){
 	return dom(x, y, olen_y, h, h_ctx, 2);
 }
@@ -104,7 +104,7 @@ static inline int dom2(u16 x, const u8 *y, u16 olen_y, const hash_mapping *h,
  *                is an octet string of at most 255 octets.  "SigEd448"
  *                is in ASCII (8 octets).
  */
-static inline int dom4(u16 x, const u8 *y, u16 olen_y, const hash_mapping *h,
+ATTRIBUTE_WARN_UNUSED_RET static inline int dom4(u16 x, const u8 *y, u16 olen_y, const hash_mapping *h,
 		       hash_context *h_ctx){
 	return dom(x, y, olen_y, h, h_ctx, 4);
 }
@@ -114,7 +114,7 @@ static inline int dom4(u16 x, const u8 *y, u16 olen_y, const hash_mapping *h,
  * EDDSA25519 and variants only support WEI25519 as a curve, and SHA-512 as a hash function.
  * EDDSA448 and variants only support WEI448 as a curve, and SHAKE256 as a "hash function".
  */
-static inline hash_alg_type get_eddsa_hash_type(ec_sig_alg_type sig_type){
+ATTRIBUTE_WARN_UNUSED_RET static inline hash_alg_type get_eddsa_hash_type(ec_sig_alg_type sig_type){
 	hash_alg_type hash_type = UNKNOWN_HASH_ALG;
 
 	switch (sig_type) {
@@ -145,7 +145,7 @@ static inline hash_alg_type get_eddsa_hash_type(ec_sig_alg_type sig_type){
  * Check given EdDSA key type does match given curve type. Returns 0 on success,
  * and -1 on error.
  */
-static int eddsa_key_type_check_curve(ec_sig_alg_type key_type,
+ATTRIBUTE_WARN_UNUSED_RET static int eddsa_key_type_check_curve(ec_sig_alg_type key_type,
 				      ec_curve_type curve_type)
 {
 	int ret;
@@ -177,7 +177,7 @@ static int eddsa_key_type_check_curve(ec_sig_alg_type key_type,
 	return ret;
 }
 
-static int eddsa_priv_key_sanity_check(const ec_priv_key *in_priv)
+ATTRIBUTE_WARN_UNUSED_RET static int eddsa_priv_key_sanity_check(const ec_priv_key *in_priv)
 {
 	int ret;
 
@@ -189,7 +189,7 @@ err:
 	return ret;
 }
 
-static int eddsa_pub_key_sanity_check(const ec_pub_key *in_pub)
+ATTRIBUTE_WARN_UNUSED_RET static int eddsa_pub_key_sanity_check(const ec_pub_key *in_pub)
 {
 	int ret;
 
@@ -202,7 +202,7 @@ err:
 	return ret;
 }
 
-static int eddsa_key_pair_sanity_check(const ec_key_pair *key_pair)
+ATTRIBUTE_WARN_UNUSED_RET static int eddsa_key_pair_sanity_check(const ec_key_pair *key_pair)
 {
 	int ret;
 
@@ -219,7 +219,7 @@ err:
 /*
  * EdDSA decode an integer from a buffer using little endian format.
  */
-static int eddsa_decode_integer(nn_t nn_out, const u8 *buf, u16 buf_size)
+ATTRIBUTE_WARN_UNUSED_RET static int eddsa_decode_integer(nn_t nn_out, const u8 *buf, u16 buf_size)
 {
 	u32 i;
 	u8 buf_little_endian[MAX_DIGEST_SIZE];
@@ -230,7 +230,7 @@ static int eddsa_decode_integer(nn_t nn_out, const u8 *buf, u16 buf_size)
 
 	ret = nn_init(nn_out, 0); EG(ret, err);
 
-	local_memset(buf_little_endian, 0, sizeof(buf_little_endian));
+	ret = local_memset(buf_little_endian, 0, sizeof(buf_little_endian)); EG(ret, err);
 	if(buf_size > 1){
 		/* Inverse endianness of our input buffer */
 		for(i = 0; i < buf_size; i++){
@@ -248,7 +248,7 @@ err:
 /*
  * EdDSA encode an integer to a buffer using little endian format.
  */
-static int eddsa_encode_integer(nn_src_t nn_in, u8 *buf, u16 buf_size)
+ATTRIBUTE_WARN_UNUSED_RET static int eddsa_encode_integer(nn_src_t nn_in, u8 *buf, u16 buf_size)
 {
 	u32 i;
 	u8 tmp;
@@ -281,7 +281,7 @@ err:
 /*
  * EdDSA encoding of scalar s.
  */
-static int eddsa_compute_s(nn_t s, const u8 *digest, u16 digest_size)
+ATTRIBUTE_WARN_UNUSED_RET static int eddsa_compute_s(nn_t s, const u8 *digest, u16 digest_size)
 {
 	int ret;
 
@@ -296,7 +296,7 @@ err:
 }
 
 /* Extract the digest from the encoded private key */
-static int eddsa_get_digest_from_priv_key(u8 *digest, u8 *digest_size, const ec_priv_key *in_priv)
+ATTRIBUTE_WARN_UNUSED_RET static int eddsa_get_digest_from_priv_key(u8 *digest, u8 *digest_size, const ec_priv_key *in_priv)
 {
 	int ret;
 	hash_alg_type hash_type;
@@ -322,7 +322,7 @@ err:
 }
 
 /* Encode an Edwards curve affine point in canonical form */
-static int eddsa_encode_point(aff_pt_edwards_src_t in, fp_src_t alpha_edwards,
+ATTRIBUTE_WARN_UNUSED_RET static int eddsa_encode_point(aff_pt_edwards_src_t in, fp_src_t alpha_edwards,
 			      u8 *buf, u16 buflen, ec_sig_alg_type sig_alg)
 {
 	nn out_reduced;
@@ -340,7 +340,7 @@ static int eddsa_encode_point(aff_pt_edwards_src_t in, fp_src_t alpha_edwards,
 	ret = fp_check_initialized(alpha_edwards); EG(ret, err);
 
 	/* Zeroize the buffer */
-	local_memset(buf, 0, buflen);
+	ret = local_memset(buf, 0, buflen); EG(ret, err);
 
 	/* Note: we should be reduced modulo Fp for canonical encoding here as
 	 * coordinate elements are in Fp ...
@@ -417,7 +417,7 @@ err:
 }
 
 /* Decode an Edwards curve affine point from canonical form */
-static int eddsa_decode_point(aff_pt_edwards_t out, ec_edwards_crv_src_t edwards_curve,
+ATTRIBUTE_WARN_UNUSED_RET static int eddsa_decode_point(aff_pt_edwards_t out, ec_edwards_crv_src_t edwards_curve,
 			      fp_src_t alpha_edwards, const u8 *buf, u16 buflen,
 			      ec_sig_alg_type sig_type)
 {
@@ -570,7 +570,7 @@ err:
 /*
  * Derive hash from private key.
  */
-static int eddsa_derive_priv_key_hash(const ec_priv_key *in_priv,
+ATTRIBUTE_WARN_UNUSED_RET static int eddsa_derive_priv_key_hash(const ec_priv_key *in_priv,
 				      u8 *buf, u16 buflen)
 {
 	hash_alg_type hash_type = UNKNOWN_HASH_ALG;
@@ -587,7 +587,7 @@ static int eddsa_derive_priv_key_hash(const ec_priv_key *in_priv,
 	MUST_HAVE(hash != NULL, ret, err);
 
 	/* Get the private key as a buffer and hash it */
-	local_memset(x_buf, 0, sizeof(x_buf));
+	ret = local_memset(x_buf, 0, sizeof(x_buf)); EG(ret, err);
 	MUST_HAVE(sizeof(x_buf) >= (hash->digest_size / 2), ret, err);
 
 	ret = ec_priv_key_export_to_buf(in_priv, x_buf, (hash->digest_size / 2)); EG(ret, err);
@@ -772,7 +772,7 @@ int eddsa_import_priv_key(ec_priv_key *priv_key, const u8 *buf, u16 buflen,
 
 err:
 	if((priv_key != NULL) && (ret != 0)){
-		local_memset(priv_key, 0, sizeof(ec_priv_key));
+		IGNORE_RET_VAL(local_memset(priv_key, 0, sizeof(ec_priv_key)));
 	}
 	VAR_ZEROIFY(digest_size);
 	VAR_ZEROIFY(blen);
@@ -801,7 +801,7 @@ int eddsa_init_pub_key(ec_pub_key *out_pub, const ec_priv_key *in_priv)
 	ret = nn_init(&s, 0); EG(ret, err);
 
 	/* Zero init public key to be generated */
-	local_memset(out_pub, 0, sizeof(ec_pub_key));
+	ret = local_memset(out_pub, 0, sizeof(ec_pub_key)); EG(ret, err);
 
 	/* Check if private key is initialized and everything is OK with it */
 	ret = eddsa_priv_key_sanity_check(in_priv); EG(ret, err);
@@ -939,7 +939,7 @@ err1:
 
 err:
 	if((pub_key != NULL) && (ret != 0)){
-		local_memset(pub_key, 0, sizeof(ec_pub_key));
+		IGNORE_RET_VAL(local_memset(pub_key, 0, sizeof(ec_pub_key)));
 	}
 	PTR_NULLIFY(shortw_curve);
 	PTR_NULLIFY(alpha_montgomery);
@@ -1020,7 +1020,7 @@ err:
 }
 
 /* Compute PH(M) with PH being the hash depending on the key type */
-static int eddsa_compute_pre_hash(const u8 *message, u32 message_size,
+ATTRIBUTE_WARN_UNUSED_RET static int eddsa_compute_pre_hash(const u8 *message, u32 message_size,
 				  u8 *digest, u8 *digest_size,
 				  ec_sig_alg_type sig_type)
 {
@@ -1246,11 +1246,11 @@ int _eddsa_sign_finalize_pre_hash(struct ec_sign_context *ctx, u8 *sig, u8 sigle
 	MUST_HAVE(sig != NULL, ret, err);
 
 	/* Zero init out points and data */
-	local_memset(&R, 0, sizeof(prj_pt));
-	local_memset(&Tmp_edwards, 0, sizeof(aff_pt_edwards));
-	local_memset(&crv_edwards, 0, sizeof(ec_edwards_crv));
-	local_memset(hash, 0, sizeof(hash));
-	local_memset(ph_hash, 0, sizeof(ph_hash));
+	ret = local_memset(&R, 0, sizeof(prj_pt)); EG(ret, err);
+	ret = local_memset(&Tmp_edwards, 0, sizeof(aff_pt_edwards)); EG(ret, err);
+	ret = local_memset(&crv_edwards, 0, sizeof(ec_edwards_crv)); EG(ret, err);
+	ret = local_memset(hash, 0, sizeof(hash)); EG(ret, err);
+	ret = local_memset(ph_hash, 0, sizeof(ph_hash)); EG(ret, err);
 
 	/* Key type */
 	key_type = ctx->key_pair->priv_key.key_type;
@@ -1498,8 +1498,8 @@ int _eddsa_sign_finalize_pre_hash(struct ec_sign_context *ctx, u8 *sig, u8 sigle
 	 * We can now clear data part of the context. This will clear
 	 * magic and avoid further reuse of the whole context.
 	 */
-	local_memset(&(ctx->sign_data.eddsa), 0, sizeof(eddsa_sign_data));
-	local_memset(ph_hash, 0, sizeof(ph_hash));
+	IGNORE_RET_VAL(local_memset(&(ctx->sign_data.eddsa), 0, sizeof(eddsa_sign_data)));
+	IGNORE_RET_VAL(local_memset(ph_hash, 0, sizeof(ph_hash)));
 
 	return ret;
 }
@@ -1554,11 +1554,11 @@ int _eddsa_sign(u8 *sig, u8 siglen, const ec_key_pair *key_pair,
 	MUST_HAVE(rand == NULL, ret, err);
 
 	/* Zero init out points and data */
-	local_memset(&R, 0, sizeof(prj_pt));
-	local_memset(&Tmp_edwards, 0, sizeof(aff_pt_edwards));
-	local_memset(&crv_edwards, 0, sizeof(ec_edwards_crv));
-	local_memset(hash, 0, sizeof(hash));
-	local_memset(ph_hash, 0, sizeof(ph_hash));
+	ret = local_memset(&R, 0, sizeof(prj_pt)); EG(ret, err);
+	ret = local_memset(&Tmp_edwards, 0, sizeof(aff_pt_edwards)); EG(ret, err);
+	ret = local_memset(&crv_edwards, 0, sizeof(ec_edwards_crv)); EG(ret, err);
+	ret = local_memset(hash, 0, sizeof(hash)); EG(ret, err);
+	ret = local_memset(ph_hash, 0, sizeof(ph_hash)); EG(ret, err);
 
 	/* Sanity check on the key pair */
 	ret = eddsa_key_pair_sanity_check(key_pair); EG(ret, err);
@@ -1809,9 +1809,9 @@ err:
 	VAR_ZEROIFY(r_len);
 	VAR_ZEROIFY(s_len);
 	VAR_ZEROIFY(blen);
-	local_memset(&h_ctx, 0, sizeof(h_ctx));
-	local_memset(hash, 0, sizeof(hash));
-	local_memset(ph_hash, 0, sizeof(ph_hash));
+	IGNORE_RET_VAL(local_memset(&h_ctx, 0, sizeof(h_ctx)));
+	IGNORE_RET_VAL(local_memset(hash, 0, sizeof(hash)));
+	IGNORE_RET_VAL(local_memset(ph_hash, 0, sizeof(ph_hash)));
 
 	prj_pt_uninit(&R);
 	ec_edwards_crv_uninit(&crv_edwards);
@@ -1835,7 +1835,7 @@ err:
  */
 
 /* Naive double and add cofactor scalar multiplication */
-static int _eddsa_cofactor_scalar_mult(prj_pt_t out, prj_pt_src_t in, nn_src_t cofactor)
+ATTRIBUTE_WARN_UNUSED_RET static int _eddsa_cofactor_scalar_mult(prj_pt_t out, prj_pt_src_t in, nn_src_t cofactor)
 {
 	u8 expbit;
 	bitcnt_t explen;
@@ -1903,11 +1903,11 @@ int _eddsa_verify_init(struct ec_verify_context *ctx, const u8 *sig, u8 siglen)
 	ret = sig_verify_check_initialized(ctx); EG(ret, err);
 
 	/* Zero init our local data */
-	local_memset(&A, 0, sizeof(aff_pt_edwards));
-	local_memset(&crv_edwards, 0, sizeof(ec_edwards_crv));
-	local_memset(buff, 0, sizeof(buff));
-	local_memset(&R, 0, sizeof(R));
-	local_memset(&_Tmp, 0, sizeof(_Tmp));
+	ret = local_memset(&A, 0, sizeof(aff_pt_edwards)); EG(ret, err);
+	ret = local_memset(&crv_edwards, 0, sizeof(ec_edwards_crv)); EG(ret, err);
+	ret = local_memset(buff, 0, sizeof(buff)); EG(ret, err);
+	ret = local_memset(&R, 0, sizeof(R)); EG(ret, err);
+	ret = local_memset(&_Tmp, 0, sizeof(_Tmp)); EG(ret, err);
 
 	/* Do some sanity checks on input params */
 	ret = eddsa_pub_key_sanity_check(ctx->pub_key); EG(ret, err);
@@ -2115,9 +2115,9 @@ int _eddsa_verify_finalize(struct ec_verify_context *ctx)
 	EDDSA_VERIFY_CHECK_INITIALIZED(&(ctx->verify_data.eddsa), ret, err);
 
 	/* Zero init points */
-	local_memset(&_Tmp1, 0, sizeof(prj_pt));
-	local_memset(&_Tmp2, 0, sizeof(prj_pt));
-	local_memset(hash, 0, sizeof(hash));
+	ret = local_memset(&_Tmp1, 0, sizeof(prj_pt)); EG(ret, err);
+	ret = local_memset(&_Tmp2, 0, sizeof(prj_pt)); EG(ret, err);
+	ret = local_memset(hash, 0, sizeof(hash)); EG(ret, err);
 
 	/* Make things more readable */
 	G = &(ctx->pub_key->params->ec_gen);
@@ -2207,7 +2207,7 @@ int _eddsa_verify_finalize(struct ec_verify_context *ctx)
 	 * We can now clear data part of the context. This will clear
 	 * magic and avoid further reuse of the whole context.
 	 */
-	local_memset(&(ctx->verify_data.eddsa), 0, sizeof(eddsa_verify_data));
+	IGNORE_RET_VAL(local_memset(&(ctx->verify_data.eddsa), 0, sizeof(eddsa_verify_data)));
 
 	/* Clean what remains on the stack */
 	PTR_NULLIFY(G);

@@ -49,18 +49,18 @@ typedef struct {
 
 struct ec_sign_context;
 
-int sm2_gen_priv_key(ec_priv_key *priv_key);
+ATTRIBUTE_WARN_UNUSED_RET int sm2_gen_priv_key(ec_priv_key *priv_key);
 
-int sm2_init_pub_key(ec_pub_key *out_pub, const ec_priv_key *in_priv);
+ATTRIBUTE_WARN_UNUSED_RET int sm2_init_pub_key(ec_pub_key *out_pub, const ec_priv_key *in_priv);
 
-int sm2_siglen(u16 p_bit_len, u16 q_bit_len, u8 hsize, u8 blocksize, u8 *siglen);
+ATTRIBUTE_WARN_UNUSED_RET int sm2_siglen(u16 p_bit_len, u16 q_bit_len, u8 hsize, u8 blocksize, u8 *siglen);
 
-int _sm2_sign_init(struct ec_sign_context *ctx);
+ATTRIBUTE_WARN_UNUSED_RET int _sm2_sign_init(struct ec_sign_context *ctx);
 
-int _sm2_sign_update(struct ec_sign_context *ctx,
+ATTRIBUTE_WARN_UNUSED_RET int _sm2_sign_update(struct ec_sign_context *ctx,
 		       const u8 *chunk, u32 chunklen);
 
-int _sm2_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen);
+ATTRIBUTE_WARN_UNUSED_RET int _sm2_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen);
 
 typedef struct {
 	nn r;
@@ -71,13 +71,13 @@ typedef struct {
 
 struct ec_verify_context;
 
-int _sm2_verify_init(struct ec_verify_context *ctx,
+ATTRIBUTE_WARN_UNUSED_RET int _sm2_verify_init(struct ec_verify_context *ctx,
 		       const u8 *sig, u8 siglen);
 
-int _sm2_verify_update(struct ec_verify_context *ctx,
+ATTRIBUTE_WARN_UNUSED_RET int _sm2_verify_update(struct ec_verify_context *ctx,
 			 const u8 *chunk, u32 chunklen);
 
-int _sm2_verify_finalize(struct ec_verify_context *ctx);
+ATTRIBUTE_WARN_UNUSED_RET int _sm2_verify_finalize(struct ec_verify_context *ctx);
 
 #endif /* __SM2_H__ */
 #endif /* WITH_SIG_SM2 */

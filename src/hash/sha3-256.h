@@ -49,12 +49,12 @@
 
 typedef sha3_context sha3_256_context;
 
-int sha3_256_init(sha3_256_context *ctx);
-int sha3_256_update(sha3_256_context *ctx, const u8 *input, u32 ilen);
-int sha3_256_final(sha3_256_context *ctx, u8 output[SHA3_256_DIGEST_SIZE]);
-int sha3_256_scattered(const u8 **inputs, const u32 *ilens,
+ATTRIBUTE_WARN_UNUSED_RET int sha3_256_init(sha3_256_context *ctx);
+ATTRIBUTE_WARN_UNUSED_RET int sha3_256_update(sha3_256_context *ctx, const u8 *input, u32 ilen);
+ATTRIBUTE_WARN_UNUSED_RET int sha3_256_final(sha3_256_context *ctx, u8 output[SHA3_256_DIGEST_SIZE]);
+ATTRIBUTE_WARN_UNUSED_RET int sha3_256_scattered(const u8 **inputs, const u32 *ilens,
 		       u8 output[SHA3_256_DIGEST_SIZE]);
-int sha3_256(const u8 *input, u32 ilen, u8 output[SHA3_256_DIGEST_SIZE]);
+ATTRIBUTE_WARN_UNUSED_RET int sha3_256(const u8 *input, u32 ilen, u8 output[SHA3_256_DIGEST_SIZE]);
 
 #endif /* __SHA3_256_H__ */
 #endif /* WITH_HASH_SHA3_256 */

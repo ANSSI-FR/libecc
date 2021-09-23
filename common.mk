@@ -216,6 +216,12 @@ ifeq ($(ASSERT_PRINT), 1)
 CFLAGS += -DUSE_ASSERT_PRINT
 endif
 
+# By default, we want to catch all unused functions return values by
+# triggering a warning. We deactivate this is we are asked to by the user.
+ifneq ($(NO_WARN_UNUSED_RET), 1)
+CFLAGS += -DUSE_WARN_UNUSED_RET
+endif
+
 # Do we want to use clang or gcc sanitizers?
 ifeq ($(USE_SANITIZERS),1)
 CFLAGS += -fsanitize=undefined -fsanitize=address -fsanitize=leak

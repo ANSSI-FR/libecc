@@ -59,12 +59,12 @@ typedef struct {
 	word_t magic;
 } sha256_context;
 
-int sha256_init(sha256_context *ctx);
-int sha256_update(sha256_context *ctx, const u8 *input, u32 ilen);
-int sha256_final(sha256_context *ctx, u8 output[SHA256_DIGEST_SIZE]);
-int sha256_scattered(const u8 **inputs, const u32 *ilens,
+ATTRIBUTE_WARN_UNUSED_RET int sha256_init(sha256_context *ctx);
+ATTRIBUTE_WARN_UNUSED_RET int sha256_update(sha256_context *ctx, const u8 *input, u32 ilen);
+ATTRIBUTE_WARN_UNUSED_RET int sha256_final(sha256_context *ctx, u8 output[SHA256_DIGEST_SIZE]);
+ATTRIBUTE_WARN_UNUSED_RET int sha256_scattered(const u8 **inputs, const u32 *ilens,
 		     u8 output[SHA256_DIGEST_SIZE]);
-int sha256(const u8 *input, u32 ilen, u8 output[SHA256_DIGEST_SIZE]);
+ATTRIBUTE_WARN_UNUSED_RET int sha256(const u8 *input, u32 ilen, u8 output[SHA256_DIGEST_SIZE]);
 
 #endif /* __SHA256_H__ */
 #endif /* WITH_HASH_SHA256 */

@@ -29,23 +29,23 @@
 
 struct ec_sign_context;
 
-int __ecsdsa_init_pub_key(ec_pub_key *out_pub, const ec_priv_key *in_priv,
+ATTRIBUTE_WARN_UNUSED_RET int __ecsdsa_init_pub_key(ec_pub_key *out_pub, const ec_priv_key *in_priv,
 			   ec_sig_alg_type key_type);
-int __ecsdsa_siglen(u16 p_bit_len, u16 q_bit_len, u8 hsize, u8 blocksize,
+ATTRIBUTE_WARN_UNUSED_RET int __ecsdsa_siglen(u16 p_bit_len, u16 q_bit_len, u8 hsize, u8 blocksize,
 		    u8 *siglen);
 
-int __ecsdsa_sign_init(struct ec_sign_context *ctx,
+ATTRIBUTE_WARN_UNUSED_RET int __ecsdsa_sign_init(struct ec_sign_context *ctx,
 		       ec_sig_alg_type key_type, int optimized);
-int __ecsdsa_sign_update(struct ec_sign_context *ctx,
+ATTRIBUTE_WARN_UNUSED_RET int __ecsdsa_sign_update(struct ec_sign_context *ctx,
 			 const u8 *chunk, u32 chunklen);
-int __ecsdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen);
+ATTRIBUTE_WARN_UNUSED_RET int __ecsdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen);
 
-int __ecsdsa_verify_init(struct ec_verify_context *ctx,
+ATTRIBUTE_WARN_UNUSED_RET int __ecsdsa_verify_init(struct ec_verify_context *ctx,
 			 const u8 *sig, u8 siglen,
 			 ec_sig_alg_type key_type, int optimized);
-int __ecsdsa_verify_update(struct ec_verify_context *ctx,
+ATTRIBUTE_WARN_UNUSED_RET int __ecsdsa_verify_update(struct ec_verify_context *ctx,
 			   const u8 *chunk, u32 chunklen);
-int __ecsdsa_verify_finalize(struct ec_verify_context *ctx);
+ATTRIBUTE_WARN_UNUSED_RET int __ecsdsa_verify_finalize(struct ec_verify_context *ctx);
 
 #endif /* __ECSDSA_COMMON_H__ */
 #endif /* (defined(WITH_SIG_ECSDSA) || defined(WITH_SIG_ECOSDSA)) */

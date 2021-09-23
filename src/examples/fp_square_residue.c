@@ -18,7 +18,7 @@
 /* Declare our Miller-Rabin test implemented
  * in another module.
  */
-int miller_rabin(nn_src_t n, const unsigned int t, int *check);
+ATTRIBUTE_WARN_UNUSED_RET int miller_rabin(nn_src_t n, const unsigned int t, int *check);
 
 #ifdef FP_EXAMPLE
 int main()

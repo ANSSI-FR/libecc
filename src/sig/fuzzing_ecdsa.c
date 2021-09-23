@@ -69,7 +69,7 @@ int ecdsa_sign_raw(struct ec_sign_context *ctx, const u8 *input, u8 inputlen, u8
 	ECDSA_SIGN_CHECK_INITIALIZED(&(ctx->sign_data.ecdsa), ret, err);
 
 	/* Zero init out poiny */
-	local_memset(&kG, 0, sizeof(prj_pt));
+	ret = local_memset(&kG, 0, sizeof(prj_pt)); EG(ret, err);
 
 	/* Make things more readable */
 	priv_key = &(ctx->key_pair->priv_key);
@@ -93,8 +93,8 @@ int ecdsa_sign_raw(struct ec_sign_context *ctx, const u8 *input, u8 inputlen, u8
 	/* NOTE: here we have raw ECDSA, this is the raw input */
 	MUST_HAVE((input != NULL) && (inputlen <= sizeof(hash)), ret, err);
 
-	local_memset(hash, 0, sizeof(hash));
-	local_memcpy(hash, input, hsize);
+	ret = local_memset(hash, 0, sizeof(hash)); EG(ret, err);
+	ret = local_memcpy(hash, input, hsize); EG(ret, err);
 
 	dbg_buf_print("h", hash, hsize);
 
@@ -117,7 +117,7 @@ int ecdsa_sign_raw(struct ec_sign_context *ctx, const u8 *input, u8 inputlen, u8
 	 *    integer and reducing it mod q
 	 */
 	ret = nn_init_from_buf(&tmp2, hash, hsize); EG(ret, err);
-	local_memset(hash, 0, hsize);
+	ret = local_memset(hash, 0, hsize); EG(ret, err);
 	dbg_nn_print("h initial import as nn", &tmp2);
 	if (rshift) {
 		ret = nn_rshift_fixedlen(&tmp2, &tmp2, rshift); EG(ret, err);
@@ -162,14 +162,12 @@ int ecdsa_sign_raw(struct ec_sign_context *ctx, const u8 *input, u8 inputlen, u8
  	ret = prj_pt_mul_monty(&kG, &k, G); EG(ret, err);
 #endif /* USE_SIG_BLINDING */
 	ret = prj_pt_to_aff(&W, &kG); EG(ret, err);
-	prj_pt_uninit(&kG);
 
 	dbg_nn_print("W_x", &(W.x.fp_val));
 	dbg_nn_print("W_y", &(W.y.fp_val));
 
 	/* 6. Compute r = W_x mod q */
 	ret = nn_mod(&r, &(W.x.fp_val), q); EG(ret, err);
-	aff_pt_uninit(&W);
 	dbg_nn_print("r", &r);
 
 	/* 7. If r is 0, restart the process at step 4. */
@@ -205,8 +203,6 @@ int ecdsa_sign_raw(struct ec_sign_context *ctx, const u8 *input, u8 inputlen, u8
 
 	/* tmp2 = (e + xr) mod q */
 	ret = nn_mod_add(&tmp2, &tmp, &e, q); EG(ret, err);
-	nn_uninit(&e);
-	nn_uninit(&tmp);
 	dbg_nn_print("(xr + e) mod q", &tmp2);
 
 #ifdef USE_SIG_BLINDING
@@ -217,14 +213,11 @@ int ecdsa_sign_raw(struct ec_sign_context *ctx, const u8 *input, u8 inputlen, u8
 #endif
 	/* Compute k^-1 mod q */
 	ret = nn_modinv(&kinv, &k, q); EG(ret, err);
-	nn_uninit(&k);
 
 	dbg_nn_print("k^-1 mod q", &kinv);
 
 	/* s = k^-1 * tmp2 mod q */
 	ret = nn_mul_mod(&s, &tmp2, &kinv, q); EG(ret, err);
-	nn_uninit(&kinv);
-	nn_uninit(&tmp2);
 
 	dbg_nn_print("s", &s);
 
@@ -236,21 +229,25 @@ int ecdsa_sign_raw(struct ec_sign_context *ctx, const u8 *input, u8 inputlen, u8
 	MUST_HAVE(!iszero, ret, err);
 
 	/* 11. return (r,s) */
-	ret = nn_export_to_buf(sig + q_len, q_len, &s); EG(ret, err);
-
-	nn_uninit(&r);
-	nn_uninit(&s);
+	ret = nn_export_to_buf(sig + q_len, q_len, &s);
 
  err:
 
+	nn_uninit(&r);
+	nn_uninit(&s);
 	nn_uninit(&tmp2);
 	nn_uninit(&e);
+	nn_uninit(&tmp);
+	nn_uninit(&k);
+	nn_uninit(&kinv);
+	prj_pt_uninit(&kG);
+	aff_pt_uninit(&W);
 
 	/*
 	 * We can now clear data part of the context. This will clear
 	 * magic and avoid further reuse of the whole context.
 	 */
-	local_memset(&(ctx->sign_data.ecdsa), 0, sizeof(ecdsa_sign_data));
+	IGNORE_RET_VAL(local_memset(&(ctx->sign_data.ecdsa), 0, sizeof(ecdsa_sign_data)));
 
 	/* Clean what remains on the stack */
 	PTR_NULLIFY(priv_key);
@@ -301,8 +298,8 @@ int ecdsa_verify_raw(struct ec_verify_context *ctx, const u8 *input, u8 inputlen
 	ECDSA_VERIFY_CHECK_INITIALIZED(&(ctx->verify_data.ecdsa), ret, err);
 
 	/* Zero init points */
-	local_memset(&uG, 0, sizeof(prj_pt));
-	local_memset(&vY, 0, sizeof(prj_pt));
+	ret = local_memset(&uG, 0, sizeof(prj_pt)); EG(ret, err);
+	ret = local_memset(&vY, 0, sizeof(prj_pt)); EG(ret, err);
 
 	/* Make things more readable */
 	G = &(ctx->pub_key->params->ec_gen);
@@ -317,8 +314,8 @@ int ecdsa_verify_raw(struct ec_verify_context *ctx, const u8 *input, u8 inputlen
 	/* NOTE: here we have raw ECDSA, this is the raw input */
 	MUST_HAVE((input != NULL) && (inputlen <= sizeof(hash)), ret, err);
 
-	local_memset(hash, 0, sizeof(hash));
-	local_memcpy(hash, input, hsize);
+	ret = local_memset(hash, 0, sizeof(hash)); EG(ret, err);
+	ret = local_memcpy(hash, input, hsize); EG(ret, err);
 
 	dbg_buf_print("h = H(m)", hash, hsize);
 
@@ -341,15 +338,14 @@ int ecdsa_verify_raw(struct ec_verify_context *ctx, const u8 *input, u8 inputlen
 	 * and reducing it mod q
 	 */
 	ret = nn_init_from_buf(&tmp, hash, hsize); EG(ret, err);
-	local_memset(hash, 0, hsize);
+	ret = local_memset(hash, 0, hsize); EG(ret, err);
 	dbg_nn_print("h initial import as nn", &tmp);
 	if (rshift) {
-		nn_rshift_fixedlen(&tmp, &tmp, rshift);
+		ret = nn_rshift_fixedlen(&tmp, &tmp, rshift); EG(ret, err);
 	}
 	dbg_nn_print("h   final import as nn", &tmp);
 
 	ret = nn_mod(&e, &tmp, q); EG(ret, err);
-	nn_uninit(&tmp);
 	dbg_nn_print("e", &e);
 
 	/* Compute s^-1 mod q */
@@ -360,24 +356,17 @@ int ecdsa_verify_raw(struct ec_verify_context *ctx, const u8 *input, u8 inputlen
 
 	/* 5. Compute u = (s^-1)e mod q */
 	ret = nn_mul(&tmp, &e, &sinv); EG(ret, err);
-	nn_uninit(&e);
 	ret = nn_mod(&u, &tmp, q); EG(ret, err);
 	dbg_nn_print("u = (s^-1)e mod q", &u);
 
 	/* 6. Compute v = (s^-1)r mod q */
 	ret = nn_mul_mod(&v, r, &sinv, q); EG(ret, err);
 	dbg_nn_print("v = (s^-1)r mod q", &v);
-	nn_uninit(&sinv);
-	nn_uninit(&tmp);
 
 	/* 7. Compute W' = uG + vY */
 	ret = prj_pt_mul_monty(&uG, &u, G); EG(ret, err);
 	ret = prj_pt_mul_monty(&vY, &v, Y); EG(ret, err);
 	ret = prj_pt_add_monty(&W_prime, &uG, &vY); EG(ret, err);
-	prj_pt_uninit(&uG);
-	prj_pt_uninit(&vY);
-	nn_uninit(&u);
-	nn_uninit(&v);
 
 	/* 8. If W' is the point at infinity, reject the signature. */
 	ret = prj_pt_iszero(&W_prime, &iszero); EG(ret, err);
@@ -388,8 +377,6 @@ int ecdsa_verify_raw(struct ec_verify_context *ctx, const u8 *input, u8 inputlen
 	dbg_nn_print("W'_x", &(W_prime_aff.x.fp_val));
 	dbg_nn_print("W'_y", &(W_prime_aff.y.fp_val));
 	ret = nn_mod(&r_prime, &(W_prime_aff.x.fp_val), q); EG(ret, err);
-	prj_pt_uninit(&W_prime);
-	aff_pt_uninit(&W_prime_aff);
 
 	/* 10. Accept the signature if and only if r equals r' */
 	ret = nn_cmp(&r_prime, r, &cmp); EG(ret, err);
@@ -397,11 +384,21 @@ int ecdsa_verify_raw(struct ec_verify_context *ctx, const u8 *input, u8 inputlen
 
  err:
 	nn_uninit(&r_prime);
+	nn_uninit(&tmp);
+	nn_uninit(&u);
+	nn_uninit(&v);
+	nn_uninit(&e);
+	nn_uninit(&sinv);
+	prj_pt_uninit(&uG);
+	prj_pt_uninit(&vY);
+	prj_pt_uninit(&W_prime);
+	aff_pt_uninit(&W_prime_aff);
+
 	/*
 	 * We can now clear data part of the context. This will clear
 	 * magic and avoid further reuse of the whole context.
 	 */
-	local_memset(&(ctx->verify_data.ecdsa), 0, sizeof(ecdsa_verify_data));
+	IGNORE_RET_VAL(local_memset(&(ctx->verify_data.ecdsa), 0, sizeof(ecdsa_verify_data)));
 
 	/* Clean what remains on the stack */
 	PTR_NULLIFY(G);

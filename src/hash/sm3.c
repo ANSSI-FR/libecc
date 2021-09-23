@@ -80,7 +80,7 @@ static const u32 SM3_Tj_high = 0x7a879d8a;
 #define SM3_P_1(X) (((u32)X) ^ SM3_ROTL((X), 15) ^ SM3_ROTL((X), 23))
 
 /* SM3 Iterative Compression Process */
-static int sm3_process(sm3_context *ctx, const u8 data[SM3_BLOCK_SIZE])
+ATTRIBUTE_WARN_UNUSED_RET static int sm3_process(sm3_context *ctx, const u8 data[SM3_BLOCK_SIZE])
 {
 	u32 A, B, C, D, E, F, G, H;
 	u32 SS1, SS2, TT1, TT2;
@@ -238,7 +238,7 @@ int sm3_update(sm3_context *ctx, const u8 *input, u32 ilen)
 
 	if ((left > 0) && (remain_ilen >= fill)) {
 		/* Copy data at the end of the buffer */
-		local_memcpy(ctx->sm3_buffer + left, data_ptr, fill);
+		ret = local_memcpy(ctx->sm3_buffer + left, data_ptr, fill); EG(ret, err);
 		ret = sm3_process(ctx, ctx->sm3_buffer); EG(ret, err);
 		data_ptr += fill;
 		remain_ilen -= fill;
@@ -252,7 +252,7 @@ int sm3_update(sm3_context *ctx, const u8 *input, u32 ilen)
 	}
 
 	if (remain_ilen > 0) {
-		local_memcpy(ctx->sm3_buffer + left, data_ptr, remain_ilen);
+		ret = local_memcpy(ctx->sm3_buffer + left, data_ptr, remain_ilen); EG(ret, err);
 	}
 
 	ret = 0;
@@ -272,14 +272,14 @@ int sm3_final(sm3_context *ctx, u8 output[SM3_DIGEST_SIZE])
 	SM3_HASH_CHECK_INITIALIZED(ctx, ret, err);
 
 	/* Fill in our last block with zeroes */
-	local_memset(last_padded_block, 0, sizeof(last_padded_block));
+	ret = local_memset(last_padded_block, 0, sizeof(last_padded_block)); EG(ret, err);
 
 	/* This is our final step, so we proceed with the padding */
 	block_present = ctx->sm3_total % SM3_BLOCK_SIZE;
 	if (block_present != 0) {
 		/* Copy what's left in our temporary context buffer */
-		local_memcpy(last_padded_block, ctx->sm3_buffer,
-			     block_present);
+		ret = local_memcpy(last_padded_block, ctx->sm3_buffer,
+			     block_present); EG(ret, err);
 	}
 
 	/* Put the 0x80 byte, beginning of padding  */

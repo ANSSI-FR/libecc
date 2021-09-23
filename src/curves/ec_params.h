@@ -84,6 +84,6 @@ typedef struct {
 	ec_curve_type curve_type;
 } ec_params;
 
-int import_params(ec_params *out_params, const ec_str_params *in_str_params);
+ATTRIBUTE_WARN_UNUSED_RET int import_params(ec_params *out_params, const ec_str_params *in_str_params);
 
 #endif /* __EC_PARAMS_H__ */

@@ -45,12 +45,12 @@
 
 typedef streebog_context streebog512_context;
 
-int streebog512_init(streebog512_context *ctx);
-int streebog512_update(streebog512_context *ctx, const u8 *input, u32 ilen);
-int streebog512_final(streebog512_context *ctx, u8 output[STREEBOG512_DIGEST_SIZE]);
-int streebog512_scattered(const u8 **inputs, const u32 *ilens,
+ATTRIBUTE_WARN_UNUSED_RET int streebog512_init(streebog512_context *ctx);
+ATTRIBUTE_WARN_UNUSED_RET int streebog512_update(streebog512_context *ctx, const u8 *input, u32 ilen);
+ATTRIBUTE_WARN_UNUSED_RET int streebog512_final(streebog512_context *ctx, u8 output[STREEBOG512_DIGEST_SIZE]);
+ATTRIBUTE_WARN_UNUSED_RET int streebog512_scattered(const u8 **inputs, const u32 *ilens,
 		      u8 output[STREEBOG512_DIGEST_SIZE]);
-int streebog512(const u8 *input, u32 ilen, u8 output[STREEBOG512_DIGEST_SIZE]);
+ATTRIBUTE_WARN_UNUSED_RET int streebog512(const u8 *input, u32 ilen, u8 output[STREEBOG512_DIGEST_SIZE]);
 
 #endif /* __STREEBOG512_H__ */
 #endif /* WITH_HASH_STREEBOG512 */

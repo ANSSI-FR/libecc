@@ -23,13 +23,13 @@ typedef struct {
         word_t magic;
 } hmac_context;
 
-int hmac_init(hmac_context *ctx, const u8 *hmackey, u32 hmackey_len, hash_alg_type hash_type);
+ATTRIBUTE_WARN_UNUSED_RET int hmac_init(hmac_context *ctx, const u8 *hmackey, u32 hmackey_len, hash_alg_type hash_type);
 
-int hmac_update(hmac_context *ctx, const u8 *input, u32 ilen);
+ATTRIBUTE_WARN_UNUSED_RET int hmac_update(hmac_context *ctx, const u8 *input, u32 ilen);
 
-int hmac_finalize(hmac_context *ctx, u8 *output, u8 *outlen);
+ATTRIBUTE_WARN_UNUSED_RET int hmac_finalize(hmac_context *ctx, u8 *output, u8 *outlen);
 
-int hmac(const u8 *hmackey, u32 hmackey_len, hash_alg_type hash_type, const u8 *input, u32 ilen, u8 *output, u8 *outlen);
+ATTRIBUTE_WARN_UNUSED_RET int hmac(const u8 *hmackey, u32 hmackey_len, hash_alg_type hash_type, const u8 *input, u32 ilen, u8 *output, u8 *outlen);
 
 #endif /* WITH_HMAC */
 

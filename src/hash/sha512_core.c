@@ -18,7 +18,7 @@
 #include "sha512_core.h"
 
 /* SHA-2 core processing. Returns 0 on success, -1 on error. */
-static int sha512_core_process(sha512_core_context *ctx,
+ATTRIBUTE_WARN_UNUSED_RET static int sha512_core_process(sha512_core_context *ctx,
 			   const u8 data[SHA512_CORE_BLOCK_SIZE])
 {
 	u64 a, b, c, d, e, f, g, h;
@@ -89,7 +89,7 @@ int sha512_core_update(sha512_core_context *ctx, const u8 *input, u32 ilen)
 
 	if ((left > 0) && (remain_ilen >= fill)) {
 		/* Copy data at the end of the buffer */
-		local_memcpy(ctx->sha512_buffer + left, data_ptr, fill);
+		ret = local_memcpy(ctx->sha512_buffer + left, data_ptr, fill); EG(ret, err);
 		ret = sha512_core_process(ctx, ctx->sha512_buffer); EG(ret, err);
 		data_ptr += fill;
 		remain_ilen -= fill;
@@ -103,7 +103,7 @@ int sha512_core_update(sha512_core_context *ctx, const u8 *input, u32 ilen)
 	}
 
 	if (remain_ilen > 0) {
-		local_memcpy(ctx->sha512_buffer + left, data_ptr, remain_ilen);
+		ret = local_memcpy(ctx->sha512_buffer + left, data_ptr, remain_ilen); EG(ret, err);
 	}
 
 	ret = 0;
@@ -122,14 +122,14 @@ int sha512_core_final(sha512_core_context *ctx, u8 *output, u32 output_size)
 	MUST_HAVE(((ctx != NULL) && (output != NULL)), ret, err);
 
 	/* Fill in our last block with zeroes */
-	local_memset(last_padded_block, 0, sizeof(last_padded_block));
+	ret = local_memset(last_padded_block, 0, sizeof(last_padded_block)); EG(ret, err);
 
 	/* This is our final step, so we proceed with the padding */
 	block_present = ctx->sha512_total[0] % SHA512_CORE_BLOCK_SIZE;
 	if (block_present != 0) {
 		/* Copy what's left in our temporary context buffer */
-		local_memcpy(last_padded_block, ctx->sha512_buffer,
-			     block_present);
+		ret = local_memcpy(last_padded_block, ctx->sha512_buffer,
+			     block_present); EG(ret, err);
 	}
 
 	/* Put the 0x80 byte, beginning of padding  */
@@ -171,7 +171,7 @@ int sha512_core_final(sha512_core_context *ctx, u8 *output, u32 output_size)
 		PUT_UINT64_BE(ctx->sha512_state[5], tmp_output, 40);
 		PUT_UINT64_BE(ctx->sha512_state[6], tmp_output, 48);
 		PUT_UINT64_BE(ctx->sha512_state[7], tmp_output, 56);
-		local_memcpy(output, tmp_output, output_size);
+		ret = local_memcpy(output, tmp_output, output_size); EG(ret, err);
 	}
 
 	ret = 0;

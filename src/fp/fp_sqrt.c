@@ -23,7 +23,7 @@
  *   Legendre(a) = a^((p-1)/2) (p) = { -1, 0, 1 }
  *
  */
-static int legendre(fp_src_t a)
+ATTRIBUTE_WARN_UNUSED_RET static int legendre(fp_src_t a)
 {
 	int ret, iszero, cmp;
 	fp pow; /* The result if the exponentiation is in Fp */

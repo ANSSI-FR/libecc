@@ -37,7 +37,7 @@
  * (error in -Werror) is triggered at compilation time.
  *
  */
-static int ATTRIBUTE_UNUSED __nn_is_wlen_consistent(nn_src_t A)
+ATTRIBUTE_WARN_UNUSED_RET static int ATTRIBUTE_UNUSED __nn_is_wlen_consistent(nn_src_t A)
 {
 	word_t val = 0;
 	u8 i;
@@ -419,7 +419,7 @@ err:
  * The function returns 0 on success, -1 on error. On success, the result is
  * provided in 'out'. 'out' is not meaningful on error.
  */
-static int _ntohw(const u8 *val, word_t *out)
+ATTRIBUTE_WARN_UNUSED_RET static int _ntohw(const u8 *val, word_t *out)
 {
 	word_t res = 0;
 	u8 *res_buf = (u8 *)(&res);
@@ -452,7 +452,7 @@ err:
 }
 
 /* Same as previous function but from host to network byte order. */
-static inline int _htonw(const u8 *val, word_t *out)
+ATTRIBUTE_WARN_UNUSED_RET static inline int _htonw(const u8 *val, word_t *out)
 {
 	return _ntohw(val, out);
 }
@@ -474,8 +474,8 @@ int nn_init_from_buf(nn_t out_nn, const u8 *buf, u16 buflen)
 	MUST_HAVE(((out_nn != NULL) && (buf != NULL) &&
 		  (buflen <= NN_MAX_BYTE_LEN)), ret, err);
 
-	local_memset(tmp, 0, NN_MAX_BYTE_LEN - buflen);
-	local_memcpy(tmp + NN_MAX_BYTE_LEN - buflen, buf, buflen);
+	ret = local_memset(tmp, 0, NN_MAX_BYTE_LEN - buflen); EG(ret, err);
+	ret = local_memcpy(tmp + NN_MAX_BYTE_LEN - buflen, buf, buflen); EG(ret, err);
 
 	ret = nn_init(out_nn, buflen); EG(ret, err);
 
@@ -484,7 +484,7 @@ int nn_init_from_buf(nn_t out_nn, const u8 *buf, u16 buflen)
 		ret = _ntohw(tmp + buf_pos, &(out_nn->val[wpos])); EG(ret, err);
 	}
 
-	local_memset(tmp, 0, NN_MAX_BYTE_LEN);
+	ret = local_memset(tmp, 0, NN_MAX_BYTE_LEN);
 
 err:
 	return ret;
@@ -508,7 +508,7 @@ int nn_export_to_buf(u8 *buf, u16 buflen, nn_src_t in_nn)
 	MUST_HAVE(!(buf == NULL), ret, err);
 	ret = nn_check_initialized(in_nn); EG(ret, err);
 
-	local_memset(buf, 0, buflen);
+	ret = local_memset(buf, 0, buflen); EG(ret, err);
 
 	/*
 	 * We consider each word in input nn one at a time and convert
@@ -528,7 +528,7 @@ int nn_export_to_buf(u8 *buf, u16 buflen, nn_src_t in_nn)
 		dst_word_ptr = buf + buflen - (i * wb) - copylen;
 		src_word_ptr = (u8 *)(&val) + wb - copylen;
 
-		local_memcpy(dst_word_ptr, src_word_ptr, copylen);
+		ret = local_memcpy(dst_word_ptr, src_word_ptr, copylen); EG(ret, err);
 		src_word_ptr = NULL;
 
 		remain -= copylen;

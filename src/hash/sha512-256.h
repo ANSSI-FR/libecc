@@ -51,12 +51,12 @@
 
 typedef sha512_core_context sha512_256_context;
 
-int sha512_256_init(sha512_256_context *ctx);
-int sha512_256_update(sha512_256_context *ctx, const u8 *input, u32 ilen);
-int sha512_256_final(sha512_256_context *ctx, u8 output[SHA512_256_DIGEST_SIZE]);
-int sha512_256_scattered(const u8 **inputs, const u32 *ilens,
+ATTRIBUTE_WARN_UNUSED_RET int sha512_256_init(sha512_256_context *ctx);
+ATTRIBUTE_WARN_UNUSED_RET int sha512_256_update(sha512_256_context *ctx, const u8 *input, u32 ilen);
+ATTRIBUTE_WARN_UNUSED_RET int sha512_256_final(sha512_256_context *ctx, u8 output[SHA512_256_DIGEST_SIZE]);
+ATTRIBUTE_WARN_UNUSED_RET int sha512_256_scattered(const u8 **inputs, const u32 *ilens,
 			 u8 output[SHA512_256_DIGEST_SIZE]);
-int sha512_256(const u8 *input, u32 ilen, u8 output[SHA512_256_DIGEST_SIZE]);
+ATTRIBUTE_WARN_UNUSED_RET int sha512_256(const u8 *input, u32 ilen, u8 output[SHA512_256_DIGEST_SIZE]);
 
 #endif /* __SHA512_256_H__ */
 #endif /* WITH_HASH_SHA512_256 */

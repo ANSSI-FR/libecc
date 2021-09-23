@@ -17,10 +17,10 @@
 #define __NN_MUL_H__
 #include "nn.h"
 
-int nn_mul_low(nn_t out, nn_src_t in1, nn_src_t in2, u8 wlimit);
-int nn_mul(nn_t out, nn_src_t in1, nn_src_t in2);
-int nn_sqr_low(nn_t out, nn_src_t in, u8 wlimit);
-int nn_sqr(nn_t out, nn_src_t in);
-int nn_mul_word(nn_t out, nn_src_t in, word_t w);
+ATTRIBUTE_WARN_UNUSED_RET int nn_mul_low(nn_t out, nn_src_t in1, nn_src_t in2, u8 wlimit);
+ATTRIBUTE_WARN_UNUSED_RET int nn_mul(nn_t out, nn_src_t in1, nn_src_t in2);
+ATTRIBUTE_WARN_UNUSED_RET int nn_sqr_low(nn_t out, nn_src_t in, u8 wlimit);
+ATTRIBUTE_WARN_UNUSED_RET int nn_sqr(nn_t out, nn_src_t in);
+ATTRIBUTE_WARN_UNUSED_RET int nn_mul_word(nn_t out, nn_src_t in, word_t w);
 
 #endif /* __NN_MUL_H__ */

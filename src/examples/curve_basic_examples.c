@@ -33,7 +33,7 @@
  * use the Tonelli-Shanks algorithm implemented in the Fp source example
  * (fp_square_residue.c).
  */
-int get_random_point_on_curve(ec_params *curve_params, prj_pt *out_point);
+ATTRIBUTE_WARN_UNUSED_RET int get_random_point_on_curve(ec_params *curve_params, prj_pt *out_point);
 int get_random_point_on_curve(ec_params *curve_params, prj_pt *out_point)
 {
 	nn nn_tmp;
@@ -102,7 +102,7 @@ err:
 }
 
 #define PERF_SCALAR_MUL 40
-int check_curve(const u8 *curve_name);
+ATTRIBUTE_WARN_UNUSED_RET int check_curve(const u8 *curve_name);
 int check_curve(const u8 *curve_name)
 {
 	unsigned int i;
@@ -116,6 +116,7 @@ int check_curve(const u8 *curve_name)
 	prj_pt A, B, C, D;
 	prj_pt TMP;
 	aff_pt T;
+	u32 len;
 
 	nn_k.magic = 0;
 	A.magic = B.magic = C.magic = D.magic = 0;
@@ -127,11 +128,11 @@ int check_curve(const u8 *curve_name)
 	 */
 	const ec_str_params *the_curve_const_parameters;
 
+	ret = local_strnlen((const char *)curve_name, MAX_CURVE_NAME_LEN, &len); EG(ret, err);
+	len += 1;
+	MUST_HAVE(len < 256, ret, err);
 	ret = ec_get_curve_params_by_name(curve_name,
-					    (u8)local_strnlen((const char *)
-							      curve_name,
-							      MAX_CURVE_NAME_LEN)
-					    + 1, &the_curve_const_parameters); EG(ret, err);
+					    (u8)len, &the_curve_const_parameters); EG(ret, err);
 
 
 	/* Get out if getting the parameters went wrong */
@@ -535,8 +536,11 @@ int main()
 		/* All our possible curves are in ../curves/curves_list.h
 		 * We can get the curve name from its internal type.
 		 */
-		ec_get_curve_name_by_type(ec_maps[i].type, curve_name,
-					  sizeof(curve_name));
+		if(ec_get_curve_name_by_type(ec_maps[i].type, curve_name,
+					  sizeof(curve_name))){
+			ext_printf("Error when treating %s\n", curve_name);
+			return -1;
+		}
 		/* Check our curve! */
 		ext_printf("[+] Checking curve %s\n", curve_name);
 		if (check_curve(curve_name)) {

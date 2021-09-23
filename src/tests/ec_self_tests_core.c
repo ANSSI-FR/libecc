@@ -20,7 +20,7 @@
 #include "../external_deps/print.h"
 
 
-static int ec_gen_import_export_kp(ec_key_pair *kp, const ec_params *params,
+ATTRIBUTE_WARN_UNUSED_RET static int ec_gen_import_export_kp(ec_key_pair *kp, const ec_params *params,
 				   const ec_test_case *c)
 {
 	u8 pub_key_buf[EC_STRUCTURED_PUB_KEY_MAX_EXPORT_SIZE];
@@ -81,7 +81,7 @@ err:
  * test the signature init / multiple updates / finalize mechanism for
  * algorithms that support them.
  */
-static int random_split_ec_sign(u8 *sig, u8 siglen, const ec_key_pair *key_pair,
+ATTRIBUTE_WARN_UNUSED_RET static int random_split_ec_sign(u8 *sig, u8 siglen, const ec_key_pair *key_pair,
 	     const u8 *m, u32 mlen,
 	     int (*rand) (nn_t out, nn_src_t q),
 	     ec_sig_alg_type sig_type, hash_alg_type hash_type, const u8 *adata, u16 adata_len)
@@ -124,7 +124,7 @@ static int random_split_ec_sign(u8 *sig, u8 siglen, const ec_key_pair *key_pair,
  * test the verification init / multiple updates / finalize mechanism for
  * algorithms that support them.
  */
-static int random_split_ec_verify(const u8 *sig, u8 siglen, const ec_pub_key *pub_key,
+ATTRIBUTE_WARN_UNUSED_RET static int random_split_ec_verify(const u8 *sig, u8 siglen, const ec_pub_key *pub_key,
 	      const u8 *m, u32 mlen,
 	      ec_sig_alg_type sig_type, hash_alg_type hash_type, const u8 *adata, u16 adata_len)
 {
@@ -175,7 +175,7 @@ static int random_split_ec_verify(const u8 *sig, u8 siglen, const ec_pub_key *pu
  * ECC generic self tests (sign/verify on random values
  * with import/export)
  */
-static int ec_import_export_test(const ec_test_case *c)
+ATTRIBUTE_WARN_UNUSED_RET static int ec_import_export_test(const ec_test_case *c)
 {
 	ec_key_pair kp;
 	ec_params params;
@@ -231,16 +231,13 @@ static int ec_import_export_test(const ec_test_case *c)
 			goto err;
 		}
 		u8 sig_tmp1[EC_MAX_SIGLEN];
-		local_memset(sig_tmp1, 0, sizeof(sig_tmp1));
+		ret = local_memset(sig_tmp1, 0, sizeof(sig_tmp1)); EG(ret, err);
 		u8 sig_tmp2[EC_MAX_SIGLEN];
-		local_memset(sig_tmp2, 0, sizeof(sig_tmp2));
+		ret = local_memset(sig_tmp2, 0, sizeof(sig_tmp2)); EG(ret, err);
 		/* If the algorithm supports streaming mode, test it against direct mode */
 		ret = is_sign_streaming_mode_supported(c->sig_type, &check); EG(ret, err);
 		if(check){
-			if(siglen > LOCAL_MAX(sizeof(sig_tmp1), sizeof(sig_tmp2))){
-				ret = -1;
-				goto err;
-			}
+			MUST_HAVE(siglen <= LOCAL_MAX(sizeof(sig_tmp1), sizeof(sig_tmp2)), ret, err);
 			ret = generic_ec_sign(sig_tmp1, siglen, &kp, msg, msglen,
 			       c->nn_random, c->sig_type, c->hash_type, c->adata, c->adata_len);
 			if(ret){
@@ -258,13 +255,15 @@ static int ec_import_export_test(const ec_test_case *c)
 			/* Verify signature equality only in case of deterministic signatures */
 			ret = is_sign_deterministic(c->sig_type, &check); EG(ret, err);
 			if(check){
-				if(!are_equal(sig, sig_tmp1, siglen)){
+				ret = are_equal(sig, sig_tmp1, siglen, &check); EG(ret, err);
+				if(!check){
 					ext_printf("Error when signing: streaming and non streaming modes results differ "\
 						   "for deterministic signature scheme!\n");
 					ret = -1;
 					goto err;
 				}
-				if(!are_equal(sig, sig_tmp2, siglen)){
+				ret = are_equal(sig, sig_tmp2, siglen, &check); EG(ret, err);
+				if(!check){
 					ext_printf("Error when signing: streaming and non streaming modes results differ "\
 						   "for deterministic signature scheme!\n");
 					ret = -1;
@@ -333,72 +332,45 @@ static int ec_import_export_test(const ec_test_case *c)
 			u8 digest[MAX_DIGEST_SIZE] = { 0 };
 			u8 digestlen;
 			/* Initialize our signature context */
-			if(ec_sign_init(&sig_ctx, &kp, c->sig_type, c->hash_type, c->adata, c->adata_len)){
-				ret = -1;
-				goto err;
-			}
+			ret = ec_sign_init(&sig_ctx, &kp, c->sig_type, c->hash_type, c->adata, c->adata_len); EG(ret, err);
 			/* Perform the hash of the data ourselves */
-			if(hash_mapping_callbacks_sanity_check(sig_ctx.h)){
-				ret = -1;
-				goto err;
-			}
+			ret = hash_mapping_callbacks_sanity_check(sig_ctx.h); EG(ret, err);
 			const u8 *input[2] = { (const u8*)msg , NULL};
 			u32 ilens[2] = { msglen , 0 };
-			sig_ctx.h->hfunc_scattered(input, ilens, digest);
+			ret = sig_ctx.h->hfunc_scattered(input, ilens, digest); EG(ret, err);
 			digestlen = sig_ctx.h->digest_size;
 			MUST_HAVE(digestlen <= sizeof(digest), ret, err);
 			/* Raw signing of data */
 #if defined(WITH_SIG_ECDSA)
 			if(c->sig_type == ECDSA){
-				if(ecdsa_sign_raw(&sig_ctx, digest, digestlen, sig, siglen, NULL, 0)){
-					ret = -1;
-					goto err;
-				}
+				ret = ecdsa_sign_raw(&sig_ctx, digest, digestlen, sig, siglen, NULL, 0); EG(ret, err);
 			}
 #endif
 #if defined(WITH_SIG_ECGDSA)
 			if(c->sig_type ==  ECGDSA){
-				if(ecgdsa_sign_raw(&sig_ctx, digest, digestlen, sig, siglen, NULL, 0)){
-					ret = -1;
-					goto err;
-				}
+				ret = ecgdsa_sign_raw(&sig_ctx, digest, digestlen, sig, siglen, NULL, 0); EG(ret, err);
 			}
 #endif
 #if defined(WITH_SIG_ECRDSA)
 			if(c->sig_type ==  ECRDSA){
-				if(ecrdsa_sign_raw(&sig_ctx, digest, digestlen, sig, siglen, NULL, 0)){
-					ret = -1;
-					goto err;
-				}
+				ret = ecrdsa_sign_raw(&sig_ctx, digest, digestlen, sig, siglen, NULL, 0); EG(ret, err);
 			}
 #endif
 			/* Now verify signature */
-			if(ec_verify_init(&verif_ctx,  &(kp.pub_key), sig, siglen, c->sig_type, c->hash_type, c->adata, c->adata_len)){
-				ret = -1;
-				goto err;
-			}
+			ret = ec_verify_init(&verif_ctx,  &(kp.pub_key), sig, siglen, c->sig_type, c->hash_type, c->adata, c->adata_len); EG(ret, err);
 #if defined(WITH_SIG_ECDSA)
 			if(c->sig_type == ECDSA){
-				if(ecdsa_verify_raw(&verif_ctx, digest, digestlen)){
-					ret = -1;
-					goto err;
-				}
+				ret = ecdsa_verify_raw(&verif_ctx, digest, digestlen); EG(ret, err);
 			}
 #endif
 #if defined(WITH_SIG_ECGDSA)
 			if(c->sig_type ==  ECGDSA){
-				if(ecgdsa_verify_raw(&verif_ctx, digest, digestlen)){
-					ret = -1;
-					goto err;
-				}
+				ret = ecgdsa_verify_raw(&verif_ctx, digest, digestlen); EG(ret, err);
 			}
 #endif
 #if defined(WITH_SIG_ECRDSA)
 			if(c->sig_type ==  ECRDSA){
-				if(ecrdsa_verify_raw(&verif_ctx, digest, digestlen)){
-					ret = -1;
-					goto err;
-				}
+				ret = ecrdsa_verify_raw(&verif_ctx, digest, digestlen); EG(ret, err);
 			}
 #endif
 		}
@@ -415,7 +387,7 @@ static int ec_import_export_test(const ec_test_case *c)
  * Those functions respectively perform signature and verification tests
  * based the content of a given test case.
  */
-static int ec_test_sign(u8 *sig, u8 siglen, ec_key_pair *kp,
+ATTRIBUTE_WARN_UNUSED_RET static int ec_test_sign(u8 *sig, u8 siglen, ec_key_pair *kp,
 			const ec_test_case *c)
 {
 	/* If the algorithm supports streaming, we check that both the streaming and
@@ -423,36 +395,23 @@ static int ec_test_sign(u8 *sig, u8 siglen, ec_key_pair *kp,
 	 */
 	int ret, check;
 	ret = _ec_sign(sig, siglen, kp, (const u8 *)(c->msg), c->msglen,
-				c->nn_random, c->sig_type, c->hash_type, c->adata, c->adata_len);
-	if(ret){
-		ret = -1;
-		goto err;
-	}
+				c->nn_random, c->sig_type, c->hash_type, c->adata, c->adata_len); EG(ret, err);
 	ret = is_sign_streaming_mode_supported(c->sig_type, &check); EG(ret, err);
 	if(check){
 		u8 sig_tmp[EC_MAX_SIGLEN];
-		if(siglen > sizeof(sig_tmp)){
-			ret = -1;
-			goto err;
-		}
+		MUST_HAVE(siglen <= sizeof(sig_tmp), ret, err);
 		ret = generic_ec_sign(sig_tmp, siglen, kp, (const u8 *)(c->msg), c->msglen,
-				c->nn_random, c->sig_type, c->hash_type, c->adata, c->adata_len);
-		if(ret){
-			ret = -1;
-			goto err;
-		}
-		if(!are_equal(sig, sig_tmp, siglen)){
+				c->nn_random, c->sig_type, c->hash_type, c->adata, c->adata_len); EG(ret, err);
+		ret = are_equal(sig, sig_tmp, siglen, &check); EG(ret, err);
+		if(!check){
 			ret = -1;
 			goto err;
 		}
 		/* Now test the random split version */
 		ret = random_split_ec_sign(sig_tmp, siglen, kp, (const u8 *)(c->msg), c->msglen,
-				c->nn_random, c->sig_type, c->hash_type, c->adata, c->adata_len);
-		if(ret){
-			ret = -1;
-			goto err;
-		}
-		if(!are_equal(sig, sig_tmp, siglen)){
+				c->nn_random, c->sig_type, c->hash_type, c->adata, c->adata_len); EG(ret, err);
+		ret = are_equal(sig, sig_tmp, siglen, &check); EG(ret, err);
+		if(!check){
 			ret = -1;
 			goto err;
 		}
@@ -463,7 +422,7 @@ err:
 	return ret;
 }
 
-static int ec_test_verify(u8 *sig, u8 siglen, const ec_pub_key *pub_key,
+ATTRIBUTE_WARN_UNUSED_RET static int ec_test_verify(u8 *sig, u8 siglen, const ec_pub_key *pub_key,
 			  const ec_test_case *c)
 {
 	/* If the algorithm supports streaming, we check that both the streaming and
@@ -505,7 +464,7 @@ err:
  * case, the value encodes the information on what went wrong as
  * described above.
  */
-static int ec_sig_known_vector_tests_one(const ec_test_case *c)
+ATTRIBUTE_WARN_UNUSED_RET static int ec_sig_known_vector_tests_one(const ec_test_case *c)
 {
 	test_err_kind failed_test = TEST_KEY_IMPORT_ERROR;
 	u8 sig[EC_MAX_SIGLEN];
@@ -513,9 +472,8 @@ static int ec_sig_known_vector_tests_one(const ec_test_case *c)
 	ec_key_pair kp;
 	u8 siglen;
 	int ret;
-#ifdef USE_CRYPTOFUZZ
-	u8 check = 0;
-#endif
+	int check = 0;
+
 	MUST_HAVE(c != NULL, ret, err);
 
 	ret = import_params(&params, c->ec_str_p);
@@ -563,8 +521,8 @@ static int ec_sig_known_vector_tests_one(const ec_test_case *c)
 		goto err;
 	}
 
-	ret = are_equal(sig, c->exp_sig, siglen);
-	if (!ret) {
+	ret = are_equal(sig, c->exp_sig, siglen, &check); EG(ret, err);
+	if (!check) {
 		ret = -1;
 		failed_test = TEST_SIG_COMP_ERROR;
 		goto err;
@@ -614,7 +572,7 @@ static int ec_sig_known_vector_tests_one(const ec_test_case *c)
 		}
 		const u8 *input[2] = { (const u8*)(c->msg) , NULL};
 		u32 ilens[2] = { c->msglen , 0 };
-		sig_ctx.h->hfunc_scattered(input, ilens, digest);
+		ret = sig_ctx.h->hfunc_scattered(input, ilens, digest); EG(ret, err);
 		digestlen = sig_ctx.h->digest_size;
 		MUST_HAVE(digestlen <= sizeof(digest), ret, err);
 		/* Import the fixed nonce */
@@ -626,7 +584,7 @@ static int ec_sig_known_vector_tests_one(const ec_test_case *c)
 			failed_test = TEST_SIG_ERROR;
 			goto err;
 		}
-		nn_export_to_buf(nonce, BYTECEIL(q_bit_len), &n_nonce);
+		ret = nn_export_to_buf(nonce, BYTECEIL(q_bit_len), &n_nonce); EG(ret, err);
 		if((unsigned int)BYTECEIL(q_bit_len) > sizeof(nonce)){
 			ret = -1;
 			failed_test = TEST_SIG_ERROR;
@@ -663,8 +621,8 @@ static int ec_sig_known_vector_tests_one(const ec_test_case *c)
 		}
 #endif
 		/* Check computed signature against expected one */
-		ret = are_equal(sig, c->exp_sig, siglen);
-		if (!ret) {
+		ret = are_equal(sig, c->exp_sig, siglen, &check); EG(ret, err);
+		if (!check) {
 			failed_test = TEST_SIG_COMP_ERROR;
 			ret = -1;
 			goto err;
@@ -717,11 +675,12 @@ static int ec_sig_known_vector_tests_one(const ec_test_case *c)
 	return ret;
 }
 
-int perform_known_test_vectors_test(const char *sig, const char *hash, const char *curve)
+ATTRIBUTE_WARN_UNUSED_RET int perform_known_test_vectors_test(const char *sig, const char *hash, const char *curve)
 {
 	const ec_test_case *cur_test;
 	unsigned int i;
 	int ret = 0;
+	int check;
 
 	ext_printf("======= Known test vectors test =================\n");
 	for (i = 0; i < EC_FIXED_VECTOR_NUM_TESTS; i++) {
@@ -740,7 +699,8 @@ int perform_known_test_vectors_test(const char *sig, const char *hash, const cha
 			if(sig_map == NULL){
 				continue;
 			}
-			if(!are_str_equal(sig_map->name, sig)){
+			ret = are_str_equal(sig_map->name, sig, &check); EG(ret, err);
+			if(!check){
 				continue;
 			}
 		}
@@ -750,7 +710,8 @@ int perform_known_test_vectors_test(const char *sig, const char *hash, const cha
 			if(hash_map == NULL){
 				continue;
 			}
-			if(!are_str_equal(hash_map->name, hash)){
+			ret = are_str_equal(hash_map->name, hash, &check); EG(ret, err);
+			if(!check){
 				continue;
 			}
 		}
@@ -758,7 +719,8 @@ int perform_known_test_vectors_test(const char *sig, const char *hash, const cha
 			if(cur_test->ec_str_p == NULL){
 				continue;
 			}
-			if(!are_str_equal((const char*)cur_test->ec_str_p->name->buf, curve)){
+			ret = are_str_equal((const char*)cur_test->ec_str_p->name->buf, curve, &check); EG(ret, err);
+			if(!check){
 				continue;
 			}
 		}
@@ -792,7 +754,7 @@ int perform_known_test_vectors_test(const char *sig, const char *hash, const cha
 	return ret;
 }
 
-static int rand_sig_verif_test_one(const ec_sig_mapping *sig,
+ATTRIBUTE_WARN_UNUSED_RET static int rand_sig_verif_test_one(const ec_sig_mapping *sig,
 				   const hash_mapping *hash,
 				   const ec_mapping *ec)
 {
@@ -802,14 +764,19 @@ static int rand_sig_verif_test_one(const ec_sig_mapping *sig,
 	const char *crv_name = (const char *)PARAM_BUF_PTR((ec->params)->name);
 	ec_test_case t;
 	int ret;
+	u32 len;
 
 	/* Generate the test name */
-	local_memset(test_name, 0, tn_size + 1);
-	local_strncpy(test_name, sig->name, tn_size);
-	local_strncat(test_name, "-", tn_size -	local_strlen(test_name));
-	local_strncat(test_name, hash->name, tn_size - local_strlen(test_name));
-	local_strncat(test_name, "/", tn_size - local_strlen(test_name));
-	local_strncat(test_name, crv_name, tn_size - local_strlen(test_name));
+	ret = local_memset(test_name, 0, tn_size + 1); EG(ret, err);
+	ret = local_strncpy(test_name, sig->name, tn_size); EG(ret, err);
+	ret = local_strlen(test_name, &len); EG(ret, err);
+	ret = local_strncat(test_name, "-", tn_size - len); EG(ret, err);
+	ret = local_strlen(test_name, &len); EG(ret, err);
+	ret = local_strncat(test_name, hash->name, tn_size - len); EG(ret, err);
+	ret = local_strlen(test_name, &len); EG(ret, err);
+	ret = local_strncat(test_name, "/", tn_size - len); EG(ret, err);
+	ret =  local_strlen(test_name, &len); EG(ret, err);
+	ret = local_strncat(test_name, crv_name, tn_size - len); EG(ret, err);
 
 	/* Create a test */
 	t.name = test_name;
@@ -839,14 +806,8 @@ static int rand_sig_verif_test_one(const ec_sig_mapping *sig,
 #endif
 	{
 		u8 rand_len = 0;
-		if(get_random((u8 *)&rand_len, sizeof(rand_len))){
-			ret = -1;
-			return ret;
-		}
-		if(get_random((u8 *)rand_adata, (rand_len % sizeof(rand_adata)))){
-			ret = -1;
-			return ret;
-		}
+		ret = get_random((u8 *)&rand_len, sizeof(rand_len)); EG(ret, err);
+		ret = get_random((u8 *)rand_adata, (rand_len % sizeof(rand_adata))); EG(ret, err);
 		t.adata = rand_adata;
 		t.adata_len = rand_len;
 	}
@@ -880,13 +841,14 @@ static int rand_sig_verif_test_one(const ec_sig_mapping *sig,
 #endif
 #endif
 
+err:
 	return ret;
 }
 
-int perform_random_sig_verif_test(const char *sig, const char *hash, const char *curve)
+ATTRIBUTE_WARN_UNUSED_RET int perform_random_sig_verif_test(const char *sig, const char *hash, const char *curve)
 {
 	unsigned int i, j, k;
-	int ret;
+	int ret, check;
 
 	/*
 	 * Perform basic sign/verify tests on all the cipher suites
@@ -897,17 +859,20 @@ int perform_random_sig_verif_test(const char *sig, const char *hash, const char 
 		for (j = 0; hash_maps[j].type != UNKNOWN_HASH_ALG; j++) {
 			for (k = 0; k < EC_CURVES_NUM; k++) {
 				if(sig != NULL){
-					if(!are_str_equal(ec_sig_maps[i].name, sig)){
+					ret = are_str_equal(ec_sig_maps[i].name, sig, &check); EG(ret, err);
+					if(!check){
 						continue;
 					}
 				}
 				if(hash != NULL){
-					if(!are_str_equal(hash_maps[j].name, hash)){
+					ret = are_str_equal(hash_maps[j].name, hash, &check); EG(ret, err);
+					if(!check){
 						continue;
 					}
 				}
 				if(curve != NULL){
-					if(!are_str_equal((const char*)ec_maps[k].params->name->buf, curve)){
+					ret = are_str_equal((const char*)ec_maps[k].params->name->buf, curve, &check); EG(ret, err);
+					if(!check){
 						continue;
 					}
 				}
@@ -955,7 +920,7 @@ err:
  * ECC generic performance test: Returns the number of signatures
  * and verifications per second
  */
-static int ec_performance_test(const ec_test_case *c,
+ATTRIBUTE_WARN_UNUSED_RET static int ec_performance_test(const ec_test_case *c,
 			       unsigned int *n_perf_sign,
 			       unsigned int *n_perf_verif)
 {
@@ -1079,7 +1044,7 @@ static int ec_performance_test(const ec_test_case *c,
 }
 
 
-static int perf_test_one(const ec_sig_mapping *sig, const hash_mapping *hash,
+ATTRIBUTE_WARN_UNUSED_RET static int perf_test_one(const ec_sig_mapping *sig, const hash_mapping *hash,
 			 const ec_mapping *ec)
 {
 	char test_name[MAX_CURVE_NAME_LEN + MAX_HASH_ALG_NAME_LEN +
@@ -1089,14 +1054,19 @@ static int perf_test_one(const ec_sig_mapping *sig, const hash_mapping *hash,
 	const char *crv_name = (const char *)PARAM_BUF_PTR((ec->params)->name);
 	ec_test_case t;
 	int ret;
+	u32 len;
 
 	/* Generate the test name */
-	local_memset(test_name, 0, tn_size + 1);
-	local_strncpy(test_name, sig->name, tn_size);
-	local_strncat(test_name, "-", tn_size -	local_strlen(test_name));
-	local_strncat(test_name, hash->name, tn_size - local_strlen(test_name));
-	local_strncat(test_name, "/", tn_size - local_strlen(test_name));
-	local_strncat(test_name, crv_name, tn_size - local_strlen(test_name));
+	ret = local_memset(test_name, 0, tn_size + 1); EG(ret, err);
+	ret = local_strncpy(test_name, sig->name, tn_size); EG(ret, err);
+	ret = local_strlen(test_name, &len); EG(ret, err);
+	ret = local_strncat(test_name, "-", tn_size - len); EG(ret, err);
+	ret = local_strlen(test_name, &len); EG(ret, err);
+	ret = local_strncat(test_name, hash->name, tn_size - len); EG(ret, err);
+	ret = local_strlen(test_name, &len); EG(ret, err);
+	ret = local_strncat(test_name, "/", tn_size - len); EG(ret, err);
+	ret = local_strlen(test_name, &len); EG(ret, err);
+	ret = local_strncat(test_name, crv_name, tn_size - len); EG(ret, err);
 
 	/* Create a test */
 	t.name = test_name;
@@ -1126,14 +1096,8 @@ static int perf_test_one(const ec_sig_mapping *sig, const hash_mapping *hash,
 #endif
 	{
 		u8 rand_len = 0;
-		if(get_random((u8 *)&rand_len, sizeof(rand_len))){
-			ret = -1;
-			return ret;
-		}
-		if(get_random((u8 *)rand_adata, (rand_len % sizeof(rand_adata)))){
-			ret = -1;
-			return ret;
-		}
+		ret = get_random((u8 *)&rand_len, sizeof(rand_len)); EG(ret, err);
+		ret = get_random((u8 *)rand_adata, (rand_len % sizeof(rand_adata))); EG(ret, err);
 		t.adata = rand_adata;
 		t.adata_len = rand_len;
 	}
@@ -1152,13 +1116,14 @@ static int perf_test_one(const ec_sig_mapping *sig, const hash_mapping *hash,
 		ext_printf("\t(0 is less than one sig/verif per sec)\n");
 	}
 
+err:
 	return ret;
 }
 
-int perform_performance_test(const char *sig, const char *hash, const char *curve)
+ATTRIBUTE_WARN_UNUSED_RET int perform_performance_test(const char *sig, const char *hash, const char *curve)
 {
 	unsigned int i, j, k;
-	int ret;
+	int ret, check;
 
 	/* Perform performance tests like "openssl speed" command */
 	ext_printf("======= Performance test ========================\n");
@@ -1166,17 +1131,20 @@ int perform_performance_test(const char *sig, const char *hash, const char *curv
 		for (j = 0; hash_maps[j].type != UNKNOWN_HASH_ALG; j++) {
 			for (k = 0; k < EC_CURVES_NUM; k++) {
 				if(sig != NULL){
-					if(!are_str_equal(ec_sig_maps[i].name, sig)){
+					ret = are_str_equal(ec_sig_maps[i].name, sig, &check); EG(ret, err);
+					if(!check){
 						continue;
 					}
 				}
 				if(hash != NULL){
-					if(!are_str_equal(hash_maps[j].name, hash)){
+					ret = are_str_equal(hash_maps[j].name, hash, &check); EG(ret, err);
+					if(!check){
 						continue;
 					}
 				}
 				if(curve != NULL){
-					if(!are_str_equal((const char*)ec_maps[k].params->name->buf, curve)){
+					ret = are_str_equal((const char*)ec_maps[k].params->name->buf, curve, &check); EG(ret, err);
+					if(!check){
 						continue;
 					}
 				}

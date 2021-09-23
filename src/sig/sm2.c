@@ -78,7 +78,7 @@ int sm2_init_pub_key(ec_pub_key *out_pub, const ec_priv_key *in_priv)
 	G = &(in_priv->params->ec_gen);
 
 	/* Zero init public key to be generated */
-	local_memset(out_pub, 0, sizeof(ec_pub_key));
+	ret = local_memset(out_pub, 0, sizeof(ec_pub_key)); EG(ret, err);
 
 	/* Use blinding with scalar_b when computing point scalar multiplication */
 	ret = prj_pt_mul_monty_blind(&(out_pub->y), &(in_priv->x), G); EG(ret, err);
@@ -133,7 +133,7 @@ err:
  */
 #define Z_INPUT_MAX_LEN (2 + SM2_MAX_ID_LEN + (6 * BYTECEIL(CURVES_MAX_P_BIT_LEN)))
 
-static int sm2_compute_Z(u8 *Z, u16 *Zlen, const u8 *id, u16 id_len,
+ATTRIBUTE_WARN_UNUSED_RET static int sm2_compute_Z(u8 *Z, u16 *Zlen, const u8 *id, u16 id_len,
 		  const ec_pub_key *pub_key, hash_alg_type hash_type)
 {
 	u16 hsize, entlen, p_len;
@@ -197,8 +197,8 @@ static int sm2_compute_Z(u8 *Z, u16 *Zlen, const u8 *id, u16 id_len,
 	ret = hm->hfunc_finalize(&hctx, Z); EG(ret, err);
 	dbg_buf_print("Z", Z, hsize);
 
-	local_memset(buf, 0, sizeof(buf));
-	local_memset(&hctx, 0, sizeof(hctx));
+	ret = local_memset(buf, 0, sizeof(buf)); EG(ret, err);
+	ret = local_memset(&hctx, 0, sizeof(hctx)); EG(ret, err);
 
 	*Zlen = hsize;
 
@@ -265,7 +265,7 @@ int _sm2_sign_init(struct ec_sign_context *ctx)
 	ret = ctx->h->hfunc_init(&(ctx->sign_data.sm2.h_ctx)); EG(ret, err);
 
 	/* Compute Z from the ID */
-	local_memset(Z, 0, sizeof(Z));
+	ret = local_memset(Z, 0, sizeof(Z)); EG(ret, err);
 	Zlen = sizeof(Z);
 	ret = sm2_compute_Z(Z, &Zlen, ctx->adata, ctx->adata_len,
 			    &(ctx->key_pair->pub_key), ctx->h->type); EG(ret, err);
@@ -334,7 +334,7 @@ int _sm2_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	SM2_SIGN_CHECK_INITIALIZED(&(ctx->sign_data.sm2), ret, err);
 
 	/* Zero init out point */
-	local_memset(&kG, 0, sizeof(prj_pt));
+	ret = local_memset(&kG, 0, sizeof(prj_pt)); EG(ret, err);
 
 	/* Make things more readable */
 	priv_key = &(ctx->key_pair->priv_key);
@@ -354,7 +354,7 @@ int _sm2_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	/* Check given signature buffer length has the expected size */
 	MUST_HAVE(siglen == SM2_SIGLEN(q_bit_len), ret, err);
 
-	local_memset(hash, 0, hsize);
+	ret = local_memset(hash, 0, hsize); EG(ret, err);
 	/* Since we call a callback, sanity check our mapping */
 	ret = hash_mapping_callbacks_sanity_check(ctx->h); EG(ret, err);
 
@@ -389,7 +389,7 @@ int _sm2_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 
 	/* 5. Compute r = (OS2I(H) + Wx) mod q */
 	ret = nn_init_from_buf(&tmp, hash, hsize); EG(ret, err);
-	local_memset(hash, 0, hsize);
+	ret = local_memset(hash, 0, hsize); EG(ret, err);
 	dbg_nn_print("OS2I(H)", &tmp);
 	ret = nn_add(&tmp2, &tmp, &(W.x.fp_val)); EG(ret, err);
 	ret = nn_mod(&r, &tmp2, q); EG(ret, err);
@@ -462,7 +462,7 @@ err:
 	 * We can now clear data part of the context. This will clear
 	 * magic and avoid further reuse of the whole context.
 	 */
-	local_memset(&(ctx->sign_data.sm2), 0, sizeof(sm2_sign_data));
+	IGNORE_RET_VAL(local_memset(&(ctx->sign_data.sm2), 0, sizeof(sm2_sign_data)));
 
 	/* Clean what remains on the stack */
 	PTR_NULLIFY(priv_key);
@@ -560,7 +560,7 @@ int _sm2_verify_init(struct ec_verify_context *ctx,
 	ret = ctx->h->hfunc_init(&(ctx->verify_data.sm2.h_ctx)); EG(ret, err);
 
 	/* Compute Z from the ID */
-	local_memset(Z, 0, sizeof(Z));
+	ret = local_memset(Z, 0, sizeof(Z)); EG(ret, err);
 	Zlen = sizeof(Z);
 	ret = sm2_compute_Z(Z, &Zlen, ctx->adata, ctx->adata_len, ctx->pub_key, ctx->h->type); EG(ret, err);
 
@@ -630,8 +630,8 @@ int _sm2_verify_finalize(struct ec_verify_context *ctx)
 	SM2_VERIFY_CHECK_INITIALIZED(&(ctx->verify_data.sm2), ret, err);
 
 	/* Zero init points */
-	local_memset(&sG, 0, sizeof(prj_pt));
-	local_memset(&tY, 0, sizeof(prj_pt));
+	ret = local_memset(&sG, 0, sizeof(prj_pt)); EG(ret, err);
+	ret = local_memset(&tY, 0, sizeof(prj_pt)); EG(ret, err);
 
 	/* Make things more readable */
 	G = &(ctx->pub_key->params->ec_gen);
@@ -656,7 +656,7 @@ int _sm2_verify_finalize(struct ec_verify_context *ctx)
 
 	/* 5. Compute e = OS2I(h) mod q */
 	ret = nn_init_from_buf(&tmp, hash, hsize); EG(ret, err);
-	local_memset(hash, 0, hsize);
+	ret = local_memset(hash, 0, hsize); EG(ret, err);
 	dbg_nn_print("h imported as nn", &tmp);
 	ret = nn_mod(&e, &tmp, q); EG(ret, err);
 	dbg_nn_print("e", &e);
@@ -698,7 +698,7 @@ int _sm2_verify_finalize(struct ec_verify_context *ctx)
 	 * We can now clear data part of the context. This will clear
 	 * magic and avoid further reuse of the whole context.
 	 */
-	local_memset(&(ctx->verify_data.sm2), 0, sizeof(sm2_verify_data));
+	IGNORE_RET_VAL(local_memset(&(ctx->verify_data.sm2), 0, sizeof(sm2_verify_data)));
 
 	/* Clean what remains on the stack */
 	PTR_NULLIFY(G);

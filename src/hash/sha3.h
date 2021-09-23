@@ -39,8 +39,8 @@ typedef struct sha3_context_ {
 } sha3_context;
 
 
-int _sha3_init(sha3_context *ctx, u8 digest_size);
-int _sha3_update(sha3_context *ctx, const u8 *buf, u32 buflen);
-int _sha3_finalize(sha3_context *ctx, u8 *output);
+ATTRIBUTE_WARN_UNUSED_RET int _sha3_init(sha3_context *ctx, u8 digest_size);
+ATTRIBUTE_WARN_UNUSED_RET int _sha3_update(sha3_context *ctx, const u8 *buf, u32 buflen);
+ATTRIBUTE_WARN_UNUSED_RET int _sha3_finalize(sha3_context *ctx, u8 *output);
 
 #endif /* __SHA3_H__ */

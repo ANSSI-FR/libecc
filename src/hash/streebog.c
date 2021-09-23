@@ -27,7 +27,7 @@
 
 /*** Generic functions for both STREEBOG256 and STREEBOG512 ***/
 /* Init */
-static int streebog_init(streebog_context *ctx, u8 digest_size, u8 block_size)
+ATTRIBUTE_WARN_UNUSED_RET static int streebog_init(streebog_context *ctx, u8 digest_size, u8 block_size)
 {
 	int ret;
 
@@ -37,10 +37,10 @@ static int streebog_init(streebog_context *ctx, u8 digest_size, u8 block_size)
 	MUST_HAVE(ctx != NULL, ret, err);
 
 	/* Zeroize the internal state */
-	local_memset(ctx, 0, sizeof(streebog_context));
+	ret = local_memset(ctx, 0, sizeof(streebog_context)); EG(ret, err);
 
 	if(digest_size == 32){
-		local_memset(ctx->h, 1, sizeof(ctx->h));
+		ret = local_memset(ctx->h, 1, sizeof(ctx->h)); EG(ret, err);
 	}
 
 	/* Initialize our digest size and block size */
@@ -49,13 +49,11 @@ static int streebog_init(streebog_context *ctx, u8 digest_size, u8 block_size)
 	/* Detect endianness */
 	ctx->streebog_endian = arch_is_big_endian() ? STREEBOG_BIG : STREEBOG_LITTLE;
 
-	ret = 0;
-
 err:
 	return ret;
 }
 
-static int streebog_update(streebog_context *ctx, const u8 *input, u32 ilen)
+ATTRIBUTE_WARN_UNUSED_RET static int streebog_update(streebog_context *ctx, const u8 *input, u32 ilen)
 {
 	const u8 *data_ptr = input;
 	u32 remain_ilen = ilen;
@@ -79,7 +77,7 @@ static int streebog_update(streebog_context *ctx, const u8 *input, u32 ilen)
 
 	if ((left > 0) && (remain_ilen >= fill)) {
 		/* Copy data at the end of the buffer */
-		local_memcpy(ctx->streebog_buffer + left, data_ptr, fill);
+		ret = local_memcpy(ctx->streebog_buffer + left, data_ptr, fill); EG(ret, err);
 		streebog_process(ctx, ctx->streebog_buffer, (8 * STREEBOG_BLOCK_SIZE));
 		data_ptr += fill;
 		remain_ilen -= fill;
@@ -93,7 +91,7 @@ static int streebog_update(streebog_context *ctx, const u8 *input, u32 ilen)
 	}
 
 	if (remain_ilen > 0) {
-		local_memcpy(ctx->streebog_buffer + left, data_ptr, remain_ilen);
+		ret = local_memcpy(ctx->streebog_buffer + left, data_ptr, remain_ilen); EG(ret, err);
 	}
 
 	ret = 0;
@@ -102,7 +100,7 @@ err:
 	return ret;
 }
 
-static int streebog_final(streebog_context *ctx, u8 *output)
+ATTRIBUTE_WARN_UNUSED_RET static int streebog_final(streebog_context *ctx, u8 *output)
 {
 	unsigned int block_present = 0;
 	u8 last_padded_block[STREEBOG_BLOCK_SIZE];
@@ -119,17 +117,17 @@ static int streebog_final(streebog_context *ctx, u8 *output)
 	MUST_HAVE((digest_size == 32) || (digest_size == 64), ret, err);
 
 	/* Zero init our Z */
-	local_memset(Z, 0, sizeof(Z));
+	ret = local_memset(Z, 0, sizeof(Z)); EG(ret, err);
 
 	/* Fill in our last block with zeroes */
-	local_memset(last_padded_block, 0, sizeof(last_padded_block));
+	ret = local_memset(last_padded_block, 0, sizeof(last_padded_block)); EG(ret, err);
 
 	/* This is our final step, so we proceed with the padding */
 	block_present = ctx->streebog_total % STREEBOG_BLOCK_SIZE;
 	if (block_present != 0) {
 		/* Copy what's left in our temporary context buffer */
-		local_memcpy(last_padded_block, ctx->streebog_buffer,
-			     block_present);
+		ret = local_memcpy(last_padded_block, ctx->streebog_buffer,
+			     block_present); EG(ret, err);
 	}
 
 	/* Put the 0x01 byte, beginning of padding  */

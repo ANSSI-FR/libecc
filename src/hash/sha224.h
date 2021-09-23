@@ -59,12 +59,12 @@ typedef struct {
         word_t magic;
 } sha224_context;
 
-int sha224_init(sha224_context *ctx);
-int sha224_update(sha224_context *ctx, const u8 *input, u32 ilen);
-int sha224_final(sha224_context *ctx, u8 output[SHA224_DIGEST_SIZE]);
-int sha224_scattered(const u8 **inputs, const u32 *ilens,
+ATTRIBUTE_WARN_UNUSED_RET int sha224_init(sha224_context *ctx);
+ATTRIBUTE_WARN_UNUSED_RET int sha224_update(sha224_context *ctx, const u8 *input, u32 ilen);
+ATTRIBUTE_WARN_UNUSED_RET int sha224_final(sha224_context *ctx, u8 output[SHA224_DIGEST_SIZE]);
+ATTRIBUTE_WARN_UNUSED_RET int sha224_scattered(const u8 **inputs, const u32 *ilens,
 		     u8 output[SHA224_DIGEST_SIZE]);
-int sha224(const u8 *input, u32 ilen, u8 output[SHA224_DIGEST_SIZE]);
+ATTRIBUTE_WARN_UNUSED_RET int sha224(const u8 *input, u32 ilen, u8 output[SHA224_DIGEST_SIZE]);
 
 #endif /* __SHA224_H__ */
 #endif /* WITH_HASH_SHA224 */

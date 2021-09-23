@@ -19,7 +19,7 @@
 #include "sha224.h"
 
 /* SHA-2 core processing. Returns 0 on success, -1 on error. */
-static int sha224_process(sha224_context *ctx,
+ATTRIBUTE_WARN_UNUSED_RET static int sha224_process(sha224_context *ctx,
 			   const u8 data[SHA224_BLOCK_SIZE])
 {
 	u32 a, b, c, d, e, f, g, h;
@@ -118,7 +118,7 @@ int sha224_update(sha224_context *ctx, const u8 *input, u32 ilen)
 
 	if ((left > 0) && (remain_ilen >= fill)) {
 		/* Copy data at the end of the buffer */
-		local_memcpy(ctx->sha224_buffer + left, data_ptr, fill);
+		ret = local_memcpy(ctx->sha224_buffer + left, data_ptr, fill); EG(ret, err);
 		ret = sha224_process(ctx, ctx->sha224_buffer); EG(ret, err);
 		data_ptr += fill;
 		remain_ilen -= fill;
@@ -132,7 +132,7 @@ int sha224_update(sha224_context *ctx, const u8 *input, u32 ilen)
 	}
 
 	if (remain_ilen > 0) {
-		local_memcpy(ctx->sha224_buffer + left, data_ptr, remain_ilen);
+		ret = local_memcpy(ctx->sha224_buffer + left, data_ptr, remain_ilen); EG(ret, err);
 	}
 
 	ret = 0;
@@ -152,14 +152,14 @@ int sha224_final(sha224_context *ctx, u8 output[SHA224_DIGEST_SIZE])
 	SHA224_HASH_CHECK_INITIALIZED(ctx, ret, err);
 
 	/* Fill in our last block with zeroes */
-	local_memset(last_padded_block, 0, sizeof(last_padded_block));
+	ret = local_memset(last_padded_block, 0, sizeof(last_padded_block)); EG(ret, err);
 
 	/* This is our final step, so we proceed with the padding */
 	block_present = ctx->sha224_total % SHA224_BLOCK_SIZE;
 	if (block_present != 0) {
 		/* Copy what's left in our temporary context buffer */
-		local_memcpy(last_padded_block, ctx->sha224_buffer,
-			     block_present);
+		ret = local_memcpy(last_padded_block, ctx->sha224_buffer,
+			     block_present); EG(ret, err);
 	}
 
 	/* Put the 0x80 byte, beginning of padding  */

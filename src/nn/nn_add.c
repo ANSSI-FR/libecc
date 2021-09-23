@@ -57,7 +57,7 @@
  *
  * This function is for internal use only.
  */
-static int _nn_cnd_add(int cnd, nn_t out, nn_src_t in1, nn_src_t in2,
+ATTRIBUTE_WARN_UNUSED_RET static int _nn_cnd_add(int cnd, nn_t out, nn_src_t in1, nn_src_t in2,
 		       word_t *carry)
 {
 	word_t tmp, carry1, carry2, _carry = WORD(0);
@@ -176,7 +176,7 @@ int nn_add(nn_t out, nn_src_t in1, nn_src_t in2)
  *
  * This function is for internal use only.
  */
-static int nn_add_word(nn_t out, nn_src_t in1, word_t w)
+ATTRIBUTE_WARN_UNUSED_RET static int nn_add_word(nn_t out, nn_src_t in1, word_t w)
 {
 	word_t carry, tmp;
 	u8 i, n_wlen;

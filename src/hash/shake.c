@@ -19,7 +19,7 @@ int _shake_init(shake_context *ctx, u8 digest_size, u8 block_size)
 	MUST_HAVE(ctx != NULL, ret, err);
 
         /* Zeroize the internal state */
-        local_memset(ctx->shake_state, 0, sizeof(ctx->shake_state));
+        ret = local_memset(ctx->shake_state, 0, sizeof(ctx->shake_state)); EG(ret, err);
 
         ctx->shake_idx = 0;
         ctx->shake_digest_size = digest_size;
@@ -27,7 +27,6 @@ int _shake_init(shake_context *ctx, u8 digest_size, u8 block_size)
 
 	/* Detect endianness */
 	ctx->shake_endian = arch_is_big_endian() ? SHAKE_BIG : SHAKE_LITTLE;
-	ret = 0;
 
 err:
         return ret;

@@ -26,10 +26,11 @@
 #define HDR_MAGIC	 0x34215609
 
 typedef enum {
-	IMAGE_TYPE0 = 0,
-	IMAGE_TYPE1 = 1,
-	IMAGE_TYPE2 = 2,
-	IMAGE_TYPE3 = 3,
+	IMAGE_TYPE_UNKNOWN = 0,
+	IMAGE_TYPE0 = 1,
+	IMAGE_TYPE1 = 2,
+	IMAGE_TYPE2 = 3,
+	IMAGE_TYPE3 = 4,
 	/* Info: You can add more image header types */
 } image_type;
 
@@ -50,7 +51,7 @@ typedef enum {
 	DOTH,
 } export_file_type;
 
-static int export_private_key(FILE * file, const char *name,
+ATTRIBUTE_WARN_UNUSED_RET static int export_private_key(FILE * file, const char *name,
 			      const ec_priv_key *priv_key,
 			      export_file_type file_type)
 {
@@ -106,7 +107,7 @@ static int export_private_key(FILE * file, const char *name,
 	return ret;
 }
 
-static int export_public_key(FILE * file, const char *name,
+ATTRIBUTE_WARN_UNUSED_RET static int export_public_key(FILE * file, const char *name,
 			     const ec_pub_key *pub_key,
 			     export_file_type file_type)
 {
@@ -164,7 +165,7 @@ static int export_public_key(FILE * file, const char *name,
 	return ret;
 }
 
-static int string_to_params(const char *ec_name, const char *ec_sig_name,
+ATTRIBUTE_WARN_UNUSED_RET static int string_to_params(const char *ec_name, const char *ec_sig_name,
 			    ec_sig_alg_type * sig_type,
 			    const ec_str_params ** ec_str_p,
 			    const char *hash_name, hash_alg_type * hash_type)
@@ -173,11 +174,13 @@ static int string_to_params(const char *ec_name, const char *ec_sig_name,
 	const ec_sig_mapping *sm;
 	const hash_mapping *hm;
 	u32 curve_name_len;
+	int ret;
 
 	if (sig_type != NULL) {
 		/* Get sig type from signature alg name */
-		int ret = get_sig_by_name(ec_sig_name, &sm);
+		ret = get_sig_by_name(ec_sig_name, &sm);
 		if ((ret) || (!sm)) {
+			ret = -1;
 			printf("Error: signature type %s is unknown!\n",
 			       ec_sig_name);
 			goto err;
@@ -187,14 +190,17 @@ static int string_to_params(const char *ec_name, const char *ec_sig_name,
 
 	if (ec_str_p != NULL) {
 		/* Get curve params from curve name */
-		curve_name_len = local_strlen((const char *)ec_name) + 1;
+		ret = local_strlen((const char *)ec_name, &curve_name_len); EG(ret, err);
+		curve_name_len += 1;
 		if(curve_name_len > 255){
 			/* Sanity check */
+			ret = -1;
 			goto err;
 		}
-		int ret = ec_get_curve_params_by_name((const u8 *)ec_name,
+		ret = ec_get_curve_params_by_name((const u8 *)ec_name,
 							   (u8)curve_name_len, &curve_params);
 		if ((ret) || (!curve_params)) {
+			ret = -1;
 			printf("Error: EC curve %s is unknown!\n", ec_name);
 			goto err;
 		}
@@ -203,8 +209,9 @@ static int string_to_params(const char *ec_name, const char *ec_sig_name,
 
 	if (hash_type != NULL) {
 		/* Get hash type from hash alg name */
-		int ret = get_hash_by_name(hash_name, &hm);
+		ret = get_hash_by_name(hash_name, &hm);
 		if ((ret) || (!hm)) {
+			ret = -1;
 			printf("Error: hash function %s is unknown!\n",
 			       hash_name);
 			goto err;
@@ -212,13 +219,13 @@ static int string_to_params(const char *ec_name, const char *ec_sig_name,
 		*hash_type = hm->type;
 	}
 
-	return 0;
+	ret = 0;
 
  err:
-	return -1;
+	return ret;
 }
 
-static int generate_and_export_key_pair(const char *ec_name,
+ATTRIBUTE_WARN_UNUSED_RET static int generate_and_export_key_pair(const char *ec_name,
 					const char *ec_sig_name,
 					const char *fname_prefix)
 {
@@ -228,6 +235,7 @@ static int generate_and_export_key_pair(const char *ec_name,
 	const u16 fname_len = sizeof(fname);
 	const u16 kname_len = sizeof(kname);
 	u16 prefix_len;
+	u32 len;
 	ec_sig_alg_type sig_type;
 	ec_params params;
 	ec_key_pair kp;
@@ -262,10 +270,12 @@ static int generate_and_export_key_pair(const char *ec_name,
 	/*************************/
 
 	/* Export the private key to the raw binary file */
-	prefix_len = (u16)local_strnlen(fname_prefix, fname_len);
-	local_memset(fname, 0, fname_len);
-	local_memcpy(fname, fname_prefix, prefix_len);
-	local_strncat(fname, "_private_key.bin", fname_len - prefix_len);
+	ret = local_strnlen(fname_prefix, fname_len, &len); EG(ret, err);
+	MUST_HAVE(len <= 0xffff, ret, err);
+	prefix_len = (u16)len;
+	ret = local_memset(fname, 0, fname_len); EG(ret, err);
+	ret = local_memcpy(fname, fname_prefix, prefix_len); EG(ret, err);
+	ret = local_strncat(fname, "_private_key.bin", fname_len - prefix_len); EG(ret, err);
 	file = fopen(fname, "w");
 	if (file == NULL) {
 		ret = -1;
@@ -283,9 +293,9 @@ static int generate_and_export_key_pair(const char *ec_name,
 	file = NULL;
 
 	/* Export the private key to the .h file */
-	local_memset(fname, 0, fname_len);
-	local_memcpy(fname, fname_prefix, prefix_len);
-	local_strncat(fname, "_private_key.h", fname_len - prefix_len);
+	ret = local_memset(fname, 0, fname_len); EG(ret, err);
+	ret = local_memcpy(fname, fname_prefix, prefix_len); EG(ret, err);
+	ret = local_strncat(fname, "_private_key.h", fname_len - prefix_len); EG(ret, err);
 	file = fopen(fname, "w");
 	if (file == NULL) {
 		ret = -1;
@@ -306,9 +316,9 @@ static int generate_and_export_key_pair(const char *ec_name,
 	/*************************/
 
 	/* Export the public key to the raw binary file */
-	local_memset(fname, 0, fname_len);
-	local_memcpy(fname, fname_prefix, prefix_len);
-	local_strncat(fname, "_public_key.bin", fname_len - prefix_len);
+	ret = local_memset(fname, 0, fname_len); EG(ret, err);
+	ret = local_memcpy(fname, fname_prefix, prefix_len); EG(ret, err);
+	ret = local_strncat(fname, "_public_key.bin", fname_len - prefix_len); EG(ret, err);
 	file = fopen(fname, "w");
 	if (file == NULL) {
 		ret = -1;
@@ -325,9 +335,9 @@ static int generate_and_export_key_pair(const char *ec_name,
 	file = NULL;
 
 	/* Export the public key to the .h file */
-	local_memset(fname, 0, fname_len);
-	local_memcpy(fname, fname_prefix, prefix_len);
-	local_strncat(fname, "_public_key.h", fname_len - prefix_len);
+	ret = local_memset(fname, 0, fname_len); EG(ret, err);
+	ret = local_memcpy(fname, fname_prefix, prefix_len); EG(ret, err);
+	ret = local_strncat(fname, "_public_key.h", fname_len - prefix_len); EG(ret, err);
 	file = fopen(fname, "w");
 	if (file == NULL) {
 		ret = -1;
@@ -357,7 +367,7 @@ err:
 }
 
 
-static int store_sig(const char *in_fname, const char *out_fname,
+ATTRIBUTE_WARN_UNUSED_RET static int store_sig(const char *in_fname, const char *out_fname,
 		     const u8 *sig, u32 siglen,
 		     ec_sig_alg_type sig_type, hash_alg_type hash_type,
 		     const u8 curve_name[MAX_CURVE_NAME_LEN],
@@ -450,7 +460,7 @@ static int store_sig(const char *in_fname, const char *out_fname,
 }
 
 /* Get the raw size of a file */
-static int get_file_size(const char *in_fname, size_t *outsz)
+ATTRIBUTE_WARN_UNUSED_RET static int get_file_size(const char *in_fname, size_t *outsz)
 {
 	FILE *in_file = NULL;
 	long size;
@@ -497,11 +507,12 @@ static int get_file_size(const char *in_fname, size_t *outsz)
 }
 
 /* Generate a proper handler from a given type and other information */
-static int generate_metadata_hdr(metadata_hdr * hdr, const char *hdr_type,
+ATTRIBUTE_WARN_UNUSED_RET static int generate_metadata_hdr(metadata_hdr * hdr, const char *hdr_type,
 				 const char *version, size_t len, u8 siglen)
 {
 	unsigned long ver;
 	char *endptr; /* for strtoul() */
+	int ret, check;
 
 	/* The magic value */
 	hdr->magic = HDR_MAGIC;
@@ -513,36 +524,50 @@ static int generate_metadata_hdr(metadata_hdr * hdr, const char *hdr_type,
 	ver = strtoul(version, &endptr, 0);
 #ifdef WITH_STDLIB
 	if(errno){
+		ret = -1;
 		printf("Error: error in strtoul\n");
 		goto err;
 	}
 #endif
 	if (*endptr != '\0') {
+		ret = -1;
 		printf("Error: error getting provided version %s\n", version);
 		goto err;
 	}
 	if ((ver & 0xffffffff) != ver) {
+		ret = -1;
 		printf("Error: provided version %s is too long!\n", version);
 		goto err;
 	}
 	hdr->version = (u32)ver;
 
 	/* The image type */
-	if (are_str_equal(hdr_type, "IMAGE_TYPE0")) {
+	hdr->type = IMAGE_TYPE_UNKNOWN;
+	ret = are_str_equal(hdr_type, "IMAGE_TYPE0", &check); EG(ret, err);
+	if (check) {
 		hdr->type = IMAGE_TYPE0;
-	} else if (are_str_equal(hdr_type, "IMAGE_TYPE1")) {
-		hdr->type = IMAGE_TYPE0;
-	} else if (are_str_equal(hdr_type, "IMAGE_TYPE2")) {
-		hdr->type = IMAGE_TYPE0;
-	} else if (are_str_equal(hdr_type, "IMAGE_TYPE3")) {
+	}
+	ret = are_str_equal(hdr_type, "IMAGE_TYPE1", &check); EG(ret, err);
+	if (check) {
+		hdr->type = IMAGE_TYPE1;
+	}
+	ret = are_str_equal(hdr_type, "IMAGE_TYPE2", &check); EG(ret, err);
+	if (check) {
+		hdr->type = IMAGE_TYPE2;
+	}
+	ret = are_str_equal(hdr_type, "IMAGE_TYPE3", &check); EG(ret, err);
+	if (check) {
 		hdr->type = IMAGE_TYPE3;
-	} else {
+	}
+	if (hdr->type == IMAGE_TYPE_UNKNOWN) {
+		ret = -1;
 		printf("Error: unknown header type %s\n", hdr_type);
 		goto err;
 	}
 
 	/* The length without the signature */
 	if ((len & 0xffffffff) != len) {
+		ret = -1;
 		printf("Error: provided length value %lu is too long!\n", (unsigned long)len);
 		goto err;
 	}
@@ -551,16 +576,16 @@ static int generate_metadata_hdr(metadata_hdr * hdr, const char *hdr_type,
 	/* The signature length */
 	hdr->siglen = siglen;
 
-	return 0;
+	ret = 0;
 
  err:
-	return -1;
+	return ret;
 }
 
 /* Warn the user that the provided ancillary data won't be used
  * if the algorithm does not need them.
  */
-static int check_ancillary_data(const char *adata, ec_sig_alg_type sig_type, const char *sig_name, int *check)
+ATTRIBUTE_WARN_UNUSED_RET static int check_ancillary_data(const char *adata, ec_sig_alg_type sig_type, const char *sig_name, int *check)
 {
 	int ret;
 
@@ -600,7 +625,7 @@ err:
 /*
  * Sign data from file and append signature
  */
-static int sign_bin_file(const char *ec_name, const char *ec_sig_name,
+ATTRIBUTE_WARN_UNUSED_RET static int sign_bin_file(const char *ec_name, const char *ec_sig_name,
 			 const char *hash_algorithm, const char *in_fname,
 			 const char *in_key_fname,
 			 const char *out_fname, const char *hdr_type,
@@ -913,7 +938,7 @@ static int sign_bin_file(const char *ec_name, const char *ec_sig_name,
 }
 
 /* Dump metadata header */
-static int dump_hdr_info(const metadata_hdr * hdr)
+ATTRIBUTE_WARN_UNUSED_RET static int dump_hdr_info(const metadata_hdr * hdr)
 {
 	/* Dump the header */
 	printf("Metadata header info:\n");
@@ -945,7 +970,7 @@ static int dump_hdr_info(const metadata_hdr * hdr)
 /*
  * Verify signature data from file with appended signature
  */
-static int verify_bin_file(const char *ec_name, const char *ec_sig_name,
+ATTRIBUTE_WARN_UNUSED_RET static int verify_bin_file(const char *ec_name, const char *ec_sig_name,
 			   const char *hash_algorithm,
 			   const char *in_fname,
 			   const char *in_key_fname, const char *in_sig_fname, const char *adata, u16 adata_len)
@@ -1076,7 +1101,7 @@ static int verify_bin_file(const char *ec_name, const char *ec_sig_name,
 		}
 
 		/* Dump the header */
-		dump_hdr_info(&hdr);
+		ret = dump_hdr_info(&hdr); EG(ret, err);
 
 		/*
 		 * We now need to seek in file to get structured signature.
@@ -1126,8 +1151,8 @@ static int verify_bin_file(const char *ec_name, const char *ec_sig_name,
 			       hash_algorithm);
 			goto err;
 		}
-		if (!are_str_equal((char *)stored_curve_name,
-				   (char *)params.curve_name)) {
+		ret = are_str_equal((char *)stored_curve_name, (char *)params.curve_name, &check); EG(ret, err);
+		if (!check) {
 			ret = -1;
 			printf("Error: curve type '%s' imported from signature "
 			       "mismatches with '%s'\n", stored_curve_name,
@@ -1313,7 +1338,7 @@ static int verify_bin_file(const char *ec_name, const char *ec_sig_name,
 /* Compute 'scalar * Point' on the provided curve and prints
  * the result.
  */
-static int ec_scalar_mult(const char *ec_name,
+ATTRIBUTE_WARN_UNUSED_RET static int ec_scalar_mult(const char *ec_name,
 			  const char *scalar_file,
 			  const char *point_file,
 			  const char *outfile_name)
@@ -1518,12 +1543,19 @@ static void print_help(const char *prog_name)
 
 int main(int argc, char *argv[])
 {
+	int ret, check, found;
+	u32 len;
+
 	if (argc < 2) {
+		ret = -1;
 		print_help(argv[0]);
-		return -1;
+		goto err;
 	}
 
-	if (are_str_equal(argv[1], "gen_keys")) {
+	found = 0;
+	ret = are_str_equal(argv[1], "gen_keys", &check); EG(ret, err);
+	if (check) {
+		found = 1;
 		/* Generate keys ---------------------------------
 		 *
 		 * arg1 = curve name ("frp256v1", ...)
@@ -1531,6 +1563,7 @@ int main(int argc, char *argv[])
 		 * arg3 = file name prefix
 		 */
 		if (argc != 5){
+			ret = -1;
 			printf("Bad args number for %s %s:\n", argv[0],
 			       argv[1]);
 			printf("\targ1 = curve name: ");
@@ -1544,14 +1577,17 @@ int main(int argc, char *argv[])
 			printf("\targ3 = file name prefix\n");
 			printf("\n");
 
-			return -1;
+			goto err;
 		}
 		if(generate_and_export_key_pair(argv[2], argv[3], argv[4])){
+			ret = -1;
 			printf("gen_key error ...\n");
-			return -1;
+			goto err;
 		}
 	}
-	else if (are_str_equal(argv[1], "sign")) {
+	ret = are_str_equal(argv[1], "sign", &check); EG(ret, err);
+	if (check) {
+		found = 1;
 		/* Sign something --------------------------------
 		 * Signature is structured, i.e. the output is a self contained
 		 * data image
@@ -1564,6 +1600,7 @@ int main(int argc, char *argv[])
 		 * arg7 (optional) = ancillary data to be used
 		 */
 		if ((argc != 8) && (argc != 9)) {
+			ret = -1;
 			printf("Bad args number for %s %s:\n", argv[0],
 			       argv[1]);
 			printf("\targ1 = curve name: ");
@@ -1582,21 +1619,26 @@ int main(int argc, char *argv[])
 			printf("\targ5 = input file containing the private key (in raw binary format)\n");
 			printf("\targ6 = output file containing the signature\n");
 			printf("\t<arg7 (optional) = ancillary data to be used>\n");
-			return -1;
+			goto err;
 		}
 		const char *adata = NULL;
 		u16 adata_len = 0;
 		if(argc == 9){
 			adata = argv[8];
-			adata_len = (u16)local_strlen(adata);
+			ret = local_strlen(adata, &len); EG(ret, err);
+			MUST_HAVE(len <= 0xffff, ret, err);
+			adata_len = (u16)len;
 		}
 		if(sign_bin_file(argv[2], argv[3], argv[4], argv[5], argv[6],
 			      argv[7], NULL, NULL, adata, adata_len)){
+			ret = -1;
 			printf("sign error ...\n");
-			return -1;
+			goto err;
 		}
 	}
-	else if (are_str_equal(argv[1], "verify")) {
+	ret = are_str_equal(argv[1], "verify", &check); EG(ret, err);
+	if (check) {
+		found = 1;
 		/* Verify something ------------------------------
 		 *
 		 * arg1 = curve name ("frp256v1", ...)
@@ -1608,6 +1650,7 @@ int main(int argc, char *argv[])
 		 * arg7 (optional) = ancillary data to be used
 		 */
 		if ((argc != 8) && (argc != 9)) {
+			ret = -1;
 			printf("Bad args number for %s %s:\n", argv[0],
 			       argv[1]);
 			printf("\targ1 = curve name: ");
@@ -1626,22 +1669,27 @@ int main(int argc, char *argv[])
 			printf("\targ5 = input file containing the public key (in raw binary format)\n");
 			printf("\targ6 = input file containing the signature\n");
 			printf("\t<arg7 (optional) = ancillary data to be used>\n");
-			return -1;
+			goto err;
 		}
 		const char *adata = NULL;
 		u16 adata_len = 0;
 		if(argc == 9){
 			adata = argv[8];
-			adata_len = (u16)local_strlen(adata);
+			ret = local_strlen(adata, &len); EG(ret, err);
+			MUST_HAVE(len <= 0xffff, ret, err);
+			adata_len = (u16)len;
 		}
 		if (verify_bin_file(argv[2], argv[3], argv[4], argv[5], argv[6], argv[7], adata, adata_len)) {
+			ret = -1;
 			printf("Signature check of %s failed\n", argv[5]);
-			return -1;
+			goto err;
 		} else {
 			printf("Signature check of %s OK\n", argv[5]);
 		}
 	}
-	else if (are_str_equal(argv[1], "struct_sign")) {
+	ret = are_str_equal(argv[1], "struct_sign", &check); EG(ret, err);
+	if (check) {
+		found = 1;
 		/* Sign something --------------------------------
 		 * Signature is structured, i.e. the output is a self contained
 		 * data image
@@ -1656,6 +1704,7 @@ int main(int argc, char *argv[])
 		 * arg9 (optional) = ancillary data to be used
 		 */
 		if ((argc != 10) && (argc != 11)) {
+			ret = -1;
 			printf("Bad args number for %s %s:\n", argv[0],
 			       argv[1]);
 			printf("\targ1 = curve name: ");
@@ -1676,21 +1725,26 @@ int main(int argc, char *argv[])
 			printf("\targ7 = metadata header type (IMAGE_TYPE0, IMAGE_TYPE1, ...)\n");
 			printf("\targ8 = version of the metadata header\n");
 			printf("\t<arg9 (optional) = ancillary data to be used>\n");
-			return -1;
+			goto err;
 		}
 		const char *adata = NULL;
 		u16 adata_len = 0;
 		if(argc == 11){
 			adata = argv[10];
-			adata_len = (u16)local_strlen(adata);
+			ret = local_strlen(adata, &len); EG(ret, err);
+			MUST_HAVE(len <= 0xffff, ret, err);
+			adata_len = (u16)len;
 		}
 		if(sign_bin_file(argv[2], argv[3], argv[4], argv[5], argv[6],
 			      argv[7], argv[8], argv[9], adata, adata_len)){
+			ret = -1;
 			printf("struct_sign error ...\n");
-			return -1;
+			goto err;
 		}
 	}
-	else if (are_str_equal(argv[1], "struct_verify")) {
+	ret = are_str_equal(argv[1], "struct_verify", &check); EG(ret, err);
+	if (check) {
+		found = 1;
 		/* Verify something ------------------------------
 		 *
 		 * arg1 = curve name ("frp256v1", ...)
@@ -1701,6 +1755,7 @@ int main(int argc, char *argv[])
 		 * arg6 (optional) = ancillary data to be used
 		 */
 		if ((argc != 7) && (argc != 8)) {
+			ret = -1;
 			printf("Bad args number for %s %s:\n", argv[0],
 			       argv[1]);
 			printf("\targ1 = curve name: ");
@@ -1718,22 +1773,27 @@ int main(int argc, char *argv[])
 			printf("\targ4 = input file to verify\n");
 			printf("\targ5 = input file containing the public key (in raw binary format)\n");
 			printf("\t<arg6 (optional) = ancillary data to be used>\n");
-			return -1;
+			goto err;
 		}
 		const char *adata = NULL;
 		u16 adata_len = 0;
 		if(argc == 8){
 			adata = argv[7];
-			adata_len = (u16)local_strlen(adata);
+			ret = local_strlen(adata, &len); EG(ret, err);
+			MUST_HAVE(len <= 0xffff, ret, err);
+			adata_len = (u16)len;
 		}
 		if (verify_bin_file(argv[2], argv[3], argv[4], argv[5], argv[6], NULL, adata, adata_len)) {
+			ret = -1;
 			printf("Signature check of %s failed\n", argv[5]);
-			return -1;
+			goto err;
 		} else {
 			printf("Signature check of %s OK\n", argv[5]);
 		}
 	}
-	else if (are_str_equal(argv[1], "scalar_mult")) {
+	ret = are_str_equal(argv[1], "scalar_mult", &check); EG(ret, err);
+	if (check) {
+		found = 1;
 		/* Point scalar multiplication --------------------
 		 *
 		 * arg1 = curve name ("frp256v1", ...)
@@ -1742,6 +1802,7 @@ int main(int argc, char *argv[])
 		 * arg4 = file name where to save the result
 		 */
 		if (argc != 6) {
+			ret = -1;
 			printf("Bad args number for %s %s:\n", argv[0],
 			       argv[1]);
 			printf("\targ1 = curve name: ");
@@ -1751,20 +1812,25 @@ int main(int argc, char *argv[])
 			printf("\targ2 = scalar bin file\n");
 			printf("\targ3 = point to multiply bin file (projective coordinates)\n");
 			printf("\targ4 = file name where to save the result\n");
-			return -1;
+			goto err;
 		}
 		if(ec_scalar_mult(argv[2], argv[3], argv[4], argv[5])){
+			ret = -1;
 			printf("Scalar multiplication failed\n");
-			return -1;
+			goto err;
 		}
 	}
 
-	else{
+	if (found == 0) {
 		/* Bad first argument, print help */
+		ret = -1;
 		printf("Bad first argument '%s'\n", argv[1]);
 		print_help(argv[0]);
-		return -1;
+		goto err;
 	}
 
-	return 0;
+	ret = 0;
+
+err:
+	return ret;
 }

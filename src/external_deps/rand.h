@@ -17,6 +17,6 @@
 #define __RAND_H__
 #include "../words/words.h"
 
-int get_random(unsigned char *buf, u16 len);
+ATTRIBUTE_WARN_UNUSED_RET int get_random(unsigned char *buf, u16 len);
 
 #endif /* __RAND_H__ */

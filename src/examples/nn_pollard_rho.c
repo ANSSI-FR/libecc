@@ -35,9 +35,9 @@
 /* Declare our Miller-Rabin test implemented
  * in another module.
  */
-int miller_rabin(nn_src_t n, const unsigned int t, int *check);
+ATTRIBUTE_WARN_UNUSED_RET int miller_rabin(nn_src_t n, const unsigned int t, int *check);
 
-int pollar_rho(nn_t d, nn_src_t n, const word_t c);
+ATTRIBUTE_WARN_UNUSED_RET int pollar_rho(nn_t d, nn_src_t n, const word_t c);
 /* Pollard's rho main function, as described in
  * "Handbook of Applied Cryptography".
  *
@@ -125,7 +125,7 @@ int pollar_rho(nn_t d, nn_src_t n, const word_t c)
 	return ret;
 }
 
-int find_divisors(nn_src_t in);
+ATTRIBUTE_WARN_UNUSED_RET int find_divisors(nn_src_t in);
 /* Maximum number of divisors we support */
 #define MAX_DIVISORS 10
 /* Function to find prime divisors of the NN input */
@@ -176,8 +176,8 @@ int find_divisors(nn_src_t in)
 		}
 		if (found == 0) {
 			nn q, r;
-			nn_init(&q, 0);
-			nn_init(&r, 0);
+			ret = nn_init(&q, 0); EG(ret, err);
+			ret = nn_init(&r, 0); EG(ret, err);
 			ext_printf("Pollard's rho succeded\n");
 			nn_print("d:", &(divisors[n_divisors_found]));
 			/*

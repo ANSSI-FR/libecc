@@ -53,12 +53,12 @@ typedef struct {
         word_t magic;
 } sm3_context;
 
-int sm3_init(sm3_context *ctx);
-int sm3_update(sm3_context *ctx, const u8 *input, u32 ilen);
-int sm3_final(sm3_context *ctx, u8 output[SM3_DIGEST_SIZE]);
-int sm3_scattered(const u8 **inputs, const u32 *ilens,
+ATTRIBUTE_WARN_UNUSED_RET int sm3_init(sm3_context *ctx);
+ATTRIBUTE_WARN_UNUSED_RET int sm3_update(sm3_context *ctx, const u8 *input, u32 ilen);
+ATTRIBUTE_WARN_UNUSED_RET int sm3_final(sm3_context *ctx, u8 output[SM3_DIGEST_SIZE]);
+ATTRIBUTE_WARN_UNUSED_RET int sm3_scattered(const u8 **inputs, const u32 *ilens,
 		   u8 output[SM3_DIGEST_SIZE]);
-int sm3(const u8 *input, u32 ilen, u8 output[SM3_DIGEST_SIZE]);
+ATTRIBUTE_WARN_UNUSED_RET int sm3(const u8 *input, u32 ilen, u8 output[SM3_DIGEST_SIZE]);
 
 #endif /* __SM3_H__ */
 #endif /* WITH_HASH_SM3 */

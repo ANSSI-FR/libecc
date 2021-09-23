@@ -41,7 +41,7 @@ int __ecsdsa_init_pub_key(ec_pub_key *out_pub, const ec_priv_key *in_priv,
 	MUST_HAVE((out_pub != NULL), ret, err);
 
 	/* Zero init public key to be generated */
-	local_memset(out_pub, 0, sizeof(ec_pub_key));
+	ret = local_memset(out_pub, 0, sizeof(ec_pub_key)); EG(ret, err);
 
 	ret = priv_key_check_initialized_and_type(in_priv, key_type); EG(ret, err);
 
@@ -158,7 +158,7 @@ int __ecsdsa_sign_init(struct ec_sign_context *ctx,
 	ret = sig_sign_check_initialized(ctx); EG(ret, err);
 
 	/* Zero init points */
-	local_memset(&kG, 0, sizeof(prj_pt));
+	ret = local_memset(&kG, 0, sizeof(prj_pt)); EG(ret, err);
 
 	/* Additional sanity checks on input params from context */
 	ret = key_pair_check_initialized_and_type(ctx->key_pair, key_type); EG(ret, err);
@@ -227,12 +227,11 @@ int __ecsdsa_sign_init(struct ec_sign_context *ctx,
 		ret = ctx->h->hfunc_update(&(ctx->sign_data.ecsdsa.h_ctx), Wy,
 					   p_len); EG(ret, err);
 	}
-	local_memset(Wx, 0, p_len);
-	local_memset(Wy, 0, p_len);
+	ret = local_memset(Wx, 0, p_len); EG(ret, err);
+	ret = local_memset(Wy, 0, p_len); EG(ret, err);
 
 	/* Initialize the remaining of sign context. */
 	ret = nn_copy(&(ctx->sign_data.ecsdsa.k), &k); EG(ret, err);
-	ret = nn_zero(&k); EG(ret, err);
 	ctx->sign_data.ecsdsa.magic = ECSDSA_SIGN_MAGIC;
 
  err:
@@ -324,7 +323,7 @@ int __ecsdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 #endif /* USE_SIG_BLINDING */
 
 	/* 3. Compute r = H(Wx [|| Wy] || m) */
-	local_memset(r, 0, hsize);
+	ret = local_memset(r, 0, hsize); EG(ret, err);
 	/* Since we call a callback, sanity check our mapping */
 	ret = hash_mapping_callbacks_sanity_check(ctx->h); EG(ret, err);
 	ret = ctx->h->hfunc_finalize(&(ctx->sign_data.ecsdsa.h_ctx), r); EG(ret, err);
@@ -351,7 +350,6 @@ int __ecsdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 
 	/* 6. Compute s = (k + ex) mod q. */
 	ret = nn_mul_mod(&ex, x, &e, q); EG(ret, err);
-	ret = nn_zero(&e); EG(ret, err);
 #ifdef USE_SIG_BLINDING
 	/* Blind k with b */
 	ret = nn_mul_mod(&s, &(ctx->sign_data.ecsdsa.k), &b, q); EG(ret, err);
@@ -359,8 +357,6 @@ int __ecsdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 #else
 	ret = nn_mod_add(&s, &(ctx->sign_data.ecsdsa.k), &ex, q); EG(ret, err);
 #endif /* USE_SIG_BLINDING */
-	ret = nn_zero(&ex); EG(ret, err);
-	ret = nn_zero(&tmp); EG(ret, err);
 
 #ifdef USE_SIG_BLINDING
 	/* Unblind s */
@@ -378,8 +374,8 @@ int __ecsdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	MUST_HAVE(!nn_iszero(&s, &iszero) && !iszero, ret, err);
 
 	/* 8. Return (r, s) */
-	local_memcpy(sig, r, r_len);
-	local_memset(r, 0, r_len);
+	ret = local_memcpy(sig, r, r_len); EG(ret, err);
+	ret = local_memset(r, 0, r_len); EG(ret, err);
 	ret = nn_export_to_buf(sig + r_len, s_len, &s);
 
  err:
@@ -396,7 +392,7 @@ int __ecsdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	 * We can now clear data part of the context. This will clear
 	 * magic and avoid further reuse of the whole context.
 	 */
-	local_memset(&(ctx->sign_data.ecsdsa), 0, sizeof(ecsdsa_sign_data));
+	IGNORE_RET_VAL(local_memset(&(ctx->sign_data.ecsdsa), 0, sizeof(ecsdsa_sign_data)));
 
 	/* Clean what remains on the stack */
 	PTR_NULLIFY(q);
@@ -457,8 +453,8 @@ int __ecsdsa_verify_init(struct ec_verify_context *ctx,
 	ret = sig_verify_check_initialized(ctx); EG(ret, err);
 
 	/* Zero init points */
-	local_memset(&sG, 0, sizeof(prj_pt));
-	local_memset(&eY, 0, sizeof(prj_pt));
+	ret = local_memset(&sG, 0, sizeof(prj_pt)); EG(ret, err);
+	ret = local_memset(&eY, 0, sizeof(prj_pt)); EG(ret, err);
 
 	/* Do some sanity checks on input params */
 	ret = pub_key_check_initialized_and_type(ctx->pub_key, key_type); EG(ret, err);
@@ -495,14 +491,12 @@ int __ecsdsa_verify_init(struct ec_verify_context *ctx,
 	 */
 	ret = nn_init_from_buf(&r, sig, r_len); EG(ret, err);
 	ret = nn_mod(&rmodq, &r, q); EG(ret, err);
-	ret = nn_zero(&r); EG(ret, err);
 	ret = nn_iszero(&rmodq, &iszero); EG(ret, err);
 	if (iszero) {
 		ret = nn_zero(&e); EG(ret, err);
 	} else {
 		ret = nn_sub(&e, q, &rmodq); EG(ret, err);
 	}
-	ret = nn_zero(&rmodq); EG(ret, err);
 
 	/* 3. If e == 0, reject the signature. */
 	ret = nn_iszero(&e, &iszero); EG(ret, err);
@@ -514,7 +508,6 @@ int __ecsdsa_verify_init(struct ec_verify_context *ctx,
 	/* 4. Compute W' = sG + eY */
 	ret = prj_pt_mul_monty(&sG, &s, G); EG(ret, err);
 	ret = prj_pt_mul_monty(&eY, &e, Y); EG(ret, err);
-	ret = nn_zero(&e); EG(ret, err);
 	ret = prj_pt_add_monty(&Wprime, &sG, &eY); EG(ret, err);
 	ret = prj_pt_to_aff(&Wprime_aff, &Wprime); EG(ret, err);
 
@@ -538,13 +531,12 @@ int __ecsdsa_verify_init(struct ec_verify_context *ctx,
 		ret = ctx->h->hfunc_update(&(ctx->verify_data.ecsdsa.h_ctx),
 					   Wprimey, p_len); EG(ret, err);
 	}
-	local_memset(Wprimex, 0, p_len);
-	local_memset(Wprimey, 0, p_len);
+	ret = local_memset(Wprimex, 0, p_len); EG(ret, err);
+	ret = local_memset(Wprimey, 0, p_len); EG(ret, err);
 
 	/* Initialize the remaining of verify context. */
-	local_memcpy(ctx->verify_data.ecsdsa.r, sig, r_len);
+	ret = local_memcpy(ctx->verify_data.ecsdsa.r, sig, r_len); EG(ret, err);
 	ret = nn_copy(&(ctx->verify_data.ecsdsa.s), &s); EG(ret, err);
-	ret = nn_zero(&s); EG(ret, err);
 
 	ctx->verify_data.ecsdsa.magic = ECSDSA_VERIFY_MAGIC;
 
@@ -608,7 +600,7 @@ int __ecsdsa_verify_finalize(struct ec_verify_context *ctx)
 {
 	u8 r_prime[MAX_DIGEST_SIZE];
 	u32 r_len;
-	int ret;
+	int ret, check;
 
 	/*
 	 * First, verify context has been initialized and public
@@ -626,16 +618,17 @@ int __ecsdsa_verify_finalize(struct ec_verify_context *ctx)
 	ret = ctx->h->hfunc_finalize(&(ctx->verify_data.ecsdsa.h_ctx), r_prime); EG(ret, err);
 
 	/* 6. Accept the signature if and only if r and r' are the same */
-	ret = are_equal(ctx->verify_data.ecsdsa.r, r_prime, r_len) ? 0 : -1;
-	local_memset(r_prime, 0, r_len);
+	ret = are_equal(ctx->verify_data.ecsdsa.r, r_prime, r_len, &check); EG(ret, err);
+	ret = check ? 0 : -1;
 
 err:
+	IGNORE_RET_VAL(local_memset(r_prime, 0, sizeof(r_prime)));
 	/*
 	 * We can now clear data part of the context. This will clear
 	 * magic and avoid further reuse of the whole context.
 	 */
-	local_memset(&(ctx->verify_data.ecsdsa), 0,
-		     sizeof(ecsdsa_verify_data));
+	IGNORE_RET_VAL(local_memset(&(ctx->verify_data.ecsdsa), 0,
+		     sizeof(ecsdsa_verify_data)));
 
 	/* Clean what remains on the stack */
 	VAR_ZEROIFY(r_len);

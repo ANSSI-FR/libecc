@@ -18,25 +18,25 @@
 #include "nn.h"
 
 /* Compute quotient q and remainder r for given a and b such that a = q*b + r */
-int nn_divrem(nn_t q, nn_t r, nn_src_t a, nn_src_t b);
-int nn_divrem_notrim(nn_t q, nn_t r, nn_src_t a, nn_src_t b);
-int nn_divrem_unshifted(nn_t q, nn_t r, nn_src_t a, nn_src_t b, word_t v,
+ATTRIBUTE_WARN_UNUSED_RET int nn_divrem(nn_t q, nn_t r, nn_src_t a, nn_src_t b);
+ATTRIBUTE_WARN_UNUSED_RET int nn_divrem_notrim(nn_t q, nn_t r, nn_src_t a, nn_src_t b);
+ATTRIBUTE_WARN_UNUSED_RET int nn_divrem_unshifted(nn_t q, nn_t r, nn_src_t a, nn_src_t b, word_t v,
 			 bitcnt_t cnt);
-int nn_divrem_normalized(nn_t q, nn_t r, nn_src_t a, nn_src_t b, word_t v);
+ATTRIBUTE_WARN_UNUSED_RET int nn_divrem_normalized(nn_t q, nn_t r, nn_src_t a, nn_src_t b, word_t v);
 
 /* Compute r = a mod b */
-int nn_mod(nn_t r, nn_src_t a, nn_src_t b);
-int nn_mod_notrim(nn_t r, nn_src_t a, nn_src_t b);
-int nn_mod_unshifted(nn_t r, nn_src_t a, nn_src_t b, word_t v, bitcnt_t cnt);
-int nn_mod_normalized(nn_t r, nn_src_t a, nn_src_t b, word_t v);
+ATTRIBUTE_WARN_UNUSED_RET int nn_mod(nn_t r, nn_src_t a, nn_src_t b);
+ATTRIBUTE_WARN_UNUSED_RET int nn_mod_notrim(nn_t r, nn_src_t a, nn_src_t b);
+ATTRIBUTE_WARN_UNUSED_RET int nn_mod_unshifted(nn_t r, nn_src_t a, nn_src_t b, word_t v, bitcnt_t cnt);
+ATTRIBUTE_WARN_UNUSED_RET int nn_mod_normalized(nn_t r, nn_src_t a, nn_src_t b, word_t v);
 
 /* Compute floor(B^3/(d+1)) - B. */
-int wreciprocal(word_t dh, word_t dl, word_t *reciprocal);
-int nn_compute_div_coefs(nn_t p_normalized, word_t *p_shift,
+ATTRIBUTE_WARN_UNUSED_RET int wreciprocal(word_t dh, word_t dl, word_t *reciprocal);
+ATTRIBUTE_WARN_UNUSED_RET int nn_compute_div_coefs(nn_t p_normalized, word_t *p_shift,
 			  word_t *p_reciprocal, nn_src_t p_in);
 
 /* Compute gcd of a and b */
-int nn_gcd(nn_t d, nn_src_t a, nn_src_t b, int *sign);
-int nn_xgcd(nn_t g, nn_t u, nn_t v, nn_src_t a, nn_src_t b, int *sign);
+ATTRIBUTE_WARN_UNUSED_RET int nn_gcd(nn_t d, nn_src_t a, nn_src_t b, int *sign);
+ATTRIBUTE_WARN_UNUSED_RET int nn_xgcd(nn_t g, nn_t u, nn_t v, nn_src_t a, nn_src_t b, int *sign);
 
 #endif /* __NN_DIV_H__ */

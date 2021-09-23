@@ -30,7 +30,7 @@ int _sha3_init(sha3_context *ctx, u8 digest_size)
 	MUST_HAVE((ctx != NULL), ret, err);
 
 	/* Zeroize the internal state */
-	local_memset(ctx->sha3_state, 0, sizeof(ctx->sha3_state));
+	ret = local_memset(ctx->sha3_state, 0, sizeof(ctx->sha3_state)); EG(ret, err);
 
 	ctx->sha3_idx = 0;
 	ctx->sha3_digest_size = digest_size;
@@ -38,8 +38,6 @@ int _sha3_init(sha3_context *ctx, u8 digest_size)
 
 	/* Detect endianness */
 	ctx->sha3_endian = arch_is_big_endian() ? SHA3_BIG : SHA3_LITTLE;
-
-	ret = 0;
 
 err:
 	return ret;

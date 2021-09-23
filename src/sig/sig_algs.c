@@ -105,7 +105,7 @@ err:
 int get_sig_by_name(const char *ec_sig_name, const ec_sig_mapping **sig_mapping)
 {
 	const ec_sig_mapping *sm;
-	int ret;
+	int ret, check;
 	u8 i;
 
 	MUST_HAVE((ec_sig_name != NULL), ret, err);
@@ -114,7 +114,7 @@ int get_sig_by_name(const char *ec_sig_name, const ec_sig_mapping **sig_mapping)
 	ret = -1;
 	for (i = 0, sm = &ec_sig_maps[i];
 	     sm->type != UNKNOWN_SIG_ALG; sm = &ec_sig_maps[++i]) {
-		if (are_str_equal(ec_sig_name, sm->name)) {
+		if((!are_str_equal(ec_sig_name, sm->name, &check)) && check){
 			(*sig_mapping) = sm;
 			ret = 0;
 			break;
@@ -161,7 +161,7 @@ err:
 int ec_sig_mapping_callbacks_sanity_check(const ec_sig_mapping *sig)
 {
 	const ec_sig_mapping *sm;
-	int ret = -1;
+	int ret = -1, check;
 	u8 i;
 
 	if (sig == NULL){
@@ -175,7 +175,7 @@ int ec_sig_mapping_callbacks_sanity_check(const ec_sig_mapping *sig)
 	for (i = 0, sm = &ec_sig_maps[i];
 	     sm->type != UNKNOWN_SIG_ALG; sm = &ec_sig_maps[++i]) {
 		if (sm->type == sig->type){
-			if (!are_str_equal_nlen(sm->name, sig->name, MAX_SIG_ALG_NAME_LEN)){
+			if ((!are_str_equal_nlen(sm->name, sig->name, MAX_SIG_ALG_NAME_LEN, &check)) && (!check)){
 				goto err;
 			} else if (sm->siglen != sig->siglen){
 				goto err;
@@ -364,7 +364,7 @@ int _ec_sign_init(struct ec_sign_context *ctx,
 	ret = sig_mapping_sanity_check(sm); EG(ret, err);
 
 	/* Initialize context for specific signature function */
-	local_memset(ctx, 0, sizeof(struct ec_sign_context));
+	ret = local_memset(ctx, 0, sizeof(struct ec_sign_context)); EG(ret, err);
 	ctx->key_pair = key_pair;
 	ctx->rand = rand;
 	ctx->h = hm;
@@ -382,7 +382,7 @@ int _ec_sign_init(struct ec_sign_context *ctx,
  err:
 	if (ret && (ctx != NULL)) {
 		/* Clear the whole context to prevent future reuse */
-		local_memset(ctx, 0, sizeof(struct ec_sign_context));
+		IGNORE_RET_VAL(local_memset(ctx, 0, sizeof(struct ec_sign_context)));
 	}
 
 	return ret;
@@ -402,7 +402,7 @@ int ec_sign_init(struct ec_sign_context *ctx, const ec_key_pair *key_pair,
 			     adata, adata_len);
 	if (ret && ctx) {
 		/* Clear the whole context to prevent future reuse */
-		local_memset(ctx, 0, sizeof(struct ec_sign_context));
+		IGNORE_RET_VAL(local_memset(ctx, 0, sizeof(struct ec_sign_context)));
 	}
 
 	return ret;
@@ -426,7 +426,7 @@ int ec_sign_update(struct ec_sign_context *ctx, const u8 *chunk, u32 chunklen)
 err:
 	if (ret && ctx) {
 		/* Clear the whole context to prevent future reuse */
-		local_memset(ctx, 0, sizeof(struct ec_sign_context));
+		IGNORE_RET_VAL(local_memset(ctx, 0, sizeof(struct ec_sign_context)));
 	}
 
 	return ret;
@@ -450,7 +450,7 @@ int ec_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 err:
 	if (ctx) {
 		/* Clear the whole context to prevent future reuse */
-		local_memset(ctx, 0, sizeof(struct ec_sign_context));
+		IGNORE_RET_VAL(local_memset(ctx, 0, sizeof(struct ec_sign_context)));
 	}
 
 	return ret;
@@ -579,7 +579,7 @@ int ec_verify_init(struct ec_verify_context *ctx, const ec_pub_key *pub_key,
 	ret = sig_mapping_sanity_check(sm); EG(ret, err);
 
 	/* Initialize context for specific signature function */
-	local_memset(ctx, 0, sizeof(struct ec_verify_context));
+	ret = local_memset(ctx, 0, sizeof(struct ec_verify_context)); EG(ret, err);
 	ctx->pub_key = pub_key;
 	ctx->h = hm;
 	ctx->sig = sm;
@@ -598,7 +598,7 @@ int ec_verify_init(struct ec_verify_context *ctx, const ec_pub_key *pub_key,
 
 	if (ret && ctx) {
 		/* Clear the whole context to prevent future reuse */
-		local_memset(ctx, 0, sizeof(struct ec_verify_context));
+		IGNORE_RET_VAL(local_memset(ctx, 0, sizeof(struct ec_verify_context)));
 	}
 
 	return ret;
@@ -624,7 +624,7 @@ int ec_verify_update(struct ec_verify_context *ctx,
 err:
 	if (ret && ctx) {
 		/* Clear the whole context to prevent future reuse */
-		local_memset(ctx, 0, sizeof(struct ec_verify_context));
+		IGNORE_RET_VAL(local_memset(ctx, 0, sizeof(struct ec_verify_context)));
 	}
 
 	return ret;
@@ -649,7 +649,7 @@ int ec_verify_finalize(struct ec_verify_context *ctx)
 err:
 	if (ret && ctx) {
 		/* Clear the whole context to prevent future reuse */
-		local_memset(ctx, 0, sizeof(struct ec_verify_context));
+		IGNORE_RET_VAL(local_memset(ctx, 0, sizeof(struct ec_verify_context)));
 	}
 	return ret;
 }
@@ -731,7 +731,7 @@ int ec_structured_sig_import_from_buf(u8 *sig, u32 siglen,
 					curve_name, MAX_CURVE_NAME_LEN); EG(ret, err);
 
 	/* Copy the raw signature */
-	local_memcpy(sig, out_buf + metadata_len, siglen);
+	ret = local_memcpy(sig, out_buf + metadata_len, siglen);
 
 err:
 	return ret;
@@ -750,6 +750,7 @@ int ec_structured_sig_export_to_buf(const u8 *sig, u32 siglen,
 				    curve_name[MAX_CURVE_NAME_LEN])
 {
 	u32 metadata_len = (3 * sizeof(u8));
+	u32 len;
 	u8 curve_name_len;
 	ec_curve_type curve_type;
 	int ret;
@@ -771,13 +772,16 @@ int ec_structured_sig_export_to_buf(const u8 *sig, u32 siglen,
 
 	out_buf[0] = (u8)sig_type;
 	out_buf[1] = (u8)hash_type;
-	curve_name_len = (u8)local_strlen((const char *)curve_name) + 1;
+	ret = local_strlen((const char *)curve_name, &len); EG(ret, err);
+	len += 1;
+	MUST_HAVE(len < 256, ret, err);
+	curve_name_len = (u8)len;
 	ret = ec_get_curve_type_by_name(curve_name, curve_name_len, &curve_type); EG(ret, err);
 	out_buf[2] = (u8)curve_type;
 	MUST_HAVE(out_buf[2] != UNKNOWN_CURVE, ret, err);
 
 	/* Copy the raw signature */
-	local_memcpy(out_buf + metadata_len, sig, siglen);
+	ret = local_memcpy(out_buf + metadata_len, sig, siglen);
 
 err:
 	return ret;

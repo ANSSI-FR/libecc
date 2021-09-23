@@ -32,8 +32,8 @@ typedef struct {
 typedef ec_edwards_crv *ec_edwards_crv_t;
 typedef const ec_edwards_crv *ec_edwards_crv_src_t;
 
-int ec_edwards_crv_check_initialized(ec_edwards_crv_src_t crv);
-int ec_edwards_crv_init(ec_edwards_crv_t crv, fp_src_t a, fp_src_t b, nn_src_t order);
+ATTRIBUTE_WARN_UNUSED_RET int ec_edwards_crv_check_initialized(ec_edwards_crv_src_t crv);
+ATTRIBUTE_WARN_UNUSED_RET int ec_edwards_crv_init(ec_edwards_crv_t crv, fp_src_t a, fp_src_t b, nn_src_t order);
 void ec_edwards_crv_uninit(ec_edwards_crv_t crv);
 
 #endif /* __EC_EDWARDS_H__ */

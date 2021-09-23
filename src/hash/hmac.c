@@ -23,12 +23,12 @@ int hmac_init(hmac_context *ctx, const u8 *hmackey, u32 hmackey_len,
 	int ret;
 	const hash_mapping *h;
 
-	local_memset(local_hmac_key, 0, sizeof(local_hmac_key));
+	ret = local_memset(local_hmac_key, 0, sizeof(local_hmac_key)); EG(ret, err);
 	/* Set ipad and opad to appropriate values */
-	local_memset(ipad, 0x36, sizeof(ipad));
-	local_memset(opad, 0x5c, sizeof(opad));
+	ret = local_memset(ipad, 0x36, sizeof(ipad)); EG(ret, err);
+	ret = local_memset(opad, 0x5c, sizeof(opad)); EG(ret, err);
 
-	MUST_HAVE((ctx != NULL) || (hmackey != NULL), ret, err);
+	MUST_HAVE((ctx != NULL) && (hmackey != NULL), ret, err);
 	/* Get the hash mapping of the current asked hash function */
 	ret = get_hash_by_type(hash_type, &(ctx->hash)); EG(ret, err);
 	MUST_HAVE(ctx->hash != NULL, ret, err);
@@ -38,7 +38,7 @@ int hmac_init(hmac_context *ctx, const u8 *hmackey, u32 hmackey_len,
 
 	if(hmackey_len <= ctx->hash->block_size){
 		/* The key size is less than the hash function block size */
-		local_memcpy(local_hmac_key, hmackey, hmackey_len);
+		ret = local_memcpy(local_hmac_key, hmackey, hmackey_len); EG(ret, err);
 		local_hmac_key_len = hmackey_len;
 	}
 	else{
@@ -121,7 +121,7 @@ int hmac_finalize(hmac_context *ctx, u8 *output, u8 *outlen)
 err:
 	if(ctx != NULL){
 		/* Clear the hash contexts that could contain sensitive data */
-		local_memset(ctx, 0, sizeof(hmac_context));
+		ret = local_memset(ctx, 0, sizeof(hmac_context)); EG(ret, err);
 		/* Uninitialize the context  */
 		ctx->magic = 0;
 	}
@@ -143,7 +143,7 @@ int hmac(const u8 *hmackey, u32 hmackey_len, hash_alg_type hash_type,
 
 err:
 	/* Clean our context as it can contain sensitive data */
-	local_memset(&ctx, 0, sizeof(hmac_context));
+	ret = local_memset(&ctx, 0, sizeof(hmac_context));
 
 	return ret;
 }

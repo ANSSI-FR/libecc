@@ -151,47 +151,47 @@ struct dispatch_table {
 
 #define GENERIC_TEST_FP_DECL_INIT1(name, ctx) \
 	fp name##0; \
-	fp_init(&name##0, ctx);\
+	ret = fp_init(&name##0, ctx); EG(ret, err);\
 	fp_t name##_ptr[] = { &name##0 };
 
 #define GENERIC_TEST_FP_DECL_INIT2(name, ctx) \
 	fp name##0, name##1;\
-	fp_init(&name##0, ctx);\
-	fp_init(&name##1, ctx);\
+	ret = fp_init(&name##0, ctx); EG(ret, err);\
+	ret = fp_init(&name##1, ctx); EG(ret, err);\
 	fp_t name##_ptr[] = { &name##0, &name##1 };
 
 #define GENERIC_TEST_FP_DECL_INIT3(name, ctx) \
 	fp name##0, name##1, name##2;\
-	fp_init(&name##0, ctx);\
-	fp_init(&name##1, ctx);\
-	fp_init(&name##2, ctx);\
+	ret = fp_init(&name##0, ctx); EG(ret, err);\
+	ret = fp_init(&name##1, ctx); EG(ret, err);\
+	ret = fp_init(&name##2, ctx); EG(ret, err);\
 	fp_t name##_ptr[] = { &name##0, &name##1, &name##2 };
 
 #define GENERIC_TEST_FP_DECL_INIT4(name, ctx) \
 	fp name##0, name##1, name##2, name##3;\
-	fp_init(&name##0, ctx);\
-	fp_init(&name##1, ctx);\
-	fp_init(&name##2, ctx);\
-	fp_init(&name##3, ctx);\
+	ret = fp_init(&name##0, ctx); EG(ret, err);\
+	ret = fp_init(&name##1, ctx); EG(ret, err);\
+	ret = fp_init(&name##2, ctx); EG(ret, err);\
+	ret = fp_init(&name##3, ctx); EG(ret, err);\
 	fp_t name##_ptr[] = { &name##0, &name##1, &name##2, &name##3 };
 
 #define GENERIC_TEST_FP_DECL_INIT5(name, ctx) \
 	fp name##0, name##1, name##2, name##3, name##4;\
-	fp_init(&name##0, ctx);\
-	fp_init(&name##1, ctx);\
-	fp_init(&name##2, ctx);\
-	fp_init(&name##3, ctx);\
-	fp_init(&name##4, ctx);\
+	ret = fp_init(&name##0, ctx); EG(ret, err);\
+	ret = fp_init(&name##1, ctx); EG(ret, err);\
+	ret = fp_init(&name##2, ctx); EG(ret, err);\
+	ret = fp_init(&name##3, ctx); EG(ret, err);\
+	ret = fp_init(&name##4, ctx); EG(ret, err);\
 	fp_t name##_ptr[] = { &name##0, &name##1, &name##2, &name##3, &name##4 };
 
 #define GENERIC_TEST_FP_DECL_INIT6(name, ctx) \
 	fp name##0, name##1, name##2, name##3, name##4, name##5;\
-	fp_init(&name##0, ctx);\
-	fp_init(&name##1, ctx);\
-	fp_init(&name##2, ctx);\
-	fp_init(&name##3, ctx);\
-	fp_init(&name##4, ctx);\
-	fp_init(&name##5, ctx);\
+	ret = fp_init(&name##0, ctx); EG(ret, err);\
+	ret = fp_init(&name##1, ctx); EG(ret, err);\
+	ret = fp_init(&name##2, ctx); EG(ret, err);\
+	ret = fp_init(&name##3, ctx); EG(ret, err);\
+	ret = fp_init(&name##4, ctx); EG(ret, err);\
+	ret = fp_init(&name##5, ctx); EG(ret, err);\
 	fp_t name##_ptr[] = { &name##0, &name##1, &name##2, &name##3, &name##4, &name##5 };
 
 #define GENERIC_TEST_NN_DECL_INIT0(name, size) \
@@ -199,47 +199,47 @@ struct dispatch_table {
 
 #define GENERIC_TEST_NN_DECL_INIT1(name, size) \
 	nn name##0;			       \
-	nn_init(&name##0, size);	       \
+	ret = nn_init(&name##0, size); EG(ret, err); \
 	nn_t name##_ptr[] = { &name##0 };
 
 #define GENERIC_TEST_NN_DECL_INIT2(name, size)       \
 	nn name##0, name##1;			     \
-	nn_init(&name##0, size);		     \
-	nn_init(&name##1, size);		     \
+	ret = nn_init(&name##0, size); EG(ret, err); \
+	ret = nn_init(&name##1, size); EG(ret, err); \
 	nn_t name##_ptr[] = { &name##0, &name##1 };
 
 #define GENERIC_TEST_NN_DECL_INIT3(name, size)                  \
 	nn name##0, name##1, name##2;				\
-	nn_init(&name##0, size);				\
-	nn_init(&name##1, size);				\
-	nn_init(&name##2, size);				\
+	ret = nn_init(&name##0, size); EG(ret, err);		\
+	ret = nn_init(&name##1, size); EG(ret, err);		\
+	ret = nn_init(&name##2, size); EG(ret, err);   		\
 	nn_t name##_ptr[] = { &name##0, &name##1, &name##2 };
 
 #define GENERIC_TEST_NN_DECL_INIT4(name, size)				\
 	nn name##0, name##1, name##2, name##3;				\
-	nn_init(&name##0, size);					\
-	nn_init(&name##1, size);					\
-	nn_init(&name##2, size);					\
-	nn_init(&name##3, size);					\
+	ret = nn_init(&name##0, size); EG(ret, err);			\
+	ret = nn_init(&name##1, size); EG(ret, err);			\
+	ret = nn_init(&name##2, size); EG(ret, err);			\
+	ret = nn_init(&name##3, size); EG(ret, err);			\
 	nn_t name##_ptr[] = { &name##0, &name##1, &name##2, &name##3 };
 
 #define GENERIC_TEST_NN_DECL_INIT5(name, size)		    \
 	nn name##0, name##1, name##2, name##3, name##4;	    \
-	nn_init(&name##0, size);				    \
-	nn_init(&name##1, size);				    \
-	nn_init(&name##2, size);				    \
-	nn_init(&name##3, size);				    \
-	nn_init(&name##4, size);				    \
+	ret = nn_init(&name##0, size); EG(ret, err);	    \
+	ret = nn_init(&name##1, size); EG(ret, err);	    \
+	ret = nn_init(&name##2, size); EG(ret, err);	    \
+	ret = nn_init(&name##3, size); EG(ret, err);	    \
+	ret = nn_init(&name##4, size); EG(ret, err);	    \
 	nn_t name##_ptr[] = { &name##0, &name##1, &name##2, &name##3, &name##4 };
 
 #define GENERIC_TEST_NN_DECL_INIT6(name, size)				\
 	nn name##0, name##1, name##2, name##3, name##4, name##5;	\
-	nn_init(&name##0, size);					\
-	nn_init(&name##1, size);					\
-	nn_init(&name##2, size);					\
-	nn_init(&name##3, size);					\
-	nn_init(&name##4, size);					\
-	nn_init(&name##5, size);					\
+	ret = nn_init(&name##0, size);	EG(ret, err);			\
+	ret = nn_init(&name##1, size);	EG(ret, err);			\
+	ret = nn_init(&name##2, size);	EG(ret, err);			\
+	ret = nn_init(&name##3, size);	EG(ret, err);			\
+	ret = nn_init(&name##4, size);	EG(ret, err);			\
+	ret = nn_init(&name##5, size);	EG(ret, err);			\
 	nn_t name##_ptr[] = { &name##0, &name##1, &name##2, &name##3, &name##4, &name##5 };
 
 #define GENERIC_TEST_FP_CLEAR0(name)
@@ -613,6 +613,9 @@ int test_##test_name(const char ATTRIBUTE_UNUSED *op, void **params, int test_nu
 	GENERIC_TEST_FP_CLEAR##fp_out_num(fp_out);\
 	\
 	return !mismatch;\
+err:\
+	printf("[-] Error: general error when initializing variables ...\n");\
+	exit(-1);\
 }\
 ADD_TO_DISPATCH_TABLE(test_##test_name, #operation_, given_string_helper)
 
@@ -859,22 +862,7 @@ int main(int argc, char *argv[])
 	nn fp_ctx_modulus, fp_ctx_r, fp_ctx_r_square, fp_ctx_mpinv;
 	nn fp_ctx_pshift, fp_ctx_pnorm, fp_ctx_prec;
 	fp_ctx fp_ctx_param;
-
-	nn_init(&fp_ctx_modulus, 0);
-	nn_init(&fp_ctx_r, 0);
-	nn_init(&fp_ctx_r_square, 0);
-	nn_init(&fp_ctx_mpinv, 0);
-	nn_init(&fp_ctx_pshift, 0);
-	nn_init(&fp_ctx_pnorm, 0);
-	nn_init(&fp_ctx_prec, 0);
-
-	/* First "fake" context initialization with junk value 
-	 * one as prime number
-	 */
-	nn_one(&fp_ctx_modulus);
-	fp_ctx_init_from_p(&fp_ctx_param, &fp_ctx_modulus);
-	GENERIC_TEST_FP_DECL_INIT_MAX(fp_params, &fp_ctx_param)
-	GENERIC_TEST_NN_DECL_INIT_MAX(nn_params, 0)
+	int ret, cmp;
 	u64 u_params[MAX_PARAMS];
 	void *params[MAX_PARAMS];
 	unsigned int ibuflen = BIT_LEN_WORDS(NN_MAX_BIT_LEN) * WORD_BYTES * 10;
@@ -882,15 +870,30 @@ int main(int argc, char *argv[])
 	int test_ret;
 	unsigned int len = ibuflen;
 	int nrecs;
-	int fd, nn_local_cnt = 0, fp_local_cnt = 0, fp_ctx_local_cnt = 0;
+	int fd = 0, nn_local_cnt = 0, fp_local_cnt = 0, fp_ctx_local_cnt = 0;
 	unsigned int nn_len;
 	char op[1024];
-	char *ibuf, *rec;
+	char *ibuf = NULL, *rec = NULL;
 	nn *tmp;
 	fp *fp_tmp;
 	int (*curr_test_fun) (const char *, void **, int);
 	unsigned long p_tmp;
-	int ret, cmp;
+
+	ret = nn_init(&fp_ctx_modulus, 0); EG(ret, err);
+	ret = nn_init(&fp_ctx_r, 0); EG(ret, err);
+	ret = nn_init(&fp_ctx_r_square, 0); EG(ret, err);
+	ret = nn_init(&fp_ctx_mpinv, 0); EG(ret, err);
+	ret = nn_init(&fp_ctx_pshift, 0); EG(ret, err);
+	ret = nn_init(&fp_ctx_pnorm, 0); EG(ret, err);
+	ret = nn_init(&fp_ctx_prec, 0); EG(ret, err);
+
+	/* First "fake" context initialization with junk value
+	 * one as prime number
+	 */
+	ret = nn_one(&fp_ctx_modulus); EG(ret, err);
+	ret = fp_ctx_init_from_p(&fp_ctx_param, &fp_ctx_modulus); EG(ret, err);
+	GENERIC_TEST_FP_DECL_INIT_MAX(fp_params, &fp_ctx_param)
+	GENERIC_TEST_NN_DECL_INIT_MAX(nn_params, 0)
 
 #ifdef WITH_ASSERT_BACKTRACE
 	memset(backtrace_buffer, 0, sizeof(backtrace_buffer) - 1);
@@ -1183,13 +1186,21 @@ int main(int argc, char *argv[])
 	printf("\n%lu/%lu tests passed successfully (%lu on error)\n",
 	       oktests, line, line - oktests);
 
-	close(fd);
-	free(ibuf);
+	if(fd != 0){
+		close(fd);
+	}
+	if(ibuf != NULL){
+		free(ibuf);
+	}
 
 	return 0;
 err:
 	printf("Error: critical error occured! Leaving ...\n");
-	close(fd);
-	free(ibuf);
+	if(fd != 0){
+		close(fd);
+	}
+	if(ibuf != NULL){
+		free(ibuf);
+	}
 	return -1;
 }

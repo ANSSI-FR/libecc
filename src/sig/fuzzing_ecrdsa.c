@@ -52,7 +52,7 @@
  */
 #ifndef USE_ISO14888_3_ECRDSA
 /* Reverses the endiannes of a buffer in place */
-static inline int _reverse_endianness(u8 *buf, u16 buf_size)
+ATTRIBUTE_WARN_UNUSED_RET static inline int _reverse_endianness(u8 *buf, u16 buf_size)
 {
         u32 i;
         u8 tmp;
@@ -111,7 +111,7 @@ int ecrdsa_sign_raw(struct ec_sign_context *ctx, const u8 *input, u8 inputlen, u
 	ECRDSA_SIGN_CHECK_INITIALIZED(&(ctx->sign_data.ecrdsa), ret, err);
 
         /* Zero init points */
-        local_memset(&kG, 0, sizeof(prj_pt));
+        ret = local_memset(&kG, 0, sizeof(prj_pt)); EG(ret, err);
 
 	/* Make things more readable */
 	priv_key = &(ctx->key_pair->priv_key);
@@ -173,13 +173,11 @@ int ecrdsa_sign_raw(struct ec_sign_context *ctx, const u8 *input, u8 inputlen, u
         ret = prj_pt_mul_monty(&kG, &k, G); EG(ret, err);
 #endif /* USE_SIG_BLINDING */
 	ret = prj_pt_to_aff(&W, &kG); EG(ret, err);
-	prj_pt_uninit(&kG);
 	dbg_nn_print("W_x", &(W.x.fp_val));
 	dbg_nn_print("W_y", &(W.y.fp_val));
 
 	/* 4. Compute r = Wx mod q */
 	ret = nn_mod(&r, &(W.x.fp_val), q); EG(ret, err);
-	aff_pt_uninit(&W);
 
 	/* 5. If r is 0, restart the process at step 2. */
         /* NOTE: for the CRYPTOFUZZ mode, we do not restart
@@ -197,8 +195,8 @@ int ecrdsa_sign_raw(struct ec_sign_context *ctx, const u8 *input, u8 inputlen, u
         /* NOTE: here we have raw ECRDSA, this is the raw input */
 	MUST_HAVE((input != NULL) && (inputlen <= sizeof(h_buf)), ret, err);
 
-        local_memset(h_buf, 0, sizeof(h_buf));
-        local_memcpy(h_buf, input, hsize);
+        ret = local_memset(h_buf, 0, sizeof(h_buf)); EG(ret, err);
+        ret = local_memcpy(h_buf, input, hsize); EG(ret, err);
 	dbg_buf_print("H(m)", h_buf, hsize);
         /* NOTE: this handles a discrepancy between ISO/IEC 14888-3 and
          * Russian standard based RFCs.
@@ -208,7 +206,7 @@ int ecrdsa_sign_raw(struct ec_sign_context *ctx, const u8 *input, u8 inputlen, u
 #endif
 
 	ret = nn_init_from_buf(&tmp, h_buf, hsize); EG(ret, err);
-	local_memset(h_buf, 0, hsize);
+	ret = local_memset(h_buf, 0, hsize); EG(ret, err);
 	ret = nn_mod(&e, &tmp, q); EG(ret, err);
 	ret = nn_iszero(&e, &iszero); EG(ret, err);
 	if (iszero) {
@@ -225,12 +223,7 @@ int ecrdsa_sign_raw(struct ec_sign_context *ctx, const u8 *input, u8 inputlen, u
 	/* Compute s = (rx + ke) mod q */
 	ret = nn_mul_mod(&rx, &r, x, q); EG(ret, err);
 	ret = nn_mul_mod(&ke, &k, &e, q); EG(ret, err);
-	ret = nn_zero(&e); EG(ret, err);
-	ret = nn_zero(&k); EG(ret, err);
 	ret = nn_mod_add(&s, &rx, &ke, q); EG(ret, err);
-	ret = nn_zero(&rx); EG(ret, err);
-	ret = nn_zero(&ke); EG(ret, err);
-	ret = nn_zero(&tmp); EG(ret, err);
 #ifdef USE_SIG_BLINDING
 	/* Unblind s */
         ret = nn_modinv(&binv, &b, q); EG(ret, err);
@@ -253,12 +246,19 @@ int ecrdsa_sign_raw(struct ec_sign_context *ctx, const u8 *input, u8 inputlen, u
  err:
 	nn_uninit(&r);
 	nn_uninit(&s);
+	nn_uninit(&tmp);
+	nn_uninit(&rx);
+	nn_uninit(&ke);
+	nn_uninit(&k);
+	nn_uninit(&e);
+	prj_pt_uninit(&kG);
+	aff_pt_uninit(&W);
 
 	/*
 	 * We can now clear data part of the context. This will clear
 	 * magic and avoid further reuse of the whole context.
 	 */
-	local_memset(&(ctx->sign_data.ecrdsa), 0, sizeof(ecrdsa_sign_data));
+	IGNORE_RET_VAL(local_memset(&(ctx->sign_data.ecrdsa), 0, sizeof(ecrdsa_sign_data)));
 
 	/* Clean what remains on the stack */
 	VAR_ZEROIFY(r_len);
@@ -311,8 +311,8 @@ int ecrdsa_verify_raw(struct ec_verify_context *ctx, const u8 *input, u8 inputle
 	ECRDSA_VERIFY_CHECK_INITIALIZED(&(ctx->verify_data.ecrdsa), ret, err);
 
         /* Zero init points */
-        local_memset(&uG, 0, sizeof(prj_pt));
-        local_memset(&vY, 0, sizeof(prj_pt));
+        ret = local_memset(&uG, 0, sizeof(prj_pt)); EG(ret, err);
+        ret = local_memset(&vY, 0, sizeof(prj_pt)); EG(ret, err);
 
 	/* Make things more readable */
 	G = &(ctx->pub_key->params->ec_gen);
@@ -326,8 +326,8 @@ int ecrdsa_verify_raw(struct ec_verify_context *ctx, const u8 *input, u8 inputle
         /* NOTE: here we have raw ECRDSA, this is the raw input */
 	MUST_HAVE((input != NULL) && (inputlen <= sizeof(h_buf)), ret, err);
 
-        local_memset(h_buf, 0, sizeof(h_buf));
-        local_memcpy(h_buf, input, hsize);
+        ret = local_memset(h_buf, 0, sizeof(h_buf)); EG(ret, err);
+        ret = local_memcpy(h_buf, input, hsize); EG(ret, err);
 	dbg_buf_print("H(m)", h_buf, hsize);
         /* NOTE: this handles a discrepancy between ISO/IEC 14888-3 and
          * Russian standard based RFCs.
@@ -338,14 +338,13 @@ int ecrdsa_verify_raw(struct ec_verify_context *ctx, const u8 *input, u8 inputle
 
 	/* 3. Compute e = OS2I(h)^-1 mod q */
 	ret = nn_init_from_buf(&tmp, h_buf, hsize); EG(ret, err);
-	local_memset(h_buf, 0, hsize);
+	ret = local_memset(h_buf, 0, hsize); EG(ret, err);
 	ret = nn_mod(&h, &tmp, q); EG(ret, err); /* h = OS2I(h) mod q */
 	ret = nn_iszero(&h, &iszero); EG(ret, err);
 	if (iszero) {	/* If h is equal to 0, set it to 1 */
 		ret = nn_inc(&h, &h); EG(ret, err);
 	}
 	ret = nn_modinv(&e, &h, q); EG(ret, err); /* e = h^-1 mod q */
-	ret = nn_zero(&h); EG(ret, err);
 
 	/* 4. Compute u = es mod q */
 	ret = nn_mul(&tmp, &e, s); EG(ret, err);
@@ -357,7 +356,6 @@ int ecrdsa_verify_raw(struct ec_verify_context *ctx, const u8 *input, u8 inputle
 	 * v = -er mod q = q - (er mod q) (except when er is 0).
 	 */
 	ret = nn_mul(&tmp, &e, r); EG(ret, err); /* tmp = er */
-	ret = nn_zero(&e); EG(ret, err);
 	ret = nn_mod(&tmp, &tmp, q); EG(ret, err); /* tmp = er mod q */
 	ret = nn_iszero(&tmp, &iszero); EG(ret, err);
 	if (iszero) {
@@ -365,24 +363,17 @@ int ecrdsa_verify_raw(struct ec_verify_context *ctx, const u8 *input, u8 inputle
 	} else {
 		ret = nn_sub(&v, q, &tmp); EG(ret, err);
 	}
-	ret = nn_zero(&tmp); EG(ret, err);
 
 	/* 6. Compute W' = uG + vY = (W'_x, W'_y) */
 	ret = prj_pt_mul_monty(&uG, &u, G); EG(ret, err);
 	ret = prj_pt_mul_monty(&vY, &v, Y); EG(ret, err);
-	ret = nn_zero(&u); EG(ret, err);
-	ret = nn_zero(&v); EG(ret, err);
 	ret = prj_pt_add_monty(&Wprime, &uG, &vY); EG(ret, err);
-	prj_pt_uninit(&uG);
-	prj_pt_uninit(&vY);
 	ret = prj_pt_to_aff(&Wprime_aff, &Wprime); EG(ret, err);
-	prj_pt_uninit(&Wprime);
 	dbg_nn_print("W'_x", &(Wprime_aff.x.fp_val));
 	dbg_nn_print("W'_y", &(Wprime_aff.y.fp_val));
 
 	/* 7. Compute r' = W'_x mod q */
 	ret = nn_mod(&r_prime, &(Wprime_aff.x.fp_val), q); EG(ret, err);
-	aff_pt_uninit(&Wprime_aff);
 
 	/* 8. Check r and r' are the same */
 	ret = nn_cmp(r, &r_prime, &cmp); EG(ret, err);
@@ -390,12 +381,22 @@ int ecrdsa_verify_raw(struct ec_verify_context *ctx, const u8 *input, u8 inputle
 
 err:
 	nn_uninit(&r_prime);
+	nn_uninit(&tmp);
+	nn_uninit(&h);
+	nn_uninit(&e);
+	nn_uninit(&u);
+	nn_uninit(&v);
+	prj_pt_uninit(&vY);
+	prj_pt_uninit(&uG);
+	prj_pt_uninit(&Wprime);
+	aff_pt_uninit(&Wprime_aff);
+
 	/*
 	 * We can now clear data part of the context. This will clear
 	 * magic and avoid further reuse of the whole context.
 	 */
-	local_memset(&(ctx->verify_data.ecrdsa), 0,
-		     sizeof(ecrdsa_verify_data));
+	IGNORE_RET_VAL(local_memset(&(ctx->verify_data.ecrdsa), 0,
+		     sizeof(ecrdsa_verify_data)));
 
 	/* Clean what remains on the stack */
 	PTR_NULLIFY(G);

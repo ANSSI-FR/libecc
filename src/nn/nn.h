@@ -73,24 +73,24 @@ typedef struct {
 typedef nn *nn_t;
 typedef const nn *nn_src_t;
 
-int nn_check_initialized(nn_src_t A);
-int nn_is_initialized(nn_src_t A);
-int nn_zero(nn_t A);
-int nn_one(nn_t A);
-int nn_set_word_value(nn_t A, word_t val);
+ATTRIBUTE_WARN_UNUSED_RET int nn_check_initialized(nn_src_t A);
+ATTRIBUTE_WARN_UNUSED_RET int nn_is_initialized(nn_src_t A);
+ATTRIBUTE_WARN_UNUSED_RET int nn_zero(nn_t A);
+ATTRIBUTE_WARN_UNUSED_RET int nn_one(nn_t A);
+ATTRIBUTE_WARN_UNUSED_RET int nn_set_word_value(nn_t A, word_t val);
 void nn_uninit(nn_t A);
-int nn_init(nn_t A, u16 len);
-int nn_init_from_buf(nn_t A, const u8 *buf, u16 buflen);
-int nn_cnd_swap(int cnd, nn_t in1, nn_t in2);
-int nn_set_wlen(nn_t A, u8 new_wlen);
-int nn_iszero(nn_src_t A, int *iszero);
-int nn_isone(nn_src_t A, int *isone);
-int nn_isodd(nn_src_t A, int *isodd);
-int nn_cmp_word(nn_src_t in, word_t w, int *cmp);
-int nn_cmp(nn_src_t A, nn_src_t B, int *cmp);
-int nn_copy(nn_t dst_nn, nn_src_t src_nn);
-int nn_normalize(nn_t in1);
-int nn_init_from_buf(nn_t out_nn, const u8 *buf, u16 buflen);
-int nn_export_to_buf(u8 *buf, u16 buflen, nn_src_t in_nn);
+ATTRIBUTE_WARN_UNUSED_RET int nn_init(nn_t A, u16 len);
+ATTRIBUTE_WARN_UNUSED_RET int nn_init_from_buf(nn_t A, const u8 *buf, u16 buflen);
+ATTRIBUTE_WARN_UNUSED_RET int nn_cnd_swap(int cnd, nn_t in1, nn_t in2);
+ATTRIBUTE_WARN_UNUSED_RET int nn_set_wlen(nn_t A, u8 new_wlen);
+ATTRIBUTE_WARN_UNUSED_RET int nn_iszero(nn_src_t A, int *iszero);
+ATTRIBUTE_WARN_UNUSED_RET int nn_isone(nn_src_t A, int *isone);
+ATTRIBUTE_WARN_UNUSED_RET int nn_isodd(nn_src_t A, int *isodd);
+ATTRIBUTE_WARN_UNUSED_RET int nn_cmp_word(nn_src_t in, word_t w, int *cmp);
+ATTRIBUTE_WARN_UNUSED_RET int nn_cmp(nn_src_t A, nn_src_t B, int *cmp);
+ATTRIBUTE_WARN_UNUSED_RET int nn_copy(nn_t dst_nn, nn_src_t src_nn);
+ATTRIBUTE_WARN_UNUSED_RET int nn_normalize(nn_t in1);
+ATTRIBUTE_WARN_UNUSED_RET int nn_init_from_buf(nn_t out_nn, const u8 *buf, u16 buflen);
+ATTRIBUTE_WARN_UNUSED_RET int nn_export_to_buf(u8 *buf, u16 buflen, nn_src_t in_nn);
 
 #endif /* __NN_H__ */

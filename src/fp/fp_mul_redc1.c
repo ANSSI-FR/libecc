@@ -20,7 +20,7 @@
  * parameters. Those checks are left to the caller. The function returns 0 on
  * success, -1 on error.
  */
-static inline int _fp_mul_redc1(nn_t out, nn_src_t in1, nn_src_t in2,
+ATTRIBUTE_WARN_UNUSED_RET static inline int _fp_mul_redc1(nn_t out, nn_src_t in1, nn_src_t in2,
 				 fp_ctx_src_t ctx)
 {
 	return nn_mul_redc1(out, in1, in2, &(ctx->p), ctx->mpinv);

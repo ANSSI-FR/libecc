@@ -39,7 +39,7 @@
  * The function is an internal helper; it expects initialized nn in1 and
  * in2: it does not verify that.
  */
-static int nn_cmp_shift(nn_src_t in1, nn_src_t in2, u8 shift, int *cmp)
+ATTRIBUTE_WARN_UNUSED_RET static int nn_cmp_shift(nn_src_t in1, nn_src_t in2, u8 shift, int *cmp)
 {
 	int ret, mask, tmp;
 	u8 i;
@@ -71,7 +71,7 @@ err:
  * The function is an internal helper; it expects initialized nn out and
  * in: it does not verify that.
  */
-static int nn_cnd_sub_shift(int cnd, nn_t out, nn_src_t in,
+ATTRIBUTE_WARN_UNUSED_RET static int nn_cnd_sub_shift(int cnd, nn_t out, nn_src_t in,
 			    u8 shift, word_t *borrow)
 {
 	word_t tmp, borrow1, borrow2, _borrow = WORD(0);
@@ -110,7 +110,7 @@ err:
  * The function is an internal helper; it expects initialized nn out and
  * in: it does not verify that.
  */
-static int nn_submul_word_shift(nn_t out, nn_src_t in, word_t w, u8 shift,
+ATTRIBUTE_WARN_UNUSED_RET static int nn_submul_word_shift(nn_t out, nn_src_t in, word_t w, u8 shift,
 				word_t *borrow)
 {
 	word_t _borrow = WORD(0), prod_high, prod_low, tmp;
@@ -190,7 +190,7 @@ err:
  *   _nn_divrem_normalized_aliased() for such a wrapper.
  *
  */
-static int _nn_divrem_normalized(nn_t q, nn_t r,
+ATTRIBUTE_WARN_UNUSED_RET static int _nn_divrem_normalized(nn_t q, nn_t r,
 				 nn_src_t a, nn_src_t b, word_t v)
 {
 	word_t borrow, qstar, qh, ql, rh, rl; /* for 3-by-2 div. */
@@ -306,7 +306,7 @@ err:
  * - The function does not support aliasing of 'a' or 'q'.
  *
  */
-static int _nn_divrem_normalized_aliased(nn_t q, nn_src_t a, nn_t b, word_t v)
+ATTRIBUTE_WARN_UNUSED_RET static int _nn_divrem_normalized_aliased(nn_t q, nn_src_t a, nn_t b, word_t v)
 {
 	int ret;
 	nn r;
@@ -402,7 +402,7 @@ err:
  * - The function does not support aliasing. See
  *   _nn_divrem_unshifted_aliased() for such a wrapper.
  */
-static int _nn_divrem_unshifted(nn_t q, nn_t r, nn_src_t a, nn_src_t b_norm,
+ATTRIBUTE_WARN_UNUSED_RET static int _nn_divrem_unshifted(nn_t q, nn_t r, nn_src_t a, nn_src_t b_norm,
 				word_t v, bitcnt_t cnt)
 {
 	nn a_shift;
@@ -480,7 +480,7 @@ err:
  *   have been initialized. Again, this is expected from the caller
  *   (nn_divrem_unshifted()).
  */
-static int _nn_divrem_unshifted_aliased(nn_t q, nn_src_t a, nn_t b_norm,
+ATTRIBUTE_WARN_UNUSED_RET static int _nn_divrem_unshifted_aliased(nn_t q, nn_src_t a, nn_t b_norm,
 					word_t v, bitcnt_t cnt)
 {
 	int ret;
@@ -559,7 +559,7 @@ err:
  */
 
 /* Comparison of two limbs numbers. */
-static int wcmp_22(word_t a[2], word_t b[2])
+ATTRIBUTE_WARN_UNUSED_RET static int wcmp_22(word_t a[2], word_t b[2])
 {
 	int mask, ret = 0;
 	ret += a[1] > b[1];
@@ -571,7 +571,7 @@ static int wcmp_22(word_t a[2], word_t b[2])
 }
 
 /* Addition of two limbs numbers with carry returned. */
-static word_t wadd_22(word_t a[2], word_t b[2])
+ATTRIBUTE_WARN_UNUSED_RET static word_t wadd_22(word_t a[2], word_t b[2])
 {
 	word_t carry;
 	a[0] += b[0];
@@ -584,7 +584,7 @@ static word_t wadd_22(word_t a[2], word_t b[2])
 }
 
 /* Subtraction of two limbs numbers with borrow returned. */
-static word_t wsub_22(word_t a[2], word_t b[2])
+ATTRIBUTE_WARN_UNUSED_RET static word_t wsub_22(word_t a[2], word_t b[2])
 {
 	word_t borrow, tmp;
 	tmp = a[0] - b[0];
@@ -628,7 +628,7 @@ static word_t wsub_22(word_t a[2], word_t b[2])
  *
  * Returns 0 on success, -1 on error.
  */
-static int word_divrem(word_t *q, word_t *r, word_t ah, word_t al, word_t b)
+ATTRIBUTE_WARN_UNUSED_RET static int word_divrem(word_t *q, word_t *r, word_t ah, word_t al, word_t b)
 {
 	word_t bh, bl, qh, ql, rm, rhl[2], phl[2];
 	int larger, ret;
@@ -661,7 +661,7 @@ static int word_divrem(word_t *q, word_t *r, word_t ah, word_t al, word_t b)
 
 	ret = wcmp_22(phl, rhl) > 0;
 	MUST_HAVE(!(ret), ret, err);
-	wsub_22(rhl, phl);
+	IGNORE_RET_VAL(wsub_22(rhl, phl));
 	MUST_HAVE((WRSHIFT(rhl[1], HWORD_BITS) == 0), ret, err);
 
 	/* Compute low part of the quotient. */
@@ -679,7 +679,7 @@ static int word_divrem(word_t *q, word_t *r, word_t ah, word_t al, word_t b)
 
 	ret = wcmp_22(phl, rhl) > 0;
 	MUST_HAVE(!(ret), ret, err);
-	wsub_22(rhl, phl);
+	IGNORE_RET_VAL(wsub_22(rhl, phl));
 	/* Set outputs. */
 	MUST_HAVE((rhl[1] == WORD(0)), ret, err);
 	MUST_HAVE(!(rhl[0] >= (b)), ret, err);
@@ -842,7 +842,7 @@ err:
  *
  * This function does not support aliasing. It returns 0 on sucess, -1 on error.
  */
-static int _nn_divrem(nn_t q, nn_t r, nn_src_t a, nn_src_t b)
+ATTRIBUTE_WARN_UNUSED_RET static int _nn_divrem(nn_t q, nn_t r, nn_src_t a, nn_src_t b)
 {
 	nn b_large, b_normalized;
 	bitcnt_t cnt;
@@ -891,7 +891,7 @@ err:
 }
 
 /* Returns 0 on succes, -1 on error. */
-static int __nn_divrem_notrim_alias(nn_t q, nn_t r, nn_src_t a, nn_src_t b)
+ATTRIBUTE_WARN_UNUSED_RET static int __nn_divrem_notrim_alias(nn_t q, nn_t r, nn_src_t a, nn_src_t b)
 {
 	nn a_cpy, b_cpy;
 	int ret;
@@ -1005,7 +1005,7 @@ int nn_mod(nn_t r, nn_src_t a, nn_src_t b)
  * time per the algorithm used. The function returns 0 on success, -1 on
  * error. XXX document 'sign'
  */
-static int _nn_xgcd(nn_t g, nn_t u, nn_t v, nn_src_t a, nn_src_t b,
+ATTRIBUTE_WARN_UNUSED_RET static int _nn_xgcd(nn_t g, nn_t u, nn_t v, nn_src_t a, nn_src_t b,
 		    int *sign)
 {
 	nn_t c, d, q, r, u1, v1, u2, v2;

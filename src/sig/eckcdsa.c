@@ -47,7 +47,7 @@ int eckcdsa_init_pub_key(ec_pub_key *out_pub, const ec_priv_key *in_priv)
 	q = &(in_priv->params->ec_gen_order);
 
 	/* Zero init public key to be generated */
-	local_memset(out_pub, 0, sizeof(ec_pub_key));
+	ret = local_memset(out_pub, 0, sizeof(ec_pub_key)); EG(ret, err);
 
 	/* Sanity check on key */
 	MUST_HAVE(!nn_cmp(&(in_priv->x), q, &cmp) && (cmp < 0), ret, err);
@@ -130,7 +130,7 @@ err:
  * before: buf = { 0xff, 0xff, 0xff, 0x12, 0x34, 0x56, 0x78}
  * after : buf = { 0x34, 0x56, 0x78, 0x00, 0x00, 0x00, 0x00}
  */
-static int buf_lshift(u8 *buf, u8 buflen, u8 shift)
+ATTRIBUTE_WARN_UNUSED_RET static int buf_lshift(u8 *buf, u8 buflen, u8 shift)
 {
 	u8 i;
 	int ret;
@@ -236,7 +236,7 @@ int _eckcdsa_sign_init(struct ec_sign_context *ctx)
 	 * Message m will be handled during following update() calls.
 	 */
 	ret = prj_pt_to_aff(&y_aff, &(pub_key->y)); EG(ret, err);
-	local_memset(tmp_buf, 0, sizeof(tmp_buf));
+	ret = local_memset(tmp_buf, 0, sizeof(tmp_buf)); EG(ret, err);
 	ret = fp_export_to_buf(tmp_buf, p_len, &(y_aff.x)); EG(ret, err);
 	ret = fp_export_to_buf(tmp_buf + p_len, p_len, &(y_aff.y)); EG(ret, err);
 
@@ -250,7 +250,7 @@ int _eckcdsa_sign_init(struct ec_sign_context *ctx)
 	/* XXX FIXME Why do we call thi sanity check function twice? see first call above */
 	ret = hash_mapping_callbacks_sanity_check(ctx->h); EG(ret, err);
 	ret = ctx->h->hfunc_update(&(ctx->sign_data.eckcdsa.h_ctx), tmp_buf, z_len); EG(ret, err);
-	local_memset(tmp_buf, 0, sizeof(tmp_buf));
+	ret = local_memset(tmp_buf, 0, sizeof(tmp_buf));
 
 	/* Initialize data part of the context */
 	ctx->sign_data.eckcdsa.magic = ECKCDSA_SIGN_MAGIC;
@@ -327,7 +327,7 @@ int _eckcdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	ECKCDSA_SIGN_CHECK_INITIALIZED(&(ctx->sign_data.eckcdsa), ret, err);
 
 	/* Zero init points */
-	local_memset(&kG, 0, sizeof(prj_pt));
+	ret = local_memset(&kG, 0, sizeof(prj_pt)); EG(ret, err);
 
 	/* Make things more readable */
 	priv_key = &(ctx->key_pair->priv_key);
@@ -406,7 +406,7 @@ int _eckcdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	dbg_nn_print("W_y", &(W.y.fp_val));
 
 	/* 5 Compute r = h(FE2OS(W_x)). */
-	local_memset(tmp_buf, 0, sizeof(tmp_buf));
+	ret = local_memset(tmp_buf, 0, sizeof(tmp_buf)); EG(ret, err);
 	ret = fp_export_to_buf(tmp_buf, p_len, &(W.x)); EG(ret, err);
 	/* Since we call a callback, sanity check our mapping */
 	ret = hash_mapping_callbacks_sanity_check(ctx->h); EG(ret, err);
@@ -417,8 +417,8 @@ int _eckcdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	/* Since we call a callback, sanity check our mapping */
 	ret = hash_mapping_callbacks_sanity_check(ctx->h); EG(ret, err);
 	ret = ctx->h->hfunc_finalize(&r_ctx, r); EG(ret, err);
-	local_memset(tmp_buf, 0, p_len);
-	local_memset(&r_ctx, 0, sizeof(hash_context));
+	ret = local_memset(tmp_buf, 0, p_len); EG(ret, err);
+	ret = local_memset(&r_ctx, 0, sizeof(hash_context)); EG(ret, err);
 
 	/*
 	 * 6. If |H| > bitlen(q), set r to beta' rightmost bits of
@@ -438,9 +438,8 @@ int _eckcdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 		hzm[i] ^= r[i];
 	}
 	ret = nn_init_from_buf(&tmp, hzm, r_len); EG(ret, err);
-	local_memset(hzm, 0, r_len);
+	ret = local_memset(hzm, 0, r_len); EG(ret, err);
 	ret = nn_mod(&e, &tmp, q); EG(ret, err);
-	ret = nn_zero(&tmp); EG(ret, err);
 	dbg_nn_print("e", &e);
 
 #ifdef USE_SIG_BLINDING
@@ -459,12 +458,8 @@ int _eckcdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	 * safely call nn_sub().
 	 */
 	ret = nn_sub(&tmp, q, &e); EG(ret, err);
-	ret = nn_zero(&e); EG(ret, err);
 	ret = nn_mod_add(&tmp2, &k, &tmp, q); EG(ret, err);
-	ret = nn_zero(&k); EG(ret, err);
 	ret = nn_mul_mod(&s, x, &tmp2, q); EG(ret, err);
-	ret = nn_zero(&tmp2); EG(ret, err);
-	ret = nn_zero(&tmp); EG(ret, err);
 #ifdef USE_SIG_BLINDING
 	/* Unblind s with b^-1 */
 	ret = nn_mul_mod(&s, &s, &binv, q); EG(ret, err);
@@ -479,8 +474,8 @@ int _eckcdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	dbg_nn_print("s", &s);
 
 	/* 10. return (r,s) */
-	local_memcpy(sig, r, r_len);
-	local_memset(r, 0, r_len);
+	ret = local_memcpy(sig, r, r_len); EG(ret, err);
+	ret = local_memset(r, 0, r_len); EG(ret, err);
 	ret = nn_export_to_buf(sig + r_len, s_len, &s);
 
  err:
@@ -500,7 +495,7 @@ int _eckcdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	 * We can now clear data part of the context. This will clear
 	 * magic and avoid further reuse of the whole context.
 	 */
-	local_memset(&(ctx->sign_data.eckcdsa), 0, sizeof(eckcdsa_sign_data));
+	IGNORE_RET_VAL(local_memset(&(ctx->sign_data.eckcdsa), 0, sizeof(eckcdsa_sign_data)));
 
 	PTR_NULLIFY(G);
 	PTR_NULLIFY(q);
@@ -626,7 +621,7 @@ int _eckcdsa_verify_init(struct ec_verify_context *ctx,
 	 * Message m will be handled during following update() calls.
 	 */
 	ret = prj_pt_to_aff(&y_aff, &(pub_key->y)); EG(ret, err);
-	local_memset(tmp_buf, 0, sizeof(tmp_buf));
+	ret = local_memset(tmp_buf, 0, sizeof(tmp_buf)); EG(ret, err);
 	ret = fp_export_to_buf(tmp_buf, p_len, &(y_aff.x)); EG(ret, err);
 	ret = fp_export_to_buf(tmp_buf + p_len, p_len, &(y_aff.y)); EG(ret, err);
 
@@ -641,15 +636,14 @@ int _eckcdsa_verify_init(struct ec_verify_context *ctx,
 	ret = hash_mapping_callbacks_sanity_check(ctx->h); EG(ret, err);
 	ret = ctx->h->hfunc_update(&(ctx->verify_data.eckcdsa.h_ctx), tmp_buf,
 				   z_len); EG(ret, err);
-	local_memset(tmp_buf, 0, sizeof(tmp_buf));
+	ret = local_memset(tmp_buf, 0, sizeof(tmp_buf)); EG(ret, err);
 
 	/*
 	 * Initialize the verify context by storing r and s as imported
 	 * from the signature
 	 */
-	local_memcpy(ctx->verify_data.eckcdsa.r, sig, r_len);
+	ret = local_memcpy(ctx->verify_data.eckcdsa.r, sig, r_len); EG(ret, err);
 	ret = nn_copy(&(ctx->verify_data.eckcdsa.s), &s); EG(ret, err);
-	ret = nn_zero(&s); EG(ret, err);
 	ctx->verify_data.eckcdsa.magic = ECKCDSA_VERIFY_MAGIC;
 
  err:
@@ -662,8 +656,8 @@ int _eckcdsa_verify_init(struct ec_verify_context *ctx,
 		 * This will clear magic and avoid further reuse of the
 		 * whole context.
 		 */
-		local_memset(&(ctx->verify_data.eckcdsa), 0,
-			     sizeof(eckcdsa_verify_data));
+		ret = local_memset(&(ctx->verify_data.eckcdsa), 0,
+			     sizeof(eckcdsa_verify_data)); EG(ret, err);
 	}
 
 	/* Let's also clear what remains on the stack */
@@ -723,7 +717,7 @@ int _eckcdsa_verify_finalize(struct ec_verify_context *ctx)
 	nn_src_t q;
 	nn e, tmp;
 	u8 hsize, shift;
-	int ret;
+	int ret, check;
 	u8 *r;
 	nn *s;
 
@@ -739,8 +733,8 @@ int _eckcdsa_verify_finalize(struct ec_verify_context *ctx)
 	ECKCDSA_VERIFY_CHECK_INITIALIZED(&(ctx->verify_data.eckcdsa), ret, err);
 
 	/* Zero init points */
-	local_memset(&sY, 0, sizeof(prj_pt));
-	local_memset(&eG, 0, sizeof(prj_pt));
+	ret = local_memset(&sY, 0, sizeof(prj_pt)); EG(ret, err);
+	ret = local_memset(&eG, 0, sizeof(prj_pt)); EG(ret, err);
 
 	/* Make things more readable */
 	pub_key = ctx->pub_key;
@@ -776,23 +770,21 @@ int _eckcdsa_verify_finalize(struct ec_verify_context *ctx)
 		hzm[i] ^= r[i];
 	}
 	ret = nn_init_from_buf(&tmp, hzm, r_len); EG(ret, err);
-	local_memset(hzm, 0, hsize);
+	ret = local_memset(hzm, 0, hsize); EG(ret, err);
 	ret = nn_mod(&e, &tmp, q); EG(ret, err);
-	ret = nn_zero(&tmp); EG(ret, err);
 
 	dbg_nn_print("e", &e);
 
 	/* 6. Compute W' = sY + eG, where Y is the public key */
 	ret = prj_pt_mul_monty(&sY, s, Y); EG(ret, err);
 	ret = prj_pt_mul_monty(&eG, &e, G); EG(ret, err);
-	ret = nn_zero(&e); EG(ret, err);
 	ret = prj_pt_add_monty(&Wprime, &sY, &eG); EG(ret, err);
 	ret = prj_pt_to_aff(&Wprime_aff, &Wprime); EG(ret, err);
 	dbg_nn_print("W'_x", &(Wprime_aff.x.fp_val));
 	dbg_nn_print("W'_y", &(Wprime_aff.y.fp_val));
 
 	/* 7. Compute r' = h(W'x) */
-	local_memset(tmp_buf, 0, sizeof(tmp_buf));
+	ret = local_memset(tmp_buf, 0, sizeof(tmp_buf)); EG(ret, err);
 	ret = fp_export_to_buf(tmp_buf, p_len, &(Wprime_aff.x)); EG(ret, err);
 	/* Since we call a callback, sanity check our mapping */
 	ret = hash_mapping_callbacks_sanity_check(ctx->h); EG(ret, err);
@@ -804,8 +796,8 @@ int _eckcdsa_verify_finalize(struct ec_verify_context *ctx)
 	/* XXX again, why doing that check twice. see above */
 	ret = hash_mapping_callbacks_sanity_check(ctx->h); EG(ret, err);
 	ret = ctx->h->hfunc_finalize(&r_prime_ctx, r_prime); EG(ret, err);
-	local_memset(tmp_buf, 0, p_len);
-	local_memset(&r_prime_ctx, 0, sizeof(hash_context));
+	ret = local_memset(tmp_buf, 0, p_len); EG(ret, err);
+	ret = local_memset(&r_prime_ctx, 0, sizeof(hash_context)); EG(ret, err);
 
 	/*
 	 * 8. If |H| > bitlen(q), set r' to beta' rightmost bits of
@@ -818,7 +810,8 @@ int _eckcdsa_verify_finalize(struct ec_verify_context *ctx)
 	dbg_buf_print("r", r, r_len);
 
 	/* 9. Check if r == r' */
-	ret = are_equal(r, r_prime, r_len) ? 0 : -1;
+	ret = are_equal(r, r_prime, r_len, &check); EG(ret, err);
+	ret = check ? 0 : -1;
 
 err:
 	prj_pt_uninit(&sY);
@@ -832,8 +825,8 @@ err:
 	 * We can now clear data part of the context. This will clear
 	 * magic and avoid further reuse of the whole context.
 	 */
-	local_memset(&(ctx->verify_data.eckcdsa), 0,
-		     sizeof(eckcdsa_verify_data));
+	IGNORE_RET_VAL(local_memset(&(ctx->verify_data.eckcdsa), 0,
+		     sizeof(eckcdsa_verify_data)));
 
 	/* Let's also clear what remains on the stack */
 	VAR_ZEROIFY(i);

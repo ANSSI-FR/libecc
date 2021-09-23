@@ -16,7 +16,7 @@
 /* We include the NN layer API header */
 #include "libarith.h"
 
-int miller_rabin(nn_src_t n, const unsigned int t, int *res);
+ATTRIBUTE_WARN_UNUSED_RET int miller_rabin(nn_src_t n, const unsigned int t, int *res);
 
 /* Miller-Rabin primality test.
  * See "Handbook of Applied Cryptography", alorithm 4.24:
@@ -137,7 +137,7 @@ int miller_rabin(nn_src_t n, const unsigned int t, int *res)
 		ret = nn_zero(&a); EG(ret, err);
 		ret = nn_cmp(&a, &two, &cmp); EG(ret, err);
 		while (cmp < 0) {
-			nn_get_random_mod(&a, &tmp);
+			ret = nn_get_random_mod(&a, &tmp); EG(ret, err);
 			ret = nn_cmp(&a, &two, &cmp); EG(ret, err);
 		}
 		/* A very loose (and NOT robust) implementation of

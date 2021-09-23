@@ -100,74 +100,74 @@ typedef int (*_hfunc_scattered) (const unsigned char **inputs,
  * handle typing of our generic union structure.
  */
 #ifdef WITH_HASH_SHA224
-int _sha224_init(hash_context * hctx);
-int _sha224_update(hash_context * hctx, const unsigned char *chunk, u32 chunklen);
-int _sha224_final(hash_context * hctx, unsigned char *output);
+ATTRIBUTE_WARN_UNUSED_RET int _sha224_init(hash_context * hctx);
+ATTRIBUTE_WARN_UNUSED_RET int _sha224_update(hash_context * hctx, const unsigned char *chunk, u32 chunklen);
+ATTRIBUTE_WARN_UNUSED_RET int _sha224_final(hash_context * hctx, unsigned char *output);
 #endif
 #ifdef WITH_HASH_SHA256
-int _sha256_init(hash_context * hctx);
-int _sha256_update(hash_context * hctx, const unsigned char *chunk, u32 chunklen);
-int _sha256_final(hash_context * hctx, unsigned char *output);
+ATTRIBUTE_WARN_UNUSED_RET int _sha256_init(hash_context * hctx);
+ATTRIBUTE_WARN_UNUSED_RET int _sha256_update(hash_context * hctx, const unsigned char *chunk, u32 chunklen);
+ATTRIBUTE_WARN_UNUSED_RET int _sha256_final(hash_context * hctx, unsigned char *output);
 #endif
 #ifdef WITH_HASH_SHA384
-int _sha384_init(hash_context * hctx);
-int _sha384_update(hash_context * hctx, const unsigned char *chunk, u32 chunklen);
-int _sha384_final(hash_context * hctx, unsigned char *output);
+ATTRIBUTE_WARN_UNUSED_RET int _sha384_init(hash_context * hctx);
+ATTRIBUTE_WARN_UNUSED_RET int _sha384_update(hash_context * hctx, const unsigned char *chunk, u32 chunklen);
+ATTRIBUTE_WARN_UNUSED_RET int _sha384_final(hash_context * hctx, unsigned char *output);
 #endif
 #ifdef WITH_HASH_SHA512
-int _sha512_init(hash_context * hctx);
-int _sha512_update(hash_context * hctx, const unsigned char *chunk, u32 chunklen);
-int _sha512_final(hash_context * hctx, unsigned char *output);
+ATTRIBUTE_WARN_UNUSED_RET int _sha512_init(hash_context * hctx);
+ATTRIBUTE_WARN_UNUSED_RET int _sha512_update(hash_context * hctx, const unsigned char *chunk, u32 chunklen);
+ATTRIBUTE_WARN_UNUSED_RET int _sha512_final(hash_context * hctx, unsigned char *output);
 #endif
 #ifdef WITH_HASH_SHA512_224
-int _sha512_224_init(hash_context * hctx);
-int _sha512_224_update(hash_context * hctx, const unsigned char *chunk, u32 chunklen);
-int _sha512_224_final(hash_context * hctx, unsigned char *output);
+ATTRIBUTE_WARN_UNUSED_RET int _sha512_224_init(hash_context * hctx);
+ATTRIBUTE_WARN_UNUSED_RET int _sha512_224_update(hash_context * hctx, const unsigned char *chunk, u32 chunklen);
+ATTRIBUTE_WARN_UNUSED_RET int _sha512_224_final(hash_context * hctx, unsigned char *output);
 #endif
 #ifdef WITH_HASH_SHA512_256
-int _sha512_256_init(hash_context * hctx);
-int _sha512_256_update(hash_context * hctx, const unsigned char *chunk, u32 chunklen);
-int _sha512_256_final(hash_context * hctx, unsigned char *output);
+ATTRIBUTE_WARN_UNUSED_RET int _sha512_256_init(hash_context * hctx);
+ATTRIBUTE_WARN_UNUSED_RET int _sha512_256_update(hash_context * hctx, const unsigned char *chunk, u32 chunklen);
+ATTRIBUTE_WARN_UNUSED_RET int _sha512_256_final(hash_context * hctx, unsigned char *output);
 #endif
 #ifdef WITH_HASH_SHA3_224
-int _sha3_224_init(hash_context * hctx);
-int _sha3_224_update(hash_context * hctx, const unsigned char *chunk, u32 chunklen);
-int _sha3_224_final(hash_context * hctx, unsigned char *output);
+ATTRIBUTE_WARN_UNUSED_RET int _sha3_224_init(hash_context * hctx);
+ATTRIBUTE_WARN_UNUSED_RET int _sha3_224_update(hash_context * hctx, const unsigned char *chunk, u32 chunklen);
+ATTRIBUTE_WARN_UNUSED_RET int _sha3_224_final(hash_context * hctx, unsigned char *output);
 #endif
 #ifdef WITH_HASH_SHA3_256
-int _sha3_256_init(hash_context * hctx);
-int _sha3_256_update(hash_context * hctx, const unsigned char *chunk, u32 chunklen);
-int _sha3_256_final(hash_context * hctx, unsigned char *output);
+ATTRIBUTE_WARN_UNUSED_RET int _sha3_256_init(hash_context * hctx);
+ATTRIBUTE_WARN_UNUSED_RET int _sha3_256_update(hash_context * hctx, const unsigned char *chunk, u32 chunklen);
+ATTRIBUTE_WARN_UNUSED_RET int _sha3_256_final(hash_context * hctx, unsigned char *output);
 #endif
 #ifdef WITH_HASH_SHA3_384
-int _sha3_384_init(hash_context * hctx);
-int _sha3_384_update(hash_context * hctx, const unsigned char *chunk, u32 chunklen);
-int _sha3_384_final(hash_context * hctx, unsigned char *output);
+ATTRIBUTE_WARN_UNUSED_RET int _sha3_384_init(hash_context * hctx);
+ATTRIBUTE_WARN_UNUSED_RET int _sha3_384_update(hash_context * hctx, const unsigned char *chunk, u32 chunklen);
+ATTRIBUTE_WARN_UNUSED_RET int _sha3_384_final(hash_context * hctx, unsigned char *output);
 #endif
 #ifdef WITH_HASH_SHA3_512
-int _sha3_512_init(hash_context * hctx);
-int _sha3_512_update(hash_context * hctx, const unsigned char *chunk, u32 chunklen);
-int _sha3_512_final(hash_context * hctx, unsigned char *output);
+ATTRIBUTE_WARN_UNUSED_RET int _sha3_512_init(hash_context * hctx);
+ATTRIBUTE_WARN_UNUSED_RET int _sha3_512_update(hash_context * hctx, const unsigned char *chunk, u32 chunklen);
+ATTRIBUTE_WARN_UNUSED_RET int _sha3_512_final(hash_context * hctx, unsigned char *output);
 #endif
 #ifdef WITH_HASH_SM3
-int _sm3_init(hash_context * hctx);
-int _sm3_update(hash_context * hctx, const unsigned char *chunk, u32 chunklen);
-int _sm3_final(hash_context * hctx, unsigned char *output);
+ATTRIBUTE_WARN_UNUSED_RET int _sm3_init(hash_context * hctx);
+ATTRIBUTE_WARN_UNUSED_RET int _sm3_update(hash_context * hctx, const unsigned char *chunk, u32 chunklen);
+ATTRIBUTE_WARN_UNUSED_RET int _sm3_final(hash_context * hctx, unsigned char *output);
 #endif
 #ifdef WITH_HASH_SHAKE256
-int _shake256_init(hash_context * hctx);
-int _shake256_update(hash_context * hctx, const unsigned char *chunk, u32 chunklen);
-int _shake256_final(hash_context * hctx, unsigned char *output);
+ATTRIBUTE_WARN_UNUSED_RET int _shake256_init(hash_context * hctx);
+ATTRIBUTE_WARN_UNUSED_RET int _shake256_update(hash_context * hctx, const unsigned char *chunk, u32 chunklen);
+ATTRIBUTE_WARN_UNUSED_RET int _shake256_final(hash_context * hctx, unsigned char *output);
 #endif
 #ifdef WITH_HASH_STREEBOG256
-int _streebog256_init(hash_context * hctx);
-int _streebog256_update(hash_context * hctx, const unsigned char *chunk, u32 chunklen);
-int _streebog256_final(hash_context * hctx, unsigned char *output);
+ATTRIBUTE_WARN_UNUSED_RET int _streebog256_init(hash_context * hctx);
+ATTRIBUTE_WARN_UNUSED_RET int _streebog256_update(hash_context * hctx, const unsigned char *chunk, u32 chunklen);
+ATTRIBUTE_WARN_UNUSED_RET int _streebog256_final(hash_context * hctx, unsigned char *output);
 #endif
 #ifdef WITH_HASH_STREEBOG512
-int _streebog512_init(hash_context * hctx);
-int _streebog512_update(hash_context * hctx, const unsigned char *chunk, u32 chunklen);
-int _streebog512_final(hash_context * hctx, unsigned char *output);
+ATTRIBUTE_WARN_UNUSED_RET int _streebog512_init(hash_context * hctx);
+ATTRIBUTE_WARN_UNUSED_RET int _streebog512_update(hash_context * hctx, const unsigned char *chunk, u32 chunklen);
+ATTRIBUTE_WARN_UNUSED_RET int _streebog512_final(hash_context * hctx, unsigned char *output);
 #endif
 
 /*
@@ -180,13 +180,13 @@ typedef struct {
 	const char *name;
 	u8 digest_size;
 	u8 block_size;
-	_hfunc_init hfunc_init;
-	_hfunc_update hfunc_update;
-	_hfunc_finalize hfunc_finalize;
-	_hfunc_scattered hfunc_scattered;
+	ATTRIBUTE_WARN_UNUSED_RET _hfunc_init hfunc_init;
+	ATTRIBUTE_WARN_UNUSED_RET _hfunc_update hfunc_update;
+	ATTRIBUTE_WARN_UNUSED_RET _hfunc_finalize hfunc_finalize;
+	ATTRIBUTE_WARN_UNUSED_RET _hfunc_scattered hfunc_scattered;
 } hash_mapping;
 
-static inline int hash_mapping_sanity_check(const hash_mapping *hm)
+ATTRIBUTE_WARN_UNUSED_RET static inline int hash_mapping_sanity_check(const hash_mapping *hm)
 {
 	int ret;
 
@@ -408,9 +408,9 @@ static const hash_mapping hash_maps[] = {
 	 .hfunc_scattered = NULL},
 };
 
-int get_hash_by_name(const char *hash_name, const hash_mapping **hm);
-int get_hash_by_type(hash_alg_type hash_type, const hash_mapping **hm);
-int get_hash_sizes(hash_alg_type hash_type, u8 *digest_size, u8 *block_size);
-int hash_mapping_callbacks_sanity_check(const hash_mapping *h);
+ATTRIBUTE_WARN_UNUSED_RET int get_hash_by_name(const char *hash_name, const hash_mapping **hm);
+ATTRIBUTE_WARN_UNUSED_RET int get_hash_by_type(hash_alg_type hash_type, const hash_mapping **hm);
+ATTRIBUTE_WARN_UNUSED_RET int get_hash_sizes(hash_alg_type hash_type, u8 *digest_size, u8 *block_size);
+ATTRIBUTE_WARN_UNUSED_RET int hash_mapping_callbacks_sanity_check(const hash_mapping *h);
 
 #endif /* __HASH_ALGS_H__ */

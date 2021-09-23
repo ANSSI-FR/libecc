@@ -46,7 +46,7 @@
  */
 #ifndef USE_ISO14888_3_ECRDSA
 /* Reverses the endiannes of a buffer in place */
-static inline int _reverse_endianness(u8 *buf, u16 buf_size)
+ATTRIBUTE_WARN_UNUSED_RET static inline int _reverse_endianness(u8 *buf, u16 buf_size)
 {
 	u32 i;
 	u8 tmp;
@@ -77,7 +77,7 @@ int ecrdsa_init_pub_key(ec_pub_key *out_pub, const ec_priv_key *in_priv)
 	MUST_HAVE(out_pub != NULL, ret, err);
 
 	/* Zero init public key to be generated */
-	local_memset(out_pub, 0, sizeof(ec_pub_key));
+	ret = local_memset(out_pub, 0, sizeof(ec_pub_key)); EG(ret, err);
 
 	ret = priv_key_check_initialized_and_type(in_priv, ECRDSA); EG(ret, err);
 	q = &(in_priv->params->ec_gen_order);
@@ -224,7 +224,7 @@ int _ecrdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	ECRDSA_SIGN_CHECK_INITIALIZED(&(ctx->sign_data.ecrdsa), ret, err);
 
 	/* Zero init points */
-	local_memset(&kG, 0, sizeof(prj_pt));
+	ret = local_memset(&kG, 0, sizeof(prj_pt)); EG(ret, err);
 
 	/* Make things more readable */
 	priv_key = &(ctx->key_pair->priv_key);
@@ -300,7 +300,7 @@ int _ecrdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	ret = nn_export_to_buf(sig, r_len, &r); EG(ret, err);
 
 	/* 6. Compute e = OS2I(h) mod q. If e is 0, set e to 1. */
-	local_memset(h_buf, 0, hsize);
+	ret = local_memset(h_buf, 0, hsize); EG(ret, err);
 	/* Since we call a callback, sanity check our mapping */
 	ret = hash_mapping_callbacks_sanity_check(ctx->h); EG(ret, err);
 	ret = ctx->h->hfunc_finalize(&(ctx->sign_data.ecrdsa.h_ctx), h_buf); EG(ret, err);
@@ -312,7 +312,7 @@ int _ecrdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	ret = _reverse_endianness(h_buf, hsize); EG(ret, err);
 #endif
 	ret = nn_init_from_buf(&tmp, h_buf, hsize); EG(ret, err);
-	local_memset(h_buf, 0, hsize);
+	ret = local_memset(h_buf, 0, hsize); EG(ret, err);
 	ret = nn_mod(&e, &tmp, q); EG(ret, err);
 	ret = nn_iszero(&e, &iszero); EG(ret, err);
 	if (iszero) {
@@ -329,12 +329,7 @@ int _ecrdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	/* Compute s = (rx + ke) mod q */
 	ret = nn_mul_mod(&rx, &r, x, q); EG(ret, err);
 	ret = nn_mul_mod(&ke, &k, &e, q); EG(ret, err);
-	ret = nn_zero(&e); EG(ret, err);
-	ret = nn_zero(&k); EG(ret, err);
 	ret = nn_mod_add(&s, &rx, &ke, q); EG(ret, err);
-	ret = nn_zero(&rx); EG(ret, err);
-	ret = nn_zero(&ke); EG(ret, err);
-	ret = nn_zero(&tmp); EG(ret, err);
 #ifdef USE_SIG_BLINDING
 	/* Unblind s */
 	ret = nn_modinv(&binv, &b, q); EG(ret, err);
@@ -373,7 +368,7 @@ int _ecrdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	 * We can now clear data part of the context. This will clear
 	 * magic and avoid further reuse of the whole context.
 	 */
-	local_memset(&(ctx->sign_data.ecrdsa), 0, sizeof(ecrdsa_sign_data));
+	IGNORE_RET_VAL(local_memset(&(ctx->sign_data.ecrdsa), 0, sizeof(ecrdsa_sign_data)));
 
 	/* Clean what remains on the stack */
 	VAR_ZEROIFY(r_len);
@@ -462,9 +457,7 @@ int _ecrdsa_verify_init(struct ec_verify_context *ctx,
 
 	/* Initialize the remaining of verify context. */
 	ret = nn_copy(&(ctx->verify_data.ecrdsa.r), &r); EG(ret, err);
-	ret = nn_zero(&r); EG(ret, err);
 	ret = nn_copy(&(ctx->verify_data.ecrdsa.s), &s); EG(ret, err);
-	ret = nn_zero(&s); EG(ret, err);
 	/* Since we call a callback, sanity check our mapping */
 	ret = hash_mapping_callbacks_sanity_check(ctx->h); EG(ret, err);
 	ret = ctx->h->hfunc_init(&(ctx->verify_data.ecrdsa.h_ctx)); EG(ret, err);
@@ -532,8 +525,8 @@ int _ecrdsa_verify_finalize(struct ec_verify_context *ctx)
 	ECRDSA_VERIFY_CHECK_INITIALIZED(&(ctx->verify_data.ecrdsa), ret, err);
 
 	/* Zero init points */
-	local_memset(&uG, 0, sizeof(prj_pt));
-	local_memset(&vY, 0, sizeof(prj_pt));
+	ret = local_memset(&uG, 0, sizeof(prj_pt)); EG(ret, err);
+	ret = local_memset(&vY, 0, sizeof(prj_pt)); EG(ret, err);
 
 	/* Make things more readable */
 	G = &(ctx->pub_key->params->ec_gen);
@@ -544,7 +537,7 @@ int _ecrdsa_verify_finalize(struct ec_verify_context *ctx)
 	hsize = ctx->h->digest_size;
 
 	/* 2. Compute h = H(m) */
-	local_memset(h_buf, 0, hsize);
+	ret = local_memset(h_buf, 0, hsize); EG(ret, err);
 	/* Since we call a callback, sanity check our mapping */
 	ret = hash_mapping_callbacks_sanity_check(ctx->h); EG(ret, err);
 	ret = ctx->h->hfunc_finalize(&(ctx->verify_data.ecrdsa.h_ctx), h_buf); EG(ret, err);
@@ -558,14 +551,13 @@ int _ecrdsa_verify_finalize(struct ec_verify_context *ctx)
 
 	/* 3. Compute e = OS2I(h)^-1 mod q */
 	ret = nn_init_from_buf(&tmp, h_buf, hsize); EG(ret, err);
-	local_memset(h_buf, 0, hsize);
+	ret = local_memset(h_buf, 0, hsize); EG(ret, err);
 	ret = nn_mod(&h, &tmp, q); EG(ret, err); /* h = OS2I(h) mod q */
 	ret = nn_iszero(&h, &iszero); EG(ret, err);
 	if (iszero) {	/* If h is equal to 0, set it to 1 */
 		ret = nn_inc(&h, &h); EG(ret, err);
 	}
 	ret = nn_modinv(&e, &h, q); EG(ret, err); /* e = h^-1 mod q */
-	ret = nn_zero(&h); EG(ret, err);
 
 	/* 4. Compute u = es mod q */
 	ret = nn_mul(&tmp, &e, s); EG(ret, err);
@@ -577,7 +569,6 @@ int _ecrdsa_verify_finalize(struct ec_verify_context *ctx)
 	 * v = -er mod q = q - (er mod q) (except when er is 0).
 	 */
 	ret = nn_mul(&tmp, &e, r); EG(ret, err); /* tmp = er */
-	ret = nn_zero(&e); EG(ret, err);
 	ret = nn_mod(&tmp, &tmp, q); EG(ret, err); /* tmp = er mod q */
 	ret = nn_iszero(&tmp, &iszero); EG(ret, err);
 	if (iszero) {
@@ -585,13 +576,10 @@ int _ecrdsa_verify_finalize(struct ec_verify_context *ctx)
 	} else {
 		ret = nn_sub(&v, q, &tmp); EG(ret, err);
 	}
-	ret = nn_zero(&tmp); EG(ret, err);
 
 	/* 6. Compute W' = uG + vY = (W'_x, W'_y) */
 	ret = prj_pt_mul_monty(&uG, &u, G); EG(ret, err);
 	ret = prj_pt_mul_monty(&vY, &v, Y); EG(ret, err);
-	ret = nn_zero(&u); EG(ret, err);
-	ret = nn_zero(&v); EG(ret, err);
 	ret = prj_pt_add_monty(&Wprime, &uG, &vY); EG(ret, err);
 	ret = prj_pt_to_aff(&Wprime_aff, &Wprime); EG(ret, err);
 	dbg_nn_print("W'_x", &(Wprime_aff.x.fp_val));
@@ -620,8 +608,8 @@ err:
 	 * We can now clear data part of the context. This will clear
 	 * magic and avoid further reuse of the whole context.
 	 */
-	local_memset(&(ctx->verify_data.ecrdsa), 0,
-		     sizeof(ecrdsa_verify_data));
+	IGNORE_RET_VAL(local_memset(&(ctx->verify_data.ecrdsa), 0,
+		     sizeof(ecrdsa_verify_data)));
 
 	/* Clean what remains on the stack */
 	PTR_NULLIFY(G);

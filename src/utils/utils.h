@@ -166,15 +166,15 @@
 
 #define BYTECEIL(numbits) (((numbits) + 7) / 8)
 
-u8 are_equal(const void *a, const void *b, u32 len);
-void local_memcpy(void *dst, const void *src, u32 n);
-void local_memset(void *v, u8 c, u32 n);
-u8 are_str_equal(const char *s1, const char *s2);
-u8 are_str_equal_nlen(const char *s1, const char *s2, u32 maxlen);
-u32 local_strlen(const char *s);
-u32 local_strnlen(const char *s, u32 maxlen);
-char *local_strncpy(char *dst, const char *src, u32 n);
-char *local_strncat(char *dest, const char *src, u32 n);
+ATTRIBUTE_WARN_UNUSED_RET int are_equal(const void *a, const void *b, u32 len, int *check);
+ATTRIBUTE_WARN_UNUSED_RET int local_memcpy(void *dst, const void *src, u32 n);
+ATTRIBUTE_WARN_UNUSED_RET int local_memset(void *v, u8 c, u32 n);
+ATTRIBUTE_WARN_UNUSED_RET int are_str_equal(const char *s1, const char *s2, int *check);
+ATTRIBUTE_WARN_UNUSED_RET int are_str_equal_nlen(const char *s1, const char *s2, u32 maxlen, int *check);
+ATTRIBUTE_WARN_UNUSED_RET int local_strlen(const char *s, u32 *len);
+ATTRIBUTE_WARN_UNUSED_RET int local_strnlen(const char *s, u32 maxlen, u32 *len);
+ATTRIBUTE_WARN_UNUSED_RET int local_strncpy(char *dst, const char *src, u32 n);
+ATTRIBUTE_WARN_UNUSED_RET int local_strncat(char *dest, const char *src, u32 n);
 
 /* Return 1 if architecture is big endian, 0 otherwise. */
 static inline int arch_is_big_endian(void)

@@ -605,7 +605,7 @@ err:
  *
  * The function returns 0 on success, -1 on error.
  */
-static int __prj_pt_add(prj_pt_t out, prj_pt_src_t in1, prj_pt_src_t in2)
+ATTRIBUTE_WARN_UNUSED_RET static int __prj_pt_add(prj_pt_t out, prj_pt_src_t in1, prj_pt_src_t in2)
 {
 #ifndef NO_USE_COMPLETE_FORMULAS
 	fp t0, t1, t2, t3, t4, t5;
@@ -784,7 +784,7 @@ err:
  * Version for handling aliasing of one of the inputs 'in1' or 'in2' with 'out'.
  * Handle that through a temporary local copy.
  */
-static int __prj_pt_add_aliased(prj_pt_t out, prj_pt_src_t in1, prj_pt_src_t in2)
+ATTRIBUTE_WARN_UNUSED_RET static int __prj_pt_add_aliased(prj_pt_t out, prj_pt_src_t in1, prj_pt_src_t in2)
 {
 	prj_pt out_cpy;
 	int ret;
@@ -803,7 +803,7 @@ err:
  * Alias-supporting version, i.e. same point can be passed to 'out' and
  * 'in1' or 'in2'.
  */
-static int _prj_pt_add(prj_pt_t out, prj_pt_src_t in1, prj_pt_src_t in2)
+ATTRIBUTE_WARN_UNUSED_RET static int _prj_pt_add(prj_pt_t out, prj_pt_src_t in1, prj_pt_src_t in2)
 {
 	int ret;
 
@@ -885,7 +885,7 @@ err:
  * The function returns 0 on success, -1 on error.
  */
 #ifndef NO_USE_COMPLETE_FORMULAS
-static int __prj_pt_dbl(prj_pt_t out, prj_pt_src_t in)
+ATTRIBUTE_WARN_UNUSED_RET static int __prj_pt_dbl(prj_pt_t out, prj_pt_src_t in)
 {
 	fp t0, t1, t2 ,t3;
 	int ret;
@@ -947,7 +947,7 @@ err:
 	return ret;
 }
 #else
-static int __prj_pt_dbl(prj_pt_t out, prj_pt_src_t in)
+ATTRIBUTE_WARN_UNUSED_RET static int __prj_pt_dbl(prj_pt_t out, prj_pt_src_t in)
 {
 	fp XX, ZZ, w, s, ss, sss, R, RR, B, h;
 	int ret, iszero;
@@ -1041,7 +1041,7 @@ err:
 }
 #endif
 
-static int __prj_pt_dbl_aliased(prj_pt_t out, prj_pt_src_t in)
+ATTRIBUTE_WARN_UNUSED_RET static int __prj_pt_dbl_aliased(prj_pt_t out, prj_pt_src_t in)
 {
 	prj_pt out_cpy;
 	int ret;
@@ -1059,7 +1059,7 @@ err:
 /*
  * Alias-supporting version, i.e. same point can be passed to 'out' and 'in'.
  */
-static int _prj_pt_dbl(prj_pt_t out, prj_pt_src_t in)
+ATTRIBUTE_WARN_UNUSED_RET static int _prj_pt_dbl(prj_pt_t out, prj_pt_src_t in)
 {
 	int ret;
 
@@ -1156,7 +1156,7 @@ err:
  *
  * Returns 0 on success, -1 on error.
  */
-static int _prj_pt_mul_ltr_dbl_add_always(prj_pt_t out, nn_src_t m, prj_pt_src_t in)
+ATTRIBUTE_WARN_UNUSED_RET static int _prj_pt_mul_ltr_dbl_add_always(prj_pt_t out, nn_src_t m, prj_pt_src_t in)
 {
 	/* We use Itoh et al. notations here for T and the random r */
 	prj_pt T[3];
@@ -1340,7 +1340,7 @@ err:
  *
  * Returns 0 on success, -1 on error.
  */
-static int _prj_pt_mul_ltr_ladder(prj_pt_t out, nn_src_t m, prj_pt_src_t in)
+ATTRIBUTE_WARN_UNUSED_RET static int _prj_pt_mul_ltr_ladder(prj_pt_t out, nn_src_t m, prj_pt_src_t in)
 {
 	/* We use Itoh et al. notations here for T and the random r */
 	prj_pt T[3];
@@ -1509,7 +1509,7 @@ err:
  * Depending on the preprocessing options, we use either the
  * Double and Add Always algorithm, or the Montgomery Ladder one.
  */
-static int _prj_pt_mul_ltr(prj_pt_t out, nn_src_t m, prj_pt_src_t in){
+ATTRIBUTE_WARN_UNUSED_RET static int _prj_pt_mul_ltr(prj_pt_t out, nn_src_t m, prj_pt_src_t in){
 #if defined(USE_DOUBLE_ADD_ALWAYS)
 	return _prj_pt_mul_ltr_dbl_add_always(out, m, in);
 #elif defined(USE_MONTY_LADDER)
@@ -1519,7 +1519,7 @@ static int _prj_pt_mul_ltr(prj_pt_t out, nn_src_t m, prj_pt_src_t in){
 #endif
 }
 
-static int _prj_pt_mul_ltr_aliased(prj_pt_t out, nn_src_t m, prj_pt_src_t in)
+ATTRIBUTE_WARN_UNUSED_RET static int _prj_pt_mul_ltr_aliased(prj_pt_t out, nn_src_t m, prj_pt_src_t in)
 {
 	prj_pt out_cpy;
 	int ret;

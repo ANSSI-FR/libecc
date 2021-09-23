@@ -40,7 +40,7 @@
  *
  * The function returns 0 on succes, -1 on error.
  */
-static int _nn_mul_low(nn_t out, nn_src_t in1, nn_src_t in2,
+ATTRIBUTE_WARN_UNUSED_RET static int _nn_mul_low(nn_t out, nn_src_t in1, nn_src_t in2,
 			u8 wlimit)
 {
 	word_t carry, prod_high, prod_low;
@@ -102,7 +102,7 @@ err:
 }
 
 /* Aliased version. Internal use only. Check on input nn left to the caller */
-static int _nn_mul_low_aliased(nn_t out, nn_src_t in1, nn_src_t in2,
+ATTRIBUTE_WARN_UNUSED_RET static int _nn_mul_low_aliased(nn_t out, nn_src_t in1, nn_src_t in2,
 			       u8 wlimit)
 {
 	nn out_cpy;

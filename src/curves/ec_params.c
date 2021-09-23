@@ -37,7 +37,7 @@ int import_params(ec_params *out_params, const ec_str_params *in_str_params)
 
 	MUST_HAVE(((out_params != NULL) && (in_str_params != NULL)), ret, err);
 
-	local_memset(out_params, 0, sizeof(ec_params));
+	ret = local_memset(out_params, 0, sizeof(ec_params)); EG(ret, err);
 
 	/*
 	 * We first need to import p, the prime defining Fp and associated
@@ -149,17 +149,17 @@ int import_params(ec_params *out_params, const ec_str_params *in_str_params)
 
 	/* Import a local copy of curve OID */
 	MUST_HAVE(in_str_params->oid->buflen < MAX_CURVE_OID_LEN, ret, err);
-	local_memset(out_params->curve_oid, 0, MAX_CURVE_OID_LEN);
-	local_strncpy((char *)out_params->curve_oid,
+	ret = local_memset(out_params->curve_oid, 0, MAX_CURVE_OID_LEN); EG(ret, err);
+	ret = local_strncpy((char *)out_params->curve_oid,
 		      (const char *)in_str_params->oid->buf,
-		      in_str_params->oid->buflen);
+		      in_str_params->oid->buflen); EG(ret, err);
 
 	/* Import a local copy of curve name */
 	MUST_HAVE(in_str_params->name->buflen < MAX_CURVE_NAME_LEN, ret, err);
-	local_memset(out_params->curve_name, 0, MAX_CURVE_NAME_LEN);
-	local_strncpy((char *)out_params->curve_name,
+	ret = local_memset(out_params->curve_name, 0, MAX_CURVE_NAME_LEN); EG(ret, err);
+	ret = local_strncpy((char *)out_params->curve_name,
 		      (const char *)in_str_params->name->buf,
-		      in_str_params->name->buflen);
+		      in_str_params->name->buflen); EG(ret, err);
 
 	/* Get the curve type */
 	ret = ec_get_curve_type_by_name(in_str_params->name->buf,

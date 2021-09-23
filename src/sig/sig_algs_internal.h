@@ -49,27 +49,27 @@ typedef struct {
 	ec_sig_alg_type type;
 	const char *name;
 
-	int (*siglen) (u16 p_bit_len, u16 q_bit_len, u8 hsize, u8 blocksize, u8 *siglen);
+	ATTRIBUTE_WARN_UNUSED_RET int (*siglen) (u16 p_bit_len, u16 q_bit_len, u8 hsize, u8 blocksize, u8 *siglen);
 
-	int (*gen_priv_key) (ec_priv_key *priv_key);
-	int (*init_pub_key) (ec_pub_key *pub_key, const ec_priv_key *priv_key);
+	ATTRIBUTE_WARN_UNUSED_RET int (*gen_priv_key) (ec_priv_key *priv_key);
+	ATTRIBUTE_WARN_UNUSED_RET int (*init_pub_key) (ec_pub_key *pub_key, const ec_priv_key *priv_key);
 
-	int (*sign_init) (struct ec_sign_context * ctx);
-	int (*sign_update) (struct ec_sign_context * ctx,
+	ATTRIBUTE_WARN_UNUSED_RET int (*sign_init) (struct ec_sign_context * ctx);
+	ATTRIBUTE_WARN_UNUSED_RET int (*sign_update) (struct ec_sign_context * ctx,
 			    const u8 *chunk, u32 chunklen);
-	int (*sign_finalize) (struct ec_sign_context * ctx,
+	ATTRIBUTE_WARN_UNUSED_RET int (*sign_finalize) (struct ec_sign_context * ctx,
 			      u8 *sig, u8 siglen);
-	int (*sign) (u8 *sig, u8 siglen, const ec_key_pair *key_pair,
+	ATTRIBUTE_WARN_UNUSED_RET int (*sign) (u8 *sig, u8 siglen, const ec_key_pair *key_pair,
 		     const u8 *m, u32 mlen, int (*rand) (nn_t out, nn_src_t q),
 		     ec_sig_alg_type sig_type, hash_alg_type hash_type,
 		     const u8 *adata, u16 adata_len);
 
-	int (*verify_init) (struct ec_verify_context * ctx,
+	ATTRIBUTE_WARN_UNUSED_RET int (*verify_init) (struct ec_verify_context * ctx,
 			    const u8 *sig, u8 siglen);
-	int (*verify_update) (struct ec_verify_context * ctx,
+	ATTRIBUTE_WARN_UNUSED_RET int (*verify_update) (struct ec_verify_context * ctx,
 			      const u8 *chunk, u32 chunklen);
-	int (*verify_finalize) (struct ec_verify_context * ctx);
-	int (*verify) (const u8 *sig, u8 siglen, const ec_pub_key *pub_key,
+	ATTRIBUTE_WARN_UNUSED_RET int (*verify_finalize) (struct ec_verify_context * ctx);
+	ATTRIBUTE_WARN_UNUSED_RET int (*verify) (const u8 *sig, u8 siglen, const ec_pub_key *pub_key,
 	      const u8 *m, u32 mlen, ec_sig_alg_type sig_type,
 	      hash_alg_type hash_type, const u8 *adata, u16 adata_len);
 } ec_sig_mapping;
@@ -77,7 +77,7 @@ typedef struct {
 /* Sanity check to ensure our sig mapping does not contain
  * NULL pointers
  */
-static inline int sig_mapping_sanity_check(const ec_sig_mapping *sm)
+ATTRIBUTE_WARN_UNUSED_RET static inline int sig_mapping_sanity_check(const ec_sig_mapping *sm)
 {
 	int ret;
 
@@ -143,7 +143,7 @@ typedef union {
 struct ec_sign_context {
 	word_t ctx_magic;
 	const ec_key_pair *key_pair;
-	int (*rand) (nn_t out, nn_src_t q);
+	ATTRIBUTE_WARN_UNUSED_RET int (*rand) (nn_t out, nn_src_t q);
 	const hash_mapping *h;
 	const ec_sig_mapping *sig;
 
@@ -157,7 +157,7 @@ struct ec_sign_context {
 };
 
 #define SIG_SIGN_MAGIC ((word_t)(0x4ed73cfe4594dfd3ULL))
-static inline int sig_sign_check_initialized(struct ec_sign_context *ctx)
+ATTRIBUTE_WARN_UNUSED_RET static inline int sig_sign_check_initialized(struct ec_sign_context *ctx)
 {
 	return (((ctx == NULL) || (ctx->ctx_magic != SIG_SIGN_MAGIC)) ? -1 : 0);
 }
@@ -209,7 +209,7 @@ struct ec_verify_context {
 };
 
 #define SIG_VERIFY_MAGIC ((word_t)(0x7e0d42d13e3159baULL))
-static inline int sig_verify_check_initialized(struct ec_verify_context *ctx)
+ATTRIBUTE_WARN_UNUSED_RET static inline int sig_verify_check_initialized(struct ec_verify_context *ctx)
 {
 	return (((ctx == NULL) || (ctx->ctx_magic != SIG_VERIFY_MAGIC)) ? -1 : 0);
 }
@@ -218,32 +218,32 @@ static inline int sig_verify_check_initialized(struct ec_verify_context *ctx)
  * backend. Used for signature and verification functions that support these streaming APIs.
  *
  */
-int generic_ec_sign(u8 *sig, u8 siglen, const ec_key_pair *key_pair,
+ATTRIBUTE_WARN_UNUSED_RET int generic_ec_sign(u8 *sig, u8 siglen, const ec_key_pair *key_pair,
 	     const u8 *m, u32 mlen, int (*rand) (nn_t out, nn_src_t q),
 	     ec_sig_alg_type sig_type, hash_alg_type hash_type, const u8 *adata, u16 adata_len);
-int generic_ec_verify(const u8 *sig, u8 siglen, const ec_pub_key *pub_key,
+ATTRIBUTE_WARN_UNUSED_RET int generic_ec_verify(const u8 *sig, u8 siglen, const ec_pub_key *pub_key,
 	      const u8 *m, u32 mlen, ec_sig_alg_type sig_type,
 	      hash_alg_type hash_type, const u8 *adata, u16 adata_len);
 /* Generic init / update / finalize functions returning an error and telling that they are
  * unsupported.
  */
-int unsupported_sign_init(struct ec_sign_context * ctx);
-int unsupported_sign_update(struct ec_sign_context * ctx,
+ATTRIBUTE_WARN_UNUSED_RET int unsupported_sign_init(struct ec_sign_context * ctx);
+ATTRIBUTE_WARN_UNUSED_RET int unsupported_sign_update(struct ec_sign_context * ctx,
 		    const u8 *chunk, u32 chunklen);
-int unsupported_sign_finalize(struct ec_sign_context * ctx,
+ATTRIBUTE_WARN_UNUSED_RET int unsupported_sign_finalize(struct ec_sign_context * ctx,
 		      u8 *sig, u8 siglen);
 
-int is_sign_streaming_mode_supported(ec_sig_alg_type sig_type, int *check);
+ATTRIBUTE_WARN_UNUSED_RET int is_sign_streaming_mode_supported(ec_sig_alg_type sig_type, int *check);
 
-int unsupported_verify_init(struct ec_verify_context * ctx,
+ATTRIBUTE_WARN_UNUSED_RET int unsupported_verify_init(struct ec_verify_context * ctx,
 		    const u8 *sig, u8 siglen);
-int unsupported_verify_update(struct ec_verify_context * ctx,
+ATTRIBUTE_WARN_UNUSED_RET int unsupported_verify_update(struct ec_verify_context * ctx,
 		      const u8 *chunk, u32 chunklen);
-int unsupported_verify_finalize(struct ec_verify_context * ctx);
+ATTRIBUTE_WARN_UNUSED_RET int unsupported_verify_finalize(struct ec_verify_context * ctx);
 
-int is_verify_streaming_mode_supported(ec_sig_alg_type sig_type, int *check);
+ATTRIBUTE_WARN_UNUSED_RET int is_verify_streaming_mode_supported(ec_sig_alg_type sig_type, int *check);
 
-int is_sign_deterministic(ec_sig_alg_type sig_type, int *check);
+ATTRIBUTE_WARN_UNUSED_RET int is_sign_deterministic(ec_sig_alg_type sig_type, int *check);
 
 /*
  * Each signature algorithm supported by the library and implemented

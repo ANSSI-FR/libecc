@@ -39,7 +39,7 @@ int ecgdsa_init_pub_key(ec_pub_key *out_pub, const ec_priv_key *in_priv)
 	MUST_HAVE(out_pub != NULL, ret, err);
 
 	/* Zero init public key to be generated */
-	local_memset(out_pub, 0, sizeof(ec_pub_key));
+	ret = local_memset(out_pub, 0, sizeof(ec_pub_key)); EG(ret, err);
 
 	ret = priv_key_check_initialized_and_type(in_priv, ECGDSA); EG(ret, err);
 	q = &(in_priv->params->ec_gen_order);
@@ -206,7 +206,7 @@ int _ecgdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	ECGDSA_SIGN_CHECK_INITIALIZED(&(ctx->sign_data.ecgdsa), ret, err);
 
 	/* Zero init points */
-	local_memset(&kG, 0, sizeof(prj_pt));
+	ret = local_memset(&kG, 0, sizeof(prj_pt)); EG(ret, err);
 
 	/* Make things more readable */
 	priv_key = &(ctx->key_pair->priv_key);
@@ -238,7 +238,7 @@ int _ecgdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	dbg_pub_key_print("Y", &(ctx->key_pair->pub_key));
 
 	/* 1. Compute h = H(m) */
-	local_memset(e_buf, 0, hsize);
+	ret = local_memset(e_buf, 0, hsize); EG(ret, err);
 	/* Since we call a callback, sanity check our mapping */
 	ret = hash_mapping_callbacks_sanity_check(ctx->h); EG(ret, err);
 	ret = ctx->h->hfunc_finalize(&(ctx->sign_data.ecgdsa.h_ctx), e_buf); EG(ret, err);
@@ -254,7 +254,7 @@ int _ecgdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 		rshift = (hsize * 8) - q_bit_len;
 	}
 	ret = nn_init_from_buf(&tmp, e_buf, hsize); EG(ret, err);
-	local_memset(e_buf, 0, hsize);
+	ret = local_memset(e_buf, 0, hsize); EG(ret, err);
 	if (rshift) {
 		ret = nn_rshift_fixedlen(&tmp, &tmp, rshift); EG(ret, err);
 	}
@@ -366,7 +366,7 @@ int _ecgdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	 * We can now clear data part of the context. This will clear
 	 * magic and avoid further reuse of the whole context.
 	 */
-	local_memset(&(ctx->sign_data.ecgdsa), 0, sizeof(ecgdsa_sign_data));
+	IGNORE_RET_VAL(local_memset(&(ctx->sign_data.ecgdsa), 0, sizeof(ecgdsa_sign_data)));
 
 	/* Clean what remains on the stack */
 	VAR_ZEROIFY(q_bit_len);
@@ -527,8 +527,8 @@ int _ecgdsa_verify_finalize(struct ec_verify_context *ctx)
 	ECGDSA_VERIFY_CHECK_INITIALIZED(&(ctx->verify_data.ecgdsa), ret, err);
 
 	/* Zero init points */
-	local_memset(&uG, 0, sizeof(prj_pt));
-	local_memset(&vY, 0, sizeof(prj_pt));
+	ret = local_memset(&uG, 0, sizeof(prj_pt)); EG(ret, err);
+	ret = local_memset(&vY, 0, sizeof(prj_pt)); EG(ret, err);
 
 	/* Make things more readable */
 	G = &(ctx->pub_key->params->ec_gen);
@@ -555,7 +555,7 @@ int _ecgdsa_verify_finalize(struct ec_verify_context *ctx)
 		rshift = (hsize * 8) - q_bit_len;
 	}
 	ret = nn_init_from_buf(&tmp, e_buf, hsize); EG(ret, err);
-	local_memset(e_buf, 0, hsize);
+	ret = local_memset(e_buf, 0, hsize); EG(ret, err);
 	if (rshift) {
 		ret = nn_rshift_fixedlen(&tmp, &tmp, rshift); EG(ret, err);
 	}
@@ -604,8 +604,8 @@ err:
 	 * We can now clear data part of the context. This will clear
 	 * magic and avoid further reuse of the whole context.
 	 */
-	local_memset(&(ctx->verify_data.ecgdsa), 0,
-		     sizeof(ecgdsa_verify_data));
+	IGNORE_RET_VAL(local_memset(&(ctx->verify_data.ecgdsa), 0,
+		     sizeof(ecgdsa_verify_data)));
 
 	PTR_NULLIFY(r);
 	PTR_NULLIFY(s);

@@ -26,7 +26,7 @@
  * Returns 0 on success, -1 on error.
  */
 #define TAB_ENTRIES 2
-static int _fp_pow(fp_t out, fp_src_t base, nn_src_t exp)
+ATTRIBUTE_WARN_UNUSED_RET static int _fp_pow(fp_t out, fp_src_t base, nn_src_t exp)
 {
 	fp base_monty, mul_monty, sqr_monty, out_monty, r;
 	fp_src_t tab_monty[TAB_ENTRIES];
@@ -87,7 +87,7 @@ err:
  * base is passed via 'out'.  Expects caller to check parameters
  * have been initialized. This is an internal helper.
  */
-static int _fp_pow_aliased(fp_t out, nn_src_t exp)
+ATTRIBUTE_WARN_UNUSED_RET static int _fp_pow_aliased(fp_t out, nn_src_t exp)
 {
 	fp base;
 	int ret;

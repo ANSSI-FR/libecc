@@ -27,10 +27,11 @@ int ec_get_curve_params_by_name(const u8 *ec_name, u8 ec_name_len,
 {
 	const ec_str_params *params;
 	u8 comp_len, name_len;
+	u32 len;
 	const ec_mapping *map;
 	const u8 *name;
 	unsigned int i;
-	int ret;
+	int ret, check;
 
 	MUST_HAVE((ec_name != NULL), ret, err);
 	MUST_HAVE((ec_params != NULL), ret, err);
@@ -40,7 +41,8 @@ int ec_get_curve_params_by_name(const u8 *ec_name, u8 ec_name_len,
 	 * User has been warned ec_name_len is expected to include final
 	 * null character.
 	 */
-	comp_len = (u8)local_strnlen((const char *)ec_name, ec_name_len);
+	ret = local_strnlen((const char *)ec_name, ec_name_len, &len); EG(ret, err);
+	comp_len = (u8)len;
 	MUST_HAVE(((comp_len + 1) == ec_name_len), ret, err);
 
 	/* Iterate on our list of curves */
@@ -60,7 +62,7 @@ int ec_get_curve_params_by_name(const u8 *ec_name, u8 ec_name_len,
 			continue;
 		}
 
-		if (are_str_equal((const char *)ec_name, (const char *)name)) {
+		if ((!are_str_equal((const char *)ec_name, (const char *)name, &check)) && check) {
 			*ec_params = params;
 			ret = 0;
 			break;
@@ -83,6 +85,7 @@ int ec_get_curve_params_by_type(ec_curve_type ec_type,
 	const ec_str_params *params;
 	const ec_mapping *map;
 	const u8 *name;
+	u32 len;
 	u8 name_len;
 	unsigned int i;
 	int ret;
@@ -102,7 +105,9 @@ int ec_get_curve_params_by_type(ec_curve_type ec_type,
 			MUST_HAVE((params->name->buf != NULL), ret, err);
 
 			name = params->name->buf;
-			name_len = (u8)local_strlen((const char *)name);
+			ret = local_strlen((const char *)name, &len); EG(ret, err);
+			MUST_HAVE(len < 256, ret, err);
+			name_len = (u8)len;
 
 			MUST_HAVE((params->name->buflen == (name_len + 1)), ret, err);
 
@@ -127,11 +132,12 @@ int ec_get_curve_type_by_name(const u8 *ec_name, u8 ec_name_len,
 			      ec_curve_type *ec_type)
 {
 	const ec_str_params *params;
+	u32 len;
 	u8 name_len, comp_len;
 	const ec_mapping *map;
 	const u8 *name;
 	unsigned int i;
-	int ret;
+	int ret, check;
 
 	/* No need to bother w/ obvious crap */
 	MUST_HAVE(((ec_name_len > 2) && (ec_name_len <= MAX_CURVE_NAME_LEN)), ret, err);
@@ -141,7 +147,9 @@ int ec_get_curve_type_by_name(const u8 *ec_name, u8 ec_name_len,
 	 * User has been warned ec_name_len is expected to include final
 	 * null character.
 	 */
-	comp_len = (u8)local_strnlen((const char *)ec_name, ec_name_len);
+	ret = local_strnlen((const char *)ec_name, ec_name_len, &len); EG(ret, err);
+	MUST_HAVE(len < 256, ret, err);
+	comp_len = (u8)len;
 	MUST_HAVE(((comp_len + 1) == ec_name_len), ret, err);
 
 	/* Iterate on our list of curves */
@@ -161,7 +169,7 @@ int ec_get_curve_type_by_name(const u8 *ec_name, u8 ec_name_len,
 			continue;
 		}
 
-		if (are_str_equal((const char *)ec_name, (const char *)name)) {
+		if((!are_str_equal((const char *)ec_name, (const char *)name, &check)) && check) {
 			*ec_type = map->type;
 			ret = 0;
 			break;
@@ -200,7 +208,7 @@ int ec_get_curve_name_by_type(const ec_curve_type ec_type, u8 *out, u8 outlen)
 	/* Not enough room to copy curve name? */
 	MUST_HAVE((name_len <= outlen), ret, err);
 
-	local_memcpy(out, name, name_len);
+	ret = local_memcpy(out, name, name_len);
 
  err:
 	return ret;
@@ -219,7 +227,7 @@ int ec_check_curve_type_and_name(const ec_curve_type ec_type,
 	const ec_str_params *by_type;
 	const u8 *name;
 	u8 name_len;
-	int ret;
+	int ret, check;
 
 	/* No need to bother w/ obvious crap */
 	MUST_HAVE((ec_name != NULL), ret, err);
@@ -238,9 +246,8 @@ int ec_check_curve_type_and_name(const ec_curve_type ec_type,
 
 	MUST_HAVE((name_len == ec_name_len), ret, err);
 
-	if (!are_str_equal((const char *)ec_name, (const char *)name)) {
+	if ((!are_str_equal((const char *)ec_name, (const char *)name, &check)) && (!check)) {
 		ret = -1;
-		goto err;
 	}
 
 err:

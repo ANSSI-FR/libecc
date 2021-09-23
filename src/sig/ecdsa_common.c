@@ -45,7 +45,7 @@
  * you want to use the deterministic version or not.
  *
  */
-static int __ecdsa_rfc6979_nonce(nn_t k, nn_src_t q, bitcnt_t q_bit_len,
+ATTRIBUTE_WARN_UNUSED_RET static int __ecdsa_rfc6979_nonce(nn_t k, nn_src_t q, bitcnt_t q_bit_len,
 				 nn_src_t x, const u8 *hash, u8 hsize,
 				 hash_alg_type hash_type)
 {
@@ -71,8 +71,8 @@ static int __ecdsa_rfc6979_nonce(nn_t k, nn_src_t q, bitcnt_t q_bit_len,
 	MUST_HAVE((q_len <= EC_PRIV_KEY_MAX_SIZE) && (hsize <= MAX_BLOCK_SIZE), ret, err);
 
 	/* Steps b. and c.: set V = 0x01 ... 0x01 and K = 0x00 ... 0x00 */
-	local_memset(V, 0x01, hsize);
-	local_memset(K, 0x00, hsize);
+	ret = local_memset(V, 0x01, hsize); EG(ret, err);
+	ret = local_memset(K, 0x00, hsize); EG(ret, err);
 	/* Export our private key in a buffer */
 	ret = nn_export_to_buf(priv_key_buff, q_len, x); EG(ret, err);
 	/* Step d.: set K = HMAC_K(V || 0x00 || int2octets(x) || bits2octets(h1))
@@ -139,7 +139,7 @@ restart:
 		/* V = HMAC_K(V) */
 		hmac_size = sizeof(V);
 		ret = hmac(K, hsize, hash_type, V, hsize, V, &hmac_size); EG(ret, err);
-		local_memcpy(&T[BYTECEIL(t_bit_len)], V, hmac_size);
+		ret = local_memcpy(&T[BYTECEIL(t_bit_len)], V, hmac_size); EG(ret, err);
 		t_bit_len += (8 * hmac_size);
 	}
 	ret = nn_init_from_buf(k, T, q_len); EG(ret, err);
@@ -179,7 +179,7 @@ int __ecdsa_init_pub_key(ec_pub_key *out_pub, const ec_priv_key *in_priv,
 	MUST_HAVE(out_pub != NULL, ret, err);
 
 	/* Zero init public key to be generated */
-	local_memset(out_pub, 0, sizeof(ec_pub_key));
+	ret = local_memset(out_pub, 0, sizeof(ec_pub_key)); EG(ret, err);
 
 	ret = priv_key_check_initialized_and_type(in_priv, key_type); EG(ret, err);
 	q = &(in_priv->params->ec_gen_order);
@@ -350,7 +350,7 @@ int __ecdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen,
 	ret = key_pair_check_initialized_and_type(ctx->key_pair, key_type); EG(ret, err);
 
 	/* Zero init out point */
-	local_memset(&kG, 0, sizeof(prj_pt));
+	ret = local_memset(&kG, 0, sizeof(prj_pt)); EG(ret, err);
 
 	/* Make things more readable */
 	priv_key = &(ctx->key_pair->priv_key);
@@ -380,7 +380,7 @@ int __ecdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen,
 	MUST_HAVE(siglen == ECDSA_SIGLEN(q_bit_len), ret, err);
 
 	/* 1. Compute h = H(m) */
-	local_memset(hash, 0, hsize);
+	ret = local_memset(hash, 0, hsize); EG(ret, err);
 	/* Since we call a callback, sanity check our mapping */
 	ret = hash_mapping_callbacks_sanity_check(ctx->h); EG(ret, err);
 	ret = ctx->h->hfunc_finalize(&(ctx->sign_data.ecdsa.h_ctx), hash); EG(ret, err);
@@ -494,7 +494,7 @@ int __ecdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen,
 	}
 
 	/* Clean hash buffer as we do not need it anymore */
-	local_memset(hash, 0, hsize);
+	ret = local_memset(hash, 0, hsize); EG(ret, err);
 
 	/* Export r */
 	ret = nn_export_to_buf(sig, q_len, &r); EG(ret, err);
@@ -547,7 +547,7 @@ int __ecdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen,
 	}
 
 	/* 11. return (r,s) */
-	ret = nn_export_to_buf(sig + q_len, q_len, &s); EG(ret, err);
+	ret = nn_export_to_buf(sig + q_len, q_len, &s);
 
 err:
 	nn_uninit(&k);
@@ -567,7 +567,7 @@ err:
 	 * We can now clear data part of the context. This will clear
 	 * magic and avoid further reuse of the whole context.
 	 */
-	local_memset(&(ctx->sign_data.ecdsa), 0, sizeof(ecdsa_sign_data));
+	IGNORE_RET_VAL(local_memset(&(ctx->sign_data.ecdsa), 0, sizeof(ecdsa_sign_data)));
 
 	/* Clean what remains on the stack */
 	PTR_NULLIFY(priv_key);
@@ -723,8 +723,8 @@ int __ecdsa_verify_finalize(struct ec_verify_context *ctx,
 	ret = pub_key_check_initialized_and_type(ctx->pub_key, key_type); EG(ret, err);
 
 	/* Zero init points */
-	local_memset(&uG, 0, sizeof(prj_pt));
-	local_memset(&vY, 0, sizeof(prj_pt));
+	ret = local_memset(&uG, 0, sizeof(prj_pt)); EG(ret, err);
+	ret = local_memset(&vY, 0, sizeof(prj_pt)); EG(ret, err);
 
 	/* Make things more readable */
 	G = &(ctx->pub_key->params->ec_gen);
@@ -760,7 +760,7 @@ int __ecdsa_verify_finalize(struct ec_verify_context *ctx,
 	 * and reducing it mod q
 	 */
 	ret = nn_init_from_buf(&tmp, hash, hsize); EG(ret, err);
-	local_memset(hash, 0, hsize);
+	ret = local_memset(hash, 0, hsize); EG(ret, err);
 	dbg_nn_print("h initial import as nn", &tmp);
 	if (rshift) {
 		ret = nn_rshift_fixedlen(&tmp, &tmp, rshift); EG(ret, err);
@@ -819,7 +819,7 @@ int __ecdsa_verify_finalize(struct ec_verify_context *ctx,
 	 * We can now clear data part of the context. This will clear
 	 * magic and avoid further reuse of the whole context.
 	 */
-	local_memset(&(ctx->verify_data.ecdsa), 0, sizeof(ecdsa_verify_data));
+	IGNORE_RET_VAL(local_memset(&(ctx->verify_data.ecdsa), 0, sizeof(ecdsa_verify_data)));
 
 	/* Clean what remains on the stack */
 	PTR_NULLIFY(G);

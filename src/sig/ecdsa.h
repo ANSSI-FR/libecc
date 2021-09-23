@@ -22,24 +22,24 @@
 
 #include "ecdsa_common.h"
 
-int ecdsa_init_pub_key(ec_pub_key *out_pub, const ec_priv_key *in_priv);
+ATTRIBUTE_WARN_UNUSED_RET int ecdsa_init_pub_key(ec_pub_key *out_pub, const ec_priv_key *in_priv);
 
-int ecdsa_siglen(u16 p_bit_len, u16 q_bit_len, u8 hsize, u8 blocksize, u8 *siglen);
+ATTRIBUTE_WARN_UNUSED_RET int ecdsa_siglen(u16 p_bit_len, u16 q_bit_len, u8 hsize, u8 blocksize, u8 *siglen);
 
-int _ecdsa_sign_init(struct ec_sign_context *ctx);
+ATTRIBUTE_WARN_UNUSED_RET int _ecdsa_sign_init(struct ec_sign_context *ctx);
 
-int _ecdsa_sign_update(struct ec_sign_context *ctx,
+ATTRIBUTE_WARN_UNUSED_RET int _ecdsa_sign_update(struct ec_sign_context *ctx,
 		       const u8 *chunk, u32 chunklen);
 
-int _ecdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen);
+ATTRIBUTE_WARN_UNUSED_RET int _ecdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen);
 
-int _ecdsa_verify_init(struct ec_verify_context *ctx,
+ATTRIBUTE_WARN_UNUSED_RET int _ecdsa_verify_init(struct ec_verify_context *ctx,
 		       const u8 *sig, u8 siglen);
 
-int _ecdsa_verify_update(struct ec_verify_context *ctx,
+ATTRIBUTE_WARN_UNUSED_RET int _ecdsa_verify_update(struct ec_verify_context *ctx,
 			 const u8 *chunk, u32 chunklen);
 
-int _ecdsa_verify_finalize(struct ec_verify_context *ctx);
+ATTRIBUTE_WARN_UNUSED_RET int _ecdsa_verify_finalize(struct ec_verify_context *ctx);
 
 #endif /* __ECDSA_H__ */
 #endif /* WITH_SIG_ECDSA */

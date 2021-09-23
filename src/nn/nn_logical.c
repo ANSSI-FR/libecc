@@ -462,7 +462,7 @@ err:
 }
 
 /* Count leading zeros of a word. This is constant time */
-static u8 wclz(word_t A)
+ATTRIBUTE_WARN_UNUSED_RET static u8 wclz(word_t A)
 {
 	u8 cnt = WORD_BITS, over = 0;
 	int i;
