@@ -211,7 +211,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int ec_import_export_test(const ec_test_case *c
 		u8 msg[MAX_MSG_LEN];
 		u8 sig[EC_MAX_SIGLEN];
 #ifdef USE_CRYPTOFUZZ
-		check_type = 0;
+		u8 check_type = 0;
 #endif
 		ret = ec_get_sig_len(&params, c->sig_type, c->hash_type,
 				     (u8 *)&siglen);
@@ -318,7 +318,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int ec_import_export_test(const ec_test_case *c
 			}
 		}
 #ifdef USE_CRYPTOFUZZ
-		u8 check_type = 0;
+		check_type = 0;
 		/* Specific case where we have access to raw signature API */
 #if defined(WITH_SIG_ECDSA)
 		if(c->sig_type == ECDSA){
