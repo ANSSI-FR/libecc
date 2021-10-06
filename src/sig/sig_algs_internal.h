@@ -46,7 +46,7 @@
  * digest size, its block size and the associated scattered function.
  */
 typedef struct {
-	ec_sig_alg_type type;
+	ec_alg_type type;
 	const char *name;
 
 	ATTRIBUTE_WARN_UNUSED_RET int (*siglen) (u16 p_bit_len, u16 q_bit_len, u8 hsize, u8 blocksize, u8 *siglen);
@@ -61,7 +61,7 @@ typedef struct {
 			      u8 *sig, u8 siglen);
 	ATTRIBUTE_WARN_UNUSED_RET int (*sign) (u8 *sig, u8 siglen, const ec_key_pair *key_pair,
 		     const u8 *m, u32 mlen, int (*rand) (nn_t out, nn_src_t q),
-		     ec_sig_alg_type sig_type, hash_alg_type hash_type,
+		     ec_alg_type sig_type, hash_alg_type hash_type,
 		     const u8 *adata, u16 adata_len);
 
 	ATTRIBUTE_WARN_UNUSED_RET int (*verify_init) (struct ec_verify_context * ctx,
@@ -70,7 +70,7 @@ typedef struct {
 			      const u8 *chunk, u32 chunklen);
 	ATTRIBUTE_WARN_UNUSED_RET int (*verify_finalize) (struct ec_verify_context * ctx);
 	ATTRIBUTE_WARN_UNUSED_RET int (*verify) (const u8 *sig, u8 siglen, const ec_pub_key *pub_key,
-	      const u8 *m, u32 mlen, ec_sig_alg_type sig_type,
+	      const u8 *m, u32 mlen, ec_alg_type sig_type,
 	      hash_alg_type hash_type, const u8 *adata, u16 adata_len);
 } ec_sig_mapping;
 
@@ -220,9 +220,9 @@ ATTRIBUTE_WARN_UNUSED_RET static inline int sig_verify_check_initialized(struct 
  */
 ATTRIBUTE_WARN_UNUSED_RET int generic_ec_sign(u8 *sig, u8 siglen, const ec_key_pair *key_pair,
 	     const u8 *m, u32 mlen, int (*rand) (nn_t out, nn_src_t q),
-	     ec_sig_alg_type sig_type, hash_alg_type hash_type, const u8 *adata, u16 adata_len);
+	     ec_alg_type sig_type, hash_alg_type hash_type, const u8 *adata, u16 adata_len);
 ATTRIBUTE_WARN_UNUSED_RET int generic_ec_verify(const u8 *sig, u8 siglen, const ec_pub_key *pub_key,
-	      const u8 *m, u32 mlen, ec_sig_alg_type sig_type,
+	      const u8 *m, u32 mlen, ec_alg_type sig_type,
 	      hash_alg_type hash_type, const u8 *adata, u16 adata_len);
 /* Generic init / update / finalize functions returning an error and telling that they are
  * unsupported.
@@ -233,7 +233,7 @@ ATTRIBUTE_WARN_UNUSED_RET int unsupported_sign_update(struct ec_sign_context * c
 ATTRIBUTE_WARN_UNUSED_RET int unsupported_sign_finalize(struct ec_sign_context * ctx,
 		      u8 *sig, u8 siglen);
 
-ATTRIBUTE_WARN_UNUSED_RET int is_sign_streaming_mode_supported(ec_sig_alg_type sig_type, int *check);
+ATTRIBUTE_WARN_UNUSED_RET int is_sign_streaming_mode_supported(ec_alg_type sig_type, int *check);
 
 ATTRIBUTE_WARN_UNUSED_RET int unsupported_verify_init(struct ec_verify_context * ctx,
 		    const u8 *sig, u8 siglen);
@@ -241,9 +241,9 @@ ATTRIBUTE_WARN_UNUSED_RET int unsupported_verify_update(struct ec_verify_context
 		      const u8 *chunk, u32 chunklen);
 ATTRIBUTE_WARN_UNUSED_RET int unsupported_verify_finalize(struct ec_verify_context * ctx);
 
-ATTRIBUTE_WARN_UNUSED_RET int is_verify_streaming_mode_supported(ec_sig_alg_type sig_type, int *check);
+ATTRIBUTE_WARN_UNUSED_RET int is_verify_streaming_mode_supported(ec_alg_type sig_type, int *check);
 
-ATTRIBUTE_WARN_UNUSED_RET int is_sign_deterministic(ec_sig_alg_type sig_type, int *check);
+ATTRIBUTE_WARN_UNUSED_RET int is_sign_deterministic(ec_alg_type sig_type, int *check);
 
 /*
  * Each signature algorithm supported by the library and implemented
@@ -516,7 +516,7 @@ static const ec_sig_mapping ec_sig_maps[] = {
 #define MAX_SIG_ALG_NAME_LEN 7
 #endif /* MAX_SIG_ALG_NAME_LEN */
 #endif /* WITH_SIG_DECDSA */
-	{.type = UNKNOWN_SIG_ALG,	/* Needs to be kept last */
+	{.type = UNKNOWN_ALG,	/* Needs to be kept last */
 	 .name = "UNKNOWN",
 	 .siglen = 0,
 	 .gen_priv_key = NULL,

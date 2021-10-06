@@ -44,8 +44,9 @@ int gen_priv_key(ec_priv_key *priv_key)
 
 	ret = priv_key_check_initialized(priv_key); EG(ret, err);
 
+	ret = -1;
 	for (i = 0, sm = &ec_sig_maps[i];
-	     sm->type != UNKNOWN_SIG_ALG; sm = &ec_sig_maps[++i]) {
+	     sm->type != UNKNOWN_ALG; sm = &ec_sig_maps[++i]) {
 		if (sm->type == priv_key->key_type) {
 			/* NOTE: since sm is initalized with a structure
 			 * coming from a const source, we can safely call
@@ -76,8 +77,9 @@ int init_pubkey_from_privkey(ec_pub_key *pub_key, ec_priv_key *priv_key)
 
 	ret = priv_key_check_initialized(priv_key); EG(ret, err);
 
+	ret = -1;
 	for (i = 0, sm = &ec_sig_maps[i];
-	     sm->type != UNKNOWN_SIG_ALG; sm = &ec_sig_maps[++i]) {
+	     sm->type != UNKNOWN_ALG; sm = &ec_sig_maps[++i]) {
 		if (sm->type == priv_key->key_type) {
 			/* NOTE: since sm is initalized with a structure
 			 * coming from a const source, we can safely call
@@ -110,7 +112,7 @@ int get_sig_by_name(const char *ec_sig_name, const ec_sig_mapping **sig_mapping)
 
 	ret = -1;
 	for (i = 0, sm = &ec_sig_maps[i];
-	     sm->type != UNKNOWN_SIG_ALG; sm = &ec_sig_maps[++i]) {
+	     sm->type != UNKNOWN_ALG; sm = &ec_sig_maps[++i]) {
 		if((!are_str_equal(ec_sig_name, sm->name, &check)) && check){
 			(*sig_mapping) = sm;
 			ret = 0;
@@ -128,7 +130,7 @@ err:
  * 'sig_type' (e.g. ECDSA, ECSDA). -1 is returned on error in which
  * case 'sig_mapping' is not meaningful.
  */
-int get_sig_by_type(ec_sig_alg_type sig_type, const ec_sig_mapping **sig_mapping)
+int get_sig_by_type(ec_alg_type sig_type, const ec_sig_mapping **sig_mapping)
 {
 	const ec_sig_mapping *sm;
 	int ret;
@@ -138,7 +140,7 @@ int get_sig_by_type(ec_sig_alg_type sig_type, const ec_sig_mapping **sig_mapping
 
 	ret = -1;
 	for (i = 0, sm = &ec_sig_maps[i];
-	     sm->type != UNKNOWN_SIG_ALG; sm = &ec_sig_maps[++i]) {
+	     sm->type != UNKNOWN_ALG; sm = &ec_sig_maps[++i]) {
 		if (sm->type == sig_type) {
 			(*sig_mapping) = sm;
 			ret = 0;
@@ -167,7 +169,7 @@ int ec_sig_mapping_callbacks_sanity_check(const ec_sig_mapping *sig)
 	 * one of the registered mappings.
 	 */
 	for (i = 0, sm = &ec_sig_maps[i];
-	     sm->type != UNKNOWN_SIG_ALG; sm = &ec_sig_maps[++i]) {
+	     sm->type != UNKNOWN_ALG; sm = &ec_sig_maps[++i]) {
 		if (sm->type == sig->type){
 			if ((!are_str_equal_nlen(sm->name, sig->name, MAX_SIG_ALG_NAME_LEN, &check)) && (!check)){
 				goto err;
@@ -244,7 +246,7 @@ err:
  * returned and The signature length is returned using 'siglen' parameter. -1 is
  * returned on error.
  */
-int ec_get_sig_len(const ec_params *params, ec_sig_alg_type sig_type,
+int ec_get_sig_len(const ec_params *params, ec_alg_type sig_type,
 		   hash_alg_type hash_type, u8 *siglen)
 {
 	const ec_sig_mapping *sm;
@@ -259,7 +261,7 @@ int ec_get_sig_len(const ec_params *params, ec_sig_alg_type sig_type,
 
 	ret = -1;
 	for (i = 0, sm = &ec_sig_maps[i];
-	     sm->type != UNKNOWN_SIG_ALG; sm = &ec_sig_maps[++i]) {
+	     sm->type != UNKNOWN_ALG; sm = &ec_sig_maps[++i]) {
 		if (sm->type == sig_type) {
 			/* NOTE: since sm is initalized with a structure
 			 * coming from a const source, we can safely call
@@ -292,7 +294,7 @@ err:
 int _ec_sign_init(struct ec_sign_context *ctx,
 		  const ec_key_pair *key_pair,
 		  int (*rand) (nn_t out, nn_src_t q),
-		  ec_sig_alg_type sig_type, hash_alg_type hash_type,
+		  ec_alg_type sig_type, hash_alg_type hash_type,
 		  const u8 *adata, u16 adata_len)
 {
 	const ec_sig_mapping *sm;
@@ -320,7 +322,7 @@ int _ec_sign_init(struct ec_sign_context *ctx,
 	/* Now, let's try and get the specific key alg which was requested */
 	ret = -1;
 	for (i = 0, sm = &ec_sig_maps[i];
-	     sm->type != UNKNOWN_SIG_ALG; sm = &ec_sig_maps[++i]) {
+	     sm->type != UNKNOWN_ALG; sm = &ec_sig_maps[++i]) {
 		if ((sm->type == sig_type) && (sm->sign_init != NULL)) {
 			ret = 0;
 			break;
@@ -384,7 +386,7 @@ int _ec_sign_init(struct ec_sign_context *ctx,
  * function (nn_get_random_mod()). Returns 0 on success, -1 on error.
  */
 int ec_sign_init(struct ec_sign_context *ctx, const ec_key_pair *key_pair,
-		 ec_sig_alg_type sig_type, hash_alg_type hash_type,
+		 ec_alg_type sig_type, hash_alg_type hash_type,
 		 const u8 *adata, u16 adata_len)
 {
 	return _ec_sign_init(ctx, key_pair, NULL, sig_type, hash_type,
@@ -452,7 +454,7 @@ err:
 int generic_ec_sign(u8 *sig, u8 siglen, const ec_key_pair *key_pair,
 		    const u8 *m, u32 mlen,
 		    int (*rand) (nn_t out, nn_src_t q),
-		    ec_sig_alg_type sig_type, hash_alg_type hash_type,
+		    ec_alg_type sig_type, hash_alg_type hash_type,
 		    const u8 *adata, u16 adata_len)
 {
 	struct ec_sign_context ctx;
@@ -471,7 +473,7 @@ err:
 int _ec_sign(u8 *sig, u8 siglen, const ec_key_pair *key_pair,
 	     const u8 *m, u32 mlen,
 	     int (*rand) (nn_t out, nn_src_t q),
-	     ec_sig_alg_type sig_type, hash_alg_type hash_type,
+	     ec_alg_type sig_type, hash_alg_type hash_type,
 	     const u8 *adata, u16 adata_len)
 {
 	const ec_sig_mapping *sm;
@@ -494,7 +496,7 @@ err:
  */
 int ec_sign(u8 *sig, u8 siglen, const ec_key_pair *key_pair,
 	    const u8 *m, u32 mlen,
-	    ec_sig_alg_type sig_type, hash_alg_type hash_type,
+	    ec_alg_type sig_type, hash_alg_type hash_type,
 	    const u8 *adata, u16 adata_len)
 {
 	return _ec_sign(sig, siglen, key_pair, m, mlen,
@@ -508,7 +510,7 @@ int ec_sign(u8 *sig, u8 siglen, const ec_key_pair *key_pair,
  */
 int ec_verify_init(struct ec_verify_context *ctx, const ec_pub_key *pub_key,
 		   const u8 *sig, u8 siglen,
-		   ec_sig_alg_type sig_type, hash_alg_type hash_type,
+		   ec_alg_type sig_type, hash_alg_type hash_type,
 		   const u8 *adata, u16 adata_len)
 {
 	const ec_sig_mapping *sm;
@@ -539,7 +541,7 @@ int ec_verify_init(struct ec_verify_context *ctx, const ec_pub_key *pub_key,
 	 */
 	ret = -1;
 	for (i = 0, sm = &ec_sig_maps[i];
-	     sm->type != UNKNOWN_SIG_ALG; sm = &ec_sig_maps[++i]) {
+	     sm->type != UNKNOWN_ALG; sm = &ec_sig_maps[++i]) {
 		if ((sm->type == sig_type) && (sm->verify_init != NULL)) {
 			ret = 0;
 			break;
@@ -635,7 +637,7 @@ err:
  */
 int generic_ec_verify(const u8 *sig, u8 siglen, const ec_pub_key *pub_key,
 		      const u8 *m, u32 mlen,
-		      ec_sig_alg_type sig_type, hash_alg_type hash_type,
+		      ec_alg_type sig_type, hash_alg_type hash_type,
 		      const u8 *adata, u16 adata_len)
 {
 	struct ec_verify_context ctx;
@@ -652,7 +654,7 @@ int generic_ec_verify(const u8 *sig, u8 siglen, const ec_pub_key *pub_key,
 
 int ec_verify(const u8 *sig, u8 siglen, const ec_pub_key *pub_key,
 	      const u8 *m, u32 mlen,
-	      ec_sig_alg_type sig_type, hash_alg_type hash_type,
+	      ec_alg_type sig_type, hash_alg_type hash_type,
 	      const u8 *adata, u16 adata_len)
 {
 
@@ -678,7 +680,7 @@ err:
  */
 int ec_structured_sig_import_from_buf(u8 *sig, u32 siglen,
 				      const u8 *out_buf, u32 outlen,
-				      ec_sig_alg_type * sig_type,
+				      ec_alg_type * sig_type,
 				      hash_alg_type * hash_type,
 				      u8 curve_name[MAX_CURVE_NAME_LEN])
 {
@@ -697,7 +699,7 @@ int ec_structured_sig_import_from_buf(u8 *sig, u32 siglen,
 	 */
 	MUST_HAVE((outlen <= (siglen + metadata_len)), ret, err);
 
-	*sig_type = (ec_sig_alg_type)out_buf[0];
+	*sig_type = (ec_alg_type)out_buf[0];
 	*hash_type = (hash_alg_type)out_buf[1];
 	ret = ec_get_curve_name_by_type((ec_curve_type) out_buf[2],
 					curve_name, MAX_CURVE_NAME_LEN); EG(ret, err);
@@ -716,7 +718,7 @@ err:
  */
 int ec_structured_sig_export_to_buf(const u8 *sig, u32 siglen,
 				    u8 *out_buf, u32 outlen,
-				    ec_sig_alg_type sig_type,
+				    ec_alg_type sig_type,
 				    hash_alg_type hash_type,
 				    const u8
 				    curve_name[MAX_CURVE_NAME_LEN])
@@ -829,7 +831,7 @@ int unsupported_verify_finalize(struct ec_verify_context * ctx)
  * Return value is 0 on success, -1 on error. 'check' is only meaningful on
  * success.
  */
-int is_sign_streaming_mode_supported(ec_sig_alg_type sig_type, int *check)
+int is_sign_streaming_mode_supported(ec_alg_type sig_type, int *check)
 {
 	int ret;
 	const ec_sig_mapping *sig;
@@ -858,7 +860,7 @@ err:
  * Return value is 0 on success, -1 on error. 'check' is only meaningful on
  * success.
  */
-int is_verify_streaming_mode_supported(ec_sig_alg_type sig_type, int *check)
+int is_verify_streaming_mode_supported(ec_alg_type sig_type, int *check)
 {
 	int ret;
 	const ec_sig_mapping *sig;
@@ -890,7 +892,7 @@ err:
  * success.
 
  */
-int is_sign_deterministic(ec_sig_alg_type sig_type, int *check)
+int is_sign_deterministic(ec_alg_type sig_type, int *check)
 {
 	int ret;
 	const ec_sig_mapping *sig;

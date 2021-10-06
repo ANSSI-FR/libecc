@@ -48,8 +48,8 @@ int get_random_point_on_curve(ec_params *curve_params, prj_pt *out_point)
 
 	MUST_HAVE((curve_params != NULL), ret, err);
 
-	nn_tmp.magic = 0;
-	x.magic = y.magic = fp_tmp1.magic = fp_tmp2.magic = 0;
+	nn_tmp.magic = WORD(0);
+	x.magic = y.magic = fp_tmp1.magic = fp_tmp2.magic = WORD(0);
 
 	/* Initialize our x value with the curve Fp context */
 	ctx = &(curve_params->ec_fp);
@@ -120,9 +120,9 @@ int check_curve(const u8 *curve_name)
 	aff_pt T;
 	u32 len;
 
-	nn_k.magic = 0;
-	A.magic = B.magic = C.magic = D.magic = 0;
-	TMP.magic = T.magic = 0;
+	nn_k.magic = WORD(0);
+	A.magic = B.magic = C.magic = D.magic = WORD(0);
+	TMP.magic = T.magic = WORD(0);
 
 	/* Importing a specific curve parameters from the constant static
 	 * buffers describing it:

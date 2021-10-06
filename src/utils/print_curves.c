@@ -23,7 +23,7 @@ void ec_point_print(const char *msg, prj_pt_src_t prj_pt)
 {
 	aff_pt y_aff;
 	int ret, iszero;
-	y_aff.magic = 0;
+	y_aff.magic = WORD(0);
 
 	MUST_HAVE(msg != NULL, ret, err);
 	ret = prj_pt_iszero(prj_pt, &iszero); EG(ret, err);

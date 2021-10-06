@@ -202,7 +202,7 @@ int streebog256_final(streebog256_context *ctx,
 	ret = streebog_final(ctx, output); EG(ret, err);
 
 	/* Uninit our context magic */
-	ctx->magic = 0;
+	ctx->magic = WORD(0);
 
 	ret = 0;
 
@@ -289,7 +289,7 @@ int streebog512_final(streebog512_context *ctx,
 	ret = streebog_final(ctx, output); EG(ret, err);
 
 	/* Uninit our context magic */
-	ctx->magic = 0;
+	ctx->magic = WORD(0);
 
 	ret = 0;
 

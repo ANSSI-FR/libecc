@@ -94,7 +94,7 @@ int nn_get_random_mod(nn_t out, nn_src_t q)
 	nn tmp_rand, qprime;
 	bitcnt_t q_bit_len, q_len;
 	int ret, isone;
-	qprime.magic = tmp_rand.magic = 0;
+	qprime.magic = tmp_rand.magic = WORD(0);
 
 	/* Check q is initialized and get its bit length */
 	ret = nn_check_initialized(q); EG(ret, err);

@@ -101,7 +101,7 @@ int is_on_montgomery_curve(fp_src_t u, fp_src_t v, ec_montgomery_crv_src_t curve
 {
 	fp Bv2, u3, Au2, tmp;
 	int ret, cmp;
-	Bv2.magic = u3.magic = Au2.magic = tmp.magic = 0;
+	Bv2.magic = u3.magic = Au2.magic = tmp.magic = WORD(0);
 
 	MUST_HAVE((on_curve != NULL), ret, err);
 	ret = ec_montgomery_crv_check_initialized(curve); EG(ret, err);
@@ -295,7 +295,7 @@ int curve_montgomery_to_shortw(ec_montgomery_crv_src_t montgomery_crv, ec_shortw
 {
 	fp tmp, tmp2, a, b;
 	int ret;
-	tmp.magic = tmp2.magic = a.magic = b.magic = 0;
+	tmp.magic = tmp2.magic = a.magic = b.magic = WORD(0);
 
 	ret = ec_montgomery_crv_check_initialized(montgomery_crv); EG(ret, err);
 
@@ -362,7 +362,7 @@ int curve_montgomery_shortw_check(ec_montgomery_crv_src_t montgomery_crv,
 {
 	int ret, cmp;
 	ec_shortw_crv check;
-	check.magic = 0;
+	check.magic = WORD(0);
 
 	ret = ec_shortw_crv_check_initialized(shortw_crv); EG(ret, err);
 	ret = curve_montgomery_to_shortw(montgomery_crv, &check); EG(ret, err);
@@ -394,7 +394,7 @@ int curve_shortw_to_montgomery(ec_shortw_crv_src_t shortw_crv,
 {
 	int ret, cmp;
 	fp c, gamma_inv, A, tmp;
-	c.magic = gamma_inv.magic = A.magic = tmp.magic = 0;
+	c.magic = gamma_inv.magic = A.magic = tmp.magic = WORD(0);
 
 	ret = ec_shortw_crv_check_initialized(shortw_crv); EG(ret, err);
 	ret = fp_check_initialized(alpha); EG(ret, err);
@@ -447,7 +447,7 @@ int aff_pt_montgomery_to_shortw(aff_pt_montgomery_src_t in_montgomery,
 {
 	int ret, on_curve;
 	fp tmp, tmp2;
-	tmp.magic = tmp2.magic = 0;
+	tmp.magic = tmp2.magic = WORD(0);
 
 	ret = ec_shortw_crv_check_initialized(shortw_crv); EG(ret, err);
 
@@ -498,7 +498,7 @@ int aff_pt_shortw_to_montgomery(aff_pt_src_t in_shortw,
 {
 	int ret, on_curve;
 	fp tmp, tmp2;
-	tmp.magic = tmp2.magic = 0;
+	tmp.magic = tmp2.magic = WORD(0);
 
 	ret = ec_montgomery_crv_check_initialized(montgomery_crv); EG(ret, err);
 

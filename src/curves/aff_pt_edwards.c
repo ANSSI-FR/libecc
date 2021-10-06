@@ -107,7 +107,7 @@ int is_on_edwards_curve(fp_src_t x, fp_src_t y,
 {
 	fp x2, y2, tmp1, tmp2;
 	int ret, cmp;
-	x2.magic = y2.magic = tmp1.magic = tmp2.magic = 0;
+	x2.magic = y2.magic = tmp1.magic = tmp2.magic = WORD(0);
 
 	MUST_HAVE((on_curve != NULL), ret, err);
 	ret = ec_edwards_crv_check_initialized(curve); EG(ret, err);
@@ -311,7 +311,7 @@ int curve_edwards_to_montgomery(ec_edwards_crv_src_t edwards_crv,
 {
 	fp tmp1, tmp2, A, B;
 	int ret;
-	tmp1.magic = tmp2.magic = A.magic = B.magic = 0;
+	tmp1.magic = tmp2.magic = A.magic = B.magic = WORD(0);
 
 	ret = ec_edwards_crv_check_initialized(edwards_crv); EG(ret, err);
 	ret = fp_check_initialized(alpha_edwards); EG(ret, err);
@@ -363,7 +363,7 @@ int curve_edwards_montgomery_check(ec_edwards_crv_src_t e_crv,
 {
 	int ret, cmp;
 	ec_montgomery_crv check;
-	check.magic = 0;
+	check.magic = WORD(0);
 
 	ret = ec_montgomery_crv_check_initialized(m_crv); EG(ret, err);
 	ret = curve_edwards_to_montgomery(e_crv, &check, alpha_edwards); EG(ret, err);
@@ -396,7 +396,7 @@ int curve_montgomery_to_edwards(ec_montgomery_crv_src_t m_crv,
 {
 	int ret, cmp;
 	fp tmp, tmp2, a, d;
-	tmp.magic = tmp2.magic = a.magic = d.magic = 0;
+	tmp.magic = tmp2.magic = a.magic = d.magic = WORD(0);
 
 	ret = ec_montgomery_crv_check_initialized(m_crv); EG(ret, err);
 	ret = fp_check_initialized(alpha_edwards); EG(ret, err);
@@ -450,7 +450,7 @@ int curve_edwards_to_shortw(ec_edwards_crv_src_t edwards_crv,
 {
 	int ret;
 	ec_montgomery_crv montgomery_crv;
-	montgomery_crv.magic = 0;
+	montgomery_crv.magic = WORD(0);
 
 	ret = curve_edwards_to_montgomery(edwards_crv, &montgomery_crv, alpha_edwards); EG(ret, err);
 	ret = curve_montgomery_to_shortw(&montgomery_crv, shortw_crv);
@@ -471,7 +471,7 @@ int curve_edwards_shortw_check(ec_edwards_crv_src_t edwards_crv,
 {
 	int ret;
 	ec_montgomery_crv montgomery_crv;
-	montgomery_crv.magic = 0;
+	montgomery_crv.magic = WORD(0);
 
 	ret = curve_edwards_to_montgomery(edwards_crv, &montgomery_crv, alpha_edwards); EG(ret, err);
 
@@ -496,7 +496,7 @@ int curve_shortw_to_edwards(ec_shortw_crv_src_t shortw_crv,
 {
 	int ret;
 	ec_montgomery_crv montgomery_crv;
-	montgomery_crv.magic = 0;
+	montgomery_crv.magic = WORD(0);
 
 	ret = curve_shortw_to_montgomery(shortw_crv, &montgomery_crv, alpha_montgomery, gamma_montgomery); EG(ret, err);
 
@@ -532,9 +532,9 @@ int aff_pt_edwards_to_montgomery(aff_pt_edwards_src_t in_edwards,
 	fp tab_y[2];
 	fp_src_t tab_y_t[2] = { &tab_y[0], &tab_y[1] };
 	u8 idx = 0;
-	tmp.magic = tmp2.magic = x.magic = y.magic = 0;
-	tab_x[0].magic = tab_x[1].magic = 0;
-	tab_y[0].magic = tab_y[1].magic = 0;
+	tmp.magic = tmp2.magic = x.magic = y.magic = WORD(0);
+	tab_x[0].magic = tab_x[1].magic = WORD(0);
+	tab_y[0].magic = tab_y[1].magic = WORD(0);
 
 	ret = ec_montgomery_crv_check_initialized(montgomery_crv); EG(ret, err);
 
@@ -633,8 +633,8 @@ int aff_pt_montgomery_to_edwards(aff_pt_montgomery_src_t in_montgomery,
 	fp_src_t tab_v_t[2] = { &tab_v[0], &tab_v[1] };
 	u8 idx = 0;
 	tmp.magic = u.magic = v.magic  = 0;
-	tab_u[0].magic = tab_u[1].magic = 0;
-	tab_v[0].magic = tab_v[1].magic = 0;
+	tab_u[0].magic = tab_u[1].magic = WORD(0);
+	tab_v[0].magic = tab_v[1].magic = WORD(0);
 
 	ret = ec_edwards_crv_check_initialized(edwards_crv); EG(ret, err);
 
@@ -709,7 +709,7 @@ int aff_pt_edwards_to_shortw(aff_pt_edwards_src_t in_edwards,
 	int ret;
 	aff_pt_montgomery inter_montgomery;
 	ec_montgomery_crv inter_montgomery_crv;
-	inter_montgomery.magic = inter_montgomery_crv.magic = 0;
+	inter_montgomery.magic = inter_montgomery_crv.magic = WORD(0);
 
 	/* First, map from Edwards to Montgomery */
 	ret = aff_pt_edwards_check_initialized(in_edwards); EG(ret, err);
@@ -739,7 +739,7 @@ int aff_pt_shortw_to_edwards(aff_pt_src_t in_shortw,
 	int ret;
 	aff_pt_montgomery inter_montgomery;
 	ec_montgomery_crv inter_montgomery_crv;
-	inter_montgomery.magic = inter_montgomery_crv.magic = 0;
+	inter_montgomery.magic = inter_montgomery_crv.magic = WORD(0);
 
 	/* First, map from short Weierstrass to Montgomery */
 	ret = curve_edwards_to_montgomery(edwards_crv, &inter_montgomery_crv, alpha_edwards); EG(ret, err);

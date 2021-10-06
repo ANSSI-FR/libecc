@@ -103,6 +103,10 @@
 #define WITH_SIG_EDDSA448
 #define WITH_SIG_DECDSA
 
+#define WITH_ECCCDH
+#define WITH_X25519
+#define WITH_X448
+
 #endif /* WITH_LIBECC_CONFIG_OVERRIDE */
 
 #endif /* __LIB_ECC_CONFIG_H__ */

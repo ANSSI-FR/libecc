@@ -193,7 +193,7 @@ int sha384_final(sha384_context *ctx, u8 output[SHA384_DIGEST_SIZE])
 	PUT_UINT64_BE(ctx->sha384_state[5], output, 40);
 
 	/* Tell that we are uninitialized */
-	ctx->magic = 0;
+	ctx->magic = WORD(0);
 
 	ret = 0;
 

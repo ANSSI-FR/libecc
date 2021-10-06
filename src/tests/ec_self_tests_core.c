@@ -31,6 +31,10 @@ ATTRIBUTE_WARN_UNUSED_RET static int ec_gen_import_export_kp(ec_key_pair *kp, co
 
 	MUST_HAVE(c != NULL, ret, err);
 
+	ret = local_memset(pub_key_buf, 0, sizeof(pub_key_buf)); EG(ret, err);
+	ret = local_memset(priv_key_buf, 0, sizeof(priv_key_buf)); EG(ret, err);
+	ret = local_memset(&imported_kp, 0, sizeof(imported_kp)); EG(ret, err);
+
 	/* Generate key pair */
 	ret = ec_key_pair_gen(kp, params, c->sig_type);
 	if (ret) {
@@ -86,11 +90,13 @@ err:
 ATTRIBUTE_WARN_UNUSED_RET static int random_split_ec_sign(u8 *sig, u8 siglen, const ec_key_pair *key_pair,
 	     const u8 *m, u32 mlen,
 	     int (*rand) (nn_t out, nn_src_t q),
-	     ec_sig_alg_type sig_type, hash_alg_type hash_type, const u8 *adata, u16 adata_len)
+	     ec_alg_type sig_type, hash_alg_type hash_type, const u8 *adata, u16 adata_len)
 {
 	struct ec_sign_context ctx;
 	int ret;
 	u32 consumed;
+
+	ret = local_memset(&ctx, 0, sizeof(ctx)); EG(ret, err);
 
 	MUST_HAVE(sig != NULL, ret, err);
 	MUST_HAVE(key_pair != NULL, ret, err);
@@ -133,11 +139,13 @@ ATTRIBUTE_WARN_UNUSED_RET static int random_split_ec_sign(u8 *sig, u8 siglen, co
  */
 ATTRIBUTE_WARN_UNUSED_RET static int random_split_ec_verify(const u8 *sig, u8 siglen, const ec_pub_key *pub_key,
 	      const u8 *m, u32 mlen,
-	      ec_sig_alg_type sig_type, hash_alg_type hash_type, const u8 *adata, u16 adata_len)
+	      ec_alg_type sig_type, hash_alg_type hash_type, const u8 *adata, u16 adata_len)
 {
 	int ret;
 	struct ec_verify_context ctx;
 	u32 consumed;
+
+	ret = local_memset(&ctx, 0, sizeof(ctx)); EG(ret, err);
 
 	ret = ec_verify_init(&ctx, pub_key, sig, siglen, sig_type, hash_type, adata, adata_len);
 	if (ret) {
@@ -189,6 +197,9 @@ ATTRIBUTE_WARN_UNUSED_RET static int ec_import_export_test(const ec_test_case *c
 	int ret, check;
 
 	MUST_HAVE(c != NULL, ret, err);
+
+	ret = local_memset(&kp, 0, sizeof(kp)); EG(ret, err);
+	ret = local_memset(&params, 0, sizeof(params)); EG(ret, err);
 
 	/* Import EC params from test case */
 	ret = import_params(&params, c->ec_str_p);
@@ -490,7 +501,11 @@ ATTRIBUTE_WARN_UNUSED_RET static int ec_sig_known_vector_tests_one(const ec_test
 	int ret;
 	int check = 0;
 
-	MUST_HAVE(c != NULL, ret, err);
+	MUST_HAVE((c != NULL), ret, err);
+
+	ret = local_memset(&kp, 0, sizeof(kp)); EG(ret, err);
+	ret = local_memset(&params, 0, sizeof(params)); EG(ret, err);
+	ret = local_memset(sig, 0, sizeof(sig)); EG(ret, err);
 
 	ret = import_params(&params, c->ec_str_p);
 	if (ret) {
@@ -691,6 +706,196 @@ ATTRIBUTE_WARN_UNUSED_RET static int ec_sig_known_vector_tests_one(const ec_test
 	return ret;
 }
 
+/*
+ * ECC generic self tests (ecdh on known test vectors). Returns
+ * 0 if given test succeeded, or a non-zero value otherwise. In that
+ * case, the value encodes the information on what went wrong as
+ * described above.
+ */
+ATTRIBUTE_WARN_UNUSED_RET static int ecdh_known_vector_tests_one(const ecdh_test_case *c)
+{
+	test_err_kind failed_test = TEST_KEY_IMPORT_ERROR;
+	ec_params params;
+	ec_key_pair kp;
+	int ret, check;
+
+	MUST_HAVE((c != NULL), ret, err);
+
+	ret = local_memset(&kp, 0, sizeof(kp)); EG(ret, err);
+	ret = local_memset(&params, 0, sizeof(params)); EG(ret, err);
+
+	ret = import_params(&params, c->ec_str_p);
+	if (ret) {
+		ext_printf("Error importing params\n");
+		goto err;
+	}
+
+	/* Check what ECDH test we have to perform */
+	switch(c->ecdh_type){
+#if defined(WITH_ECCCDH)
+		case ECCCDH:{
+			u8 serialized_pub_key[EC_PUB_KEY_MAX_SIZE];
+			u8 serialized_pub_key_len;
+			/* This maximum size is way bigger than expected, but we ensure
+			 * that there is enough room for our shared secret.
+			 */
+			u8 shared_secret[EC_PUB_KEY_MAX_SIZE];
+			u8 shared_secret_len;
+
+			ret = local_memset(serialized_pub_key, 0, sizeof(serialized_pub_key)); EG(ret, err);
+			ret = local_memset(shared_secret, 0, sizeof(shared_secret)); EG(ret, err);
+
+			/* Import our ECDH key pair */
+			ret = ecccdh_import_key_pair_from_priv_key_buf(&kp, &params, c->our_priv_key,
+								   c->our_priv_key_len);
+			if (ret) {
+				failed_test = TEST_KEY_IMPORT_ERROR;
+				ret = -1;
+				goto err;
+			}
+			/* Serialize our public key */
+			ret = ecccdh_serialized_pub_key_size(&params, &serialized_pub_key_len); EG(ret, err);
+			MUST_HAVE((sizeof(serialized_pub_key) >= serialized_pub_key_len), ret, err);
+			ret = ecccdh_serialize_pub_key(&(kp.pub_key), serialized_pub_key, serialized_pub_key_len);
+			if (ret) {
+				failed_test = TEST_ECDH_ERROR;
+				ret = -1;
+				goto err;
+			}
+			/* Check it against the expected one */
+			MUST_HAVE((serialized_pub_key_len == c->exp_our_pub_key_len), ret, err);
+			ret = are_equal(serialized_pub_key, c->exp_our_pub_key, serialized_pub_key_len, &check); EG(ret, err);
+			if (!check) {
+				failed_test = TEST_ECDH_COMP_ERROR;
+				ret = -1;
+				goto err;
+			}
+			/* Now derive the shared secret */
+			ret = ecccdh_shared_secret_size(&params, &shared_secret_len); EG(ret, err);
+			MUST_HAVE((sizeof(shared_secret) >= shared_secret_len), ret, err);
+			ret = ecccdh_derive_secret(&(kp.priv_key), c->peer_pub_key, c->peer_pub_key_len, shared_secret, shared_secret_len);
+			if (ret) {
+				failed_test = TEST_ECDH_ERROR;
+				ret = -1;
+				goto err;
+			}
+			/* Check it against the expected one */
+			MUST_HAVE((shared_secret_len == c->exp_shared_secret_len), ret, err);
+			ret = are_equal(shared_secret, c->exp_shared_secret, shared_secret_len, &check); EG(ret, err);
+			if (!check) {
+				failed_test = TEST_ECDH_COMP_ERROR;
+				ret = -1;
+				goto err;
+			}
+
+			break;
+		}
+#endif
+#if defined(WITH_X25519)
+		case X25519:{
+			u8 pub_key[32];
+			u8 shared_secret[32];
+
+			ret = local_memset(pub_key, 0, sizeof(pub_key)); EG(ret, err);
+			ret = local_memset(shared_secret, 0, sizeof(shared_secret)); EG(ret, err);
+
+			/* Compute our public key */
+			MUST_HAVE((c->our_priv_key_len == 32), ret, err);
+			ret = x25519_init_pub_key(c->our_priv_key, pub_key);
+			if (ret) {
+				failed_test = TEST_KEY_IMPORT_ERROR;
+				ret = -1;
+				goto err;
+			}
+			/* Check it against the expected one */
+			MUST_HAVE((c->exp_our_pub_key_len == 32), ret, err);
+			ret = are_equal(pub_key, c->exp_our_pub_key, 32, &check); EG(ret, err);
+			if (!check) {
+				failed_test = TEST_ECDH_COMP_ERROR;
+				ret = -1;
+				goto err;
+			}
+			/* Now derive the shared secret */
+			MUST_HAVE((c->peer_pub_key_len == 32), ret, err);
+			ret = x25519_derive_secret(c->our_priv_key, c->peer_pub_key, shared_secret);
+			if (ret) {
+				failed_test = TEST_ECDH_ERROR;
+				ret = -1;
+				goto err;
+			}
+			/* Check it against the expected one */
+			MUST_HAVE((c->exp_shared_secret_len == 32), ret, err);
+			ret = are_equal(shared_secret, c->exp_shared_secret, 32, &check); EG(ret, err);
+			if (!check) {
+				failed_test = TEST_ECDH_COMP_ERROR;
+				ret = -1;
+				goto err;
+			}
+
+			break;
+		}
+#endif
+#if defined(WITH_X448)
+		case X448:{
+			u8 pub_key[56];
+			u8 shared_secret[56];
+
+			ret = local_memset(pub_key, 0, sizeof(pub_key)); EG(ret, err);
+			ret = local_memset(shared_secret, 0, sizeof(shared_secret)); EG(ret, err);
+
+			/* Compute our public key */
+			MUST_HAVE((c->our_priv_key_len == 56), ret, err);
+			ret = x448_init_pub_key(c->our_priv_key, pub_key);
+			if (ret) {
+				failed_test = TEST_KEY_IMPORT_ERROR;
+				ret = -1;
+				goto err;
+			}
+			/* Check it against the expected one */
+			MUST_HAVE((c->exp_our_pub_key_len == 56), ret, err);
+			ret = are_equal(pub_key, c->exp_our_pub_key, 56, &check); EG(ret, err);
+			if (!check) {
+				failed_test = TEST_ECDH_COMP_ERROR;
+				ret = -1;
+				goto err;
+			}
+			/* Now derive the shared secret */
+			MUST_HAVE((c->peer_pub_key_len == 56), ret, err);
+			ret = x448_derive_secret(c->our_priv_key, c->peer_pub_key, shared_secret);
+			if (ret) {
+				failed_test = TEST_ECDH_ERROR;
+				ret = -1;
+				goto err;
+			}
+			/* Check it against the expected one */
+			MUST_HAVE((c->exp_shared_secret_len == 56), ret, err);
+			ret = are_equal(shared_secret, c->exp_shared_secret, 56, &check); EG(ret, err);
+			if (!check) {
+				failed_test = TEST_ECDH_COMP_ERROR;
+				ret = -1;
+				goto err;
+			}
+
+			break;
+		}
+#endif
+		default:{
+			ext_printf("Error: not an ECDH test\n");
+			ret = -1;
+			goto err;
+		}
+	}
+
+err:
+	if (ret) {
+		u32 ret_;
+		ret = ecdh_encode_error_value(c, failed_test, &ret_); EG(ret, err);
+		ret = (int)ret_;
+	}
+
+	return ret;
+}
+
 ATTRIBUTE_WARN_UNUSED_RET int perform_known_test_vectors_test(const char *sig, const char *hash, const char *curve)
 {
 	const ec_test_case *cur_test;
@@ -705,7 +910,7 @@ ATTRIBUTE_WARN_UNUSED_RET int perform_known_test_vectors_test(const char *sig, c
 			continue;
 		}
 		/* If this is a dummy test case, skip it! */
-		if(cur_test->sig_type == UNKNOWN_SIG_ALG){
+		if(cur_test->sig_type == UNKNOWN_ALG){
 			continue;
 		}
 		/* Filter out */
@@ -765,6 +970,38 @@ ATTRIBUTE_WARN_UNUSED_RET int perform_known_test_vectors_test(const char *sig, c
 			goto err;
 		}
 	}
+#if defined(WITH_ECCCDH) || defined(WITH_X25519) || defined(WITH_X448)
+	/* Now take care of ECDH */
+	if((sig == NULL) && (hash == NULL)){
+		const ecdh_test_case *ecdh_cur_test;
+		for (i = 0; i < ECDH_FIXED_VECTOR_NUM_TESTS; i++) {
+			ecdh_cur_test = ecdh_fixed_vector_tests[i];
+			if(ecdh_cur_test == NULL){
+				continue;
+			}
+			/* If this is not an ECDH test case, skip it! */
+			if(ecdh_cur_test->ecdh_type == UNKNOWN_ALG){
+				continue;
+			}
+			if(curve != NULL){
+				if(ecdh_cur_test->ec_str_p == NULL){
+					continue;
+				}
+				ret = are_str_equal((const char*)ecdh_cur_test->ec_str_p->name->buf, curve, &check); EG(ret, err);
+				if(!check){
+					continue;
+				}
+			}
+			ret = ecdh_known_vector_tests_one(ecdh_cur_test);
+			ext_printf("[%s] %30s selftests: known test vectors "
+				   "ecdh %s\n", ret ? "-" : "+",
+				   ecdh_cur_test->name, ret ? "failed" : "ok");
+			if (ret) {
+				goto err;
+			}
+		}
+	}
+#endif
 
  err:
 	return ret;
@@ -782,15 +1019,18 @@ ATTRIBUTE_WARN_UNUSED_RET static int rand_sig_verif_test_one(const ec_sig_mappin
 	int ret;
 	u32 len;
 
+	ret = local_memset(test_name, 0, sizeof(test_name)); EG(ret, err);
+
 #if defined(WITH_SIG_EDDSA25519) || defined(WITH_SIG_SM2)
-	u8 rand_adata[255] = { 0 };
+	u8 rand_adata[255];
+	ret = local_memset(rand_adata, 0, sizeof(rand_adata));
 	/* The case of EDDSA25519CTX and SM2 needs a non NULL context (ancillary data).
 	 * Create a random string of size <= 255 for this.
 	 */
 #endif
-	MUST_HAVE(sig != NULL, ret, err);
-	MUST_HAVE(hash != NULL, ret, err);
-	MUST_HAVE(ec != NULL, ret, err);
+	MUST_HAVE((sig != NULL), ret, err);
+	MUST_HAVE((hash != NULL), ret, err);
+	MUST_HAVE((ec != NULL), ret, err);
 
 	crv_name  = (const char *)PARAM_BUF_PTR((ec->params)->name);
 
@@ -879,7 +1119,7 @@ ATTRIBUTE_WARN_UNUSED_RET int perform_random_sig_verif_test(const char *sig, con
 	 * (combination of sign algo/hash function/curve)
 	 */
 	ext_printf("======= Random sig/verif test ===================\n");
-	for (i = 0; ec_sig_maps[i].type != UNKNOWN_SIG_ALG; i++) {
+	for (i = 0; ec_sig_maps[i].type != UNKNOWN_ALG; i++) {
 		for (j = 0; hash_maps[j].type != UNKNOWN_HASH_ALG; j++) {
 			for (k = 0; k < EC_CURVES_NUM; k++) {
 				if(sig != NULL){
@@ -956,6 +1196,8 @@ ATTRIBUTE_WARN_UNUSED_RET static int ec_performance_test(const ec_test_case *c,
 	MUST_HAVE(n_perf_sign != NULL, ret, err);
 	MUST_HAVE(n_perf_verif != NULL, ret, err);
 
+	ret = local_memset(&kp, 0, sizeof(kp)); EG(ret, err);
+
 	/* Import EC params from test case */
 	ret = import_params(&params, c->ec_str_p);
 	if (ret) {
@@ -980,6 +1222,9 @@ ATTRIBUTE_WARN_UNUSED_RET static int ec_performance_test(const ec_test_case *c,
 		/* Time related variables */
 		u64 time1, time2, cumulated_time_sign, cumulated_time_verify;
 		int i;
+
+		ret = local_memset(sig, 0, sizeof(sig)); EG(ret, err);
+		ret = local_memset(msg, 0, sizeof(msg)); EG(ret, err);
 
 		ret = ec_get_sig_len(&params, c->sig_type, c->hash_type,
 			     (u8 *)&siglen);
@@ -1084,14 +1329,17 @@ ATTRIBUTE_WARN_UNUSED_RET static int perf_test_one(const ec_sig_mapping *sig, co
 	int ret;
 	u32 len;
 #if defined(WITH_SIG_EDDSA25519) || defined(WITH_SIG_SM2)
-	u8 rand_adata[255] = { 0 };
+	u8 rand_adata[255];
+	ret = local_memset(rand_adata, 0, sizeof(rand_adata)); EG(ret, err);
 	/* The case of EDDSA25519CTX and SM2 needs a non NULL context (ancillary data).
 	 * Create a random string of size <= 255 for this.
 	 */
 #endif
-	MUST_HAVE(sig != NULL, ret, err);
-	MUST_HAVE(hash != NULL, ret, err);
-	MUST_HAVE(ec != NULL, ret, err);
+	MUST_HAVE((sig != NULL), ret, err);
+	MUST_HAVE((hash != NULL), ret, err);
+	MUST_HAVE((ec != NULL), ret, err);
+
+	ret = local_memset(test_name, 0, sizeof(test_name)); EG(ret, err);
 
 	crv_name = (const char *)PARAM_BUF_PTR((ec->params)->name);
 
@@ -1162,7 +1410,7 @@ ATTRIBUTE_WARN_UNUSED_RET int perform_performance_test(const char *sig, const ch
 
 	/* Perform performance tests like "openssl speed" command */
 	ext_printf("======= Performance test ========================\n");
-	for (i = 0; ec_sig_maps[i].type != UNKNOWN_SIG_ALG; i++) {
+	for (i = 0; ec_sig_maps[i].type != UNKNOWN_ALG; i++) {
 		for (j = 0; hash_maps[j].type != UNKNOWN_HASH_ALG; j++) {
 			for (k = 0; k < EC_CURVES_NUM; k++) {
 				if(sig != NULL){

@@ -43,7 +43,7 @@ int nn_compute_redc1_coefs(nn_t r, nn_t r_square, nn_src_t p_in, word_t *mpinv)
 	nn p, tmp_nn1, tmp_nn2;
 	word_t _mpinv;
 	int ret, isodd;
-	p.magic = tmp_nn1.magic = tmp_nn2.magic = 0;
+	p.magic = tmp_nn1.magic = tmp_nn2.magic = WORD(0);
 
 	ret = nn_check_initialized(p_in); EG(ret, err);
 	ret = nn_init(&p, 0); EG(ret, err);
@@ -227,7 +227,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int _nn_mul_redc1_aliased(nn_t out, nn_src_t in
 {
 	nn out_cpy;
 	int ret;
-	out_cpy.magic = 0;
+	out_cpy.magic = WORD(0);
 
 	ret = _nn_mul_redc1(&out_cpy, in1, in2, p, mpinv); EG(ret, err);
 	ret = nn_init(out, out_cpy.wlen); EG(ret, err);
@@ -286,7 +286,7 @@ int nn_mul_mod(nn_t out, nn_src_t in1, nn_src_t in2, nn_src_t p_in)
 	nn in1_tmp, in2_tmp;
 	word_t mpinv;
 	int ret;
-	r_square.magic = in1_tmp.magic = in2_tmp.magic = p.magic = 0;
+	r_square.magic = in1_tmp.magic = in2_tmp.magic = p.magic = WORD(0);
 
 	ret = nn_copy(&p, p_in); EG(ret, err);
 

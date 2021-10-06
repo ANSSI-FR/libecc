@@ -27,8 +27,8 @@ int main()
 	fp x, x_sqrt1, x_sqrt2;
 	fp_ctx ctx;
 	int ret, ret_sqr, isone, check, cmp;
-	x.magic = x_sqrt1.magic = x_sqrt2.magic = 0;
-	ctx.magic = 0;
+	x.magic = x_sqrt1.magic = x_sqrt2.magic = WORD(0);
+	ctx.magic = WORD(0);
 
 	while (1) {
 		/* Get a random prime p of maximum 521 bits */

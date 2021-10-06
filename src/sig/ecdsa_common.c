@@ -170,7 +170,7 @@ err:
 #endif
 
 int __ecdsa_init_pub_key(ec_pub_key *out_pub, const ec_priv_key *in_priv,
-			 ec_sig_alg_type key_type)
+			 ec_alg_type key_type)
 {
 	prj_pt_src_t G;
 	int ret, cmp;
@@ -262,7 +262,7 @@ err:
 #define ECDSA_SIGN_CHECK_INITIALIZED(A, ret, err) \
 	MUST_HAVE((((void *)(A)) != NULL) && ((A)->magic == ECDSA_SIGN_MAGIC), ret, err)
 
-int __ecdsa_sign_init(struct ec_sign_context *ctx, ec_sig_alg_type key_type)
+int __ecdsa_sign_init(struct ec_sign_context *ctx, ec_alg_type key_type)
 {
 	int ret;
 
@@ -290,7 +290,7 @@ err:
 }
 
 int __ecdsa_sign_update(struct ec_sign_context *ctx,
-		       const u8 *chunk, u32 chunklen, ec_sig_alg_type key_type)
+		       const u8 *chunk, u32 chunklen, ec_alg_type key_type)
 {
 	int ret;
 
@@ -316,7 +316,7 @@ err:
 }
 
 int __ecdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen,
-			  ec_sig_alg_type key_type)
+			  ec_alg_type key_type)
 {
 	int ret, iszero, cmp;
 	const ec_priv_key *priv_key;
@@ -330,12 +330,12 @@ int __ecdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen,
 #ifdef USE_SIG_BLINDING
 	/* b is the blinding mask */
 	nn b;
-	b.magic = 0;
+	b.magic = WORD(0);
 #endif
 
-	k.magic = r.magic = e.magic = 0;
-	tmp.magic = s.magic = kinv.magic = 0;
-	kG.magic = 0;
+	k.magic = r.magic = e.magic = WORD(0);
+	tmp.magic = s.magic = kinv.magic = WORD(0);
+	kG.magic = WORD(0);
 
 	/*
 	 * First, verify context has been initialized and private
@@ -614,7 +614,7 @@ err:
 	MUST_HAVE((((void *)(A)) != NULL) && ((A)->magic == ECDSA_VERIFY_MAGIC), ret, err)
 
 int __ecdsa_verify_init(struct ec_verify_context *ctx, const u8 *sig, u8 siglen,
-			ec_sig_alg_type key_type)
+			ec_alg_type key_type)
 {
 	bitcnt_t q_bit_len;
 	u8 q_len;
@@ -672,7 +672,7 @@ int __ecdsa_verify_init(struct ec_verify_context *ctx, const u8 *sig, u8 siglen,
 }
 
 int __ecdsa_verify_update(struct ec_verify_context *ctx,
-			 const u8 *chunk, u32 chunklen, ec_sig_alg_type key_type)
+			 const u8 *chunk, u32 chunklen, ec_alg_type key_type)
 {
 	int ret;
 
@@ -697,7 +697,7 @@ err:
 }
 
 int __ecdsa_verify_finalize(struct ec_verify_context *ctx,
-			    ec_sig_alg_type key_type)
+			    ec_alg_type key_type)
 {
 	prj_pt uG, vY;
 	prj_pt_t W_prime;
@@ -710,8 +710,8 @@ int __ecdsa_verify_finalize(struct ec_verify_context *ctx,
 	u8 hsize;
 	int ret, iszero, cmp;
 
-	uG.magic = vY.magic = 0;
-	e.magic = sinv.magic = uv.magic = r_prime.magic = 0;
+	uG.magic = vY.magic = WORD(0);
+	e.magic = sinv.magic = uv.magic = r_prime.magic = WORD(0);
 
 	/* NOTE: we reuse uG for W_prime to optimize local variables */
 	W_prime = &uG;

@@ -127,7 +127,7 @@ int _ecfsdsa_sign_init(struct ec_sign_context *ctx)
 	bitcnt_t p_bit_len;
 	u8 i, p_len, r_len;
 	int ret;
-	kG.magic = 0;
+	kG.magic = WORD(0);
 
 	/* First, verify context has been initialized */
 	ret = sig_sign_check_initialized(ctx); EG(ret, err);
@@ -265,10 +265,10 @@ int _ecfsdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 #ifdef USE_SIG_BLINDING
 	/* b is the blinding mask */
 	nn b, binv;
-	b.magic = binv.magic = 0;
+	b.magic = binv.magic = WORD(0);
 #endif /* USE_SIG_BLINDING */
 
-	s.magic = e.magic = ex.magic = 0;
+	s.magic = e.magic = ex.magic = WORD(0);
 
 	/*
 	 * First, verify context has been initialized and private
@@ -421,7 +421,7 @@ int _ecfsdsa_verify_init(struct ec_verify_context *ctx,
 	fp rx, ry;
 	nn *s;
 
-	rx.magic = ry.magic = 0;
+	rx.magic = ry.magic = WORD(0);
 
 	/* First, verify context has been initialized */
 	ret = sig_verify_check_initialized(ctx); EG(ret, err);
@@ -544,8 +544,8 @@ int _ecfsdsa_verify_finalize(struct ec_verify_context *ctx)
 	const u8 *r;
 	int ret, iszero, check;
 
-	tmp.magic = e.magic = 0;
-	sG.magic = eY.magic = 0;
+	tmp.magic = e.magic = WORD(0);
+	sG.magic = eY.magic = WORD(0);
 
 	/* NOTE: we reuse sG for Wprime to optimize local variables */
 	Wprime = &sG;

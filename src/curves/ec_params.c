@@ -29,11 +29,11 @@ int import_params(ec_params *out_params, const ec_str_params *in_str_params)
 	fp tmp_a, tmp_b, tmp_gx, tmp_gy, tmp_gz;
 	ec_curve_type curve_type;
 	int ret;
-	tmp_p.magic = tmp_r.magic = tmp_r_square.magic = tmp_mpinv.magic = 0;
-	tmp_p_shift.magic = tmp_p_normalized.magic = tmp_p_reciprocal.magic = 0;
-	tmp_a.magic = tmp_b.magic = tmp_curve_order.magic = tmp_gx.magic = 0;
-	tmp_gy.magic = tmp_gz.magic = tmp_order.magic = tmp_cofactor.magic = 0;
-	tmp_order_bitlen.magic = tmp_p_bitlen.magic = 0;
+	tmp_p.magic = tmp_r.magic = tmp_r_square.magic = tmp_mpinv.magic = WORD(0);
+	tmp_p_shift.magic = tmp_p_normalized.magic = tmp_p_reciprocal.magic = WORD(0);
+	tmp_a.magic = tmp_b.magic = tmp_curve_order.magic = tmp_gx.magic = WORD(0);
+	tmp_gy.magic = tmp_gz.magic = tmp_order.magic = tmp_cofactor.magic = WORD(0);
+	tmp_order_bitlen.magic = tmp_p_bitlen.magic = WORD(0);
 
 	MUST_HAVE(((out_params != NULL) && (in_str_params != NULL)), ret, err);
 

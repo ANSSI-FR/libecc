@@ -41,7 +41,7 @@ typedef struct {
 	u32 msglen;
 
 	/* Expected signature and associated length */
-	ec_sig_alg_type sig_type;
+	ec_alg_type sig_type;
 	const u8 *exp_sig;
 	u8 exp_siglen;
 
@@ -49,6 +49,34 @@ typedef struct {
 	const u8 *adata;
 	u16 adata_len;
 } ec_test_case;
+
+/* ECDH test case */
+typedef struct {
+	/* Test case name */
+	const char *name;
+
+	/* ECDH type */
+	ec_alg_type ecdh_type;
+
+	/* Curve params */
+	const ec_str_params *ec_str_p;
+
+	/* Our private key */
+	const u8 *our_priv_key;
+	u8 our_priv_key_len;
+
+	/* Peer public key */
+	const u8 *peer_pub_key;
+	u8 peer_pub_key_len;
+
+	/* Our expected public key */
+	const u8 *exp_our_pub_key;
+	u8 exp_our_pub_key_len;
+
+	/* Expected shared secret */
+	const u8 *exp_shared_secret;
+	u8 exp_shared_secret_len;
+} ecdh_test_case;
 
 /*******************************************************************
  ************** ECDSA tests ****************************************
@@ -4840,8 +4868,8 @@ static const ec_test_case sm2_nn_random_sm2p256v1_test_case = {
  * remove automatically generated code.
  */
 
-/* Dummy empty test case to avoid empty array 
- * when no test case is defined 
+/* Dummy empty test case to avoid empty array
+ * when no test case is defined
  */
 static const ec_test_case dummy_test_case = {
 	.name = "Dummy",
@@ -4852,7 +4880,7 @@ static const ec_test_case dummy_test_case = {
 	.hash_type = UNKNOWN_HASH_ALG,
 	.msg = NULL,
 	.msglen = 0,
-	.sig_type = UNKNOWN_SIG_ALG,
+	.sig_type = UNKNOWN_ALG,
 	.exp_sig = NULL,
 	.exp_siglen = 0,
 	.adata = NULL,
@@ -5192,6 +5220,437 @@ static const ec_test_case *ec_fixed_vector_tests[] = {
 #define EC_FIXED_VECTOR_NUM_TESTS \
 	(sizeof(ec_fixed_vector_tests) / sizeof(ec_fixed_vector_tests[0]))
 
+
+/* Dummy empty test case to avoid empty array
+ * when no test case is defined
+ */
+static const ecdh_test_case ecdh_dummy_test_case = {
+	.name = "Dummy",
+	.ecdh_type = UNKNOWN_ALG,
+	.ec_str_p = NULL,
+	.our_priv_key = NULL,
+	.our_priv_key_len = 0,
+	.peer_pub_key = NULL,
+	.peer_pub_key_len = 0,
+	.exp_our_pub_key = NULL,
+	.exp_our_pub_key_len = 0,
+	.exp_shared_secret = NULL,
+	.exp_shared_secret_len = 0,
+};
+
+/*******************************************************************
+ ************** ECCCDH tests ***************************************
+ *******************************************************************/
+#ifdef WITH_ECCCDH
+/* NOTE: these tests are taken from the NIST CAVS 14.1 test suite
+ * on curves P-192 P-224 P-256 P-384 P-521
+ */
+#include "ecccdh_test_vectors.h"
+#endif /* WITH_ECCCDH */
+
+#ifdef WITH_X25519
+/* NOTE: tests takes from RFC7748 */
+#include "x25519_test_vectors.h"
+#endif /* WITH_X25519 */
+
+#ifdef WITH_X448
+/* NOTE: tests takes from RFC7748 */
+#include "x448_test_vectors.h"
+#endif /* WITH_X448 */
+
+static const ecdh_test_case *ecdh_fixed_vector_tests[] = {
+#ifdef ECCCDH_SECP192R1_SELF_TEST_0
+	&ecccdh_SECP192R1_0_test_case,
+#endif /* ECCCDH_SECP192R1_SELF_TEST_0 */
+#ifdef ECCCDH_SECP192R1_SELF_TEST_1
+	&ecccdh_SECP192R1_1_test_case,
+#endif /* ECCCDH_SECP192R1_SELF_TEST_1 */
+#ifdef ECCCDH_SECP192R1_SELF_TEST_2
+	&ecccdh_SECP192R1_2_test_case,
+#endif /* ECCCDH_SECP192R1_SELF_TEST_2 */
+#ifdef ECCCDH_SECP192R1_SELF_TEST_3
+	&ecccdh_SECP192R1_3_test_case,
+#endif /* ECCCDH_SECP192R1_SELF_TEST_3 */
+#ifdef ECCCDH_SECP192R1_SELF_TEST_4
+	&ecccdh_SECP192R1_4_test_case,
+#endif /* ECCCDH_SECP192R1_SELF_TEST_4 */
+#ifdef ECCCDH_SECP192R1_SELF_TEST_5
+	&ecccdh_SECP192R1_5_test_case,
+#endif /* ECCCDH_SECP192R1_SELF_TEST_5 */
+#ifdef ECCCDH_SECP192R1_SELF_TEST_6
+	&ecccdh_SECP192R1_6_test_case,
+#endif /* ECCCDH_SECP192R1_SELF_TEST_6 */
+#ifdef ECCCDH_SECP192R1_SELF_TEST_7
+	&ecccdh_SECP192R1_7_test_case,
+#endif /* ECCCDH_SECP192R1_SELF_TEST_7 */
+#ifdef ECCCDH_SECP192R1_SELF_TEST_8
+	&ecccdh_SECP192R1_8_test_case,
+#endif /* ECCCDH_SECP192R1_SELF_TEST_8 */
+#ifdef ECCCDH_SECP192R1_SELF_TEST_9
+	&ecccdh_SECP192R1_9_test_case,
+#endif /* ECCCDH_SECP192R1_SELF_TEST_9 */
+#ifdef ECCCDH_SECP192R1_SELF_TEST_10
+	&ecccdh_SECP192R1_10_test_case,
+#endif /* ECCCDH_SECP192R1_SELF_TEST_10 */
+#ifdef ECCCDH_SECP192R1_SELF_TEST_11
+	&ecccdh_SECP192R1_11_test_case,
+#endif /* ECCCDH_SECP192R1_SELF_TEST_11 */
+#ifdef ECCCDH_SECP192R1_SELF_TEST_12
+	&ecccdh_SECP192R1_12_test_case,
+#endif /* ECCCDH_SECP192R1_SELF_TEST_12 */
+#ifdef ECCCDH_SECP192R1_SELF_TEST_13
+	&ecccdh_SECP192R1_13_test_case,
+#endif /* ECCCDH_SECP192R1_SELF_TEST_13 */
+#ifdef ECCCDH_SECP192R1_SELF_TEST_14
+	&ecccdh_SECP192R1_14_test_case,
+#endif /* ECCCDH_SECP192R1_SELF_TEST_14 */
+#ifdef ECCCDH_SECP192R1_SELF_TEST_15
+	&ecccdh_SECP192R1_15_test_case,
+#endif /* ECCCDH_SECP192R1_SELF_TEST_15 */
+#ifdef ECCCDH_SECP192R1_SELF_TEST_16
+	&ecccdh_SECP192R1_16_test_case,
+#endif /* ECCCDH_SECP192R1_SELF_TEST_16 */
+#ifdef ECCCDH_SECP192R1_SELF_TEST_17
+	&ecccdh_SECP192R1_17_test_case,
+#endif /* ECCCDH_SECP192R1_SELF_TEST_17 */
+#ifdef ECCCDH_SECP192R1_SELF_TEST_18
+	&ecccdh_SECP192R1_18_test_case,
+#endif /* ECCCDH_SECP192R1_SELF_TEST_18 */
+#ifdef ECCCDH_SECP192R1_SELF_TEST_19
+	&ecccdh_SECP192R1_19_test_case,
+#endif /* ECCCDH_SECP192R1_SELF_TEST_19 */
+#ifdef ECCCDH_SECP192R1_SELF_TEST_20
+	&ecccdh_SECP192R1_20_test_case,
+#endif /* ECCCDH_SECP192R1_SELF_TEST_20 */
+#ifdef ECCCDH_SECP192R1_SELF_TEST_21
+	&ecccdh_SECP192R1_21_test_case,
+#endif /* ECCCDH_SECP192R1_SELF_TEST_21 */
+#ifdef ECCCDH_SECP192R1_SELF_TEST_22
+	&ecccdh_SECP192R1_22_test_case,
+#endif /* ECCCDH_SECP192R1_SELF_TEST_22 */
+#ifdef ECCCDH_SECP192R1_SELF_TEST_23
+	&ecccdh_SECP192R1_23_test_case,
+#endif /* ECCCDH_SECP192R1_SELF_TEST_23 */
+#ifdef ECCCDH_SECP192R1_SELF_TEST_24
+	&ecccdh_SECP192R1_24_test_case,
+#endif /* ECCCDH_SECP192R1_SELF_TEST_24 */
+#ifdef ECCCDH_SECP224R1_SELF_TEST_0
+	&ecccdh_SECP224R1_0_test_case,
+#endif /* ECCCDH_SECP224R1_SELF_TEST_0 */
+#ifdef ECCCDH_SECP224R1_SELF_TEST_1
+	&ecccdh_SECP224R1_1_test_case,
+#endif /* ECCCDH_SECP224R1_SELF_TEST_1 */
+#ifdef ECCCDH_SECP224R1_SELF_TEST_2
+	&ecccdh_SECP224R1_2_test_case,
+#endif /* ECCCDH_SECP224R1_SELF_TEST_2 */
+#ifdef ECCCDH_SECP224R1_SELF_TEST_3
+	&ecccdh_SECP224R1_3_test_case,
+#endif /* ECCCDH_SECP224R1_SELF_TEST_3 */
+#ifdef ECCCDH_SECP224R1_SELF_TEST_4
+	&ecccdh_SECP224R1_4_test_case,
+#endif /* ECCCDH_SECP224R1_SELF_TEST_4 */
+#ifdef ECCCDH_SECP224R1_SELF_TEST_5
+	&ecccdh_SECP224R1_5_test_case,
+#endif /* ECCCDH_SECP224R1_SELF_TEST_5 */
+#ifdef ECCCDH_SECP224R1_SELF_TEST_6
+	&ecccdh_SECP224R1_6_test_case,
+#endif /* ECCCDH_SECP224R1_SELF_TEST_6 */
+#ifdef ECCCDH_SECP224R1_SELF_TEST_7
+	&ecccdh_SECP224R1_7_test_case,
+#endif /* ECCCDH_SECP224R1_SELF_TEST_7 */
+#ifdef ECCCDH_SECP224R1_SELF_TEST_8
+	&ecccdh_SECP224R1_8_test_case,
+#endif /* ECCCDH_SECP224R1_SELF_TEST_8 */
+#ifdef ECCCDH_SECP224R1_SELF_TEST_9
+	&ecccdh_SECP224R1_9_test_case,
+#endif /* ECCCDH_SECP224R1_SELF_TEST_9 */
+#ifdef ECCCDH_SECP224R1_SELF_TEST_10
+	&ecccdh_SECP224R1_10_test_case,
+#endif /* ECCCDH_SECP224R1_SELF_TEST_10 */
+#ifdef ECCCDH_SECP224R1_SELF_TEST_11
+	&ecccdh_SECP224R1_11_test_case,
+#endif /* ECCCDH_SECP224R1_SELF_TEST_11 */
+#ifdef ECCCDH_SECP224R1_SELF_TEST_12
+	&ecccdh_SECP224R1_12_test_case,
+#endif /* ECCCDH_SECP224R1_SELF_TEST_12 */
+#ifdef ECCCDH_SECP224R1_SELF_TEST_13
+	&ecccdh_SECP224R1_13_test_case,
+#endif /* ECCCDH_SECP224R1_SELF_TEST_13 */
+#ifdef ECCCDH_SECP224R1_SELF_TEST_14
+	&ecccdh_SECP224R1_14_test_case,
+#endif /* ECCCDH_SECP224R1_SELF_TEST_14 */
+#ifdef ECCCDH_SECP224R1_SELF_TEST_15
+	&ecccdh_SECP224R1_15_test_case,
+#endif /* ECCCDH_SECP224R1_SELF_TEST_15 */
+#ifdef ECCCDH_SECP224R1_SELF_TEST_16
+	&ecccdh_SECP224R1_16_test_case,
+#endif /* ECCCDH_SECP224R1_SELF_TEST_16 */
+#ifdef ECCCDH_SECP224R1_SELF_TEST_17
+	&ecccdh_SECP224R1_17_test_case,
+#endif /* ECCCDH_SECP224R1_SELF_TEST_17 */
+#ifdef ECCCDH_SECP224R1_SELF_TEST_18
+	&ecccdh_SECP224R1_18_test_case,
+#endif /* ECCCDH_SECP224R1_SELF_TEST_18 */
+#ifdef ECCCDH_SECP224R1_SELF_TEST_19
+	&ecccdh_SECP224R1_19_test_case,
+#endif /* ECCCDH_SECP224R1_SELF_TEST_19 */
+#ifdef ECCCDH_SECP224R1_SELF_TEST_20
+	&ecccdh_SECP224R1_20_test_case,
+#endif /* ECCCDH_SECP224R1_SELF_TEST_20 */
+#ifdef ECCCDH_SECP224R1_SELF_TEST_21
+	&ecccdh_SECP224R1_21_test_case,
+#endif /* ECCCDH_SECP224R1_SELF_TEST_21 */
+#ifdef ECCCDH_SECP224R1_SELF_TEST_22
+	&ecccdh_SECP224R1_22_test_case,
+#endif /* ECCCDH_SECP224R1_SELF_TEST_22 */
+#ifdef ECCCDH_SECP224R1_SELF_TEST_23
+	&ecccdh_SECP224R1_23_test_case,
+#endif /* ECCCDH_SECP224R1_SELF_TEST_23 */
+#ifdef ECCCDH_SECP224R1_SELF_TEST_24
+	&ecccdh_SECP224R1_24_test_case,
+#endif /* ECCCDH_SECP224R1_SELF_TEST_24 */
+#ifdef ECCCDH_SECP256R1_SELF_TEST_0
+	&ecccdh_SECP256R1_0_test_case,
+#endif /* ECCCDH_SECP256R1_SELF_TEST_0 */
+#ifdef ECCCDH_SECP256R1_SELF_TEST_1
+	&ecccdh_SECP256R1_1_test_case,
+#endif /* ECCCDH_SECP256R1_SELF_TEST_1 */
+#ifdef ECCCDH_SECP256R1_SELF_TEST_2
+	&ecccdh_SECP256R1_2_test_case,
+#endif /* ECCCDH_SECP256R1_SELF_TEST_2 */
+#ifdef ECCCDH_SECP256R1_SELF_TEST_3
+	&ecccdh_SECP256R1_3_test_case,
+#endif /* ECCCDH_SECP256R1_SELF_TEST_3 */
+#ifdef ECCCDH_SECP256R1_SELF_TEST_4
+	&ecccdh_SECP256R1_4_test_case,
+#endif /* ECCCDH_SECP256R1_SELF_TEST_4 */
+#ifdef ECCCDH_SECP256R1_SELF_TEST_5
+	&ecccdh_SECP256R1_5_test_case,
+#endif /* ECCCDH_SECP256R1_SELF_TEST_5 */
+#ifdef ECCCDH_SECP256R1_SELF_TEST_6
+	&ecccdh_SECP256R1_6_test_case,
+#endif /* ECCCDH_SECP256R1_SELF_TEST_6 */
+#ifdef ECCCDH_SECP256R1_SELF_TEST_7
+	&ecccdh_SECP256R1_7_test_case,
+#endif /* ECCCDH_SECP256R1_SELF_TEST_7 */
+#ifdef ECCCDH_SECP256R1_SELF_TEST_8
+	&ecccdh_SECP256R1_8_test_case,
+#endif /* ECCCDH_SECP256R1_SELF_TEST_8 */
+#ifdef ECCCDH_SECP256R1_SELF_TEST_9
+	&ecccdh_SECP256R1_9_test_case,
+#endif /* ECCCDH_SECP256R1_SELF_TEST_9 */
+#ifdef ECCCDH_SECP256R1_SELF_TEST_10
+	&ecccdh_SECP256R1_10_test_case,
+#endif /* ECCCDH_SECP256R1_SELF_TEST_10 */
+#ifdef ECCCDH_SECP256R1_SELF_TEST_11
+	&ecccdh_SECP256R1_11_test_case,
+#endif /* ECCCDH_SECP256R1_SELF_TEST_11 */
+#ifdef ECCCDH_SECP256R1_SELF_TEST_12
+	&ecccdh_SECP256R1_12_test_case,
+#endif /* ECCCDH_SECP256R1_SELF_TEST_12 */
+#ifdef ECCCDH_SECP256R1_SELF_TEST_13
+	&ecccdh_SECP256R1_13_test_case,
+#endif /* ECCCDH_SECP256R1_SELF_TEST_13 */
+#ifdef ECCCDH_SECP256R1_SELF_TEST_14
+	&ecccdh_SECP256R1_14_test_case,
+#endif /* ECCCDH_SECP256R1_SELF_TEST_14 */
+#ifdef ECCCDH_SECP256R1_SELF_TEST_15
+	&ecccdh_SECP256R1_15_test_case,
+#endif /* ECCCDH_SECP256R1_SELF_TEST_15 */
+#ifdef ECCCDH_SECP256R1_SELF_TEST_16
+	&ecccdh_SECP256R1_16_test_case,
+#endif /* ECCCDH_SECP256R1_SELF_TEST_16 */
+#ifdef ECCCDH_SECP256R1_SELF_TEST_17
+	&ecccdh_SECP256R1_17_test_case,
+#endif /* ECCCDH_SECP256R1_SELF_TEST_17 */
+#ifdef ECCCDH_SECP256R1_SELF_TEST_18
+	&ecccdh_SECP256R1_18_test_case,
+#endif /* ECCCDH_SECP256R1_SELF_TEST_18 */
+#ifdef ECCCDH_SECP256R1_SELF_TEST_19
+	&ecccdh_SECP256R1_19_test_case,
+#endif /* ECCCDH_SECP256R1_SELF_TEST_19 */
+#ifdef ECCCDH_SECP256R1_SELF_TEST_20
+	&ecccdh_SECP256R1_20_test_case,
+#endif /* ECCCDH_SECP256R1_SELF_TEST_20 */
+#ifdef ECCCDH_SECP256R1_SELF_TEST_21
+	&ecccdh_SECP256R1_21_test_case,
+#endif /* ECCCDH_SECP256R1_SELF_TEST_21 */
+#ifdef ECCCDH_SECP256R1_SELF_TEST_22
+	&ecccdh_SECP256R1_22_test_case,
+#endif /* ECCCDH_SECP256R1_SELF_TEST_22 */
+#ifdef ECCCDH_SECP256R1_SELF_TEST_23
+	&ecccdh_SECP256R1_23_test_case,
+#endif /* ECCCDH_SECP256R1_SELF_TEST_23 */
+#ifdef ECCCDH_SECP256R1_SELF_TEST_24
+	&ecccdh_SECP256R1_24_test_case,
+#endif /* ECCCDH_SECP256R1_SELF_TEST_24 */
+#ifdef ECCCDH_SECP384R1_SELF_TEST_0
+	&ecccdh_SECP384R1_0_test_case,
+#endif /* ECCCDH_SECP384R1_SELF_TEST_0 */
+#ifdef ECCCDH_SECP384R1_SELF_TEST_1
+	&ecccdh_SECP384R1_1_test_case,
+#endif /* ECCCDH_SECP384R1_SELF_TEST_1 */
+#ifdef ECCCDH_SECP384R1_SELF_TEST_2
+	&ecccdh_SECP384R1_2_test_case,
+#endif /* ECCCDH_SECP384R1_SELF_TEST_2 */
+#ifdef ECCCDH_SECP384R1_SELF_TEST_3
+	&ecccdh_SECP384R1_3_test_case,
+#endif /* ECCCDH_SECP384R1_SELF_TEST_3 */
+#ifdef ECCCDH_SECP384R1_SELF_TEST_4
+	&ecccdh_SECP384R1_4_test_case,
+#endif /* ECCCDH_SECP384R1_SELF_TEST_4 */
+#ifdef ECCCDH_SECP384R1_SELF_TEST_5
+	&ecccdh_SECP384R1_5_test_case,
+#endif /* ECCCDH_SECP384R1_SELF_TEST_5 */
+#ifdef ECCCDH_SECP384R1_SELF_TEST_6
+	&ecccdh_SECP384R1_6_test_case,
+#endif /* ECCCDH_SECP384R1_SELF_TEST_6 */
+#ifdef ECCCDH_SECP384R1_SELF_TEST_7
+	&ecccdh_SECP384R1_7_test_case,
+#endif /* ECCCDH_SECP384R1_SELF_TEST_7 */
+#ifdef ECCCDH_SECP384R1_SELF_TEST_8
+	&ecccdh_SECP384R1_8_test_case,
+#endif /* ECCCDH_SECP384R1_SELF_TEST_8 */
+#ifdef ECCCDH_SECP384R1_SELF_TEST_9
+	&ecccdh_SECP384R1_9_test_case,
+#endif /* ECCCDH_SECP384R1_SELF_TEST_9 */
+#ifdef ECCCDH_SECP384R1_SELF_TEST_10
+	&ecccdh_SECP384R1_10_test_case,
+#endif /* ECCCDH_SECP384R1_SELF_TEST_10 */
+#ifdef ECCCDH_SECP384R1_SELF_TEST_11
+	&ecccdh_SECP384R1_11_test_case,
+#endif /* ECCCDH_SECP384R1_SELF_TEST_11 */
+#ifdef ECCCDH_SECP384R1_SELF_TEST_12
+	&ecccdh_SECP384R1_12_test_case,
+#endif /* ECCCDH_SECP384R1_SELF_TEST_12 */
+#ifdef ECCCDH_SECP384R1_SELF_TEST_13
+	&ecccdh_SECP384R1_13_test_case,
+#endif /* ECCCDH_SECP384R1_SELF_TEST_13 */
+#ifdef ECCCDH_SECP384R1_SELF_TEST_14
+	&ecccdh_SECP384R1_14_test_case,
+#endif /* ECCCDH_SECP384R1_SELF_TEST_14 */
+#ifdef ECCCDH_SECP384R1_SELF_TEST_15
+	&ecccdh_SECP384R1_15_test_case,
+#endif /* ECCCDH_SECP384R1_SELF_TEST_15 */
+#ifdef ECCCDH_SECP384R1_SELF_TEST_16
+	&ecccdh_SECP384R1_16_test_case,
+#endif /* ECCCDH_SECP384R1_SELF_TEST_16 */
+#ifdef ECCCDH_SECP384R1_SELF_TEST_17
+	&ecccdh_SECP384R1_17_test_case,
+#endif /* ECCCDH_SECP384R1_SELF_TEST_17 */
+#ifdef ECCCDH_SECP384R1_SELF_TEST_18
+	&ecccdh_SECP384R1_18_test_case,
+#endif /* ECCCDH_SECP384R1_SELF_TEST_18 */
+#ifdef ECCCDH_SECP384R1_SELF_TEST_19
+	&ecccdh_SECP384R1_19_test_case,
+#endif /* ECCCDH_SECP384R1_SELF_TEST_19 */
+#ifdef ECCCDH_SECP384R1_SELF_TEST_20
+	&ecccdh_SECP384R1_20_test_case,
+#endif /* ECCCDH_SECP384R1_SELF_TEST_20 */
+#ifdef ECCCDH_SECP384R1_SELF_TEST_21
+	&ecccdh_SECP384R1_21_test_case,
+#endif /* ECCCDH_SECP384R1_SELF_TEST_21 */
+#ifdef ECCCDH_SECP384R1_SELF_TEST_22
+	&ecccdh_SECP384R1_22_test_case,
+#endif /* ECCCDH_SECP384R1_SELF_TEST_22 */
+#ifdef ECCCDH_SECP384R1_SELF_TEST_23
+	&ecccdh_SECP384R1_23_test_case,
+#endif /* ECCCDH_SECP384R1_SELF_TEST_23 */
+#ifdef ECCCDH_SECP384R1_SELF_TEST_24
+	&ecccdh_SECP384R1_24_test_case,
+#endif /* ECCCDH_SECP384R1_SELF_TEST_24 */
+#ifdef ECCCDH_SECP521R1_SELF_TEST_0
+	&ecccdh_SECP521R1_0_test_case,
+#endif /* ECCCDH_SECP521R1_SELF_TEST_0 */
+#ifdef ECCCDH_SECP521R1_SELF_TEST_1
+	&ecccdh_SECP521R1_1_test_case,
+#endif /* ECCCDH_SECP521R1_SELF_TEST_1 */
+#ifdef ECCCDH_SECP521R1_SELF_TEST_2
+	&ecccdh_SECP521R1_2_test_case,
+#endif /* ECCCDH_SECP521R1_SELF_TEST_2 */
+#ifdef ECCCDH_SECP521R1_SELF_TEST_3
+	&ecccdh_SECP521R1_3_test_case,
+#endif /* ECCCDH_SECP521R1_SELF_TEST_3 */
+#ifdef ECCCDH_SECP521R1_SELF_TEST_4
+	&ecccdh_SECP521R1_4_test_case,
+#endif /* ECCCDH_SECP521R1_SELF_TEST_4 */
+#ifdef ECCCDH_SECP521R1_SELF_TEST_5
+	&ecccdh_SECP521R1_5_test_case,
+#endif /* ECCCDH_SECP521R1_SELF_TEST_5 */
+#ifdef ECCCDH_SECP521R1_SELF_TEST_6
+	&ecccdh_SECP521R1_6_test_case,
+#endif /* ECCCDH_SECP521R1_SELF_TEST_6 */
+#ifdef ECCCDH_SECP521R1_SELF_TEST_7
+	&ecccdh_SECP521R1_7_test_case,
+#endif /* ECCCDH_SECP521R1_SELF_TEST_7 */
+#ifdef ECCCDH_SECP521R1_SELF_TEST_8
+	&ecccdh_SECP521R1_8_test_case,
+#endif /* ECCCDH_SECP521R1_SELF_TEST_8 */
+#ifdef ECCCDH_SECP521R1_SELF_TEST_9
+	&ecccdh_SECP521R1_9_test_case,
+#endif /* ECCCDH_SECP521R1_SELF_TEST_9 */
+#ifdef ECCCDH_SECP521R1_SELF_TEST_10
+	&ecccdh_SECP521R1_10_test_case,
+#endif /* ECCCDH_SECP521R1_SELF_TEST_10 */
+#ifdef ECCCDH_SECP521R1_SELF_TEST_11
+	&ecccdh_SECP521R1_11_test_case,
+#endif /* ECCCDH_SECP521R1_SELF_TEST_11 */
+#ifdef ECCCDH_SECP521R1_SELF_TEST_12
+	&ecccdh_SECP521R1_12_test_case,
+#endif /* ECCCDH_SECP521R1_SELF_TEST_12 */
+#ifdef ECCCDH_SECP521R1_SELF_TEST_13
+	&ecccdh_SECP521R1_13_test_case,
+#endif /* ECCCDH_SECP521R1_SELF_TEST_13 */
+#ifdef ECCCDH_SECP521R1_SELF_TEST_14
+	&ecccdh_SECP521R1_14_test_case,
+#endif /* ECCCDH_SECP521R1_SELF_TEST_14 */
+#ifdef ECCCDH_SECP521R1_SELF_TEST_15
+	&ecccdh_SECP521R1_15_test_case,
+#endif /* ECCCDH_SECP521R1_SELF_TEST_15 */
+#ifdef ECCCDH_SECP521R1_SELF_TEST_16
+	&ecccdh_SECP521R1_16_test_case,
+#endif /* ECCCDH_SECP521R1_SELF_TEST_16 */
+#ifdef ECCCDH_SECP521R1_SELF_TEST_17
+	&ecccdh_SECP521R1_17_test_case,
+#endif /* ECCCDH_SECP521R1_SELF_TEST_17 */
+#ifdef ECCCDH_SECP521R1_SELF_TEST_18
+	&ecccdh_SECP521R1_18_test_case,
+#endif /* ECCCDH_SECP521R1_SELF_TEST_18 */
+#ifdef ECCCDH_SECP521R1_SELF_TEST_19
+	&ecccdh_SECP521R1_19_test_case,
+#endif /* ECCCDH_SECP521R1_SELF_TEST_19 */
+#ifdef ECCCDH_SECP521R1_SELF_TEST_20
+	&ecccdh_SECP521R1_20_test_case,
+#endif /* ECCCDH_SECP521R1_SELF_TEST_20 */
+#ifdef ECCCDH_SECP521R1_SELF_TEST_21
+	&ecccdh_SECP521R1_21_test_case,
+#endif /* ECCCDH_SECP521R1_SELF_TEST_21 */
+#ifdef ECCCDH_SECP521R1_SELF_TEST_22
+	&ecccdh_SECP521R1_22_test_case,
+#endif /* ECCCDH_SECP521R1_SELF_TEST_22 */
+#ifdef ECCCDH_SECP521R1_SELF_TEST_23
+	&ecccdh_SECP521R1_23_test_case,
+#endif /* ECCCDH_SECP521R1_SELF_TEST_23 */
+#ifdef ECCCDH_SECP521R1_SELF_TEST_24
+	&ecccdh_SECP521R1_24_test_case,
+#endif /* ECCCDH_SECP521R1_SELF_TEST_24 */
+#if defined(WITH_X25519) && defined(WITH_CURVE_WEI25519)
+	&x25519_WEI25519_0_test_case,
+	&x25519_WEI25519_1_test_case,
+#endif
+#if defined(WITH_X448) && defined(WITH_CURVE_WEI448)
+	&x448_WEI448_0_test_case,
+	&x448_WEI448_1_test_case,
+#endif
+
+	/* Dummy empty test case to avoid empty array
+	 * when no test case is defined */
+	&ecdh_dummy_test_case,
+};
+
+#define ECDH_FIXED_VECTOR_NUM_TESTS \
+        (sizeof(ecdh_fixed_vector_tests) / sizeof(ecdh_fixed_vector_tests[0]))
+
 /*
  * A fixed test can fail in various ways. The way we report the failure
  * to the caller is by returning a non-zero value, in which we encode
@@ -5205,13 +5664,15 @@ typedef enum {
 	TEST_KEY_IMPORT_ERROR = 1,
 	TEST_SIG_ERROR = 2,
 	TEST_SIG_COMP_ERROR = 3,
-	TEST_VERIF_ERROR = 4
+	TEST_VERIF_ERROR = 4,
+	TEST_ECDH_ERROR = 5,
+	TEST_ECDH_COMP_ERROR = 6,
 } test_err_kind;
 
 static int encode_error_value(const ec_test_case *c, test_err_kind failed_test, u32 *err_val)
 {
 	ec_curve_type ctype;
-	ec_sig_alg_type stype = c->sig_type;
+	ec_alg_type stype = c->sig_type;
 	hash_alg_type htype = c->hash_type;
 	test_err_kind etype = failed_test;
 	int ret;
@@ -5224,6 +5685,28 @@ static int encode_error_value(const ec_test_case *c, test_err_kind failed_test, 
 	*err_val = (((u32)ctype << 24) |
 		    ((u32)stype << 16) |
 		    ((u32)htype <<  8) |
+		    ((u32)etype));
+	ret = 0;
+
+err:
+	return ret;
+}
+
+static int ecdh_encode_error_value(const ecdh_test_case *c, test_err_kind failed_test, u32 *err_val)
+{
+	ec_curve_type ctype;
+	ec_alg_type stype = c->ecdh_type;
+	test_err_kind etype = failed_test;
+	int ret;
+
+	MUST_HAVE((c != NULL) && (err_val != NULL), ret, err);
+
+	ret = ec_get_curve_type_by_name(c->ec_str_p->name->buf,
+					c->ec_str_p->name->buflen, &ctype); EG(ret, err);
+
+	*err_val = (((u32)ctype << 24) |
+		    ((u32)stype << 16) |
+		    ((u32)0 <<  8) |
 		    ((u32)etype));
 	ret = 0;
 

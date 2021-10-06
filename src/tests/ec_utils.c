@@ -166,7 +166,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int export_public_key(FILE * file, const char *
 }
 
 ATTRIBUTE_WARN_UNUSED_RET static int string_to_params(const char *ec_name, const char *ec_sig_name,
-			    ec_sig_alg_type * sig_type,
+			    ec_alg_type * sig_type,
 			    const ec_str_params ** ec_str_p,
 			    const char *hash_name, hash_alg_type * hash_type)
 {
@@ -236,7 +236,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int generate_and_export_key_pair(const char *ec
 	const u16 kname_len = sizeof(kname);
 	u16 prefix_len;
 	u32 len;
-	ec_sig_alg_type sig_type;
+	ec_alg_type sig_type;
 	ec_params params;
 	ec_key_pair kp;
 	FILE *file = NULL;
@@ -369,7 +369,7 @@ err:
 
 ATTRIBUTE_WARN_UNUSED_RET static int store_sig(const char *in_fname, const char *out_fname,
 		     const u8 *sig, u32 siglen,
-		     ec_sig_alg_type sig_type, hash_alg_type hash_type,
+		     ec_alg_type sig_type, hash_alg_type hash_type,
 		     const u8 curve_name[MAX_CURVE_NAME_LEN],
 		     metadata_hdr * hdr)
 {
@@ -597,14 +597,14 @@ ATTRIBUTE_WARN_UNUSED_RET static int generate_metadata_hdr(metadata_hdr * hdr, c
 /* Warn the user that the provided ancillary data won't be used
  * if the algorithm does not need them.
  */
-ATTRIBUTE_WARN_UNUSED_RET static int check_ancillary_data(const char *adata, ec_sig_alg_type sig_type, const char *sig_name, int *check)
+ATTRIBUTE_WARN_UNUSED_RET static int check_ancillary_data(const char *adata, ec_alg_type sig_type, const char *sig_name, int *check)
 {
 	int ret;
 
 	MUST_HAVE(check != NULL, ret, err);
 	MUST_HAVE(adata != NULL, ret, err);
 	MUST_HAVE(sig_name != NULL, ret, err);
-	MUST_HAVE(sig_type != UNKNOWN_SIG_ALG, ret, err);
+	MUST_HAVE(sig_type != UNKNOWN_ALG, ret, err);
 
 	(*check) = 0;
 
@@ -654,7 +654,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int sign_bin_file(const char *ec_name, const ch
 	const ec_str_params *ec_str_p;
 	ec_params params;
 	int ret, check;
-	ec_sig_alg_type sig_type;
+	ec_alg_type sig_type;
 	hash_alg_type hash_type;
 	u8 priv_key_buf[EC_STRUCTURED_PRIV_KEY_MAX_EXPORT_SIZE];
 	u8 priv_key_buf_len;
@@ -1009,10 +1009,10 @@ ATTRIBUTE_WARN_UNUSED_RET static int verify_bin_file(const char *ec_name, const 
 	u8 stored_curve_name[MAX_CURVE_NAME_LEN];
 	u8 pub_key_buf[EC_STRUCTURED_PUB_KEY_MAX_EXPORT_SIZE];
 	struct ec_verify_context verif_ctx;
-	ec_sig_alg_type stored_sig_type;
+	ec_alg_type stored_sig_type;
 	hash_alg_type stored_hash_type;
 	const ec_str_params *ec_str_p;
-	ec_sig_alg_type sig_type;
+	ec_alg_type sig_type;
 	hash_alg_type hash_type;
 	u8 sig[EC_MAX_SIGLEN];
 	u8 siglen, st_siglen;
@@ -1392,7 +1392,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int ec_scalar_mult(const char *ec_name,
 	nn d;
 	/* Point to import */
 	prj_pt Q;
-	d.magic = Q.magic = 0;
+	d.magic = Q.magic = WORD(0);
 
 	MUST_HAVE(ec_name != NULL, ret, err);
 	MUST_HAVE(scalar_file != NULL, ret, err);
@@ -1563,7 +1563,7 @@ static void print_sig_algs(void)
 	int i;
 
 	/* Print all the available signature schemes */
-	for (i = 0; ec_sig_maps[i].type != UNKNOWN_SIG_ALG; i++) {
+	for (i = 0; ec_sig_maps[i].type != UNKNOWN_ALG; i++) {
 		printf("%s ", ec_sig_maps[i].name);
 	}
 

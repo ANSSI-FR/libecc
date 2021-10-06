@@ -37,7 +37,7 @@ int eckcdsa_init_pub_key(ec_pub_key *out_pub, const ec_priv_key *in_priv)
 	int ret, cmp;
 	nn xinv;
 	nn_src_t q;
-	xinv.magic = 0;
+	xinv.magic = WORD(0);
 
 	MUST_HAVE((out_pub != NULL), ret, err);
 
@@ -204,7 +204,7 @@ int _eckcdsa_sign_init(struct ec_sign_context *ctx)
 	u8 p_len;
 	u16 z_len;
 	int ret;
-	y_aff.magic = 0;
+	y_aff.magic = WORD(0);
 
 	/* First, verify context has been initialized */
 	ret = sig_sign_check_initialized(ctx); EG(ret, err);
@@ -307,11 +307,11 @@ int _eckcdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 #ifdef USE_SIG_BLINDING
 	/* b is the blinding mask */
 	nn b, binv;
-	b.magic = binv.magic = 0;
+	b.magic = binv.magic = WORD(0);
 #endif /* USE_SIG_BLINDING */
 
-	kG.magic = 0;
-	e.magic = tmp.magic = s.magic = k.magic = 0;
+	kG.magic = WORD(0);
+	e.magic = tmp.magic = s.magic = k.magic = WORD(0);
 
 	/*
 	 * First, verify context has been initialized and private
@@ -551,7 +551,7 @@ int _eckcdsa_verify_init(struct ec_verify_context *ctx,
 	u8 hsize;
 	int ret, iszero, cmp;
 	nn s;
-	y_aff.magic = s.magic = 0;
+	y_aff.magic = s.magic = WORD(0);
 
 	/* First, verify context has been initialized */
 	ret = sig_verify_check_initialized(ctx); EG(ret, err);
@@ -705,8 +705,8 @@ int _eckcdsa_verify_finalize(struct ec_verify_context *ctx)
 	u8 *r;
 	nn *s;
 
-	sY.magic = eG.magic = 0;
-	e.magic = tmp.magic = 0;
+	sY.magic = eG.magic = WORD(0);
+	e.magic = tmp.magic = WORD(0);
 
 	/* NOTE: we reuse eG for Wprime to optimize local variables */
 	Wprime = &eG;

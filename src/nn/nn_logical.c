@@ -269,7 +269,7 @@ int nn_rrot(nn_t out, nn_src_t in, bitcnt_t cnt, bitcnt_t bitlen)
 	u8 owlen = (u8)BIT_LEN_WORDS(bitlen);
 	int ret;
 	nn tmp;
-	tmp.magic = 0;
+	tmp.magic = WORD(0);
 
 	MUST_HAVE((bitlen <= NN_MAX_BIT_LEN), ret, err);
 	MUST_HAVE((cnt < bitlen), ret, err);
@@ -307,7 +307,7 @@ int nn_lrot(nn_t out, nn_src_t in, bitcnt_t cnt, bitcnt_t bitlen)
 	u8 owlen = (u8)BIT_LEN_WORDS(bitlen);
 	int ret;
 	nn tmp;
-	tmp.magic = 0;
+	tmp.magic = WORD(0);
 
 	MUST_HAVE(!(bitlen > NN_MAX_BIT_LEN), ret, err);
 	MUST_HAVE(!(cnt >= bitlen), ret, err);

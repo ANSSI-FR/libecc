@@ -112,7 +112,7 @@ static void print_sig_algs(void)
         int i;
 
         /* Print all the available signature schemes */
-        for (i = 0; ec_sig_maps[i].type != UNKNOWN_SIG_ALG; i++) {
+        for (i = 0; ec_sig_maps[i].type != UNKNOWN_ALG; i++) {
                 ext_printf("%s ", ec_sig_maps[i].name);
         }
 

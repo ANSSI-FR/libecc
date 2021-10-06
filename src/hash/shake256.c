@@ -47,7 +47,7 @@ int shake256_final(shake256_context *ctx, u8 output[SHAKE256_DIGEST_SIZE])
 	ret = _shake_finalize((shake_context *)ctx, output);
 
 	/* Tell that we are uninitialized */
-	ctx->magic = 0;
+	ctx->magic = WORD(0);
 
 err:
 	return ret;

@@ -13,7 +13,9 @@
  *  This software is licensed under a dual BSD and GPL v2 license.
  *  See LICENSE file at the root folder of the project.
  */
+#include "../lib_ecc_config.h"
 #include "libec.h"
+
 /* We include the printf external dependency for printf output */
 #include "print.h"
 
@@ -93,7 +95,7 @@ int ECDH_helper(const u8 *curve_name, const u8 *role)
 	/* libecc internal structure holding the curve parameters */
 	ec_params curve_params;
 
-	Q.magic = 0;
+	Q.magic = WORD(0);
 
 	MUST_HAVE((curve_name != NULL) && (role != NULL), ret, err);
 

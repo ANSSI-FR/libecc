@@ -33,15 +33,15 @@ err:
 
 /*
  * Same as previous but also verifies that the signature algorithm type does
- * match the one passed using 'sig_type'. Returns 0 on success, -1 on error.
+ * match the one passed using 'alg_type'. Returns 0 on success, -1 on error.
  */
 int priv_key_check_initialized_and_type(const ec_priv_key *A,
-					 ec_sig_alg_type sig_type)
+					 ec_alg_type alg_type)
 {
 	int ret = 0;
 
 	MUST_HAVE(((A != NULL) && (A->magic == PRIV_KEY_MAGIC) &&
-			(A->params != NULL) && (A->key_type == sig_type)), ret, err);
+			(A->params != NULL) && (A->key_type == alg_type)), ret, err);
 
 err:
 	return ret;
@@ -56,7 +56,7 @@ err:
 int ec_priv_key_import_from_buf(ec_priv_key *priv_key,
 				const ec_params *params,
 				const u8 *priv_key_buf, u8 priv_key_buf_len,
-				ec_sig_alg_type ec_key_alg)
+				ec_alg_type ec_key_alg)
 {
 	int ret;
 
@@ -115,15 +115,15 @@ err:
 
 /*
  * Same as previous but also verifies that the signature algorithm type does
- * match the one passed using 'sig_type'. Returns 0 on success, -1 on error.
+ * match the one passed using 'alg_type'. Returns 0 on success, -1 on error.
  */
 int pub_key_check_initialized_and_type(const ec_pub_key *A,
-					ec_sig_alg_type sig_type)
+					ec_alg_type alg_type)
 {
 	int ret = 0;
 
 	MUST_HAVE(((A != NULL) && (A->magic == PUB_KEY_MAGIC) &&
-			(A->params != NULL) && (A->key_type == sig_type)), ret, err);
+			(A->params != NULL) && (A->key_type == alg_type)), ret, err);
 
 err:
 	return ret;
@@ -138,7 +138,7 @@ err:
  */
 int ec_pub_key_import_from_buf(ec_pub_key *pub_key, const ec_params *params,
 			       const u8 *pub_key_buf, u8 pub_key_buf_len,
-			       ec_sig_alg_type ec_key_alg)
+			       ec_alg_type ec_key_alg)
 {
 	int ret, isone;
 
@@ -179,7 +179,7 @@ err:
  */
 int ec_pub_key_import_from_aff_buf(ec_pub_key *pub_key, const ec_params *params,
 			       const u8 *pub_key_buf, u8 pub_key_buf_len,
-			       ec_sig_alg_type ec_key_alg)
+			       ec_alg_type ec_key_alg)
 {
 	int ret, isone;
 
@@ -263,17 +263,17 @@ err:
 
 /*
  * Same as previous but also verifies that the signature algorithm type does
- * match the one passed using 'sig_type'. Returns 0 on success, -1 on error.
+ * match the one passed using 'alg_type'. Returns 0 on success, -1 on error.
  */
 int key_pair_check_initialized_and_type(const ec_key_pair *A,
-					 ec_sig_alg_type sig_type)
+					 ec_alg_type alg_type)
 {
 	int ret;
 
 	MUST_HAVE((A != NULL), ret, err);
 
-	ret = priv_key_check_initialized_and_type(&A->priv_key, sig_type); EG(ret, err);
-	ret = pub_key_check_initialized_and_type(&A->pub_key, sig_type);
+	ret = priv_key_check_initialized_and_type(&A->priv_key, alg_type); EG(ret, err);
+	ret = pub_key_check_initialized_and_type(&A->pub_key, alg_type);
 
 err:
 	return ret;
@@ -287,7 +287,7 @@ err:
 int ec_key_pair_import_from_priv_key_buf(ec_key_pair *kp,
 					 const ec_params *params,
 					 const u8 *priv_key, u8 priv_key_len,
-					 ec_sig_alg_type ec_key_alg)
+					 ec_alg_type ec_key_alg)
 {
 	int ret;
 
@@ -311,7 +311,7 @@ int ec_structured_priv_key_import_from_buf(ec_priv_key *priv_key,
 					   const ec_params *params,
 					   const u8 *priv_key_buf,
 					   u8 priv_key_buf_len,
-					   ec_sig_alg_type ec_key_alg)
+					   ec_alg_type ec_key_alg)
 {
 	u8 metadata_len = (3 * sizeof(u8));
 	u8 crv_name_len;
@@ -408,7 +408,7 @@ int ec_structured_pub_key_import_from_buf(ec_pub_key *pub_key,
 					  const ec_params *params,
 					  const u8 *pub_key_buf,
 					  u8 pub_key_buf_len,
-					  ec_sig_alg_type ec_key_alg)
+					  ec_alg_type ec_key_alg)
 {
 	u8 metadata_len = (3 * sizeof(u8));
 	u8 crv_name_len;
@@ -507,7 +507,7 @@ int ec_structured_key_pair_import_from_priv_key_buf(ec_key_pair *kp,
 						    const ec_params *params,
 						    const u8 *priv_key_buf,
 						    u8 priv_key_buf_len,
-						    ec_sig_alg_type ec_key_alg)
+						    ec_alg_type ec_key_alg)
 {
 	u8 metadata_len = (3 * sizeof(u8));
 	u8 crv_name_len;
@@ -557,7 +557,7 @@ int ec_structured_key_pair_import_from_buf(ec_key_pair *kp,
 					   u8 priv_key_buf_len,
 					   const u8 *pub_key_buf,
 					   u8 pub_key_buf_len,
-					   ec_sig_alg_type ec_key_alg)
+					   ec_alg_type ec_key_alg)
 {
 	int ret;
 
@@ -581,7 +581,7 @@ err:
  * given EC params. The function returns 0 on success, -1 on error.
  */
 int ec_key_pair_gen(ec_key_pair *kp, const ec_params *params,
-		    ec_sig_alg_type ec_key_alg)
+		    ec_alg_type ec_key_alg)
 {
 	int ret;
 
@@ -603,8 +603,8 @@ int ec_key_pair_gen(ec_key_pair *kp, const ec_params *params,
 
  err:
 	if (ret && (kp != NULL)) {
-		kp->priv_key.magic = 0;
-		kp->pub_key.magic = 0;
+		kp->priv_key.magic = WORD(0);
+		kp->pub_key.magic = WORD(0);
 	}
 	return ret;
 }

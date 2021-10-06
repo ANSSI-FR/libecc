@@ -29,5 +29,7 @@
 #include "utils/dbg_sig.h"	/* debug */
 /* Include the hash functions */
 #include "hash/hash_algs.h"
+/* Include the ECDH primitives */
+#include "ecdh/ecdh.h"
 
 #endif /* __LIBSIG_H__ */

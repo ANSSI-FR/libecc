@@ -190,7 +190,7 @@ int sha256_final(sha256_context *ctx, u8 output[SHA256_DIGEST_SIZE])
 	PUT_UINT32_BE(ctx->sha256_state[7], output, 28);
 
 	/* Tell that we are uninitialized */
-	ctx->magic = 0;
+	ctx->magic = WORD(0);
 
 	ret = 0;
 

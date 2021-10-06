@@ -400,7 +400,7 @@ int nn_mod_sub(nn_t out, nn_src_t in1, nn_src_t in2, nn_src_t p)
 	int smaller, ret, cmp;
 	nn_src_t in2_;
 	nn in2_cpy;
-	in2_cpy.magic = 0;
+	in2_cpy.magic = WORD(0);
 
 	ret = nn_check_initialized(in1); EG(ret, err);
 	ret = nn_check_initialized(in2); EG(ret, err);

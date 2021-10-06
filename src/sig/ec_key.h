@@ -39,7 +39,7 @@ typedef enum {
 #define PRIV_KEY_MAGIC ((word_t)(0x2feb91e938a4855dULL))
 typedef struct {
 	/* A key type can only be used for a given sig alg */
-	ec_sig_alg_type key_type;
+	ec_alg_type key_type;
 
 	/* Elliptic curve parameters */
 	const ec_params *params;
@@ -94,12 +94,12 @@ typedef struct {
 
 ATTRIBUTE_WARN_UNUSED_RET int priv_key_check_initialized(const ec_priv_key *A);
 ATTRIBUTE_WARN_UNUSED_RET int priv_key_check_initialized_and_type(const ec_priv_key *A,
-					ec_sig_alg_type sig_type);
+					ec_alg_type sig_type);
 
 ATTRIBUTE_WARN_UNUSED_RET int ec_priv_key_import_from_buf(ec_priv_key *priv_key,
 				const ec_params *params,
 				const u8 *priv_key_buf, u8 priv_key_buf_len,
-				ec_sig_alg_type ec_key_alg);
+				ec_alg_type ec_key_alg);
 ATTRIBUTE_WARN_UNUSED_RET int ec_priv_key_export_to_buf(const ec_priv_key *priv_key, u8 *priv_key_buf,
 			      u8 priv_key_buf_len);
 
@@ -107,7 +107,7 @@ ATTRIBUTE_WARN_UNUSED_RET int ec_structured_priv_key_import_from_buf(ec_priv_key
 					   const ec_params *params,
 					   const u8 *priv_key_buf,
 					   u8 priv_key_buf_len,
-					   ec_sig_alg_type ec_key_alg);
+					   ec_alg_type ec_key_alg);
 ATTRIBUTE_WARN_UNUSED_RET int ec_structured_priv_key_export_to_buf(const ec_priv_key *priv_key,
 					 u8 *priv_key_buf,
 					 u8 priv_key_buf_len);
@@ -119,7 +119,7 @@ ATTRIBUTE_WARN_UNUSED_RET int ec_structured_priv_key_export_to_buf(const ec_priv
 #define PUB_KEY_MAGIC ((word_t)(0x31327f37741ffb76ULL))
 typedef struct {
 	/* A key type can only be used for a given sig alg */
-	ec_sig_alg_type key_type;
+	ec_alg_type key_type;
 
 	/* Elliptic curve parameters */
 	const ec_params *params;
@@ -144,17 +144,17 @@ typedef struct {
 
 ATTRIBUTE_WARN_UNUSED_RET int pub_key_check_initialized(const ec_pub_key *A);
 ATTRIBUTE_WARN_UNUSED_RET int pub_key_check_initialized_and_type(const ec_pub_key *A,
-				       ec_sig_alg_type sig_type);
+				       ec_alg_type sig_type);
 
 ATTRIBUTE_WARN_UNUSED_RET int ec_pub_key_import_from_buf(ec_pub_key *pub_key, const ec_params *params,
 			       const u8 *pub_key_buf, u8 pub_key_buf_len,
-			       ec_sig_alg_type ec_key_alg);
+			       ec_alg_type ec_key_alg);
 ATTRIBUTE_WARN_UNUSED_RET int ec_pub_key_export_to_buf(const ec_pub_key *pub_key, u8 *pub_key_buf,
 			     u8 pub_key_buf_len);
 
 ATTRIBUTE_WARN_UNUSED_RET int ec_pub_key_import_from_aff_buf(ec_pub_key *pub_key, const ec_params *params,
 			       const u8 *pub_key_buf, u8 pub_key_buf_len,
-			       ec_sig_alg_type ec_key_alg);
+			       ec_alg_type ec_key_alg);
 
 ATTRIBUTE_WARN_UNUSED_RET int ec_pub_key_export_to_aff_buf(const ec_pub_key *pub_key, u8 *pub_key_buf,
 			     u8 pub_key_buf_len);
@@ -163,7 +163,7 @@ ATTRIBUTE_WARN_UNUSED_RET int ec_structured_pub_key_import_from_buf(ec_pub_key *
 					  const ec_params *params,
 					  const u8 *pub_key_buf,
 					  u8 pub_key_buf_len,
-					  ec_sig_alg_type ec_key_alg);
+					  ec_alg_type ec_key_alg);
 ATTRIBUTE_WARN_UNUSED_RET int ec_structured_pub_key_export_to_buf(const ec_pub_key *pub_key,
 					u8 *pub_key_buf, u8 pub_key_buf_len);
 
@@ -179,27 +179,27 @@ typedef struct {
 ATTRIBUTE_WARN_UNUSED_RET int key_pair_check_initialized(const ec_key_pair *A);
 
 ATTRIBUTE_WARN_UNUSED_RET int key_pair_check_initialized_and_type(const ec_key_pair *A,
-					 ec_sig_alg_type sig_type);
+					 ec_alg_type sig_type);
 
 ATTRIBUTE_WARN_UNUSED_RET int ec_key_pair_import_from_priv_key_buf(ec_key_pair *kp,
 					 const ec_params *params,
 					 const u8 *priv_key, u8 priv_key_len,
-					 ec_sig_alg_type ec_key_alg);
+					 ec_alg_type ec_key_alg);
 ATTRIBUTE_WARN_UNUSED_RET int ec_key_pair_gen(ec_key_pair *kp, const ec_params *params,
-		    ec_sig_alg_type ec_key_alg);
+		    ec_alg_type ec_key_alg);
 
 ATTRIBUTE_WARN_UNUSED_RET int ec_structured_key_pair_import_from_priv_key_buf(ec_key_pair *kp,
 						    const ec_params *params,
 						    const u8 *priv_key_buf,
 						    u8 priv_key_buf_len,
-						    ec_sig_alg_type ec_key_alg);
+						    ec_alg_type ec_key_alg);
 ATTRIBUTE_WARN_UNUSED_RET int ec_structured_key_pair_import_from_buf(ec_key_pair *kp,
 					   const ec_params *params,
 					   const u8 *priv_key_buf,
 					   u8 priv_key_buf_len,
 					   const u8 *pub_key_buf,
 					   u8 pub_key_buf_len,
-					   ec_sig_alg_type ec_key_alg);
+					   ec_alg_type ec_key_alg);
 
 ATTRIBUTE_WARN_UNUSED_RET int generic_gen_priv_key(ec_priv_key *priv_key);
 

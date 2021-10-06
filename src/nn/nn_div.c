@@ -310,7 +310,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int _nn_divrem_normalized_aliased(nn_t q, nn_sr
 {
 	int ret;
 	nn r;
-	r.magic = 0;
+	r.magic = WORD(0);
 
 	ret = nn_init(&r, 0); EG(ret, err);
 	ret = _nn_divrem_normalized(q, &r, a, b, v); EG(ret, err);
@@ -365,7 +365,7 @@ int nn_mod_normalized(nn_t r, nn_src_t a, nn_src_t b, word_t v)
 {
 	int ret;
 	nn q;
-	q.magic = 0;
+	q.magic = WORD(0);
 
 	ret = nn_init(&q, 0); EG(ret, err);
 	ret = nn_divrem_normalized(&q, r, a, b, v);
@@ -409,7 +409,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int _nn_divrem_unshifted(nn_t q, nn_t r, nn_src
 	u8 new_wlen, b_wlen;
 	int larger, ret, cmp;
 	word_t borrow;
-	a_shift.magic = 0;
+	a_shift.magic = WORD(0);
 
 	MUST_HAVE(((a->wlen + BIT_LEN_WORDS(cnt)) < NN_MAX_WORD_LEN), ret, err);
 
@@ -485,7 +485,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int _nn_divrem_unshifted_aliased(nn_t q, nn_src
 {
 	int ret;
 	nn r;
-	r.magic = 0;
+	r.magic = WORD(0);
 
 	ret = nn_init(&r, 0); EG(ret, err);
 	ret = _nn_divrem_unshifted(q, &r, a, b_norm, v, cnt); EG(ret, err);
@@ -536,7 +536,7 @@ int nn_mod_unshifted(nn_t r, nn_src_t a, nn_src_t b, word_t v, bitcnt_t cnt)
 {
 	nn q;
 	int ret;
-	q.magic = 0;
+	q.magic = WORD(0);
 
 	ret = nn_init(&q, 0); EG(ret, err);
 	ret = nn_divrem_unshifted(&q, r, a, b, v, cnt);
@@ -786,7 +786,7 @@ int nn_compute_div_coefs(nn_t p_normalized, word_t *p_shift,
 	bitcnt_t p_rounded_bitlen, p_bitlen;
 	nn p, tmp_nn;
 	int ret;
-	p.magic = tmp_nn.magic = 0;
+	p.magic = tmp_nn.magic = WORD(0);
 
 	ret = nn_check_initialized(p_in); EG(ret, err);
 
@@ -863,7 +863,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int _nn_divrem(nn_t q, nn_t r, nn_src_t a, nn_s
 	word_t v;
 	nn_src_t ptr = b;
 	int ret, iszero;
-	b_large.magic = b_normalized.magic = 0;
+	b_large.magic = b_normalized.magic = WORD(0);
 
 	ret = nn_init(r, 0); EG(ret, err);
 	ret = nn_init(q, 0); EG(ret, err);
@@ -912,7 +912,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int __nn_divrem_notrim_alias(nn_t q, nn_t r, nn
 {
 	nn a_cpy, b_cpy;
 	int ret;
-	a_cpy.magic = b_cpy.magic = 0;
+	a_cpy.magic = b_cpy.magic = WORD(0);
 
 	ret = nn_init(&a_cpy, 0); EG(ret, err);
 	ret = nn_init(&b_cpy, 0); EG(ret, err);
@@ -986,7 +986,7 @@ int nn_mod_notrim(nn_t r, nn_src_t a, nn_src_t b)
 {
 	int ret;
 	nn q;
-	q.magic = 0;
+	q.magic = WORD(0);
 
 	/* nn_divrem() will init q. */
 	ret = nn_divrem_notrim(&q, r, a, b);
@@ -1005,7 +1005,7 @@ int nn_mod(nn_t r, nn_src_t a, nn_src_t b)
 {
 	int ret;
 	nn q;
-	q.magic = 0;
+	q.magic = WORD(0);
 
 	/* nn_divrem will init q. */
 	ret = nn_divrem(&q, r, a, b);
@@ -1033,7 +1033,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int _nn_xgcd(nn_t g, nn_t u, nn_t v, nn_src_t a
 	u8 i;
 
 	for (i = 0; i < 8; i++){
-		scratch[i].magic = 0;
+		scratch[i].magic = WORD(0);
 	}
 
 	/*
@@ -1184,7 +1184,7 @@ int nn_xgcd(nn_t g, nn_t u, nn_t v, nn_src_t a, nn_src_t b, int *sign)
 	nn a_cpy, b_cpy;
 	nn_src_t a_, b_;
 	int ret, cmp, _sign;
-	a_cpy.magic = b_cpy.magic = 0;
+	a_cpy.magic = b_cpy.magic = WORD(0);
 
 	/* The internal _nn_xgcd function initializes g, u and v */
 	ret = nn_check_initialized(a); EG(ret, err);
@@ -1234,7 +1234,7 @@ int nn_gcd(nn_t g, nn_src_t a, nn_src_t b, int *sign)
 {
 	nn u, v;
 	int ret;
-	u.magic = v.magic = 0;
+	u.magic = v.magic = WORD(0);
 
 	/* nn_xgcd will initialize g, u and v and
 	 * check if a and b are indeed initialized.

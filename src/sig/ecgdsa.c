@@ -34,7 +34,7 @@ int ecgdsa_init_pub_key(ec_pub_key *out_pub, const ec_priv_key *in_priv)
 	nn_src_t q;
 	nn xinv;
 	int ret, cmp;
-	xinv.magic = 0;
+	xinv.magic = WORD(0);
 
 	MUST_HAVE((out_pub != NULL), ret, err);
 
@@ -189,12 +189,12 @@ int _ecgdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 #ifdef USE_SIG_BLINDING
 	/* b is the blinding mask */
 	nn b, binv;
-	b.magic = binv.magic = 0;
+	b.magic = binv.magic = WORD(0);
 #endif
 
-	tmp.magic = s.magic = e.magic = 0;
-	kr.magic = k.magic = r.magic = 0;
-	kG.magic = 0;
+	tmp.magic = s.magic = e.magic = WORD(0);
+	kr.magic = k.magic = r.magic = WORD(0);
+	kG.magic = WORD(0);
 
 	/*
 	 * First, verify context has been initialized and private
@@ -512,9 +512,9 @@ int _ecgdsa_verify_finalize(struct ec_verify_context *ctx)
 	bitcnt_t q_bit_len, rshift;
 	int ret, cmp;
 
-	e.magic = r_prime.magic = 0;
-	rinv.magic = uv.magic = 0;
-	uG.magic = vY.magic = 0;
+	e.magic = r_prime.magic = WORD(0);
+	rinv.magic = uv.magic = WORD(0);
+	uG.magic = vY.magic = WORD(0);
 
 	/* NOTE: we reuse uG for Wprime to optimize local variables */
 	Wprime = &uG;

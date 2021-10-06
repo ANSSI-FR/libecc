@@ -67,7 +67,7 @@ int sha512_final(sha512_context *ctx, u8 output[SHA512_DIGEST_SIZE])
 	ret = sha512_core_final(ctx, output, SHA512_DIGEST_SIZE); EG(ret, err);
 
 	/* Tell that we are uninitialized */
-	ctx->magic = 0;
+	ctx->magic = WORD(0);
 	ret = 0;
 
 err:

@@ -49,8 +49,8 @@ int miller_rabin(nn_src_t n, const unsigned int t, int *res)
 	bitcnt_t k;
 	/* Temporary NN variables */
 	nn s, q, r, d, a, y, j, one, two, tmp;
-	s.magic = q.magic = r.magic = d.magic = a.magic = y.magic = j.magic = 0;
-	one.magic = two.magic = tmp.magic = 0;
+	s.magic = q.magic = r.magic = d.magic = a.magic = y.magic = j.magic = WORD(0);
+	one.magic = two.magic = tmp.magic = WORD(0);
 
 	ret = nn_check_initialized(n); EG(ret, err);
 	MUST_HAVE((res != NULL), ret, err);

@@ -88,7 +88,7 @@ int fp_ctx_init_from_p(fp_ctx_t ctx, nn_src_t p_in)
 	word_t mpinv, p_shift, p_reciprocal;
 	bitcnt_t p_bitlen;
 	int ret;
-	p.magic = r.magic = r_square.magic = p_normalized.magic = 0;
+	p.magic = r.magic = r_square.magic = p_normalized.magic = WORD(0);
 
 	MUST_HAVE((ctx != NULL), ret, err);
 	ret = nn_check_initialized(p_in); EG(ret, err);
@@ -402,7 +402,7 @@ int fp_eq_or_opp(fp_src_t in1, fp_src_t in2, int *eq_or_opp)
 {
 	int ret, cmp_eq, cmp_opp;
 	fp opp;
-	opp.magic = 0;
+	opp.magic = WORD(0);
 
 	MUST_HAVE((eq_or_opp != NULL), ret, err);
 	ret = fp_check_initialized(in1); EG(ret, err);

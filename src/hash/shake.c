@@ -94,7 +94,7 @@ int _shake_finalize(shake_context *ctx, u8 *output)
 	}
 
         /* Uninit our context magic */
-        ctx->magic = 0;
+        ctx->magic = WORD(0);
 
         ret = 0;
 

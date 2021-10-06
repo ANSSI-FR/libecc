@@ -66,7 +66,7 @@ int sha512_256_final(sha512_256_context *ctx, u8 output[SHA512_256_DIGEST_SIZE])
 	SHA512_256_HASH_CHECK_INITIALIZED(ctx, ret, err);
 	ret = sha512_core_final(ctx, output, SHA512_256_DIGEST_SIZE); EG(ret, err);
 
-	ctx->magic = 0;
+	ctx->magic = WORD(0);
 	ret = 0;
 
 err:

@@ -29,8 +29,8 @@ ATTRIBUTE_WARN_UNUSED_RET static int legendre(fp_src_t a)
 	fp pow; /* The result if the exponentiation is in Fp */
 	fp one; /* The element 1 in the field */
 	nn exp; /* The power exponent is in NN */
-	pow.magic = one.magic = 0;
-	exp.magic = 0;
+	pow.magic = one.magic = WORD(0);
+	exp.magic = WORD(0);
 
 	/* Initialize elements */
 	ret = fp_check_initialized(a); EG(ret, err);
@@ -110,9 +110,9 @@ int fp_sqrt(fp_t sqrt1, fp_t sqrt2, fp_src_t n)
 	nn q, s, one_nn, two_nn, m, i, tmp_nn;
 	fp z, t, b, r, c, one_fp, tmp_fp, __n;
 	fp_t _n = &__n;
-	q.magic = s.magic = one_nn.magic = two_nn.magic = m.magic = 0;
-	i.magic = tmp_nn.magic = z.magic = t.magic = b.magic = 0;
-	r.magic = c.magic = one_fp.magic = tmp_fp.magic = __n.magic = 0;
+	q.magic = s.magic = one_nn.magic = two_nn.magic = m.magic = WORD(0);
+	i.magic = tmp_nn.magic = z.magic = t.magic = b.magic = WORD(0);
+	r.magic = c.magic = one_fp.magic = tmp_fp.magic = __n.magic = WORD(0);
 
 	ret = nn_init(&q, 0); EG(ret, err);
 	ret = nn_init(&s, 0); EG(ret, err);

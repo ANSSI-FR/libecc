@@ -107,7 +107,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int _nn_mul_low_aliased(nn_t out, nn_src_t in1,
 {
 	nn out_cpy;
 	int ret;
-	out_cpy.magic = 0;
+	out_cpy.magic = WORD(0);
 
 	ret = _nn_mul_low(&out_cpy, in1, in2, wlimit); EG(ret, err);
 	ret = nn_init(out, out_cpy.wlen); EG(ret, err);
@@ -176,7 +176,7 @@ int nn_mul_word(nn_t out, nn_src_t in, word_t w)
 {
 	nn w_nn;
 	int ret;
-	w_nn.magic = 0;
+	w_nn.magic = WORD(0);
 
 	ret = nn_check_initialized(in); EG(ret, err);
 	ret = nn_init(&w_nn, WORD_BYTES); EG(ret, err);

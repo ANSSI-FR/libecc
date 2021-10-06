@@ -22,7 +22,7 @@
 /* Macro to allow inner values of tests vectors print */
 #ifdef VERBOSE_INNER_VALUES
 #ifndef EC_SIG_ALG
-#define EC_SIG_ALG "UNKNOWN_SIG_ALG"
+#define EC_SIG_ALG "UNKNOWN_ALG"
 #endif
 
 #define dbg_buf_print(msg, ...) do {\

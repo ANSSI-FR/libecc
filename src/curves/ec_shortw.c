@@ -42,7 +42,7 @@ int ec_shortw_crv_init(ec_shortw_crv_t crv, fp_src_t a, fp_src_t b, nn_src_t ord
 {
 	fp tmp, tmp2;
 	int ret, iszero;
-	tmp.magic = tmp2.magic = 0;
+	tmp.magic = tmp2.magic = WORD(0);
 
 	ret = nn_check_initialized(order); EG(ret, err);
 	ret = fp_check_initialized(a); EG(ret, err);

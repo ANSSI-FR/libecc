@@ -110,7 +110,7 @@ void nn_uninit(nn_t A)
 		}
 
 		A->wlen = 0;
-		A->magic = 0;
+		A->magic = WORD(0);
 	}
 
 	return;

@@ -189,7 +189,7 @@ int sha224_final(sha224_context *ctx, u8 output[SHA224_DIGEST_SIZE])
 	PUT_UINT32_BE(ctx->sha224_state[6], output, 24);
 
 	/* Tell that we are uninitialized */
-	ctx->magic = 0;
+	ctx->magic = WORD(0);
 
 	ret = 0;
 

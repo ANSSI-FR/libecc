@@ -20,7 +20,7 @@
 
 /* Signature algorithm types */
 typedef enum {
-	UNKNOWN_SIG_ALG = 0,
+	UNKNOWN_ALG = 0,
 #ifdef WITH_SIG_ECDSA
 	ECDSA = 1,
 #endif
@@ -57,7 +57,17 @@ typedef enum {
 #ifdef WITH_SIG_DECDSA
 	DECDSA = 14,
 #endif
-} ec_sig_alg_type;
+	/* ECDH types */
+#ifdef WITH_ECCCDH
+	ECCCDH = 15,
+#endif
+#ifdef WITH_X25519
+	X25519 = 16,
+#endif
+#ifdef WITH_X448
+	X448 = 17,
+#endif
+} ec_alg_type;
 
 /* Hash algorithm types */
 typedef enum {

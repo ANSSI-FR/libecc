@@ -36,7 +36,7 @@ int ec_montgomery_crv_init(ec_montgomery_crv_t crv, fp_src_t A, fp_src_t B, nn_s
 {
 	int ret, iszero;
 	fp tmp;
-	tmp.magic = 0;
+	tmp.magic = WORD(0);
 
 	MUST_HAVE((crv != NULL), ret, err);
 

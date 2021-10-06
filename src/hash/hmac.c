@@ -125,7 +125,7 @@ err:
 		/* Clear the hash contexts that could contain sensitive data */
 		ret = local_memset(ctx, 0, sizeof(hmac_context)); EG(ret, err);
 		/* Uninitialize the context  */
-		ctx->magic = 0;
+		ctx->magic = WORD(0);
 	}
 	if(ret && (outlen != NULL)){
 		(*outlen) = 0;

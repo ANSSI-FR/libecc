@@ -121,7 +121,7 @@ ATTRIBUTE_WARN_UNUSED_RET static inline int dom4(u16 x, const u8 *y, u16 olen_y,
  * EDDSA25519 and variants only support WEI25519 as a curve, and SHA-512 as a hash function.
  * EDDSA448 and variants only support WEI448 as a curve, and SHAKE256 as a "hash function".
  */
-ATTRIBUTE_WARN_UNUSED_RET static inline hash_alg_type get_eddsa_hash_type(ec_sig_alg_type sig_type){
+ATTRIBUTE_WARN_UNUSED_RET static inline hash_alg_type get_eddsa_hash_type(ec_alg_type sig_type){
 	hash_alg_type hash_type = UNKNOWN_HASH_ALG;
 
 	switch (sig_type) {
@@ -152,7 +152,7 @@ ATTRIBUTE_WARN_UNUSED_RET static inline hash_alg_type get_eddsa_hash_type(ec_sig
  * Check given EdDSA key type does match given curve type. Returns 0 on success,
  * and -1 on error.
  */
-ATTRIBUTE_WARN_UNUSED_RET static int eddsa_key_type_check_curve(ec_sig_alg_type key_type,
+ATTRIBUTE_WARN_UNUSED_RET static int eddsa_key_type_check_curve(ec_alg_type key_type,
 				      ec_curve_type curve_type)
 {
 	int ret;
@@ -329,12 +329,12 @@ err:
 ATTRIBUTE_WARN_UNUSED_RET static int eddsa_encode_point(aff_pt_edwards_src_t in,
 							fp_src_t alpha_edwards,
 							u8 *buf, u16 buflen,
-							ec_sig_alg_type sig_alg)
+							ec_alg_type sig_alg)
 {
 	nn out_reduced;
 	u8 lsb = 0;
 	int ret;
-	out_reduced.magic = 0;
+	out_reduced.magic = WORD(0);
 
 	/* Sanity checks */
 	MUST_HAVE((buf != NULL), ret, err);
@@ -363,7 +363,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int eddsa_encode_point(aff_pt_edwards_src_t in,
 		 * the encoding.
 		 */
 		fp tmp_x, tmp_y, y1;
-		tmp_x.magic = tmp_y.magic = y1.magic = 0;
+		tmp_x.magic = tmp_y.magic = y1.magic = WORD(0);
 		/* Compute x1 to get our LSB */
 		ret = fp_init(&y1, in->y.ctx); EG(ret, err1);
 		ret = fp_copy(&tmp_x, &(in->x)); EG(ret, err1);
@@ -422,7 +422,7 @@ err:
 /* Decode an Edwards curve affine point from canonical form */
 ATTRIBUTE_WARN_UNUSED_RET static int eddsa_decode_point(aff_pt_edwards_t out, ec_edwards_crv_src_t edwards_curve,
 			      fp_src_t alpha_edwards, const u8 *buf, u16 buflen,
-			      ec_sig_alg_type sig_type)
+			      ec_alg_type sig_type)
 {
 	fp x, y;
 	fp sqrt1, sqrt2;
@@ -442,10 +442,10 @@ ATTRIBUTE_WARN_UNUSED_RET static int eddsa_decode_point(aff_pt_edwards_t out, ec
 		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x67, 0x56
 	};
 	fp d_edwards448;
-	d_edwards448.magic = 0;
+	d_edwards448.magic = WORD(0);
 #endif
 
-	x.magic = y.magic = sqrt1.magic = sqrt2.magic = 0;
+	x.magic = y.magic = sqrt1.magic = sqrt2.magic = WORD(0);
 
 	MUST_HAVE((buf != NULL), ret, err);
 
@@ -742,7 +742,7 @@ err:
  */
 int eddsa_import_priv_key(ec_priv_key *priv_key, const u8 *buf, u16 buflen,
 			  const ec_params *shortw_curve_params,
-			  ec_sig_alg_type sig_type)
+			  ec_alg_type sig_type)
 {
 	int ret;
 	hash_alg_type hash_type = UNKNOWN_HASH_ALG;
@@ -798,7 +798,7 @@ int eddsa_init_pub_key(ec_pub_key *out_pub, const ec_priv_key *in_priv)
 	nn s;
 	hash_alg_type hash_type;
 	int ret;
-	s.magic = 0;
+	s.magic = WORD(0);
 
 	MUST_HAVE(out_pub != NULL, ret, err);
 	ret = eddsa_priv_key_sanity_check(in_priv); EG(ret, err);
@@ -867,7 +867,7 @@ err:
  */
 int eddsa_import_pub_key(ec_pub_key *pub_key, const u8 *buf, u16 buflen,
 			 const ec_params *shortw_curve_params,
-			 ec_sig_alg_type sig_type)
+			 ec_alg_type sig_type)
 {
 	aff_pt_edwards _Tmp;
 	ec_edwards_crv edwards_curve;
@@ -877,7 +877,7 @@ int eddsa_import_pub_key(ec_pub_key *pub_key, const u8 *buf, u16 buflen,
 	fp_src_t gamma_montgomery;
 	fp_src_t alpha_edwards;
 	prj_pt_t pub_key_y;
-	_Tmp.magic = edwards_curve.magic = 0;
+	_Tmp.magic = edwards_curve.magic = WORD(0);
 
 #if defined(WITH_SIG_EDDSA25519) && defined(WITH_SIG_EDDSA448)
 	if((sig_type != EDDSA25519) && (sig_type != EDDSA25519CTX) && (sig_type != EDDSA25519PH) && \
@@ -916,7 +916,7 @@ int eddsa_import_pub_key(ec_pub_key *pub_key, const u8 *buf, u16 buflen,
 	if((sig_type == EDDSA448) || (sig_type == EDDSA448PH)){
 		nn_src_t gen_order = &(shortw_curve_params->ec_gen_order);
 		nn tmp;
-		tmp.magic = 0;
+		tmp.magic = WORD(0);
 
 		/*
 		 * NOTE: because of the 4-isogeny between Ed448 and Edwards448,
@@ -971,7 +971,7 @@ int eddsa_export_pub_key(const ec_pub_key *in_pub, u8 *buf, u16 buflen)
 	fp_src_t gamma_montgomery;
 	fp_src_t alpha_edwards;
 	prj_pt_src_t pub_key_y;
-	_Tmp.magic = edwards_curve.magic = 0;
+	_Tmp.magic = edwards_curve.magic = WORD(0);
 
 	ret = pub_key_check_initialized(in_pub); EG(ret, err);
 	MUST_HAVE((buf != NULL), ret, err);
@@ -1008,7 +1008,7 @@ err:
 int eddsa_import_key_pair_from_priv_key_buf(ec_key_pair *kp,
 					    const u8 *buf, u16 buflen,
 					    const ec_params *shortw_curve_params,
-					    ec_sig_alg_type sig_type)
+					    ec_alg_type sig_type)
 {
 	int ret;
 
@@ -1028,7 +1028,7 @@ err:
 /* Compute PH(M) with PH being the hash depending on the key type */
 ATTRIBUTE_WARN_UNUSED_RET static int eddsa_compute_pre_hash(const u8 *message, u32 message_size,
 				  u8 *digest, u8 *digest_size,
-				  ec_sig_alg_type sig_type)
+				  ec_alg_type sig_type)
 {
 	hash_alg_type hash_type;
 	const hash_mapping *hash;
@@ -1092,7 +1092,7 @@ int _eddsa_sign_init_pre_hash(struct ec_sign_context *ctx)
 	int ret;
 	bitcnt_t blen;
 	u8 use_message_pre_hash = 0;
-	ec_sig_alg_type key_type = UNKNOWN_SIG_ALG;
+	ec_alg_type key_type = UNKNOWN_ALG;
 	const ec_key_pair *key_pair;
 	const hash_mapping *h;
 
@@ -1154,7 +1154,7 @@ int _eddsa_sign_update_pre_hash(struct ec_sign_context *ctx,
 		       const u8 *chunk, u32 chunklen)
 {
 	int ret;
-	ec_sig_alg_type key_type = UNKNOWN_SIG_ALG;
+	ec_alg_type key_type = UNKNOWN_ALG;
 	u8 use_message_pre_hash = 0;
 
 	/*
@@ -1218,7 +1218,7 @@ int _eddsa_sign_finalize_pre_hash(struct ec_sign_context *ctx, u8 *sig, u8 sigle
 	prj_pt_src_t pub_key_y;
 	u8 use_message_pre_hash = 0;
 	u16 use_message_pre_hash_hsize = 0;
-	ec_sig_alg_type key_type = UNKNOWN_SIG_ALG;
+	ec_alg_type key_type = UNKNOWN_ALG;
 	u8 r_len, s_len;
 	const hash_mapping *h;
 
@@ -1226,10 +1226,10 @@ int _eddsa_sign_finalize_pre_hash(struct ec_sign_context *ctx, u8 *sig, u8 sigle
 #ifdef USE_SIG_BLINDING
 	/* b is the blinding mask */
 	nn b, binv;
-	b.magic = binv.magic = 0;
+	b.magic = binv.magic = WORD(0);
 #endif
-	r.magic = s.magic = S.magic = 0;
-	R.magic = crv_edwards.magic = Tmp_edwards.magic = 0;
+	r.magic = s.magic = S.magic = WORD(0);
+	R.magic = crv_edwards.magic = Tmp_edwards.magic = WORD(0);
 
 	/*
 	 * First, verify context has been initialized and private
@@ -1354,7 +1354,7 @@ int _eddsa_sign_finalize_pre_hash(struct ec_sign_context *ctx, u8 *sig, u8 sigle
 		 * divide our scalar by 4.
 		 */
 		nn r_tmp;
-		r_tmp.magic = 0;
+		r_tmp.magic = WORD(0);
 
 		ret = nn_init(&r_tmp, 0); EG(ret, err1);
 		ret = nn_modinv_word(&r_tmp, WORD(4), q); EG(ret, err1);
@@ -1506,11 +1506,11 @@ err1:
  */
 int _eddsa_sign(u8 *sig, u8 siglen, const ec_key_pair *key_pair,
 		const u8 *m, u32 mlen, int (*rand) (nn_t out, nn_src_t q),
-		ec_sig_alg_type sig_type, hash_alg_type hash_type,
+		ec_alg_type sig_type, hash_alg_type hash_type,
 		const u8 *adata, u16 adata_len)
 {
 	int ret;
-	ec_sig_alg_type key_type = UNKNOWN_SIG_ALG;
+	ec_alg_type key_type = UNKNOWN_ALG;
 	ec_shortw_crv_src_t shortw_curve;
 	fp_src_t alpha_montgomery;
 	fp_src_t gamma_montgomery;
@@ -1537,11 +1537,11 @@ int _eddsa_sign(u8 *sig, u8 siglen, const ec_key_pair *key_pair,
 #ifdef USE_SIG_BLINDING
 	/* b is the blinding mask */
 	nn b, binv;
-	b.magic = binv.magic = 0;
+	b.magic = binv.magic = WORD(0);
 #endif
 
-	r.magic = s.magic = S.magic = 0;
-	R.magic = Tmp_edwards.magic = crv_edwards.magic = 0;
+	r.magic = s.magic = S.magic = WORD(0);
+	R.magic = Tmp_edwards.magic = crv_edwards.magic = WORD(0);
 
 	/*
 	 * NOTE: EdDSA does not use any notion of random Nonce, so no need
@@ -1673,7 +1673,7 @@ int _eddsa_sign(u8 *sig, u8 siglen, const ec_key_pair *key_pair,
 		 * divide our scalar by 4.
 		 */
 		nn r_tmp;
-		r_tmp.magic = 0;
+		r_tmp.magic = WORD(0);
 
 		ret = nn_init(&r_tmp, 0); EG(ret, err1);
 		ret = nn_modinv_word(&r_tmp, WORD(4), q); EG(ret, err1);
@@ -1890,9 +1890,9 @@ int _eddsa_verify_init(struct ec_verify_context *ctx, const u8 *sig, u8 siglen)
 	prj_pt_src_t pub_key_y;
 	hash_context *h_ctx;
 	hash_context *h_ctx_pre_hash;
-	ec_sig_alg_type key_type = UNKNOWN_SIG_ALG;
+	ec_alg_type key_type = UNKNOWN_ALG;
 
-	R.magic = crv_edwards.magic = _Tmp.magic = A.magic = 0;
+	R.magic = crv_edwards.magic = _Tmp.magic = A.magic = WORD(0);
 
 	/* First, verify context has been initialized */
 	ret = sig_verify_check_initialized(ctx); EG(ret, err);
@@ -2029,7 +2029,7 @@ int _eddsa_verify_update(struct ec_verify_context *ctx,
 			 const u8 *chunk, u32 chunklen)
 {
 	int ret;
-	ec_sig_alg_type key_type = UNKNOWN_SIG_ALG;
+	ec_alg_type key_type = UNKNOWN_ALG;
 	u8 use_message_pre_hash = 0;
 	hash_context *h_ctx;
 	hash_context *h_ctx_pre_hash;
@@ -2090,13 +2090,13 @@ int _eddsa_verify_finalize(struct ec_verify_context *ctx)
 	u8 hash[MAX_DIGEST_SIZE];
 	nn_src_t gen_cofactor;
 	int ret, iszero, cmp;
-	ec_sig_alg_type key_type = UNKNOWN_SIG_ALG;
+	ec_alg_type key_type = UNKNOWN_ALG;
 	u8 use_message_pre_hash = 0;
 	u16 use_message_pre_hash_hsize = 0;
 	hash_context *h_ctx;
 	hash_context *h_ctx_pre_hash;
 
-	_Tmp1.magic = _Tmp2.magic = h.magic = 0;
+	_Tmp1.magic = _Tmp2.magic = h.magic = WORD(0);
 
 	/*
 	 * First, verify context has been initialized and public

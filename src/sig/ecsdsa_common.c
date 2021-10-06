@@ -33,7 +33,7 @@
  * functions. The function returns 0 on success, -1 on error.
  */
 int __ecsdsa_init_pub_key(ec_pub_key *out_pub, const ec_priv_key *in_priv,
-			   ec_sig_alg_type key_type)
+			   ec_alg_type key_type)
 {
 	prj_pt_src_t G;
 	int ret;
@@ -139,7 +139,7 @@ err:
  * The function returns 0 on success, -1 on error.
  */
 int __ecsdsa_sign_init(struct ec_sign_context *ctx,
-		       ec_sig_alg_type key_type, int optimized)
+		       ec_alg_type key_type, int optimized)
 {
 	u8 Wx[BYTECEIL(CURVES_MAX_P_BIT_LEN)];
 	u8 Wy[BYTECEIL(CURVES_MAX_P_BIT_LEN)];
@@ -151,7 +151,7 @@ int __ecsdsa_sign_init(struct ec_sign_context *ctx,
 	nn_src_t q;
 	int ret;
 	nn k;
-	kG.magic = k.magic = 0;
+	kG.magic = k.magic = WORD(0);
 
 	/* First, verify context has been initialized */
 	ret = sig_sign_check_initialized(ctx); EG(ret, err);
@@ -281,10 +281,10 @@ int __ecsdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 #ifdef USE_SIG_BLINDING
 	/* b is the blinding mask */
 	nn b, binv;
-	b.magic = binv.magic = 0;
+	b.magic = binv.magic = WORD(0);
 #endif /* USE_SIG_BLINDING */
 
-	s.magic = e.magic = ex.magic = 0;
+	s.magic = e.magic = ex.magic = WORD(0);
 
 	/*
 	 * First, verify context has been initialized and private
@@ -421,7 +421,7 @@ int __ecsdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
  */
 int __ecsdsa_verify_init(struct ec_verify_context *ctx,
 			 const u8 *sig, u8 siglen,
-			 ec_sig_alg_type key_type, int optimized)
+			 ec_alg_type key_type, int optimized)
 {
 	prj_pt_src_t G, Y;
 	const ec_pub_key *pub_key;
@@ -436,8 +436,8 @@ int __ecsdsa_verify_init(struct ec_verify_context *ctx,
 	u8 hsize;
 	int ret, iszero, cmp;
 
-	rmodq.magic = e.magic = r.magic = s.magic = 0;
-	sG.magic = eY.magic = 0;
+	rmodq.magic = e.magic = r.magic = s.magic = WORD(0);
+	sG.magic = eY.magic = WORD(0);
 
 	/* NOTE: we reuse sG for Wprime to optimize local variables */
 	Wprime = &sG;

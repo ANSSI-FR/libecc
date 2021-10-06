@@ -94,12 +94,12 @@ int ecrdsa_sign_raw(struct ec_sign_context *ctx, const u8 *input, u8 inputlen, u
 #ifdef USE_SIG_BLINDING
         /* b is the blinding mask */
         nn b, binv;
-	b.magic = binv.magic = 0;
+	b.magic = binv.magic = WORD(0);
 #endif /* USE_SIG_BLINDING */
 
-	tmp.magic = s.magic = rx.magic = ke.magic = 0;
-	k.magic = r.magic = e.magic = 0;
-	kG.magic = 0;
+	tmp.magic = s.magic = rx.magic = ke.magic = WORD(0);
+	k.magic = r.magic = e.magic = WORD(0);
+	kG.magic = WORD(0);
 
 	/*
 	 * First, verify context has been initialized and private
@@ -290,9 +290,9 @@ int ecrdsa_verify_raw(struct ec_verify_context *ctx, const u8 *input, u8 inputle
 	u8 hsize;
 	int ret, iszero, cmp;
 
-	tmp.magic = h.magic = r_prime.magic = e.magic = 0;
-	v.magic = u.magic = 0;
-	vY.magic = uG.magic = 0;
+	tmp.magic = h.magic = r_prime.magic = e.magic = WORD(0);
+	v.magic = u.magic = WORD(0);
+	vY.magic = uG.magic = WORD(0);
 
 	/* NOTE: we reuse uG for Wprime to optimize local variables */
 	Wprime = &uG;

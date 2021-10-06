@@ -80,7 +80,7 @@ int fp_unredcify(fp_t out, fp_src_t in)
 {
 	int ret;
 	nn one;
-	one.magic = 0;
+	one.magic = WORD(0);
 
 	ret = fp_check_initialized(in); EG(ret, err);
 	ret = fp_check_initialized(out); EG(ret, err);

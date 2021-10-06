@@ -101,7 +101,7 @@ int is_on_shortw_curve(fp_src_t x, fp_src_t y, ec_shortw_crv_src_t curve, int *o
 {
 	fp tmp1, tmp2;
 	int ret, cmp;
-	tmp1.magic = tmp2.magic = 0;
+	tmp1.magic = tmp2.magic = WORD(0);
 
 	ret = ec_shortw_crv_check_initialized(curve); EG(ret, err);
 	ret = fp_check_initialized(x);  EG(ret, err);

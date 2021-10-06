@@ -38,7 +38,7 @@ int sm2_gen_priv_key(ec_priv_key *priv_key)
 {
 	int ret;
 	nn tmp;
-	tmp.magic = 0;
+	tmp.magic = WORD(0);
 
 	ret = priv_key_check_initialized_and_type(priv_key, SM2); EG(ret, err);
 
@@ -58,7 +58,7 @@ int sm2_init_pub_key(ec_pub_key *out_pub, const ec_priv_key *in_priv)
 	prj_pt_src_t G;
 	int ret, cmp;
 	nn tmp;
-	tmp.magic = 0;
+	tmp.magic = WORD(0);
 
 	MUST_HAVE((out_pub != NULL), ret, err);
 
@@ -320,11 +320,11 @@ int _sm2_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	nn k, r, s, tmp, tmp2, tmp3;
 #ifdef USE_SIG_BLINDING
 	nn b;        /* blinding mask */
-	b.magic = 0;
+	b.magic = WORD(0);
 #endif
 
-	kG.magic = 0;
-	k.magic = r.magic = s.magic = tmp.magic = tmp2.magic = tmp3.magic = 0;
+	kG.magic = WORD(0);
+	k.magic = r.magic = s.magic = tmp.magic = tmp2.magic = tmp3.magic = WORD(0);
 
 	/*
 	 * First, verify context has been initialized and private part too.
@@ -614,8 +614,8 @@ int _sm2_verify_finalize(struct ec_verify_context *ctx)
 	u8 hsize;
 	int ret, iszero, cmp;
 
-	e.magic = tmp.magic = r_prime.magic = t.magic = 0;
-	sG.magic = tY.magic = 0;
+	e.magic = tmp.magic = r_prime.magic = t.magic = WORD(0);
+	sG.magic = tY.magic = WORD(0);
 
 	/* NOTE: we reuse sG for W_prime to optimize local variables */
 	W_prime = &sG;

@@ -50,7 +50,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int _nn_modinv_odd(nn_t out, nn_src_t x, nn_src
 	nn a, b, u, tmp, mp1d2;
 	nn_t uu = out;
 	bitcnt_t cnt;
-	a.magic = b.magic = u.magic = tmp.magic = mp1d2.magic = 0;
+	a.magic = b.magic = u.magic = tmp.magic = mp1d2.magic = WORD(0);
 
 	ret = nn_init(out, 0); EG(ret, err);
 	ret = nn_init(&a, m->wlen * WORD_BYTES); EG(ret, err);
@@ -221,7 +221,7 @@ int nn_modinv(nn_t _out, nn_src_t x, nn_src_t m)
 	int sign, ret, cmp, isodd, isone;
 	nn_t x_mod_m;
 	nn u, v, out; /* Out to support aliasing */
-	out.magic = u.magic = v.magic = 0;
+	out.magic = u.magic = v.magic = WORD(0);
 
 	ret = nn_check_initialized(x); EG(ret, err);
 	ret = nn_check_initialized(m); EG(ret, err);
@@ -314,7 +314,7 @@ int nn_modinv_2exp(nn_t _out, nn_src_t x, bitcnt_t exp, int *x_isodd)
 	/* for aliasing */
 	int isodd, ret;
 	nn out;
-	out.magic = tmp_sqr.magic = tmp_mul.magic = 0;
+	out.magic = tmp_sqr.magic = tmp_mul.magic = WORD(0);
 
 	MUST_HAVE((x_isodd != NULL), ret, err);
 	ret = nn_check_initialized(x); EG(ret, err);
@@ -411,7 +411,7 @@ int nn_modinv_word(nn_t out, word_t w, nn_src_t m)
 {
 	nn nn_tmp;
 	int ret;
-	nn_tmp.magic = 0;
+	nn_tmp.magic = WORD(0);
 
 	ret = nn_init(&nn_tmp, 0); EG(ret, err);
 	ret = nn_set_word_value(&nn_tmp, w); EG(ret, err);

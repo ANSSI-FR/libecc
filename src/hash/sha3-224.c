@@ -55,7 +55,7 @@ int sha3_224_final(sha3_224_context *ctx, u8 output[SHA3_224_DIGEST_SIZE])
 	ret = _sha3_finalize((sha3_context *)ctx, output); EG(ret, err);
 
 	/* Tell that we are uninitialized */
-	ctx->magic = 0;
+	ctx->magic = WORD(0);
 	ret = 0;
 
 err:

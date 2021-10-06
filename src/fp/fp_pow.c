@@ -33,7 +33,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int _fp_pow(fp_t out, fp_src_t base, nn_src_t e
 	bitcnt_t explen;
 	u8 expbit;
 	int ret, iszero;
-	base_monty.magic = mul_monty.magic = sqr_monty.magic = out_monty.magic = r.magic = 0;
+	base_monty.magic = mul_monty.magic = sqr_monty.magic = out_monty.magic = r.magic = WORD(0);
 
 	/* Exponentiating to zero provides 1 */
 	ret = nn_iszero(exp, &iszero); EG(ret, err);
@@ -91,7 +91,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int _fp_pow_aliased(fp_t out, nn_src_t exp)
 {
 	fp base;
 	int ret;
-	base.magic = 0;
+	base.magic = WORD(0);
 
 	ret = fp_init(&base, out->ctx); EG(ret, err);
 	ret = fp_copy(&base, out); EG(ret, err);

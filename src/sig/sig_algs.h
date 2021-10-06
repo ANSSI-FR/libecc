@@ -33,7 +33,7 @@ ATTRIBUTE_WARN_UNUSED_RET int gen_priv_key(ec_priv_key *priv_key);
 ATTRIBUTE_WARN_UNUSED_RET int init_pubkey_from_privkey(ec_pub_key *pub_key, ec_priv_key *priv_key);
 
 ATTRIBUTE_WARN_UNUSED_RET int get_sig_by_name(const char *ec_sig_name, const ec_sig_mapping **sig_mapping);
-ATTRIBUTE_WARN_UNUSED_RET int get_sig_by_type(ec_sig_alg_type sig_type, const ec_sig_mapping **sig_mapping);
+ATTRIBUTE_WARN_UNUSED_RET int get_sig_by_type(ec_alg_type sig_type, const ec_sig_mapping **sig_mapping);
 
 /* Sanity checks for calbacks */
 ATTRIBUTE_WARN_UNUSED_RET int ec_sig_mapping_callbacks_sanity_check(const ec_sig_mapping *sig);
@@ -44,7 +44,7 @@ ATTRIBUTE_WARN_UNUSED_RET int ec_verify_ctx_callbacks_sanity_check(const struct 
  * Compute generic effective signature length depending on the curve parameters,
  * the signature algorithm and the hash function
  */
-ATTRIBUTE_WARN_UNUSED_RET int ec_get_sig_len(const ec_params *params, ec_sig_alg_type sig_type,
+ATTRIBUTE_WARN_UNUSED_RET int ec_get_sig_len(const ec_params *params, ec_alg_type sig_type,
 		   hash_alg_type hash_type, u8 *siglen);
 
 /* Generic signature init/update/finalize */
@@ -52,11 +52,11 @@ ATTRIBUTE_WARN_UNUSED_RET int ec_get_sig_len(const ec_params *params, ec_sig_alg
 ATTRIBUTE_WARN_UNUSED_RET int _ec_sign_init(struct ec_sign_context *ctx,
 			 const ec_key_pair *key_pair,
 			 int (*rand) (nn_t out, nn_src_t q),
-			 ec_sig_alg_type sig_type, hash_alg_type hash_type,
+			 ec_alg_type sig_type, hash_alg_type hash_type,
 			 const u8 *adata, u16 adata_len);
 
 ATTRIBUTE_WARN_UNUSED_RET int ec_sign_init(struct ec_sign_context *ctx, const ec_key_pair *key_pair,
-		 ec_sig_alg_type sig_type, hash_alg_type hash_type,
+		 ec_alg_type sig_type, hash_alg_type hash_type,
 		 const u8 *adata, u16 adata_len);
 
 ATTRIBUTE_WARN_UNUSED_RET int ec_sign_update(struct ec_sign_context *ctx, const u8 *chunk, u32 chunklen);
@@ -66,18 +66,18 @@ ATTRIBUTE_WARN_UNUSED_RET int ec_sign_finalize(struct ec_sign_context *ctx, u8 *
 ATTRIBUTE_WARN_UNUSED_RET int _ec_sign(u8 *sig, u8 siglen, const ec_key_pair *key_pair,
 	     const u8 *m, u32 mlen,
 	     int (*rand) (nn_t out, nn_src_t q),
-	     ec_sig_alg_type sig_type, hash_alg_type hash_type,
+	     ec_alg_type sig_type, hash_alg_type hash_type,
 	     const u8 *adata, u16 adata_len);
 
 ATTRIBUTE_WARN_UNUSED_RET int ec_sign(u8 *sig, u8 siglen, const ec_key_pair *key_pair,
 	    const u8 *m, u32 mlen,
-	    ec_sig_alg_type sig_type, hash_alg_type hash_type,
+	    ec_alg_type sig_type, hash_alg_type hash_type,
 	    const u8 *adata, u16 adata_len);
 
 /* Generic signature verification init/update/finalize */
 
 ATTRIBUTE_WARN_UNUSED_RET int ec_verify_init(struct ec_verify_context *ctx, const ec_pub_key *pub_key,
-		   const u8 *sig, u8 siglen, ec_sig_alg_type sig_type,
+		   const u8 *sig, u8 siglen, ec_alg_type sig_type,
 		   hash_alg_type hash_type, const u8 *adata, u16 adata_len);
 
 ATTRIBUTE_WARN_UNUSED_RET int ec_verify_update(struct ec_verify_context *ctx,
@@ -87,20 +87,20 @@ ATTRIBUTE_WARN_UNUSED_RET int ec_verify_finalize(struct ec_verify_context *ctx);
 
 ATTRIBUTE_WARN_UNUSED_RET int ec_verify(const u8 *sig, u8 siglen, const ec_pub_key *pub_key,
 	      const u8 *m, u32 mlen,
-	      ec_sig_alg_type sig_type, hash_alg_type hash_type,
+	      ec_alg_type sig_type, hash_alg_type hash_type,
 	      const u8 *adata, u16 adata_len);
 
 /* Generic signature import and export functions */
 
 ATTRIBUTE_WARN_UNUSED_RET int ec_structured_sig_import_from_buf(u8 *sig, u32 siglen,
 				      const u8 *out_buf, u32 outlen,
-				      ec_sig_alg_type * sig_type,
+				      ec_alg_type * sig_type,
 				      hash_alg_type * hash_type,
 				      u8 curve_name[MAX_CURVE_NAME_LEN]);
 
 ATTRIBUTE_WARN_UNUSED_RET int ec_structured_sig_export_to_buf(const u8 *sig, u32 siglen,
 				    u8 *out_buf, u32 outlen,
-				    ec_sig_alg_type sig_type,
+				    ec_alg_type sig_type,
 				    hash_alg_type hash_type,
 				    const u8
 				    curve_name[MAX_CURVE_NAME_LEN]);

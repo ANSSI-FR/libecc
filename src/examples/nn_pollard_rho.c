@@ -60,7 +60,7 @@ int pollard_rho(nn_t d, nn_src_t n, const word_t c)
 	int ret, cmp, cmp1, cmp2;
 	/* Temporary a and b variables */
 	nn a, b, tmp, one, c_bignum;
-	a.magic = b.magic = tmp.magic = one.magic = c_bignum.magic = 0;
+	a.magic = b.magic = tmp.magic = one.magic = c_bignum.magic = WORD(0);
 
 	/* Initialize variables */
 	ret = nn_init(&a, 0); EG(ret, err);
@@ -136,9 +136,9 @@ int find_divisors(nn_src_t in)
 	nn divisors[MAX_DIVISORS];
 	word_t c;
 
-	n.magic = 0;
+	n.magic = WORD(0);
 	for(i = 0; i < MAX_DIVISORS; i++){
-		divisors[i].magic = 0;
+		divisors[i].magic = WORD(0);
 	}
 
 	ret = nn_check_initialized(in); EG(ret, err);
@@ -227,7 +227,7 @@ int main()
 {
 	nn n;
 	int ret;
-	n.magic = 0;
+	n.magic = WORD(0);
 
 	/* Fermat F5 = 2^32 + 1 = 641 x 6700417 */
 	const unsigned char fermat_F5[] = { 0x01, 0x00, 0x00, 0x00, 0x01 };
