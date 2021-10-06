@@ -39,6 +39,13 @@
  *       exchange affine coordinates points (and not
  *       the compressed x coordinate since the
  *	 curve equation can be used).
+ *
+ * XXX NOTE: for a robust implementation of the ECDH
+ * primitives, please use the APIs provided in src/ecdh
+ * of libecc as they are suitable for "production". The
+ * purpose of the current toy example is only to show how
+ * one can manipulate the curve level APIs.
+ *
  */
 
 /* Zero buffer to detect empty buffers */

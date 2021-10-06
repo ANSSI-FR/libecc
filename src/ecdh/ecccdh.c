@@ -166,7 +166,10 @@ int ecccdh_derive_secret(const ec_priv_key *our_priv_key, const u8 *peer_pub_key
 	MUST_HAVE((shared_secret != NULL), ret, err);
 	ret = priv_key_check_initialized_and_type(our_priv_key, ECCCDH); EG(ret, err);
 
-	/* Try to import the peer public key */
+	/* Try to import the peer public key.
+	 * NOTE: the check that this public key is indeed on the curve is performed in the lower layer
+	 * functions.
+	 */
 	ret = ec_pub_key_import_from_aff_buf(&peer_pub_key, our_priv_key->params, peer_pub_key_buf, peer_pub_key_buf_len, ECCCDH); EG(ret, err);
 	Q = &(peer_pub_key.y);
 
