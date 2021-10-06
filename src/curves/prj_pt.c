@@ -147,7 +147,7 @@ int prj_pt_is_on_curve(prj_pt_src_t in,  int *on_curve)
 
  	fp X, Y;
 	fp_src_t dummy_Z;
- 	X.magic = Y.magic = 0;
+ 	X.magic = Y.magic = WORD(0);
 
 	ret = prj_pt_check_initialized(in); EG(ret, err);
 	MUST_HAVE((on_curve != NULL), ret, err);
@@ -250,7 +250,7 @@ int prj_pt_unique(prj_pt_t out, prj_pt_src_t in)
 	if(out == in){
 		/* Aliasing case */
 		fp tmp;
-		tmp.magic = 0;
+		tmp.magic = WORD(0);
 
 		ret = fp_init(&tmp, (in->Z).ctx); EG(ret, err);
 		ret = fp_inv(&tmp, &(in->Z)); EG(ret, err1);
@@ -305,7 +305,7 @@ int prj_pt_cmp(prj_pt_src_t in1, prj_pt_src_t in2, int *cmp)
 {
 	fp X1, X2, Y1, Y2;
 	int ret, x_cmp, y_cmp;
-	X1.magic = X2.magic = Y1.magic = Y2.magic = 0;
+	X1.magic = X2.magic = Y1.magic = Y2.magic = WORD(0);
 
 	MUST_HAVE((cmp != NULL), ret, err);
 	ret = prj_pt_check_initialized(in1); EG(ret, err);
@@ -356,7 +356,7 @@ ATTRIBUTE_WARN_UNUSED_RET static inline int _prj_pt_eq_or_opp_X(prj_pt_src_t in1
 {
 	int ret;
 	fp X1, X2;
-	X1.magic = X2.magic = 0;
+	X1.magic = X2.magic = WORD(0);
 
 	/*
 	 * Montgomery multiplication is used as it is faster than
@@ -384,7 +384,7 @@ ATTRIBUTE_WARN_UNUSED_RET static inline int _prj_pt_eq_or_opp_Y(prj_pt_src_t in1
 {
 	int ret;
 	fp Y1, Y2;
-	Y1.magic = Y2.magic = 0;
+	Y1.magic = Y2.magic = WORD(0);
 
 	/*
 	 * Montgomery multiplication is used as it is faster than
@@ -602,7 +602,7 @@ int prj_pt_export_to_aff_buf(prj_pt_src_t pt, u8 *pt_buf, u32 pt_buf_len)
 {
 	int ret, on_curve;
 	aff_pt tmp_aff;
-	tmp_aff.magic = 0;
+	tmp_aff.magic = WORD(0);
 
 	ret = prj_pt_check_initialized(pt); EG(ret, err);
 
@@ -641,9 +641,9 @@ ATTRIBUTE_WARN_UNUSED_RET static int __prj_pt_dbl_monty_no_cf(prj_pt_t out, prj_
 {
 	fp XX, ZZ, w, s, ss, sss, R, RR, B, h;
 	int ret;
-	XX.magic = ZZ.magic = w.magic = s.magic = 0;
-	ss.magic = sss.magic = R.magic = 0;
-	RR.magic = B.magic = h.magic = 0;
+	XX.magic = ZZ.magic = w.magic = s.magic = WORD(0);
+	ss.magic = sss.magic = R.magic = WORD(0);
+	RR.magic = B.magic = h.magic = WORD(0);
 
 	ret = prj_pt_init(out, in->crv); EG(ret, err);
 
@@ -742,8 +742,8 @@ ATTRIBUTE_WARN_UNUSED_RET static int ___prj_pt_add_monty_no_cf(prj_pt_t out,
 {
 	fp Y1Z2, X1Z2, Z1Z2, u, uu, v, vv, vvv, R, A;
 	int ret;
-	Y1Z2.magic = X1Z2.magic = Z1Z2.magic = u.magic = uu.magic = v.magic = 0;
-	vv.magic = vvv.magic = R.magic = A.magic = 0;
+	Y1Z2.magic = X1Z2.magic = Z1Z2.magic = u.magic = uu.magic = v.magic = WORD(0);
+	vv.magic = vvv.magic = R.magic = A.magic = WORD(0);
 
 	ret = prj_pt_init(out, in1->crv); EG(ret, err);
 
@@ -894,7 +894,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int __prj_pt_dbl_monty_cf(prj_pt_t out, prj_pt_
 {
 	fp t0, t1, t2, t3;
 	int ret;
-	t0.magic = t1.magic = t2.magic = t3.magic = 0;
+	t0.magic = t1.magic = t2.magic = t3.magic = WORD(0);
 
 	ret = prj_pt_init(out, in->crv); EG(ret, err);
 
@@ -974,8 +974,8 @@ ATTRIBUTE_WARN_UNUSED_RET static int __prj_pt_add_monty_cf(prj_pt_t out,
 {
 	fp t0, t1, t2, t3, t4, t5;
 	int ret;
-	t0.magic = t1.magic = t2.magic = 0;
-	t3.magic = t4.magic = t5.magic = 0;
+	t0.magic = t1.magic = t2.magic = WORD(0);
+	t3.magic = t4.magic = t5.magic = WORD(0);
 
 	ret = prj_pt_init(out, in1->crv); EG(ret, err);
 
@@ -1085,7 +1085,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int _prj_pt_dbl_monty_aliased(prj_pt_t val)
 {
 	prj_pt out_cpy;
 	int ret;
-	out_cpy.magic = 0;
+	out_cpy.magic = WORD(0);
 
 	ret = _prj_pt_dbl_monty(&out_cpy, val); EG(ret, err);
 	ret = prj_pt_copy(val, &out_cpy);
@@ -1156,7 +1156,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int _prj_pt_add_monty_aliased(prj_pt_t out,
 {
 	int ret;
 	prj_pt out_cpy;
-	out_cpy.magic = 0;
+	out_cpy.magic = WORD(0);
 
 	ret = _prj_pt_add_monty(&out_cpy, in1, in2); EG(ret, err);
 	ret = prj_pt_copy(out, &out_cpy); EG(ret, err);
@@ -1303,12 +1303,10 @@ ATTRIBUTE_WARN_UNUSED_RET static int _prj_pt_mul_ltr_monty_dbl_add_always(prj_pt
 	nn m_msb_fixed;
 	nn_src_t curve_order;
 	nn curve_order_square;
-	int ret, on_curve, cmp;
-	r.magic = m_msb_fixed.magic = curve_order_square.magic = 0;
-	T[0].magic = T[1].magic = T[2].magic = 0;
+	int ret, cmp;
+	r.magic = m_msb_fixed.magic = curve_order_square.magic = WORD(0);
+	T[0].magic = T[1].magic = T[2].magic = WORD(0);
 
-	/* Check that the input is on the curve */
-	MUST_HAVE((!prj_pt_is_on_curve(in, &on_curve)) && on_curve, ret, err);
 	/* Compute m' from m depending on the rule described above */
 	curve_order = &(in->crv->order);
 	/* First compute q**2 */
@@ -1400,13 +1398,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int _prj_pt_mul_ltr_monty_dbl_add_always(prj_pt
 		rbit = rbit_next;
 	}
 	/* Output: T[r[0]] */
-	ret = prj_pt_copy(out, &T[rbit]); EG(ret, err);
-
-	/* Check that the output is on the curve */
-	ret = prj_pt_is_on_curve(out, &on_curve); EG(ret, err);
-	if(!on_curve){
-		ret = -1;
-	}
+	ret = prj_pt_copy(out, &T[rbit]);
 
 err:
 	prj_pt_uninit(&T[0]);
@@ -1428,11 +1420,9 @@ err:
  */
 ATTRIBUTE_WARN_UNUSED_RET static int _prj_pt_mul_ltr_monty_dbl_add_always(prj_pt_t out, nn_src_t m, prj_pt_src_t in)
 {
-	int ret, on_curve;
+	int ret;
 
-	MUST_HAVE((!prj_pt_is_on_curve(in, &on_curve)) && on_curve, ret, err);
-
-	/* Check that the input point is on the curve */
+	/* Blind the input point projective coordinates */
 	ret = _blind_projective_point(out, in); EG(ret, err);
 
 	/*******************/
@@ -1445,11 +1435,11 @@ ATTRIBUTE_WARN_UNUSED_RET static int _prj_pt_mul_ltr_monty_dbl_add_always(prj_pt
 		nn m_msb_fixed;
 		nn_src_t curve_order;
 		int cmp;
-		m_msb_fixed.magic = 0;
+		m_msb_fixed.magic = WORD(0);
 
 		{
 			nn curve_order_square;
-			curve_order_square.magic = 0;
+			curve_order_square.magic = WORD(0);
 
 			/* Compute m' from m depending on the rule described above */
 			curve_order = &(in->crv->order);
@@ -1492,7 +1482,7 @@ err1:
 
 		{
 			prj_pt dbl;
-			dbl.magic = 0;
+			dbl.magic = WORD(0);
 
 			/* Initialize temporary point */
 			ret = prj_pt_init(&dbl, in->crv); EG(ret, err2);
@@ -1523,8 +1513,6 @@ err2:
 			prj_pt_uninit(&dbl); EG(ret, err);
 		}
 
-		/* Check that the resulting point is on the curve */
-		MUST_HAVE((!prj_pt_is_on_curve(out, &on_curve)) && on_curve, ret, err);
 err:
 		nn_uninit(&m_msb_fixed);
 
@@ -1551,13 +1539,9 @@ ATTRIBUTE_WARN_UNUSED_RET static int _prj_pt_mul_ltr_monty_ladder(prj_pt_t out, 
 	nn m_msb_fixed;
 	nn_src_t curve_order;
 	nn curve_order_square;
-	int ret, cmp, on_curve;
-	r.magic = m_msb_fixed.magic = curve_order_square.magic = 0;
-	T[0].magic = T[1].magic = T[2].magic = 0;
-
-	/* Check that the input is on the curve */
-	ret = prj_pt_is_on_curve(in, &on_curve); EG(ret, err);
-	MUST_HAVE((on_curve), ret, err);
+	int ret, cmp;
+	r.magic = m_msb_fixed.magic = curve_order_square.magic = WORD(0);
+	T[0].magic = T[1].magic = T[2].magic = WORD(0);
 
 	/* Compute m' from m depending on the rule described above */
 	curve_order = &(in->crv->order);
@@ -1671,12 +1655,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int _prj_pt_mul_ltr_monty_ladder(prj_pt_t out, 
 		rbit = rbit_next;
 	}
 	/* Output: T[r[0]] */
-	ret = prj_pt_copy(out, &T[rbit]); EG(ret, err);
-	/* Check that the output is on the curve */
-	ret = prj_pt_is_on_curve(out, &on_curve); EG(ret, err);
-	if(!on_curve){
-		ret = -1;
-	}
+	ret = prj_pt_copy(out, &T[rbit]);
 
 err:
 	prj_pt_uninit(&T[0]);
@@ -1711,7 +1690,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int _prj_pt_mul_ltr_monty_aliased(prj_pt_t out,
 {
 	prj_pt out_cpy;
 	int ret;
-	out_cpy.magic = 0;
+	out_cpy.magic = WORD(0);
 
 	ret = prj_pt_init(&out_cpy, in->crv); EG(ret, err);
 	ret = _prj_pt_mul_ltr_monty(&out_cpy, m, in); EG(ret, err);
@@ -1722,19 +1701,30 @@ err:
 	return ret;
 }
 
-/* Aliased version */
+/* Aliased version. This is the public main interface of our
+ * scalar multiplication algorithm. Checks that the input point
+ * and that the output point are on the curve are performed here
+ * (before and after calling the core algorithm, albeit Double and
+ * Add Always or Montgomery Ladder).
+ */
 int prj_pt_mul(prj_pt_t out, nn_src_t m, prj_pt_src_t in)
 {
-	int ret;
+	int ret, on_curve;
 
 	ret = prj_pt_check_initialized(in); EG(ret, err);
 	ret = nn_check_initialized(m); EG(ret, err);
 
+	/* Check that the input is on the curve */
+	MUST_HAVE((!prj_pt_is_on_curve(in, &on_curve)) && on_curve, ret, err);
+
 	if (out == in) {
-		ret = _prj_pt_mul_ltr_monty_aliased(out, m, in);
+		ret = _prj_pt_mul_ltr_monty_aliased(out, m, in); EG(ret, err);
 	} else {
-		ret = _prj_pt_mul_ltr_monty(out, m, in);
+		ret = _prj_pt_mul_ltr_monty(out, m, in); EG(ret, err);
 	}
+
+	/* Check that the output is on the curve */
+	MUST_HAVE((!prj_pt_is_on_curve(out, &on_curve)) && on_curve, ret, err);
 
 err:
 	return ret;
@@ -1747,7 +1737,7 @@ int prj_pt_mul_blind(prj_pt_t out, nn_src_t m, prj_pt_src_t in)
 	nn b;
 	nn_src_t q;
 	int ret;
-	b.magic = 0;
+	b.magic = WORD(0);
 
 	ret = prj_pt_check_initialized(in); EG(ret, err);
 
@@ -1761,6 +1751,9 @@ int prj_pt_mul_blind(prj_pt_t out, nn_src_t m, prj_pt_src_t in)
 	ret = nn_add(&b, &b, m); EG(ret, err);
 
 	/* NOTE: point blinding is performed in the lower functions */
+	/* NOTE: check that input and output points are on the curve are
+	 * performed in the lower functions.
+	 */
 
 	/* Perform the scalar multiplication */
 	ret = prj_pt_mul(out, &b, in);
@@ -1780,7 +1773,7 @@ int check_prj_pt_order(prj_pt_src_t in_shortw, nn_src_t in_isorder)
 {
 	int ret, iszero;
 	prj_pt res;
-	res.magic = 0;
+	res.magic = WORD(0);
 
 	/* First sanity checks */
 	ret = prj_pt_check_initialized(in_shortw); EG(ret, err);
@@ -1819,7 +1812,7 @@ int aff_pt_edwards_to_prj_pt_shortw(aff_pt_edwards_src_t in_edwards,
 	int ret, iszero, cmp;
 	aff_pt out_shortw_aff;
 	fp one;
-	out_shortw_aff.magic = one.magic = 0;
+	out_shortw_aff.magic = one.magic = WORD(0);
 
 	/* Check the curves compatibility */
 	ret = aff_pt_edwards_check_initialized(in_edwards); EG(ret, err);
@@ -1870,7 +1863,7 @@ int prj_pt_shortw_to_aff_pt_edwards(prj_pt_src_t in_shortw,
 {
 	int ret, iszero;
 	aff_pt in_shortw_aff;
-	in_shortw_aff.magic = 0;
+	in_shortw_aff.magic = WORD(0);
 
 	/* Check the curves compatibility */
 	ret = prj_pt_check_initialized(in_shortw); EG(ret, err);
@@ -1886,7 +1879,7 @@ int prj_pt_shortw_to_aff_pt_edwards(prj_pt_src_t in_shortw,
 	ret = prj_pt_iszero(in_shortw, &iszero); EG(ret, err);
 	if(iszero){
 		fp zero, one;
-		zero.magic = one.magic = 0;
+		zero.magic = one.magic = WORD(0);
 
 		ret = fp_init(&zero, in_shortw->X.ctx); EG(ret, err1);
 		ret = fp_init(&one, in_shortw->X.ctx); EG(ret, err1);
@@ -1925,7 +1918,7 @@ int aff_pt_montgomery_to_prj_pt_shortw(aff_pt_montgomery_src_t in_montgomery,
 {
 	int ret;
 	aff_pt out_shortw_aff;
-	out_shortw_aff.magic = 0;
+	out_shortw_aff.magic = WORD(0);
 
 	/* Check the curves compatibility */
 	ret = aff_pt_montgomery_check_initialized(in_montgomery); EG(ret, err);
@@ -1954,7 +1947,7 @@ int prj_pt_shortw_to_aff_pt_montgomery(prj_pt_src_t in_shortw, ec_montgomery_crv
 {
 	int ret;
 	aff_pt in_shortw_aff;
-	in_shortw_aff.magic = 0;
+	in_shortw_aff.magic = WORD(0);
 
 	/* Check the curves compatibility */
 	ret = prj_pt_check_initialized(in_shortw); EG(ret, err);
