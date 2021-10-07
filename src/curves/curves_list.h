@@ -53,6 +53,15 @@
 #include "known/ec_params_gost_R3410_2012_512_paramSetA.h"
 #include "known/ec_params_gost_R3410_2012_512_paramSetB.h"
 #include "known/ec_params_gost_R3410_2012_512_paramSetC.h"
+#include "known/ec_params_secp192k1.h"
+#include "known/ec_params_secp224k1.h"
+#include "known/ec_params_brainpoolp192t1.h"
+#include "known/ec_params_brainpoolp224t1.h"
+#include "known/ec_params_brainpoolp256t1.h"
+#include "known/ec_params_brainpoolp320r1.h"
+#include "known/ec_params_brainpoolp320t1.h"
+#include "known/ec_params_brainpoolp384t1.h"
+#include "known/ec_params_brainpoolp512t1.h"
 /* ADD curves header here */
 /* XXX: Do not remove the comment above, as it is
  * used by external tools as a placeholder to add or
@@ -185,6 +194,33 @@ static const ec_mapping ec_maps[] = {
 #ifdef WITH_CURVE_GOST_R3410_2012_512_PARAMSETC
 	{ .type = GOST_R3410_2012_512_PARAMSETC, .params = &gost_R3410_2012_512_paramSetC_str_params },
 #endif /* WITH_CURVE_GOST_R3410_2012_512_PARAMSETC */
+#ifdef WITH_CURVE_SECP192K1
+	{.type = SECP192K1,.params = &secp192k1_str_params},
+#endif /* WITH_CURVE_SECP192K1 */
+#ifdef WITH_CURVE_SECP224K1
+	{.type = SECP224K1,.params = &secp224k1_str_params},
+#endif /* WITH_CURVE_SECP224K1 */
+#ifdef WITH_CURVE_BRAINPOOLP192T1
+	{.type = BRAINPOOLP192T1,.params = &brainpoolp192t1_str_params},
+#endif /* WITH_CURVE_BRAINPOOLP192T1 */
+#ifdef WITH_CURVE_BRAINPOOLP224T1
+	{.type = BRAINPOOLP224T1,.params = &brainpoolp224t1_str_params},
+#endif /* WITH_CURVE_BRAINPOOLP224T1 */
+#ifdef WITH_CURVE_BRAINPOOLP256T1
+	{.type = BRAINPOOLP256T1,.params = &brainpoolp256t1_str_params},
+#endif /* WITH_CURVE_BRAINPOOLP256T1 */
+#ifdef WITH_CURVE_BRAINPOOLP320R1
+	{.type = BRAINPOOLP320R1,.params = &brainpoolp320r1_str_params},
+#endif /* WITH_CURVE_BRAINPOOLP320R1 */
+#ifdef WITH_CURVE_BRAINPOOLP320T1
+	{.type = BRAINPOOLP320T1,.params = &brainpoolp320t1_str_params},
+#endif /* WITH_CURVE_BRAINPOOLP320T1 */
+#ifdef WITH_CURVE_BRAINPOOLP384T1
+	{.type = BRAINPOOLP384T1,.params = &brainpoolp384t1_str_params},
+#endif /* WITH_CURVE_BRAINPOOLP192T1 */
+#ifdef WITH_CURVE_BRAINPOOLP512T1
+	{.type = BRAINPOOLP512T1,.params = &brainpoolp512t1_str_params},
+#endif /* WITH_CURVE_BRAINPOOLP512T1 */
 /* ADD curves mapping here */
 /* XXX: Do not remove the comment above, as it is
  * used by external tools as a placeholder to add or
