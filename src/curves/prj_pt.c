@@ -1766,10 +1766,59 @@ err:
 	return ret;
 }
 
+/* Naive double and add scalar multiplication.
+ *
+ * This scalar multiplication is used on public values and is optimized with no
+ * countermeasures, and it is usually faster as scalar can be small with few bits
+ * to process (e.g. cofactors, etc.).
+ *
+ * XXX: WARNING: this function must only be used on public points!
+ *
+ */
+int _prj_pt_unprotected_mult(prj_pt_t out, nn_src_t scalar, prj_pt_src_t in)
+{
+        u8 expbit;
+        bitcnt_t explen;
+        int ret, iszero;
+
+        ret = prj_pt_check_initialized(in); EG(ret, err);
+        ret = nn_check_initialized(scalar); EG(ret, err);
+
+        ret = nn_iszero(scalar, &iszero); EG(ret, err);
+	/* Multiplication by zero is the point at infinity */
+	if(iszero){
+		ret = prj_pt_zero(out); EG(ret, err);
+		goto err;
+	}
+
+        ret = nn_bitlen(scalar, &explen); EG(ret, err);
+        /* Sanity check */
+        MUST_HAVE((explen > 0), ret, err);
+        explen -= (bitcnt_t)1;
+        ret = prj_pt_copy(out, in); EG(ret, err);
+        while (explen > 0) {
+                explen -= (bitcnt_t)1;
+                ret = nn_getbit(scalar, explen, &expbit); EG(ret, err);
+                ret = prj_pt_dbl(out, out); EG(ret, err);
+                if(expbit){
+                        ret = prj_pt_add(out, out, in); EG(ret, err);
+                }
+        }
+
+err:
+        VAR_ZEROIFY(expbit);
+        VAR_ZEROIFY(explen);
+
+        return ret;
+}
+
 /*
  * Check if an integer is (a multiple of) a projective point order.
+ *
+ * The function returns 0 on success, -1 on error. The value check is set to 1 if the projective
+ * point has order in_isorder, 0 otherwise. The value is meaningless on error.
  */
-int check_prj_pt_order(prj_pt_src_t in_shortw, nn_src_t in_isorder)
+int check_prj_pt_order(prj_pt_src_t in_shortw, nn_src_t in_isorder, prj_pt_sensitivity s, int *check)
 {
 	int ret, iszero;
 	prj_pt res;
@@ -1778,15 +1827,23 @@ int check_prj_pt_order(prj_pt_src_t in_shortw, nn_src_t in_isorder)
 	/* First sanity checks */
 	ret = prj_pt_check_initialized(in_shortw); EG(ret, err);
 	ret = nn_check_initialized(in_isorder); EG(ret, err);
+	MUST_HAVE((check != NULL), ret, err);
 
 	/* Then, perform the scalar multiplication */
-	ret = prj_pt_mul(&res, in_isorder, in_shortw); EG(ret, err);
+	if(s == PUBLIC_PT){
+		/* If this is a public point, we can use the naive scalar multiplication */
+		ret = _prj_pt_unprotected_mult(&res, in_isorder, in_shortw); EG(ret, err);
+	}
+	else{
+		/* If the point is private, it is sensitive and we proceed with the secure
+		 * scalar blind multiplication.
+		 */
+		ret = prj_pt_mul_blind(&res, in_isorder, in_shortw); EG(ret, err);
+	}
 
 	/* Check if we have the point at infinity */
 	ret = prj_pt_iszero(&res, &iszero); EG(ret, err);
-	if(!iszero){
-		ret = -1;
-	}
+	(*check) = iszero;
 
 err:
 	prj_pt_uninit(&res);
@@ -1966,4 +2023,3 @@ err:
 
 	return ret;
 }
-

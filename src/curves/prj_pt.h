@@ -34,6 +34,11 @@ typedef struct {
 typedef prj_pt *prj_pt_t;
 typedef const prj_pt *prj_pt_src_t;
 
+typedef enum {
+	PUBLIC_PT = 0,
+	PRIVATE_PT = 1
+} prj_pt_sensitivity;
+
 ATTRIBUTE_WARN_UNUSED_RET int prj_pt_check_initialized(prj_pt_src_t in);
 ATTRIBUTE_WARN_UNUSED_RET int prj_pt_init(prj_pt_t in, ec_shortw_crv_src_t curve);
 ATTRIBUTE_WARN_UNUSED_RET int prj_pt_init_from_coords(prj_pt_t in,
@@ -55,7 +60,8 @@ ATTRIBUTE_WARN_UNUSED_RET int prj_pt_add(prj_pt_t sum, prj_pt_src_t in1, prj_pt_
 ATTRIBUTE_WARN_UNUSED_RET int prj_pt_dbl(prj_pt_t dbl, prj_pt_src_t in);
 ATTRIBUTE_WARN_UNUSED_RET int prj_pt_mul(prj_pt_t out, nn_src_t m, prj_pt_src_t in);
 ATTRIBUTE_WARN_UNUSED_RET int prj_pt_mul_blind(prj_pt_t out, nn_src_t m, prj_pt_src_t in);
-ATTRIBUTE_WARN_UNUSED_RET int check_prj_pt_order(prj_pt_src_t in_shortw, nn_src_t in_isorder);
+ATTRIBUTE_WARN_UNUSED_RET int _prj_pt_unprotected_mult(prj_pt_t out, nn_src_t cofactor, prj_pt_src_t in);
+ATTRIBUTE_WARN_UNUSED_RET int check_prj_pt_order(prj_pt_src_t in_shortw, nn_src_t in_isorder, prj_pt_sensitivity s, int *check);
 ATTRIBUTE_WARN_UNUSED_RET int prj_pt_import_from_buf(prj_pt_t pt,
 			   const u8 *pt_buf,
 			   u16 pt_buf_len, ec_shortw_crv_src_t crv);
@@ -77,4 +83,5 @@ ATTRIBUTE_WARN_UNUSED_RET int prj_pt_shortw_to_aff_pt_edwards(prj_pt_src_t in_sh
 ATTRIBUTE_WARN_UNUSED_RET int prj_pt_shortw_to_aff_pt_montgomery(prj_pt_src_t in_shortw,
 				       ec_montgomery_crv_src_t montgomery_crv,
 				       aff_pt_montgomery_t out_montgomery);
+
 #endif /* __PRJ_PT_H__ */

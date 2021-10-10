@@ -1830,41 +1830,6 @@ err:
  *
  */
 
-/* Naive double and add cofactor scalar multiplication */
-ATTRIBUTE_WARN_UNUSED_RET static int _eddsa_cofactor_scalar_mult(prj_pt_t out, prj_pt_src_t in, nn_src_t cofactor)
-{
-	u8 expbit;
-	bitcnt_t explen;
-	int ret, iszero;
-
-	ret = prj_pt_check_initialized(in); EG(ret, err);
-	ret = nn_check_initialized(cofactor); EG(ret, err);
-
-	ret = nn_iszero(cofactor, &iszero); EG(ret, err);
-	/* This should not happen: cofactor cannot be zero! */
-	MUST_HAVE((!iszero), ret, err);
-
-	ret = nn_bitlen(cofactor, &explen); EG(ret, err);
-	/* Sanity check */
-	MUST_HAVE((explen > 0), ret, err);
-	explen -= (bitcnt_t)1;
-	ret = prj_pt_copy(out, in); EG(ret, err);
-	while (explen > 0) {
-		explen -= (bitcnt_t)1;
-		ret = nn_getbit(cofactor, explen, &expbit); EG(ret, err);
-		ret = prj_pt_dbl(out, out); EG(ret, err);
-		if(expbit){
-			ret = prj_pt_add(out, out, in); EG(ret, err);
-		}
-	}
-
-err:
-	VAR_ZEROIFY(expbit);
-	VAR_ZEROIFY(explen);
-
-	return ret;
-}
-
 #define EDDSA_VERIFY_MAGIC ((word_t)(0x3298fe87e77151beULL))
 #define EDDSA_VERIFY_CHECK_INITIALIZED(A, ret, err) \
 	MUST_HAVE((((void *)(A)) != NULL) && ((A)->magic == EDDSA_VERIFY_MAGIC), ret, err)
@@ -1987,7 +1952,7 @@ int _eddsa_verify_init(struct ec_verify_context *ctx, const u8 *sig, u8 siglen)
 	 * We multiply by the cofactor: since this is a public verification,
 	 * we use a basic double and add algorithm.
 	 */
-	ret = _eddsa_cofactor_scalar_mult(&_Tmp, pub_key_y, gen_cofactor); EG(ret, err);
+	ret = _prj_pt_unprotected_mult(&_Tmp, gen_cofactor, pub_key_y); EG(ret, err);
 	/* Reject the signature if we have point at infinity here as this means
 	 * that the public key is of small order.
 	 */
@@ -2188,7 +2153,7 @@ int _eddsa_verify_finalize(struct ec_verify_context *ctx)
 	 *    since this is a public verification, we use a basic double and add
 	 *    algorithm.
 	 */
-	ret = _eddsa_cofactor_scalar_mult(&_Tmp2, &_Tmp1, gen_cofactor); EG(ret, err);
+	ret = _prj_pt_unprotected_mult(&_Tmp2, gen_cofactor, &_Tmp1); EG(ret, err);
 
 	/* Reject the signature if we do not have point at infinity here */
 	ret = prj_pt_iszero(&_Tmp2, &iszero); EG(ret, err);
