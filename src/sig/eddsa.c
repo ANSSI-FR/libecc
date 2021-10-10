@@ -990,7 +990,7 @@ int eddsa_export_pub_key(const ec_pub_key *in_pub, u8 *buf, u16 buflen)
 					alpha_edwards); EG(ret, err);
 	/* Export to buffer canonical form */
 	ret = eddsa_encode_point(&_Tmp, alpha_edwards, buf,
-			      buflen,in_pub->key_type);
+			      buflen, in_pub->key_type);
 
 err:
 	PTR_NULLIFY(shortw_curve);

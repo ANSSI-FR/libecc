@@ -36,7 +36,7 @@
 #include "../external_deps/rand.h"
 
 /* This module mainly implements the X25519 and X448 functions stricly as defined in
- * RFC77448.
+ * RFC7748.
  */
 
 
@@ -130,6 +130,10 @@ ATTRIBUTE_WARN_UNUSED_RET static int computeVfromU(fp_src_t u, fp_t v, ec_montgo
 
         /* Choose any of the two square roots as the solution */
         ret = fp_sqrt(v, &tmp, v);
+	/* NOTE: this square root is possibly non existant if the u
+	 * coordinate is on the quadratic twist of the curve.
+	 * An error is returned in this case.
+	 */
 
 err:
         fp_uninit(&tmp);
@@ -137,6 +141,14 @@ err:
         return ret;
 }
 
+
+/*
+ * This is the core computation of X25519 and X448.
+ *
+ * NOTE: the user of this primitive should be warned and aware that is is not fully compliant with the
+ * RFC7748 description as u coordinates on the quadratic twist of the curve are rejected.
+ * See the explanations in the implementation of the function for more context and explanations.
+ */
 ATTRIBUTE_WARN_UNUSED_RET static int x25519_448_core(const u8 *k, const u8 *u, u8 *res, u8 len)
 {
 	int ret, iszero, loaded;
@@ -214,6 +226,28 @@ ATTRIBUTE_WARN_UNUSED_RET static int x25519_448_core(const u8 *k, const u8 *u, u
 
 	/* Compute the v coordinate from u */
 	ret = computeVfromU(u_coord, v_coord, &montgomery_curve); EG(ret, err);
+	/* NOTE: since we use isogenies of the Curve25519/448, we must stick to points
+	 * belonging to this curve. Since not all u coordinates provide a v coordinate
+	 * (i.e. a square residue from the curve formula), the computation above can trigger an error.
+	 * When this is the case, this means that the u coordinate is on the quadtratic twist of
+	 * the Montgomery curve (which is a secure curve by design here). We could perform computations
+	 * on an isogenic curve of this twist, however we choose to return an error instead.
+	 *
+	 * Although this is not compliant with the Curve2551/448 original spirit (that accepts any u
+	 * coordinate thanks to the x-coordinate only computations with the Montgomery Ladder),
+	 * we emphasize here that in the key exchange defined in RFC7748 all the exchanged points
+	 * (i.e. public keys) are derived from base points that are on the curve and not on its twist, meaning
+	 * that all the exchanged u coordinates should belong to the curve. Diverging from this behavior would
+	 * suggest that an attacker is trying to inject other values, and we are safe to reject them in the
+	 * context of Diffie-Hellman based key exchange as defined in RFC7748.
+	 *
+	 * On the other hand, the drawback of rejecting u coordinates on the quadratic twist is that
+	 * using the current X25519/448 primitive in other contexts than RFC7748 Diffie-Hellman could be
+	 * limited and non interoperable with other implementations of this primive. Another issue is that
+	 * this specific divergence exposes our implementation to be distinguishable from other standard ones
+	 * in a "black box" analysis context, which is generally not very desirable even if no real security
+	 * issue is induced.
+	 */
 
 	/* Get the affine point in Montgomery */
 	ret = aff_pt_montgomery_init_from_coords(&_Tmp, &montgomery_curve, u_coord, v_coord); EG(ret, err);

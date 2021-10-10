@@ -22,6 +22,9 @@
 #if defined(WITH_X25519)
 /* The X25519 function as specified in RFC7748.
  *
+ * NOTE: the user of this primitive should be warned and aware that is is not fully compliant with the
+ * RFC7748 description as u coordinates on the quadratic twist of the curve are rejected.
+ * See the explanations in the implementation of the function for more context and explanations.
  */
 ATTRIBUTE_WARN_UNUSED_RET int x25519(const u8 k[32], const u8 u[32], u8 res[32]);
 
@@ -35,6 +38,9 @@ ATTRIBUTE_WARN_UNUSED_RET int x25519_derive_secret(const u8 priv_key[32], const 
 #if defined(WITH_X448)
 /* The X448 function as specified in RFC7748.
  *
+ * NOTE: the user of this primitive should be warned and aware that is is not fully compliant with the
+ * RFC7748 description as u coordinates on the quadratic twist of the curve are rejected.
+ * See the explanations in the implementation of the function for more context and explanations.
  */
 ATTRIBUTE_WARN_UNUSED_RET int x448(const u8 k[56], const u8 u[56], u8 res[56]);
 
