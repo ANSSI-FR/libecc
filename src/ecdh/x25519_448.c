@@ -146,12 +146,13 @@ err:
  * This is the core computation of X25519 and X448.
  *
  * NOTE: the user of this primitive should be warned and aware that is is not fully compliant with the
- * RFC7748 description as u coordinates on the quadratic twist of the curve are rejected.
+ * RFC7748 description as u coordinates on the quadratic twist of the curve are rejected as well
+ * as non canonical u.
  * See the explanations in the implementation of the function for more context and explanations.
  */
 ATTRIBUTE_WARN_UNUSED_RET static int x25519_448_core(const u8 *k, const u8 *u, u8 *res, u8 len)
 {
-	int ret, iszero, loaded;
+	int ret, iszero, loaded, cmp;
 	/* Note: our local variables holding scalar and coordinate have the maximum size */
 #if defined(WITH_X448)
 	u8 k_[56], u_[56];
@@ -168,6 +169,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int x25519_448_core(const u8 *k, const u8 *u, u
 	nn scalar;
 	nn_t v_coord_nn;
 	fp_t u_coord, v_coord;
+	nn_t cofactor;
 
 	_Tmp.magic = montgomery_curve.magic = Q.magic = WORD(0);
 	scalar.magic = WORD(0);
@@ -200,6 +202,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int x25519_448_core(const u8 *k, const u8 *u, u
 
 	/* Make things more readable */
 	shortw_curve = &(shortw_curve_params.ec_curve);
+	cofactor = &(shortw_curve_params.ec_gen_cofactor);
 	alpha_montgomery = &(shortw_curve_params.ec_alpha_montgomery);
 	gamma_montgomery = &(shortw_curve_params.ec_gamma_montgomery);
 	/* NOTE: we use the projective point Q Fp values as temporary
@@ -216,10 +219,11 @@ ATTRIBUTE_WARN_UNUSED_RET static int x25519_448_core(const u8 *k, const u8 *u, u
 	/* Import the scalar and u coordinate as a big integer and Fp element */
 	ret = nn_init_from_buf(&scalar, k_, len); EG(ret, err);
 	ret = nn_init_from_buf(v_coord_nn, u_, len); EG(ret, err);
-	/* Reduce u modulo p as we MUST accept any u as per RFC7748.
+	/* Reject non canonical u values.
 	 * NOTE: we use v here as a temporary value.
 	 */
-	ret = nn_mod(v_coord_nn, v_coord_nn, &(montgomery_curve.A.ctx->p)); EG(ret, err);
+	ret = nn_cmp(v_coord_nn, &(montgomery_curve.A.ctx->p), &cmp); EG(ret, err);
+	MUST_HAVE((cmp < 0), ret, err);
 	/* Now initialize u as Fp element with the reduced value */
 	ret = fp_init(u_coord, montgomery_curve.A.ctx); EG(ret, err);
 	ret = fp_set_nn(u_coord, v_coord_nn); EG(ret, err);
@@ -253,6 +257,13 @@ ATTRIBUTE_WARN_UNUSED_RET static int x25519_448_core(const u8 *k, const u8 *u, u
 	ret = aff_pt_montgomery_init_from_coords(&_Tmp, &montgomery_curve, u_coord, v_coord); EG(ret, err);
 	/* Transfer from Montgomery to short Weierstrass using the isogeny */
 	ret = aff_pt_montgomery_to_prj_pt_shortw(&_Tmp, shortw_curve, &Q); EG(ret, err);
+
+	/*
+	 * Reject small order public keys: while this is not a strict requirement of RFC7748, there is no
+	 * good reason to accept these weak values!
+	 */
+	ret = check_prj_pt_order(&Q, cofactor, PUBLIC_PT, &cmp); EG(ret, err);
+	MUST_HAVE((!cmp), ret, err);
 
 	/* Now proceed with the scalar multiplication */
 #ifdef USE_SIG_BLINDING
@@ -288,6 +299,7 @@ err:
 	PTR_NULLIFY(u_coord);
 	PTR_NULLIFY(v_coord);
 	PTR_NULLIFY(v_coord_nn);
+	PTR_NULLIFY(cofactor);
 
         return ret;
 }
