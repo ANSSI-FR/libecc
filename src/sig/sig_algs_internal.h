@@ -110,7 +110,7 @@ err:
  */
 
 typedef union {
-#ifdef WITH_SIG_ECDSA		/* ECDSA   */
+#if defined(WITH_SIG_ECDSA) || defined(WITH_SIG_DECDSA)		/* ECDSA and DECDSA */
 	ecdsa_sign_data ecdsa;
 #endif
 #ifdef WITH_SIG_ECKCDSA		/* ECKCDSA */
@@ -163,7 +163,7 @@ ATTRIBUTE_WARN_UNUSED_RET static inline int sig_sign_check_initialized(struct ec
 }
 
 typedef union {
-#ifdef WITH_SIG_ECDSA		/* ECDSA */
+#if defined(WITH_SIG_ECDSA) || defined(WITH_SIG_DECDSA)		/* ECDSA and DECDSA */
 	ecdsa_verify_data ecdsa;
 #endif
 #ifdef WITH_SIG_ECKCDSA		/* ECKCDSA */

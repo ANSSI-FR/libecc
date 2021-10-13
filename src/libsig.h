@@ -29,6 +29,8 @@
 #include "utils/dbg_sig.h"	/* debug */
 /* Include the hash functions */
 #include "hash/hash_algs.h"
+/* Include the hmac functions */
+#include "hash/hmac.h"
 /* Include the ECDH primitives */
 #include "ecdh/ecdh.h"
 
