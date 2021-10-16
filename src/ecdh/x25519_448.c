@@ -130,8 +130,8 @@ ATTRIBUTE_WARN_UNUSED_RET static int computeVfromU(fp_src_t u, fp_t v, ec_montgo
 
         /* Choose any of the two square roots as the solution */
         ret = fp_sqrt(v, &tmp, v);
-	/* NOTE: this square root is possibly non existant if the u
-	 * coordinate is on the quadratic twist of the curve.
+	/* NOTE: this square root is possibly non-existing if the
+	 * u coordinate is on the quadratic twist of the curve.
 	 * An error is returned in this case.
 	 */
 
@@ -326,15 +326,30 @@ ATTRIBUTE_WARN_UNUSED_RET static int x25519_448_init_pub_key(const u8 *priv_key,
 	MUST_HAVE((priv_key != NULL) && (pub_key != NULL), ret, err);
 	MUST_HAVE(((len == 32) || (len == 56)), ret, err);
 
-	/* Computing the public key is x25519(priv_key, 9) or x448(priv_key, 5) */
+	/* Computing the public key is x25519(priv_key, 9) or x448(priv_key, 5)
+	 *
+	 * NOTE: although we could optimize and accelerate the computation of the public
+	 * key by skipping the Montgomery to Weierstrass mapping (as the base point on the two
+	 * isomorphic curves are known), we rather use the regular x25519_448_core primitive
+	 * as it has the advantages of keeping the code clean and simple (and the performance
+	 * cost is not so expensive as the core scalar multiplication will take most of the
+	 * cycles ...).
+	 *
+	 */
 	if(len == 32){
-		/* X25519 */
-		u8 u[32] = { 0x09 };
+		u8 u[32];
+
+		ret = local_memset(u, 0, sizeof(u)); EG(ret, err);
+		/* X25519 uses the base point with x-coordinate = 0x09 */
+		u[0] = 0x09;
 		ret = x25519_448_core(priv_key, u, pub_key, len);
 	}
 	else if(len == 56){
-		/* X448 */
-		u8 u[56] = { 0x05 };
+		u8 u[56];
+
+		ret = local_memset(u, 0, sizeof(u)); EG(ret, err);
+		/* X448 uses the base point with x-coordinate = 0x05 */
+		u[0] = 0x05;
 		ret = x25519_448_core(priv_key, u, pub_key, len);
 	}
 	else{

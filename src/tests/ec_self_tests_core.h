@@ -5249,7 +5249,7 @@ static const ecdh_test_case ecdh_dummy_test_case = {
 #endif /* WITH_ECCCDH */
 
 #ifdef WITH_X25519
-/* NOTE: tests takes from RFC7748 */
+/* NOTE: tests taken from RFC7748 and https://tools.ietf.org/id/draft-ietf-ipsecme-safecurves-03.xml */
 #include "x25519_test_vectors.h"
 #endif /* WITH_X25519 */
 
@@ -5637,6 +5637,8 @@ static const ecdh_test_case *ecdh_fixed_vector_tests[] = {
 #if defined(WITH_X25519) && defined(WITH_CURVE_WEI25519)
 	&x25519_WEI25519_0_test_case,
 	&x25519_WEI25519_1_test_case,
+	&x25519_WEI25519_2_test_case,
+	&x25519_WEI25519_3_test_case,
 #endif
 #if defined(WITH_X448) && defined(WITH_CURVE_WEI448)
 	&x448_WEI448_0_test_case,
