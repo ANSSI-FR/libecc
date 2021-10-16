@@ -599,7 +599,6 @@ static int check_wycheproof_ecdh(void)
 				ret = -1;
 				goto err;
 			}
-			continue;
 		}
 		else{
 			/* No point compression is used, copy our raw buffer as public key */
@@ -615,13 +614,13 @@ static int check_wycheproof_ecdh(void)
 		ret = ecccdh_derive_secret(&priv_key, serialized_pub_key, serialized_pub_key_size, sharedsecret_check, sharedsecretsize);
 		if ((ret) && (t->result >= 0)) {
 			ext_printf("[-] Error: ECDH tests error when deriving secret while acceptable or valid\n");
-				ext_printf("    (comment = %s)\n", t->comment);
+			ext_printf("    (comment = %s)\n", t->comment);
 			ret = -1;
 			goto err;
 		}
 		if((!ret) && (t->result == -1)){
 			ext_printf("Error: ECDH tests error, secret derived OK while invalid\n");
-				ext_printf("    (comment = %s)\n", t->comment);
+			ext_printf("    (comment = %s)\n", t->comment);
 			ret = -1;
 			goto err;
 		}
@@ -630,7 +629,7 @@ static int check_wycheproof_ecdh(void)
 		}
 		if(sharedsecretsize != t->sharedsecretlen){
 			ext_printf("Error: ECDH tests error, bad shared secret size %d instead of %d\n", sharedsecretsize, t->sharedsecretlen);
-				ext_printf("    (comment = %s)\n", t->comment);
+			ext_printf("    (comment = %s)\n", t->comment);
 			ret = -1;
 			goto err;
 		}
@@ -727,31 +726,32 @@ int main(int argc, char *argv[])
 	FORCE_USED_VAR(argc);
 	FORCE_USED_VAR(argv);
 
-	ext_printf("==== Checking ECDH =========== Imported = %d, Skipped = %d (valid = %d, invalid = %d, acceptable= %d)\n", NUM_WYCHEPROOF_ECDH_TESTS_IMPORTED, NUM_WYCHEPROOF_ECDH_TESTS_SKIPPED, NUM_WYCHEPROOF_ECDH_TESTS_VALID, NUM_WYCHEPROOF_ECDH_TESTS_INVALID, NUM_WYCHEPROOF_ECDH_TESTS_ACCEPTABLE);
+	/**********************/
+	ext_printf("==== Checking ECDH =========== Imported = %d, Skipped = %d (valid = %d, invalid = %d, acceptable = %d)\n", NUM_WYCHEPROOF_ECDH_TESTS_IMPORTED, NUM_WYCHEPROOF_ECDH_TESTS_SKIPPED, NUM_WYCHEPROOF_ECDH_TESTS_VALID, NUM_WYCHEPROOF_ECDH_TESTS_INVALID, NUM_WYCHEPROOF_ECDH_TESTS_ACCEPTABLE);
 	if(check_wycheproof_ecdh()){
 		goto err;
 	}
 	ext_printf("[+][%d] All ECDH tests went OK! (%d acceptable/valid, %d acceptable/invalid)\n", ecdh_all_performed, ecdh_acceptable_valid, ecdh_acceptable_invalid);
-
-	ext_printf("==== Checking XDH =========== Imported = %d, Skipped = %d (valid = %d, invalid = %d, acceptable= %d)\n", NUM_WYCHEPROOF_XDH_TESTS_IMPORTED, NUM_WYCHEPROOF_XDH_TESTS_SKIPPED, NUM_WYCHEPROOF_XDH_TESTS_VALID, NUM_WYCHEPROOF_XDH_TESTS_INVALID, NUM_WYCHEPROOF_XDH_TESTS_ACCEPTABLE);
+	/**********************/
+	ext_printf("==== Checking XDH =========== Imported = %d, Skipped = %d (valid = %d, invalid = %d, acceptable = %d)\n", NUM_WYCHEPROOF_XDH_TESTS_IMPORTED, NUM_WYCHEPROOF_XDH_TESTS_SKIPPED, NUM_WYCHEPROOF_XDH_TESTS_VALID, NUM_WYCHEPROOF_XDH_TESTS_INVALID, NUM_WYCHEPROOF_XDH_TESTS_ACCEPTABLE);
 	if(check_wycheproof_xdh()){
 		goto err;
 	}
 	ext_printf("[+][%d] All XDH tests went OK! (%d acceptable/valid, %d acceptable/invalid)\n", xdh_all_performed, xdh_acceptable_valid, xdh_acceptable_invalid);
-
-	ext_printf("==== Checking ECDSA =========== Imported = %d, Skipped = %d (valid = %d, invalid = %d, acceptable= %d)\n", NUM_WYCHEPROOF_ECDSA_TESTS_IMPORTED, NUM_WYCHEPROOF_ECDSA_TESTS_SKIPPED, NUM_WYCHEPROOF_ECDSA_TESTS_VALID, NUM_WYCHEPROOF_ECDSA_TESTS_INVALID, NUM_WYCHEPROOF_ECDSA_TESTS_ACCEPTABLE);
+	/**********************/
+	ext_printf("==== Checking ECDSA =========== Imported = %d, Skipped = %d (valid = %d, invalid = %d, acceptable = %d)\n", NUM_WYCHEPROOF_ECDSA_TESTS_IMPORTED, NUM_WYCHEPROOF_ECDSA_TESTS_SKIPPED, NUM_WYCHEPROOF_ECDSA_TESTS_VALID, NUM_WYCHEPROOF_ECDSA_TESTS_INVALID, NUM_WYCHEPROOF_ECDSA_TESTS_ACCEPTABLE);
 	if(check_wycheproof_ecdsa()){
 		goto err;
 	}
 	ext_printf("[+][%d] All ECDSA tests went OK! (%d acceptable/valid, %d acceptable/invalid)\n", ecdsa_all_performed, ecdsa_acceptable_valid, ecdsa_acceptable_invalid);
-
-	ext_printf("==== Checking EDDSA =========== Imported = %d, Skipped = %d (valid = %d, invalid = %d, acceptable= %d)\n", NUM_WYCHEPROOF_EDDSA_TESTS_IMPORTED, NUM_WYCHEPROOF_EDDSA_TESTS_SKIPPED, NUM_WYCHEPROOF_EDDSA_TESTS_VALID, NUM_WYCHEPROOF_EDDSA_TESTS_INVALID, NUM_WYCHEPROOF_EDDSA_TESTS_ACCEPTABLE);
+	/**********************/
+	ext_printf("==== Checking EDDSA =========== Imported = %d, Skipped = %d (valid = %d, invalid = %d, acceptable = %d)\n", NUM_WYCHEPROOF_EDDSA_TESTS_IMPORTED, NUM_WYCHEPROOF_EDDSA_TESTS_SKIPPED, NUM_WYCHEPROOF_EDDSA_TESTS_VALID, NUM_WYCHEPROOF_EDDSA_TESTS_INVALID, NUM_WYCHEPROOF_EDDSA_TESTS_ACCEPTABLE);
 	if(check_wycheproof_eddsa()){
 		goto err;
 	}
 	ext_printf("[+][%d] All EDDSA tests went OK! (%d acceptable/valid, %d acceptable/invalid)\n", eddsa_all_performed, eddsa_acceptable_valid, eddsa_acceptable_invalid);
-
-	ext_printf("==== Checking HMAC =========== Imported = %d, Skipped = %d (valid = %d, invalid = %d, acceptable= %d)\n", NUM_WYCHEPROOF_HMAC_TESTS_IMPORTED, NUM_WYCHEPROOF_HMAC_TESTS_SKIPPED, NUM_WYCHEPROOF_HMAC_TESTS_VALID, NUM_WYCHEPROOF_HMAC_TESTS_INVALID, NUM_WYCHEPROOF_HMAC_TESTS_ACCEPTABLE);
+	/**********************/
+	ext_printf("==== Checking HMAC =========== Imported = %d, Skipped = %d (valid = %d, invalid = %d, acceptable = %d)\n", NUM_WYCHEPROOF_HMAC_TESTS_IMPORTED, NUM_WYCHEPROOF_HMAC_TESTS_SKIPPED, NUM_WYCHEPROOF_HMAC_TESTS_VALID, NUM_WYCHEPROOF_HMAC_TESTS_INVALID, NUM_WYCHEPROOF_HMAC_TESTS_ACCEPTABLE);
 	if(check_wycheproof_hmac()){
 		goto err;
 	}
