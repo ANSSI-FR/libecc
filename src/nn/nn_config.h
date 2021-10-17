@@ -64,6 +64,9 @@
  * rounding.
  */
 
+/* Macro to round a bit length size to a word size */
+#define BIT_LEN_ROUNDING(x, w) ((((x) + (w) - 1) / (w)) * (w))
+
 /*
  * Macro to round a bit length size of a NN value to a word size, and
  * to a size compatible with the arithmetic operations of the library
@@ -126,8 +129,20 @@
 #endif
 
 /************/
+/* NN maximum internal lengths to be "safe" in our computations */
 #define NN_MAX_BYTE_LEN (NN_MAX_BIT_LEN / 8)
 #define NN_MAX_WORD_LEN (NN_MAX_BYTE_LEN / WORD_BYTES)
+/* Usable maximum sizes, to be used by the end user to be "safe" in
+ * all the computations.
+ */
+#define NN_USABLE_MAX_BIT_LEN  (NN_MAX_BASE)
+#define NN_USABLE_MAX_BYTE_LEN ((BIT_LEN_ROUNDING(NN_USABLE_MAX_BIT_LEN, 8)) / 8)
+#define NN_USABLE_MAX_WORD_LEN ((BIT_LEN_ROUNDING(NN_USABLE_MAX_BIT_LEN, WORD_BITS)) / WORD_BITS)
+
+/* Sanity checks */
+#if (NN_USABLE_MAX_BIT_LEN > NN_MAX_BIT_LEN) || (NN_USABLE_MAX_BYTE_LEN > NN_MAX_BYTE_LEN) || (NN_USABLE_MAX_WORD_LEN > NN_MAX_WORD_LEN)
+#error "usable maximum length > internal maximum length, this should not happen!"
+#endif
 
 #if (NN_MAX_WORD_LEN > 255)
 #error "nn.wlen is encoded on an u8. NN_MAX_WORD_LEN cannot be larger than 255!"
