@@ -49,9 +49,9 @@ ATTRIBUTE_WARN_UNUSED_RET static int _nn_cmp_shift(nn_src_t in1, nn_src_t in2, u
 
 	tmp = 0;
 	for (i = in2->wlen; i > 0; i--) {
-		mask = !(tmp & 0x1);
-		tmp += (in1->val[shift + i - 1] > in2->val[i - 1]) & mask;
-		tmp -= (in1->val[shift + i - 1] < in2->val[i - 1]) & mask;
+		mask = (!(tmp & 0x1));
+		tmp += ((in1->val[shift + i - 1] > in2->val[i - 1]) & mask);
+		tmp -= ((in1->val[shift + i - 1] < in2->val[i - 1]) & mask);
 	}
 	(*cmp) = tmp;
 	ret = 0;
@@ -88,11 +88,11 @@ ATTRIBUTE_WARN_UNUSED_RET static int _nn_cnd_sub_shift(int cnd, nn_t out, nn_src
 	 */
 	for (i = 0; i < in->wlen; i++) {
 		tmp = out->val[shift + i] - (in->val[i] & mask);
-		borrow1 = tmp > out->val[shift + i];
-		out->val[shift + i] = tmp - _borrow;
-		borrow2 = out->val[shift + i] > tmp;
+		borrow1 = (tmp > out->val[shift + i]);
+		out->val[shift + i] = (tmp - _borrow);
+		borrow2 = (out->val[shift + i] > tmp);
 		/* There is at most one borrow going out. */
-		_borrow = borrow1 | borrow2;
+		_borrow = (borrow1 | borrow2);
 	}
 
 	(*borrow) = _borrow;
@@ -131,13 +131,13 @@ ATTRIBUTE_WARN_UNUSED_RET static int _nn_submul_word_shift(nn_t out, nn_src_t in
 		 * And add previous borrow.
 		 */
 		prod_low += _borrow;
-		prod_high += prod_low < _borrow;
+		prod_high += (prod_low < _borrow);
 
 		/*
 		 * Subtract computed word at current position in result.
 		 */
-		tmp = out->val[shift + i] - prod_low;
-		_borrow = prod_high + (tmp > out->val[shift + i]);
+		tmp = (out->val[shift + i] - prod_low);
+		_borrow = (prod_high + (tmp > out->val[shift + i]));
 		out->val[shift + i] = tmp;
 	}
 
@@ -216,7 +216,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int _nn_divrem_normalized(nn_t q, nn_t r,
 	 * reciprocal and correct afterward.
 	 */
 	for (i = r->wlen; i > b->wlen; i--) {
-		u8 shift = i - b->wlen - 1;
+		u8 shift = (i - b->wlen - 1);
 
 		/*
 		 * Perform 3-by-2 approximate division:
@@ -230,9 +230,9 @@ ATTRIBUTE_WARN_UNUSED_RET static int _nn_divrem_normalized(nn_t q, nn_t r,
 		WORD_MUL(qstar, ql, rh, v);
 		/* And propagate carries. */
 		qh += ql;
-		qstar += qh < ql;
+		qstar += (qh < ql);
 		qh += rl;
-		rh += qh < rl;
+		rh += (qh < rl);
 		qstar += rh;
 
 		/*
@@ -251,7 +251,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int _nn_divrem_normalized(nn_t q, nn_t r,
 		 * At most one multiprecision correction is needed.
 		 */
 		ret = _nn_cmp_shift(r, b, shift, &cmp); EG(ret, err);
-		small = (!!(r->val[i - 1])) | (cmp >= 0);
+		small = ((!!(r->val[i - 1])) | (cmp >= 0));
 		/* Perform conditional multiprecision correction. */
 		ret = _nn_cnd_sub_shift(small, r, b, shift, &borrow); EG(ret, err);
 		MUST_HAVE(!(r->val[i - 1] != borrow), ret, err);
@@ -411,6 +411,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int _nn_divrem_unshifted(nn_t q, nn_t r, nn_src
 	word_t borrow;
 	a_shift.magic = WORD(0);
 
+	/* Avoid overflow */
 	MUST_HAVE(((a->wlen + BIT_LEN_WORDS(cnt)) < NN_MAX_WORD_LEN), ret, err);
 
 	/* We now know that new_wlen will fit in an u8 */
@@ -432,9 +433,9 @@ ATTRIBUTE_WARN_UNUSED_RET static int _nn_divrem_unshifted(nn_t q, nn_t r, nn_src
 	if (new_wlen == b_wlen) {
 		/* Ensure that a is smaller than b. */
 		ret = nn_cmp(&a_shift, b_norm, &cmp); EG(ret, err);
-		larger =  cmp >= 0;
+		larger = (cmp >= 0);
 		ret = nn_cnd_sub(larger, r, &a_shift, b_norm); EG(ret, err);
-		MUST_HAVE(!nn_cmp(r, b_norm, &cmp) && (cmp < 0), ret, err);
+		MUST_HAVE(((!nn_cmp(r, b_norm, &cmp)) && (cmp < 0)), ret, err);
 
 		/* Set MSW of quotient. */
 		ret = nn_set_wlen(q, new_wlen - b_wlen + 1); EG(ret, err);
@@ -443,9 +444,9 @@ ATTRIBUTE_WARN_UNUSED_RET static int _nn_divrem_unshifted(nn_t q, nn_t r, nn_src
 	} else if (new_wlen > b_wlen) {
 		/* Ensure that most significant part of a is smaller than b. */
 		ret = _nn_cmp_shift(&a_shift, b_norm, new_wlen - b_wlen, &cmp); EG(ret, err);
-		larger = cmp >= 0;
+		larger = (cmp >= 0);
 		ret = _nn_cnd_sub_shift(larger, &a_shift, b_norm, new_wlen - b_wlen, &borrow); EG(ret, err);
-		MUST_HAVE(!_nn_cmp_shift(&a_shift, b_norm, new_wlen - b_wlen, &cmp) && (cmp < 0), ret, err);
+		MUST_HAVE(((!_nn_cmp_shift(&a_shift, b_norm, new_wlen - b_wlen, &cmp)) && (cmp < 0)), ret, err);
 
 		/*
 		 * Perform division with MSP of a smaller than b. This ensures
@@ -565,11 +566,11 @@ err:
 ATTRIBUTE_WARN_UNUSED_RET static int _wcmp_22(word_t a[2], word_t b[2])
 {
 	int mask, ret = 0;
-	ret += a[1] > b[1];
-	ret -= a[1] < b[1];
+	ret += (a[1] > b[1]);
+	ret -= (a[1] < b[1]);
 	mask = !(ret & 0x1);
-	ret += (a[0] > b[0]) & mask;
-	ret -= (a[0] < b[0]) & mask;
+	ret += ((a[0] > b[0]) & mask);
+	ret -= ((a[0] < b[0]) & mask);
 	return ret;
 }
 
@@ -581,11 +582,11 @@ ATTRIBUTE_WARN_UNUSED_RET static word_t _wadd_22(word_t a[2], word_t b[2])
 {
 	word_t carry;
 	a[0] += b[0];
-	carry = a[0] < b[0];
+	carry = (a[0] < b[0]);
 	a[1] += carry;
-	carry = a[1] < carry;
+	carry = (a[1] < carry);
 	a[1] += b[1];
-	carry |= a[1] < b[1];
+	carry |= (a[1] < b[1]);
 	return carry;
 }
 
@@ -596,13 +597,13 @@ ATTRIBUTE_WARN_UNUSED_RET static word_t _wadd_22(word_t a[2], word_t b[2])
 ATTRIBUTE_WARN_UNUSED_RET static word_t _wsub_22(word_t a[2], word_t b[2])
 {
 	word_t borrow, tmp;
-	tmp = a[0] - b[0];
-	borrow = tmp > a[0];
+	tmp = (a[0] - b[0]);
+	borrow = (tmp > a[0]);
 	a[0] = tmp;
-	tmp = a[1] - borrow;
-	borrow = tmp > a[1];
-	a[1] = tmp - b[1];
-	borrow |= a[1] > tmp;
+	tmp = (a[1] - borrow);
+	borrow = (tmp > a[1]);
+	a[1] = (tmp - b[1]);
+	borrow |= (a[1] > tmp);
 	return borrow;
 }
 
@@ -617,18 +618,18 @@ ATTRIBUTE_WARN_UNUSED_RET static word_t _wsub_22(word_t a[2], word_t b[2])
 #define WORD_CND_SUB_21(cnd, ah, al, b) do {				\
 		word_t tmp, mask;					\
 		mask = WORD_MASK_IFNOTZERO((cnd));			\
-		tmp = (al) - ((b) & mask);				\
-		(ah) -= tmp > (al);					\
+		tmp = ((al) - ((b) & mask));				\
+		(ah) -= (tmp > (al));					\
 		(al) = tmp;						\
 	} while (0)
 /* Conditional subtraction of a two limbs number from a two limbs number. */
 #define WORD_CND_SUB_22(cnd, ah, al, bh, bl) do {			\
 		word_t tmp, mask;					\
 		mask = WORD_MASK_IFNOTZERO((cnd));			\
-		tmp = (al) - ((bl) & mask);				\
-		(ah) -= tmp > (al);					\
+		tmp = ((al) - ((bl) & mask));				\
+		(ah) -= (tmp > (al));					\
 		(al) = tmp;						\
-		(ah) -= (bh) & mask;					\
+		(ah) -= ((bh) & mask);					\
 	} while (0)
 
 /*
@@ -656,7 +657,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int _word_divrem(word_t *q, word_t *r, word_t a
 	 */
 
 	KNOWN_FACT(bh != 0, ret, err);
-	qh = rhl[1] / bh;
+	qh = (rhl[1] / bh);
 	qh = WORD_MIN(qh, HWORD_MASK);
 	WORD_MUL(phl[1], phl[0], qh, (b));
 	phl[1] = (WLSHIFT(phl[1], HWORD_BITS) |
@@ -669,7 +670,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int _word_divrem(word_t *q, word_t *r, word_t a
 		WORD_CND_SUB_22(larger, phl[1], phl[0], bh, bl);
 	}
 
-	ret = _wcmp_22(phl, rhl) > 0;
+	ret = (_wcmp_22(phl, rhl) > 0);
 	MUST_HAVE(!(ret), ret, err);
 	IGNORE_RET_VAL(_wsub_22(rhl, phl));
 	MUST_HAVE((WRSHIFT(rhl[1], HWORD_BITS) == 0), ret, err);
@@ -677,7 +678,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int _word_divrem(word_t *q, word_t *r, word_t a
 	/* Compute low part of the quotient. */
 	rm = (WLSHIFT(rhl[1], HWORD_BITS) |
 	      WRSHIFT(rhl[0], HWORD_BITS));
-	ql = rm / bh;
+	ql = (rm / bh);
 	ql = WORD_MIN(ql, HWORD_MASK);
 	WORD_MUL(phl[1], phl[0], ql, (b));
 
@@ -693,8 +694,8 @@ ATTRIBUTE_WARN_UNUSED_RET static int _word_divrem(word_t *q, word_t *r, word_t a
 	/* Set outputs. */
 	MUST_HAVE((rhl[1] == WORD(0)), ret, err);
 	MUST_HAVE(!(rhl[0] >= (b)), ret, err);
-	*q = WLSHIFT(qh, HWORD_BITS) | ql;
-	*r = rhl[0];
+	(*q) = (WLSHIFT(qh, HWORD_BITS) | ql);
+	(*r) = rhl[0];
 	MUST_HAVE(!((word_t) ((*q)*(b) + (*r)) != (al)), ret, err);
 	ret = 0;
 
@@ -813,7 +814,7 @@ int nn_compute_div_coefs(nn_t p_normalized, word_t *p_shift,
 
 	/* p_shift */
 	ret = nn_bitlen(&p, &p_bitlen); EG(ret, err);
-	*p_shift = p_rounded_bitlen - p_bitlen;
+	(*p_shift) = (p_rounded_bitlen - p_bitlen);
 
 	/* p_normalized = p << pshift */
 	ret = nn_lshift(p_normalized, &p, (bitcnt_t)(*p_shift)); EG(ret, err);
@@ -1074,7 +1075,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int _nn_xgcd(nn_t g, nn_t u, nn_t v, nn_src_t a
 		ret = nn_copy(g, a); EG(ret, err);
 		ret = nn_one(u); EG(ret, err);
 		ret = nn_zero(v); EG(ret, err);
-		*sign = 1;
+		(*sign) = 1;
 		goto err;
 	}
 
@@ -1150,7 +1151,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int _nn_xgcd(nn_t g, nn_t u, nn_t v, nn_src_t a
 	}
 
 	/* swap = -1 means u <= 0; = 1 means v <= 0 */
-	*sign = swap ? -1 : 1;
+	(*sign) = swap ? -1 : 1;
 	ret = 0;
 
 err:
@@ -1212,10 +1213,10 @@ int nn_xgcd(nn_t g, nn_t u, nn_t v, nn_src_t a, nn_src_t b, int *sign)
 	if (cmp < 0) {
 		/* If a < b, swap the inputs */
 		ret = _nn_xgcd(g, v, u, b_, a_, &_sign); EG(ret, err);
-		*sign = -(_sign);
+		(*sign) = -(_sign);
 	} else {
 		ret = _nn_xgcd(g, u, v, a_, b_, &_sign); EG(ret, err);
-		*sign = _sign;
+		(*sign) = _sign;
 	}
 
 err:

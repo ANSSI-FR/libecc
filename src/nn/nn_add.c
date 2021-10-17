@@ -79,15 +79,15 @@ ATTRIBUTE_WARN_UNUSED_RET static int _nn_cnd_add(int cnd, nn_t out, nn_src_t in1
 
 	/* Perform addition one word at a time, propagating the carry. */
 	for (i = 0; i < loop_wlen; i++) {
-		tmp = in1->val[i] + (in2->val[i] & mask);
-		carry1 = tmp < in1->val[i];
-		out->val[i] = tmp + _carry;
-		carry2 = out->val[i] < tmp;
+		tmp = (in1->val[i] + (in2->val[i] & mask));
+		carry1 = (tmp < in1->val[i]);
+		out->val[i] = (tmp + _carry);
+		carry2 = (out->val[i] < tmp);
 		/* There is at most one carry going out. */
-		_carry = carry1 | carry2;
+		_carry = (carry1 | carry2);
 	}
 
-	*carry = _carry;
+	(*carry) = _carry;
 
 err:
 	return ret;
@@ -195,8 +195,8 @@ ATTRIBUTE_WARN_UNUSED_RET static int nn_add_word(nn_t out, nn_src_t in1, word_t 
 	/* No matter its value, propagate the carry. */
 	carry = w;
 	for (i = 0; i < n_wlen; i++) {
-		tmp = in1->val[i] + carry;
-		carry = tmp < in1->val[i];
+		tmp = (in1->val[i] + carry);
+		carry = (tmp < in1->val[i]);
 		out->val[i] = tmp;
 	}
 
@@ -267,12 +267,12 @@ int nn_cnd_sub(int cnd, nn_t out, nn_src_t in1, nn_src_t in2)
 
 	/* Perform subtraction one word at a time, propagating the borrow. */
 	for (i = 0; i < loop_wlen; i++) {
-		tmp = in1->val[i] - (in2->val[i] & mask);
-		borrow1 = tmp > in1->val[i];
-		out->val[i] = tmp - borrow;
-		borrow2 = out->val[i] > tmp;
+		tmp = (in1->val[i] - (in2->val[i] & mask));
+		borrow1 = (tmp > in1->val[i]);
+		out->val[i] = (tmp - borrow);
+		borrow2 = (out->val[i] > tmp);
 		/* There is at most one borrow going out. */
-		borrow = borrow1 | borrow2;
+		borrow = (borrow1 | borrow2);
 	}
 
 	/* We only support the in1 >= in2 case */
@@ -307,8 +307,8 @@ int nn_dec(nn_t out, nn_src_t in1)
 	/* Perform subtraction w/ provided word and propagate the borrow */
 	borrow = w;
 	for (i = 0; i < n_wlen; i++) {
-		tmp = in1->val[i] - borrow;
-		borrow = tmp > in1->val[i];
+		tmp = (in1->val[i] - borrow);
+		borrow = (tmp > in1->val[i]);
 		out->val[i] = tmp;
 	}
 
@@ -405,7 +405,7 @@ int nn_mod_sub(nn_t out, nn_src_t in1, nn_src_t in2, nn_src_t p)
 	ret = nn_check_initialized(in1); EG(ret, err);
 	ret = nn_check_initialized(in2); EG(ret, err);
 	ret = nn_check_initialized(p); EG(ret, err);
-	MUST_HAVE((p->wlen < NN_MAX_WORD_LEN), ret, err);
+	MUST_HAVE((p->wlen < NN_MAX_WORD_LEN), ret, err); /* otherwise carry could overflow */
 	SHOULD_HAVE((!nn_cmp(in1, p, &cmp)) && (cmp < 0), ret, err); /* a SHOULD_HAVE as documented above */
 	SHOULD_HAVE((!nn_cmp(in2, p, &cmp)) && (cmp < 0), ret, err); /* a SHOULD_HAVE as documented above */
 
@@ -441,8 +441,8 @@ int nn_mod_dec(nn_t out, nn_src_t in1, nn_src_t p)
 
 	ret = nn_check_initialized(in1); EG(ret, err);
 	ret = nn_check_initialized(p); EG(ret, err);
-	MUST_HAVE(!(p->wlen >= NN_MAX_WORD_LEN), ret, err); /* otherwise carry could overflow */
-	(void)cmp; /* nop to silence possible warning with macro below */
+	MUST_HAVE((p->wlen < NN_MAX_WORD_LEN), ret, err); /* otherwise carry could overflow */
+	FORCE_USED_VAR(cmp); /* nop to silence possible warning with macro below */
 	SHOULD_HAVE((!nn_cmp(in1, p, &cmp)) && (cmp < 0), ret, err);  /* a SHOULD_HAVE; Documented above */
 
 	/* The below trick is used to avoid handling of "negative" numbers. */
