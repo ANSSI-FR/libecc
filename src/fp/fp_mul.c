@@ -14,6 +14,8 @@
  *  See LICENSE file at the root folder of the project.
  */
 #include "fp_mul.h"
+#include "fp_pow.h"
+#include "../nn/nn_add.h"
 #include "../nn/nn_mul.h"
 #include "../nn/nn_div.h"
 #include "../nn/nn_modinv.h"
@@ -42,17 +44,42 @@ int fp_sqr(fp_t out, fp_src_t in)
 	return fp_mul(out, in, in);
 }
 
+/* We use Fermat's little theorem for our inversion in Fp:
+ *    x^(p-1) = 1 mod (p) means that x^(p-2) mod(p) is the modular
+ *    inverse of x mod (p)
+ */
 int fp_inv(fp_t out, fp_src_t in)
 {
-	int ret;
+	int ret, cmp;
+	nn p_minus_two, two;
+	two.magic = p_minus_two.magic = 0;
 
 	ret = fp_check_initialized(in); EG(ret, err);
 	ret = fp_check_initialized(out); EG(ret, err);
 
 	MUST_HAVE(out->ctx == in->ctx, ret, err);
-	ret = nn_modinv(&(out->fp_val), &(in->fp_val), &(in->ctx->p));
+
+	/* For p <= 2, we use our regular nn_modinv */
+	ret = nn_cmp_word(&(in->ctx->p), WORD(2), &cmp); EG(ret, err);
+	if(cmp <= 0){
+		ret = nn_modinv(&(out->fp_val), &(in->fp_val), &(in->ctx->p));
+		goto err;
+	}
+
+	/* Else we compute x^(p-2) mod (p) */
+	ret = nn_init(&p_minus_two, 0); EG(ret, err);
+
+	ret = nn_init(&two, 0); EG(ret, err);
+	ret = nn_set_word_value(&two, WORD(2)); EG(ret, err);
+
+	ret = nn_sub(&p_minus_two, &(in->ctx->p), &two); EG(ret, err);
+
+	ret = fp_pow(out, in, &p_minus_two);
 
 err:
+	nn_uninit(&p_minus_two);
+	nn_uninit(&two);
+
 	return ret;
 }
 
