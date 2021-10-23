@@ -49,7 +49,10 @@ int ecgdsa_init_pub_key(ec_pub_key *out_pub, const ec_priv_key *in_priv)
 
 	/* Y = (x^-1)G */
 	G = &(in_priv->params->ec_gen);
-	ret = nn_modinv(&xinv, &(in_priv->x), &(in_priv->params->ec_gen_order)); EG(ret, err);
+	/* NOTE: we use Fermat little theorem inversion for
+	 * constant time here.
+	 */
+	ret = nn_modinv_fermat(&xinv, &(in_priv->x), &(in_priv->params->ec_gen_order)); EG(ret, err);
 	/* Use blinding with scalar_b when computing point scalar multiplication */
 	ret = prj_pt_mul_blind(&(out_pub->y), &xinv, G); EG(ret, err);
 
@@ -333,7 +336,10 @@ int _ecgdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	ret = nn_mul_mod(&s, x, &tmp, q); EG(ret, err);
 #ifdef USE_SIG_BLINDING
 	/* Unblind s */
-	ret = nn_modinv(&binv, &b, q); EG(ret, err);
+	/* NOTE: we use Fermat little theorem inversion for
+	 * constant time here.
+	 */
+	ret = nn_modinv_fermat(&binv, &b, q); EG(ret, err);
 	ret = nn_mul_mod(&s, &s, &binv, q); EG(ret, err);
 #endif
 	dbg_nn_print("s", &s);

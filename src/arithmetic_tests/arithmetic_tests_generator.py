@@ -727,9 +727,31 @@ def test_FP_ADD_SUB(op):
 test_funcs["FP_ADD"] = test_FP_ADD_SUB
 test_funcs["FP_SUB"] = test_FP_ADD_SUB
 
+def test_FP_DIV(op):
+    """ Generate tests for FP_DIV """
+    # Get random prime
+    # NOTE: since we use Fermat's little theorem for inversion, p
+    # MUST be prime for DIV (while p is relaxed only to be odd for most
+    # of the other operations).
+    nn_p = get_random_bigint(wlen, MAX_INPUT_PARAM_WLEN)
+    while not is_probprime(nn_p):
+        nn_p = get_random_bigint(wlen, MAX_INPUT_PARAM_WLEN)
 
-def test_FP_MUL_SQR_DIV(op):
-    """ Generate tests for FP_MUL_SQR_DIV """
+    # Get two random big num
+    fp_val1 = get_random_bigint(wlen, MAX_INPUT_PARAM_WLEN) % nn_p
+    fp_val2 = get_random_bigint(wlen, MAX_INPUT_PARAM_WLEN) % nn_p
+
+    fp_exp_res = (fp_val1 * modinv(fp_val2, nn_p)) % nn_p
+
+    fmt = "%s cfff %s %s %s %s\n"
+    s = fmt % (op,format_fp_context(nn_p, wlen), format_int_string(fp_exp_res, wlen), format_int_string(fp_val1, wlen), format_int_string(fp_val2, wlen))
+
+    return [ s ]
+
+test_funcs["FP_DIV"] = test_FP_DIV
+
+def test_FP_MUL_SQR(op):
+    """ Generate tests for FP_MUL_SQR """
     # Get random prime
     #nn_p = random.randint(0, nn_maxval)
     #while not is_probprime(nn_p):
@@ -740,10 +762,6 @@ def test_FP_MUL_SQR_DIV(op):
     # Get two random big num
     fp_val1 = get_random_bigint(wlen, MAX_INPUT_PARAM_WLEN) % nn_p
     fp_val2 = get_random_bigint(wlen, MAX_INPUT_PARAM_WLEN) % nn_p
-    # p is not prime, so make sure fp_val2 is invertible
-    if (op == "FP_DIV"):
-        while egcd(fp_val2, nn_p)[0] != 1:
-            fp_val2 = get_random_bigint(wlen, MAX_INPUT_PARAM_WLEN) % nn_p
 
     # Compute the result depending on the operation
     if (op == "FP_MUL") or (op == "FP_SQR"):
@@ -751,8 +769,6 @@ def test_FP_MUL_SQR_DIV(op):
             fp_exp_res = (fp_val1 * fp_val2) % nn_p
         else:
             fp_exp_res = (fp_val1 * fp_val1) % nn_p
-    else:
-        fp_exp_res = (fp_val1 * modinv(fp_val2, nn_p)) % nn_p
 
     if (op == "FP_SQR"):
         fmt = "%s cff %s %s %s\n"
@@ -763,9 +779,8 @@ def test_FP_MUL_SQR_DIV(op):
 
     return [ s ]
 
-test_funcs["FP_MUL"] = test_FP_MUL_SQR_DIV
-test_funcs["FP_SQR"] = test_FP_MUL_SQR_DIV
-test_funcs["FP_DIV"] = test_FP_MUL_SQR_DIV
+test_funcs["FP_MUL"] = test_FP_MUL_SQR
+test_funcs["FP_SQR"] = test_FP_MUL_SQR
 
 
 def test_FP_MUL_REDC1(op):

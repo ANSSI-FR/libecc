@@ -192,7 +192,10 @@ int ecgdsa_sign_raw(struct ec_sign_context *ctx, const u8 *input, u8 inputlen, u
 	ret = nn_mul_mod(&s, x, &tmp2, q); EG(ret, err);
 #ifdef USE_SIG_BLINDING
 	/* Unblind s */
-	ret = nn_modinv(&binv, &b, q); EG(ret, err);
+        /* NOTE: we use Fermat little theorem inversion for
+         * constant time here.
+         */
+	ret = nn_modinv_fermat(&binv, &b, q); EG(ret, err);
 	ret = nn_mul_mod(&s, &s, &binv, q); EG(ret, err);
 #endif
 	dbg_nn_print("s", &s);

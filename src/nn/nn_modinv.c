@@ -18,6 +18,7 @@
 #include "nn_mul.h"
 #include "nn_logical.h"
 #include "nn_add.h"
+#include "nn_mod_pow.h"
 #include "nn.h"
 
 /*
@@ -419,6 +420,90 @@ int nn_modinv_word(nn_t out, word_t w, nn_src_t m)
 
 err:
 	nn_uninit(&nn_tmp);
+
+	return ret;
+}
+
+
+/*
+ * Invert NN x modulo m using Fermat's little theorem for our inversion:
+ *
+ *    p prime means that:
+ *    x^(p-1) = 1 mod (p)
+ *    which means that x^(p-2) mod(p) is the modular inverse of x mod (p)
+ *
+ * NOTE: the input hypothesis is that p is prime.
+ *
+ * The function supports aliasing.
+ */
+int nn_modinv_fermat(nn_t out, nn_src_t x, nn_src_t p)
+{
+	int ret, cmp;
+	nn p_minus_two, two;
+
+	ret = nn_check_initialized(x); EG(ret, err);
+	ret = nn_check_initialized(p); EG(ret, err);
+
+	/* For p <= 2, we use regular modinv */
+	ret = nn_cmp_word(p, WORD(2), &cmp); EG(ret, err);
+        if(cmp <= 0){
+		ret = nn_modinv(out, x, p);
+		goto err;
+        }
+
+	/* Else we compute x^(p-2) mod (p) */
+	ret = nn_init(&p_minus_two, 0); EG(ret, err);
+
+	ret = nn_init(&two, 0); EG(ret, err);
+	ret = nn_set_word_value(&two, WORD(2)); EG(ret, err);
+
+	ret = nn_sub(&p_minus_two, p, &two); EG(ret, err);
+
+	ret = nn_mod_pow(out, x, &p_minus_two, p);
+
+err:
+	nn_uninit(&p_minus_two);
+	nn_uninit(&two);
+
+	return ret;
+}
+
+/*
+ * Invert NN x modulo m using Fermat's little theorem for our inversion.
+ *
+ * This is a version with already (pre)computed Montgomery coefficients.
+ *
+ * NOTE: the input hypothesis is that p is prime.
+ *
+ */
+int nn_modinv_fermat_redc(nn_t out, nn_src_t x, nn_src_t p, nn_src_t r, nn_src_t r_square, word_t mpinv)
+{
+	int ret, cmp;
+	nn p_minus_two, two;
+
+	ret = nn_check_initialized(x); EG(ret, err);
+	ret = nn_check_initialized(p); EG(ret, err);
+
+	/* For p <= 2, we use regular modinv */
+	ret = nn_cmp_word(p, WORD(2), &cmp); EG(ret, err);
+        if(cmp <= 0){
+		ret = nn_modinv(out, x, p);
+		goto err;
+        }
+
+	/* Else we compute x^(p-2) mod (p) */
+	ret = nn_init(&p_minus_two, 0); EG(ret, err);
+
+	ret = nn_init(&two, 0); EG(ret, err);
+	ret = nn_set_word_value(&two, WORD(2)); EG(ret, err);
+
+	ret = nn_sub(&p_minus_two, p, &two); EG(ret, err);
+
+	ret = nn_mod_pow_redc(out, x, &p_minus_two, p, r, r_square, mpinv);
+
+err:
+	nn_uninit(&p_minus_two);
+	nn_uninit(&two);
 
 	return ret;
 }

@@ -1441,7 +1441,10 @@ err1:
 	ret = nn_get_random_mod(&b, q); EG(ret, err);
 
 	dbg_nn_print("b", &b);
-	ret = nn_modinv(&binv, &b, q); EG(ret, err);
+        /* NOTE: we use Fermat little theorem inversion for
+         * constant time here.
+         */
+	ret = nn_modinv_fermat(&binv, &b, q); EG(ret, err);
 	/* If we use blinding, multiply by b */
 	ret = nn_mul_mod(&S, &S, &b, q); EG(ret, err);
 	ret = nn_mul_mod(&r, &r, &b, q); EG(ret, err);
@@ -1766,7 +1769,10 @@ err1:
 	 * a random value b in ]0,q[ */
 	ret = nn_get_random_mod(&b, q); EG(ret, err);
 	dbg_nn_print("b", &b);
-	ret = nn_modinv(&binv, &b, q); EG(ret, err);
+        /* NOTE: we use Fermat little theorem inversion for
+         * constant time here.
+         */
+	ret = nn_modinv_fermat(&binv, &b, q); EG(ret, err);
 	/* If we use blinding, multiply by b */
 	ret = nn_mul_mod(&S, &S, &b, q); EG(ret, err);
 	ret = nn_mul_mod(&r, &r, &b, q); EG(ret, err);

@@ -14,6 +14,7 @@
  *  See LICENSE file at the root folder of the project.
  */
 #include "../nn/nn_logical.h"
+#include "../nn/nn_mod_pow.h"
 #include "fp_mul_redc1.h"
 #include "fp_pow.h"
 #include "fp.h"
@@ -25,61 +26,10 @@
  *
  * Returns 0 on success, -1 on error.
  */
-#define TAB_ENTRIES 2
 ATTRIBUTE_WARN_UNUSED_RET static int _fp_pow(fp_t out, fp_src_t base, nn_src_t exp)
 {
-	fp base_monty, mul_monty, sqr_monty, out_monty, r;
-	fp_src_t tab_monty[TAB_ENTRIES];
-	bitcnt_t explen;
-	u8 expbit;
-	int ret, iszero;
-	base_monty.magic = mul_monty.magic = sqr_monty.magic = out_monty.magic = r.magic = WORD(0);
-
-	/* Exponentiating to zero provides 1 */
-	ret = nn_iszero(exp, &iszero); EG(ret, err);
-	if (iszero) {
-		ret = fp_one(out);
-		goto err;
-	}
-
-	ret = fp_init(&base_monty, out->ctx); EG(ret, err);
-	ret = fp_init(&mul_monty, out->ctx); EG(ret, err);
-	ret = fp_init(&sqr_monty, out->ctx); EG(ret, err);
-	ret = fp_init(&out_monty, out->ctx); EG(ret, err);
-	ret = fp_init(&r, out->ctx);  EG(ret, err);
-	ret = fp_set_nn(&r, &(out->ctx->r)); EG(ret, err);
-
-	ret = nn_bitlen(exp, &explen); EG(ret, err);
-
-	/* Sanity check */
-	MUST_HAVE((explen > 0), ret, err);
-
-	explen -= (bitcnt_t)1;
-
-	ret = fp_redcify(&base_monty, base); EG(ret, err);
-	ret = nn_copy(&(out_monty.fp_val), &(base_monty.fp_val)); EG(ret, err);
-
-	tab_monty[0] = &r;
-	tab_monty[1] = &base_monty;
-
-	while (explen > 0) {
-		explen -= (bitcnt_t)1;
-
-		ret = nn_getbit(exp, explen, &expbit); EG(ret, err);
-		ret = fp_sqr_redc1(&sqr_monty, &out_monty); EG(ret, err);
-		ret = fp_tabselect(&mul_monty, expbit, tab_monty, TAB_ENTRIES); EG(ret, err);
-		ret = fp_mul_redc1(&out_monty, &sqr_monty, &mul_monty); EG(ret, err);
-	}
-	ret = fp_unredcify(out, &out_monty);
-
-err:
-	fp_uninit(&base_monty);
-	fp_uninit(&mul_monty);
-	fp_uninit(&sqr_monty);
-	fp_uninit(&out_monty);
-	fp_uninit(&r);
-
-	return ret;
+	/* Use the lower layer modular exponentiation */
+	return nn_mod_pow_redc(&(out->fp_val), &(base->fp_val), exp, &(out->ctx->p), &(out->ctx->r), &(out->ctx->r_square), out->ctx->mpinv);
 }
 
 /*

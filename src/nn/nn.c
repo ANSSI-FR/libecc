@@ -537,3 +537,48 @@ int nn_export_to_buf(u8 *buf, u16 buflen, nn_src_t in_nn)
 err:
 	return ret;
 }
+
+/*
+ * Given a table 'tab' pointing to a set of 'tabsize' NN elements, the
+ * function copies the value of element at position idx (idx < tabsize)
+ * in 'out' parameters. Masking is used to avoid leaking which element
+ * was copied.
+ *
+ * Note that the main copying loop is done on the maximum bits for all
+ * NN elements and not based on the specific effective size of each
+ * NN elements in 'tab'
+ *
+ * Returns 0 on success, -1 on error.
+ */
+int nn_tabselect(nn_t out, u8 idx, nn_src_t *tab, u8 tabsize)
+{
+	u8 i, k;
+	word_t mask;
+	int ret;
+
+	/* Basic sanity checks */
+	MUST_HAVE(((tab != NULL) && (idx < tabsize)), ret, err);
+
+	ret = nn_check_initialized(out); EG(ret, err);
+
+	/* Zeroize out and enforce its size. */
+	ret = nn_zero(out); EG(ret, err);
+
+	out->wlen = 0;
+
+	for (k = 0; k < tabsize; k++) {
+		/* Check current element is initialized */
+		ret = nn_check_initialized(tab[k]); EG(ret, err);
+
+		mask = WORD_MASK_IFNOTZERO(idx == k);
+
+		out->wlen |= ((tab[k]->wlen) & mask);
+
+		for (i = 0; i < NN_MAX_WORD_LEN; i++) {
+			out->val[i] |= (tab[k]->val[i] & mask);
+		}
+	}
+
+err:
+	return ret;
+}
