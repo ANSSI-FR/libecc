@@ -54,8 +54,8 @@ int eckcdsa_init_pub_key(ec_pub_key *out_pub, const ec_priv_key *in_priv)
 
 	/* Y = (x^-1)G */
 	G = &(in_priv->params->ec_gen);
-        /* NOTE: we use Fermat little theorem inversion for
-         * constant time here.
+        /* NOTE: we use Fermat's little theorem inversion for
+         * constant time here. This is possible since q is prime.
          */
 	ret = nn_modinv_fermat(&xinv, &(in_priv->x), q); EG(ret, err);
 
@@ -437,8 +437,8 @@ int _eckcdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	/* In case of blinding, we compute (k*b - e*b) * x * b^-1 */
 	ret = nn_mul_mod(&k, &k, &b, q); EG(ret, err);
 	ret = nn_mul_mod(&e, &e, &b, q); EG(ret, err);
-        /* NOTE: we use Fermat little theorem inversion for
-         * constant time here.
+        /* NOTE: we use Fermat's little theorem inversion for
+         * constant time here. This is possible since q is prime.
          */
 	ret = nn_modinv_fermat(&binv, &b, q); EG(ret, err);
 #endif /* USE_SIG_BLINDING */

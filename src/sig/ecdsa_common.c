@@ -531,8 +531,8 @@ int __ecdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen,
 	ret = nn_mul_mod(&k, &k, &b, q); EG(ret, err);
 #endif
 	/* Compute k^-1 mod q */
-	/* NOTE: we use Fermat little theorem inversion for
-	 * constant time here.
+	/* NOTE: we use Fermat's little theorem inversion for
+	 * constant time here. This is possible since q is prime.
 	 */
 	ret = nn_modinv_fermat(&kinv, &k, q); EG(ret, err);
 

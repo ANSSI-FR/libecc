@@ -349,8 +349,8 @@ int __ecsdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 
 #ifdef USE_SIG_BLINDING
 	/* Unblind s */
-        /* NOTE: we use Fermat little theorem inversion for
-         * constant time here.
+        /* NOTE: we use Fermat's little theorem inversion for
+         * constant time here. This is possible since q is prime.
          */
 	ret = nn_modinv_fermat(&binv, &b, q); EG(ret, err);
 	ret = nn_mul_mod(&s, &s, &binv, q); EG(ret, err);

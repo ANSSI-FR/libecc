@@ -60,6 +60,7 @@ int fp_inv(fp_t out, fp_src_t in)
 
 	MUST_HAVE(out->ctx == in->ctx, ret, err);
 
+	/* We can use the Fermat inversion as p is surely prime here */
 	ret = nn_modinv_fermat_redc(&(out->fp_val), &(in->fp_val), &(in->ctx->p), &(in->ctx->r), &(in->ctx->r_square), in->ctx->mpinv);
 
 err:

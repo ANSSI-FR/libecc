@@ -1441,8 +1441,8 @@ err1:
 	ret = nn_get_random_mod(&b, q); EG(ret, err);
 
 	dbg_nn_print("b", &b);
-        /* NOTE: we use Fermat little theorem inversion for
-         * constant time here.
+        /* NOTE: we use Fermat's little theorem inversion for
+         * constant time here. This is possible since q is prime.
          */
 	ret = nn_modinv_fermat(&binv, &b, q); EG(ret, err);
 	/* If we use blinding, multiply by b */
@@ -1769,8 +1769,8 @@ err1:
 	 * a random value b in ]0,q[ */
 	ret = nn_get_random_mod(&b, q); EG(ret, err);
 	dbg_nn_print("b", &b);
-        /* NOTE: we use Fermat little theorem inversion for
-         * constant time here.
+        /* NOTE: we use Fermat's little theorem inversion for
+         * constant time here. This is possible since q is prime.
          */
 	ret = nn_modinv_fermat(&binv, &b, q); EG(ret, err);
 	/* If we use blinding, multiply by b */

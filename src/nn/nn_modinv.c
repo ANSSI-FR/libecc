@@ -433,6 +433,8 @@ err:
  *    which means that x^(p-2) mod(p) is the modular inverse of x mod (p)
  *
  * NOTE: the input hypothesis is that p is prime.
+ * XXX WARNING: using this function with p not prime will produce wrong
+ * results without triggering an error!
  *
  * The function supports aliasing.
  */
@@ -474,7 +476,10 @@ err:
  * This is a version with already (pre)computed Montgomery coefficients.
  *
  * NOTE: the input hypothesis is that p is prime.
+ * XXX WARNING: using this function with p not prime will produce wrong
+ * results without triggering an error!
  *
+ * The function supports aliasing.
  */
 int nn_modinv_fermat_redc(nn_t out, nn_src_t x, nn_src_t p, nn_src_t r, nn_src_t r_square, word_t mpinv)
 {

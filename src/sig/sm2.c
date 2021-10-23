@@ -420,8 +420,8 @@ int _sm2_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	dbg_nn_print("b", &b);
 	ret = nn_inc(&tmp2, x); EG(ret, err);
 	ret = nn_mul_mod(&tmp2, &tmp2, &b, q); EG(ret, err);
-        /* NOTE: we use Fermat little theorem inversion for
-         * constant time here.
+        /* NOTE: we use Fermat's little theorem inversion for
+         * constant time here. This is possible since q is prime.
          */
 	ret = nn_modinv_fermat(&tmp, &tmp2, q); EG(ret, err); /* tmp = (b*(1 + x))^(-1) */
 	dbg_nn_print("(b*(1 + x))^(-1)", &tmp);
@@ -433,8 +433,8 @@ int _sm2_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	dbg_nn_print("s", &s);
 #else
 	ret = nn_inc(&tmp2, x); EG(ret, err);
-        /* NOTE: we use Fermat little theorem inversion for
-         * constant time here.
+        /* NOTE: we use Fermat's little theorem inversion for
+         * constant time here. This is possible since q is prime.
          */
 	ret = nn_modinv_fermat(&tmp, &tmp2, q); EG(ret, err); /* tmp = (1 + x)^(-1) */
 	dbg_nn_print("(1 + x)^(-1)", &tmp);
