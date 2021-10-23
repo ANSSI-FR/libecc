@@ -24,6 +24,7 @@
 #include "nn/nn_mul_redc1.h"
 #include "nn/nn_div_public.h"
 #include "nn/nn_modinv.h"
+#include "nn/nn_mod_pow.h"
 #include "nn/nn_rand.h"
 #include "utils/print_nn.h"
 
