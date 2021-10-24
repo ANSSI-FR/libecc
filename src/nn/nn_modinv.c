@@ -426,6 +426,42 @@ err:
 
 
 /*
+ * Internal function for nn_modinv_fermat and nn_modinv_fermat_redc used
+ * hereafter.
+ */
+ATTRIBUTE_WARN_UNUSED_RET static int _nn_modinv_fermat_common(nn_t out, nn_src_t x, nn_src_t p, nn_t p_minus_two, nn_t two, int *lesstwo)
+{
+	int ret, cmp;
+
+	/* Sanity checks on inputs */
+	ret = nn_check_initialized(x); EG(ret, err);
+	ret = nn_check_initialized(p); EG(ret, err);
+	/* NOTE: since this is an internal function, we are ensured that p_minus_two,
+	 * two and regular are OK.
+	 */
+
+	/* For p <= 2, we use regular modinv */
+	(*lesstwo) = 0;
+	ret = nn_cmp_word(p, WORD(2), &cmp); EG(ret, err);
+        if(cmp <= 0){
+		ret = nn_modinv(out, x, p);
+		(*lesstwo) = 1;
+		goto err;
+        }
+
+	/* Else we compute x^(p-2) mod (p) */
+	ret = nn_init(p_minus_two, 0); EG(ret, err);
+
+	ret = nn_init(two, 0); EG(ret, err);
+	ret = nn_set_word_value(two, WORD(2)); EG(ret, err);
+
+	ret = nn_sub(p_minus_two, p, two);
+
+err:
+	return ret;
+}
+
+/*
  * Invert NN x modulo m using Fermat's little theorem for our inversion:
  *
  *    p prime means that:
@@ -440,28 +476,15 @@ err:
  */
 int nn_modinv_fermat(nn_t out, nn_src_t x, nn_src_t p)
 {
-	int ret, cmp;
+	int ret, lesstwo;
 	nn p_minus_two, two;
 
-	ret = nn_check_initialized(x); EG(ret, err);
-	ret = nn_check_initialized(p); EG(ret, err);
+	/* Call our helper */
+	ret = _nn_modinv_fermat_common(out, x, p, &p_minus_two, &two, &lesstwo); EG(ret, err);
 
-	/* For p <= 2, we use regular modinv */
-	ret = nn_cmp_word(p, WORD(2), &cmp); EG(ret, err);
-        if(cmp <= 0){
-		ret = nn_modinv(out, x, p);
-		goto err;
-        }
-
-	/* Else we compute x^(p-2) mod (p) */
-	ret = nn_init(&p_minus_two, 0); EG(ret, err);
-
-	ret = nn_init(&two, 0); EG(ret, err);
-	ret = nn_set_word_value(&two, WORD(2)); EG(ret, err);
-
-	ret = nn_sub(&p_minus_two, p, &two); EG(ret, err);
-
-	ret = nn_mod_pow(out, x, &p_minus_two, p);
+	if(!lesstwo){
+		ret = nn_mod_pow(out, x, &p_minus_two, p);
+	}
 
 err:
 	nn_uninit(&p_minus_two);
@@ -483,28 +506,15 @@ err:
  */
 int nn_modinv_fermat_redc(nn_t out, nn_src_t x, nn_src_t p, nn_src_t r, nn_src_t r_square, word_t mpinv)
 {
-	int ret, cmp;
+	int ret, lesstwo;
 	nn p_minus_two, two;
 
-	ret = nn_check_initialized(x); EG(ret, err);
-	ret = nn_check_initialized(p); EG(ret, err);
+	/* Call our helper */
+	ret = _nn_modinv_fermat_common(out, x, p, &p_minus_two, &two, &lesstwo); EG(ret, err);
 
-	/* For p <= 2, we use regular modinv */
-	ret = nn_cmp_word(p, WORD(2), &cmp); EG(ret, err);
-        if(cmp <= 0){
-		ret = nn_modinv(out, x, p);
-		goto err;
-        }
-
-	/* Else we compute x^(p-2) mod (p) */
-	ret = nn_init(&p_minus_two, 0); EG(ret, err);
-
-	ret = nn_init(&two, 0); EG(ret, err);
-	ret = nn_set_word_value(&two, WORD(2)); EG(ret, err);
-
-	ret = nn_sub(&p_minus_two, p, &two); EG(ret, err);
-
-	ret = nn_mod_pow_redc(out, x, &p_minus_two, p, r, r_square, mpinv);
+	if(!lesstwo){
+		ret = nn_mod_pow_redc(out, x, &p_minus_two, p, r, r_square, mpinv);
+	}
 
 err:
 	nn_uninit(&p_minus_two);
