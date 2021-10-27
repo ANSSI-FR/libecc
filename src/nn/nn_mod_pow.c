@@ -21,6 +21,12 @@
 
 /*
  * NOT constant time with regard to the bitlength of exp.
+ *
+ * Reduces the base modulo mod if it is not already reduced,
+ * which is also a small divergence wrt constant time leaking
+ * the information that base <= mod or not: please use with care
+ * in the callers if this information is sensitive.
+ *
  * Aliasing not supported. Expects caller to check parameters
  * have been initialized. This is an internal helper.
  *
