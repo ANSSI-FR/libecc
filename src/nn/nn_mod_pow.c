@@ -14,6 +14,7 @@
  *  See LICENSE file at the root folder of the project.
  */
 #include "nn_mul_redc1.h"
+#include "nn_div.h"
 #include "nn_logical.h"
 #include "nn_mod_pow.h"
 #include "nn.h"
@@ -35,7 +36,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int _nn_mod_pow_redc(nn_t out, nn_src_t base, n
 	nn_src_t tab_monty[TAB_ENTRIES];
 	bitcnt_t explen;
  	u8 expbit;
-	int ret, iszero;
+	int ret, iszero, cmp;
 	base_monty.magic = mul_monty.magic = sqr_monty.magic = out_monty.magic = one.magic = WORD(0);
 
 	MUST_HAVE((out != NULL), ret, err);
@@ -65,8 +66,17 @@ ATTRIBUTE_WARN_UNUSED_RET static int _nn_mod_pow_redc(nn_t out, nn_src_t base, n
 
 	explen -= (bitcnt_t)1;
 
-	/* Redcify the base */
-	ret = nn_mul_redc1(&base_monty, base, r_square, mod, mpinv); EG(ret, err);
+	/* Reduce the base if necessary */
+	ret = nn_cmp(base, mod, &cmp); EG(ret, err);
+	if(cmp >= 0){
+		ret = nn_mod(&base_monty, base, mod); EG(ret, err);
+		/* Redcify the base */
+		ret = nn_mul_redc1(&base_monty, &base_monty, r_square, mod, mpinv); EG(ret, err);
+	}
+	else{
+		/* Redcify the base */
+		ret = nn_mul_redc1(&base_monty, base, r_square, mod, mpinv); EG(ret, err);
+	}
 
 	/* Copy base in out */
 	ret = nn_copy(&out_monty, &base_monty); EG(ret, err);
