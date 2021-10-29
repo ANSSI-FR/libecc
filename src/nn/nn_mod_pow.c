@@ -30,7 +30,7 @@
  * Aliasing not supported. Expects caller to check parameters
  * have been initialized. This is an internal helper.
  *
- * Compute (base ** exp) mod (mod) using a square and multiply algorithm
+ * Compute (base ** exp) mod (mod) using a Montgomery Ladder algorithm
  * with Montgomery redcification, hence the Montgomery coefficients as input.
  *
  * Returns 0 on success, -1 on error.
@@ -38,12 +38,12 @@
 #define TAB_ENTRIES 2
 ATTRIBUTE_WARN_UNUSED_RET static int _nn_mod_pow_redc(nn_t out, nn_src_t base, nn_src_t exp, nn_src_t mod, nn_src_t r, nn_src_t r_square, word_t mpinv)
 {
-	nn base_monty, mul_monty, sqr_monty, out_monty, one;
-	nn_src_t tab_monty[TAB_ENTRIES];
+	nn base_monty, one, r_monty;
+	nn_t tab_monty[TAB_ENTRIES];
 	bitcnt_t explen;
  	u8 expbit;
 	int ret, iszero, cmp;
-	base_monty.magic = mul_monty.magic = sqr_monty.magic = out_monty.magic = one.magic = WORD(0);
+	base_monty.magic = one.magic = r_monty.magic = WORD(0);
 
 	MUST_HAVE((out != NULL), ret, err);
 
@@ -58,9 +58,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int _nn_mod_pow_redc(nn_t out, nn_src_t base, n
 	}
 
 	ret = nn_init(&base_monty, 0); EG(ret, err);
-	ret = nn_init(&mul_monty, 0); EG(ret, err);
-	ret = nn_init(&sqr_monty, 0); EG(ret, err);
-	ret = nn_init(&out_monty, 0); EG(ret, err);
+	ret = nn_init(&r_monty, 0); EG(ret, err);
 
 	ret = nn_init(&one, 0); EG(ret, err);
 	ret = nn_one(&one); EG(ret, err);
@@ -69,8 +67,6 @@ ATTRIBUTE_WARN_UNUSED_RET static int _nn_mod_pow_redc(nn_t out, nn_src_t base, n
 
 	/* Sanity check */
 	MUST_HAVE((explen > 0), ret, err);
-
-	explen -= (bitcnt_t)1;
 
 	/* Reduce the base if necessary */
 	ret = nn_cmp(base, mod, &cmp); EG(ret, err);
@@ -84,32 +80,30 @@ ATTRIBUTE_WARN_UNUSED_RET static int _nn_mod_pow_redc(nn_t out, nn_src_t base, n
 		ret = nn_mul_redc1(&base_monty, base, r_square, mod, mpinv); EG(ret, err);
 	}
 
-	/* Copy base in out */
-	ret = nn_copy(&out_monty, &base_monty); EG(ret, err);
-
-	tab_monty[0] = r;
+	/* We implement the Montgomery ladder exponentiation with tegisters R0 and R1,
+	 * tab_monty[0] is R0 and tab_monty[1] is R1.
+	 */
+	ret = nn_copy(&r_monty, r); EG(ret, err);
+	tab_monty[0] = &r_monty; /* r is redcified one */
 	tab_monty[1] = &base_monty;
 
-	/* Now proceed with the square and multiply always algorithm */
+	/* Now proceed with the Montgomery Ladder algorithm.
+	 */
 	while (explen > 0) {
 		explen -= (bitcnt_t)1;
-
+		/* Get the exponent bit */
 		ret = nn_getbit(exp, explen, &expbit); EG(ret, err);
-		/* Square */
-		ret = nn_mul_redc1(&sqr_monty, &out_monty, &out_monty, mod, mpinv); EG(ret, err);
-		/* Optional swap */
-		ret = nn_tabselect(&mul_monty, expbit, tab_monty, TAB_ENTRIES); EG(ret, err);
 		/* Multiply */
-		ret = nn_mul_redc1(&out_monty, &sqr_monty, &mul_monty, mod, mpinv); EG(ret, err);
+		ret = nn_mul_redc1(tab_monty[(~expbit) & 0x1], tab_monty[0], tab_monty[1], mod, mpinv); EG(ret, err);
+		/* Square */
+		ret = nn_mul_redc1(tab_monty[expbit], tab_monty[expbit], tab_monty[expbit], mod, mpinv); EG(ret, err);
 	}
 	/* Now unredcify */
-	ret = nn_mul_redc1(out, &out_monty, &one, mod, mpinv);
+	ret = nn_mul_redc1(out, tab_monty[0], &one, mod, mpinv);
 
 err:
 	nn_uninit(&base_monty);
-	nn_uninit(&mul_monty);
-	nn_uninit(&sqr_monty);
-	nn_uninit(&out_monty);
+	nn_uninit(&r_monty);
 	nn_uninit(&one);
 
 	return ret;
@@ -165,7 +159,7 @@ err:
  * Aliasing not supported. Expects caller to check parameters
  * have been initialized. This is an internal helper.
  *
- * Compute (base ** exp) mod (mod) using a square and multiply algorithm.
+ * Compute (base ** exp) mod (mod) using a Montgomery Ladder algorithm.
  * Internally, this computes Montgomery coefficients and uses the redc
  * function.
  *
