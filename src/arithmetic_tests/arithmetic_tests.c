@@ -684,7 +684,7 @@ static char global_parameters[MAX_PARAMS];
 		SET_PARAMETER_PRETTY_NAME(2, "input", "output"), NO_RET, 2,
 		NN_T_GENERIC_OUT(1), NN_T_GENERIC_IN(0))
 
-/* Testing modular add, sub, inc, dec (inputs are supposed < p) */
+/* Testing modular add, sub, inc, dec, mul, exp (inputs are supposed < p except for exp) */
 	GENERIC_TEST_NN(nn_mod_add, NN_MOD_ADD, "+%", nn_mod_add, "nnnn", "iiio",
 		SET_PARAMETER_PRETTY_NAME(4, "input1", "input2", "modulo", "output"),
 		NO_RET, 4, NN_T_GENERIC_OUT(3), NN_T_GENERIC_IN(0),
@@ -701,6 +701,14 @@ static char global_parameters[MAX_PARAMS];
 		SET_PARAMETER_PRETTY_NAME(3, "input1", "modulo", "output"),
 		NO_RET, 3, NN_T_GENERIC_OUT(2), NN_T_GENERIC_IN(0),
 		NN_T_GENERIC_IN(1))
+	GENERIC_TEST_NN(nn_mod_mul, NN_MOD_MUL, "*%", nn_mod_mul, "nnnn", "iiio",
+		SET_PARAMETER_PRETTY_NAME(4, "input1", "input2", "modulo", "output"),
+		NO_RET, 4, NN_T_GENERIC_OUT(3), NN_T_GENERIC_IN(0),
+		NN_T_GENERIC_IN(1), NN_T_GENERIC_IN(2))
+	GENERIC_TEST_NN(nn_mod_pow, NN_MOD_POW, "exp%", nn_mod_pow, "nnnn", "iiio",
+		SET_PARAMETER_PRETTY_NAME(4, "base", "exp", "modulo", "output"),
+		NO_RET, 4, NN_T_GENERIC_OUT(3), NN_T_GENERIC_IN(0),
+		NN_T_GENERIC_IN(1), NN_T_GENERIC_IN(2))
 
 
 /* Testing mul */
@@ -796,7 +804,7 @@ static char global_parameters[MAX_PARAMS];
 	     FP_T_GENERIC_OUT(1), FP_T_GENERIC_IN(2))
 
 /* Testing exponentiation in F_p */
-	GENERIC_TEST_FP(fp_pow, FP_POW, "^", fp_pow, "cffn", "ioii",
+	GENERIC_TEST_FP(fp_pow, FP_POW, "exp", fp_pow, "cffn", "ioii",
 	     SET_PARAMETER_PRETTY_NAME(4, "p", "pow", "input", "exp"),
 	     NO_RET, 0, 2,
 	     FP_T_GENERIC_OUT(1), FP_T_GENERIC_IN(2), NN_T_GENERIC_IN(3))
