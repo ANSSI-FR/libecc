@@ -1358,7 +1358,7 @@ int _eddsa_sign_finalize_pre_hash(struct ec_sign_context *ctx, u8 *sig, u8 sigle
 
 		ret = nn_init(&r_tmp, 0); EG(ret, err1);
 		ret = nn_modinv_word(&r_tmp, WORD(4), q); EG(ret, err1);
-		ret = nn_mul_mod(&r_tmp, &r_tmp, &r, q); EG(ret, err1);
+		ret = nn_mod_mul(&r_tmp, &r_tmp, &r, q); EG(ret, err1);
 #ifdef USE_SIG_BLINDING
 		ret = prj_pt_mul_blind(&R, &r_tmp, G);
 #else
@@ -1446,16 +1446,16 @@ err1:
          */
 	ret = nn_modinv_fermat(&binv, &b, q); EG(ret, err);
 	/* If we use blinding, multiply by b */
-	ret = nn_mul_mod(&S, &S, &b, q); EG(ret, err);
-	ret = nn_mul_mod(&r, &r, &b, q); EG(ret, err);
+	ret = nn_mod_mul(&S, &S, &b, q); EG(ret, err);
+	ret = nn_mod_mul(&r, &r, &b, q); EG(ret, err);
 #endif
 	/* Multiply by the secret */
-	ret = nn_mul_mod(&S, &S, &s, q); EG(ret, err);
+	ret = nn_mod_mul(&S, &S, &s, q); EG(ret, err);
 	/* Add to r */
 	ret = nn_mod_add(&S, &S, &r, q); EG(ret, err);
 #ifdef USE_SIG_BLINDING
 	/* Unblind the result */
-	ret = nn_mul_mod(&S, &S, &binv, q); EG(ret, err);
+	ret = nn_mod_mul(&S, &S, &binv, q); EG(ret, err);
 #endif
 	/* Store our S in the context as an encoded buffer */
 	MUST_HAVE((s_len <= (siglen - r_len)), ret, err);
@@ -1680,7 +1680,7 @@ int _eddsa_sign(u8 *sig, u8 siglen, const ec_key_pair *key_pair,
 
 		ret = nn_init(&r_tmp, 0); EG(ret, err1);
 		ret = nn_modinv_word(&r_tmp, WORD(4), q); EG(ret, err1);
-		ret = nn_mul_mod(&r_tmp, &r_tmp, &r, q); EG(ret, err1);
+		ret = nn_mod_mul(&r_tmp, &r_tmp, &r, q); EG(ret, err1);
 #ifdef USE_SIG_BLINDING
 		ret = prj_pt_mul_blind(&R, &r_tmp, G);
 #else
@@ -1774,18 +1774,18 @@ err1:
          */
 	ret = nn_modinv_fermat(&binv, &b, q); EG(ret, err);
 	/* If we use blinding, multiply by b */
-	ret = nn_mul_mod(&S, &S, &b, q); EG(ret, err);
-	ret = nn_mul_mod(&r, &r, &b, q); EG(ret, err);
+	ret = nn_mod_mul(&S, &S, &b, q); EG(ret, err);
+	ret = nn_mod_mul(&r, &r, &b, q); EG(ret, err);
 #endif
 	/* Multiply by the secret */
-	ret = nn_mul_mod(&S, &S, &s, q); EG(ret, err);
+	ret = nn_mod_mul(&S, &S, &s, q); EG(ret, err);
 	/* The secret is not needed anymore */
 	nn_uninit(&s);
 	/* Add to r */
 	ret = nn_mod_add(&S, &S, &r, q); EG(ret, err);
 #ifdef USE_SIG_BLINDING
 	/* Unblind the result */
-	ret = nn_mul_mod(&S, &S, &binv, q); EG(ret, err);
+	ret = nn_mod_mul(&S, &S, &binv, q); EG(ret, err);
 #endif
 	/* Store our S in the context as an encoded buffer */
 	MUST_HAVE((s_len <= (siglen - r_len)), ret, err);

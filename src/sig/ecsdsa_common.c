@@ -334,14 +334,14 @@ int __ecsdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 
 #ifdef USE_SIG_BLINDING
 	/* Blind e with b */
-	ret = nn_mul_mod(&e, &e, &b, q); EG(ret, err);
+	ret = nn_mod_mul(&e, &e, &b, q); EG(ret, err);
 #endif /* USE_SIG_BLINDING */
 
 	/* 6. Compute s = (k + ex) mod q. */
-	ret = nn_mul_mod(&ex, x, &e, q); EG(ret, err);
+	ret = nn_mod_mul(&ex, x, &e, q); EG(ret, err);
 #ifdef USE_SIG_BLINDING
 	/* Blind k with b */
-	ret = nn_mul_mod(&s, &(ctx->sign_data.ecsdsa.k), &b, q); EG(ret, err);
+	ret = nn_mod_mul(&s, &(ctx->sign_data.ecsdsa.k), &b, q); EG(ret, err);
 	ret = nn_mod_add(&s, &s, &ex, q); EG(ret, err);
 #else
 	ret = nn_mod_add(&s, &(ctx->sign_data.ecsdsa.k), &ex, q); EG(ret, err);
@@ -353,7 +353,7 @@ int __ecsdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
          * constant time here. This is possible since q is prime.
          */
 	ret = nn_modinv_fermat(&binv, &b, q); EG(ret, err);
-	ret = nn_mul_mod(&s, &s, &binv, q); EG(ret, err);
+	ret = nn_mod_mul(&s, &s, &binv, q); EG(ret, err);
 #endif /* USE_SIG_BLINDING */
 	dbg_nn_print("s", &s);
 

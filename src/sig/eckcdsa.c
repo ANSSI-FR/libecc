@@ -435,8 +435,8 @@ int _eckcdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 
 #ifdef USE_SIG_BLINDING
 	/* In case of blinding, we compute (k*b - e*b) * x * b^-1 */
-	ret = nn_mul_mod(&k, &k, &b, q); EG(ret, err);
-	ret = nn_mul_mod(&e, &e, &b, q); EG(ret, err);
+	ret = nn_mod_mul(&k, &k, &b, q); EG(ret, err);
+	ret = nn_mod_mul(&e, &e, &b, q); EG(ret, err);
         /* NOTE: we use Fermat's little theorem inversion for
          * constant time here. This is possible since q is prime.
          */
@@ -453,10 +453,10 @@ int _eckcdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	 */
 	ret = nn_sub(&tmp, q, &e); EG(ret, err);
 	ret = nn_mod_add(&tmp, &k, &tmp, q); EG(ret, err);
-	ret = nn_mul_mod(&s, x, &tmp, q); EG(ret, err);
+	ret = nn_mod_mul(&s, x, &tmp, q); EG(ret, err);
 #ifdef USE_SIG_BLINDING
 	/* Unblind s with b^-1 */
-	ret = nn_mul_mod(&s, &s, &binv, q); EG(ret, err);
+	ret = nn_mod_mul(&s, &s, &binv, q); EG(ret, err);
 #endif /* USE_SIG_BLINDING */
 
 	/* 9. if s == 0, restart at step 3. */

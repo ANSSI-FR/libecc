@@ -327,20 +327,20 @@ int _ecgdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 
 #ifdef USE_SIG_BLINDING
 	/* Blind e and r with b */
-	ret = nn_mul_mod(&e, &e, &b, q); EG(ret, err);
-	ret = nn_mul_mod(&r, &r, &b, q); EG(ret, err);
+	ret = nn_mod_mul(&e, &e, &b, q); EG(ret, err);
+	ret = nn_mod_mul(&r, &r, &b, q); EG(ret, err);
 #endif /* USE_SIG_BLINDING */
 	/* 7. Compute s = x(kr + e) mod q */
-	ret = nn_mul_mod(&kr, &k, &r, q); EG(ret, err);
+	ret = nn_mod_mul(&kr, &k, &r, q); EG(ret, err);
 	ret = nn_mod_add(&tmp, &kr, &e, q); EG(ret, err);
-	ret = nn_mul_mod(&s, x, &tmp, q); EG(ret, err);
+	ret = nn_mod_mul(&s, x, &tmp, q); EG(ret, err);
 #ifdef USE_SIG_BLINDING
 	/* Unblind s */
 	/* NOTE: we use Fermat's little theorem inversion for
 	 * constant time here. This is possible since q is prime.
 	 */
 	ret = nn_modinv_fermat(&binv, &b, q); EG(ret, err);
-	ret = nn_mul_mod(&s, &s, &binv, q); EG(ret, err);
+	ret = nn_mod_mul(&s, &s, &binv, q); EG(ret, err);
 #endif
 	dbg_nn_print("s", &s);
 
@@ -573,11 +573,11 @@ int _ecgdsa_verify_finalize(struct ec_verify_context *ctx)
 
 	/* 4. Compute u = (r^-1)e mod q */
 	ret = nn_modinv(&rinv, r, q); EG(ret, err); /* r^-1 */
-	ret = nn_mul_mod(&uv, &rinv, &e, q); EG(ret, err);
+	ret = nn_mod_mul(&uv, &rinv, &e, q); EG(ret, err);
 	ret = prj_pt_mul(&uG, &uv, G); EG(ret, err);
 
 	/* 5. Compute v = (r^-1)s mod q */
-	ret = nn_mul_mod(&uv, &rinv, s, q); EG(ret, err);
+	ret = nn_mod_mul(&uv, &rinv, s, q); EG(ret, err);
 	ret = prj_pt_mul(&vY, &uv, Y); EG(ret, err);
 
 	/* 6. Compute W' = uG + vY */

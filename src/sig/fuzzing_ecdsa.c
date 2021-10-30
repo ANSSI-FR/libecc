@@ -177,14 +177,14 @@ int ecdsa_sign_raw(struct ec_sign_context *ctx, const u8 *input, u8 inputlen, u8
 
 #ifdef USE_SIG_BLINDING
 	/* Blind r with b */
-	ret = nn_mul_mod(&r, &r, &b, q); EG(ret, err);
+	ret = nn_mod_mul(&r, &r, &b, q); EG(ret, err);
 
 	/* Blind the message e */
-	ret = nn_mul_mod(&e, &e, &b, q); EG(ret, err);
+	ret = nn_mod_mul(&e, &e, &b, q); EG(ret, err);
 #endif /* USE_SIG_BLINDING */
 
 	/* tmp = xr mod q */
-	ret = nn_mul_mod(&tmp, x, &r, q); EG(ret, err);
+	ret = nn_mod_mul(&tmp, x, &r, q); EG(ret, err);
 	dbg_nn_print("x*r mod q", &tmp);
 
 	/* 8. If e == rx, restart the process at step 4. */
@@ -204,7 +204,7 @@ int ecdsa_sign_raw(struct ec_sign_context *ctx, const u8 *input, u8 inputlen, u8
 	/* In case of blinding, we compute (b*k)^-1, and
 	 * b^-1 will automatically unblind (r*x) in the following
 	 */
-	ret = nn_mul_mod(&k, &k, &b, q); EG(ret, err);
+	ret = nn_mod_mul(&k, &k, &b, q); EG(ret, err);
 #endif
 	/* Compute k^-1 mod q */
         /* NOTE: we use Fermat's little theorem inversion for
@@ -215,7 +215,7 @@ int ecdsa_sign_raw(struct ec_sign_context *ctx, const u8 *input, u8 inputlen, u8
 	dbg_nn_print("k^-1 mod q", &kinv);
 
 	/* s = k^-1 * tmp2 mod q */
-	ret = nn_mul_mod(&s, &tmp, &kinv, q); EG(ret, err);
+	ret = nn_mod_mul(&s, &tmp, &kinv, q); EG(ret, err);
 
 	dbg_nn_print("s", &s);
 
@@ -356,12 +356,12 @@ int ecdsa_verify_raw(struct ec_verify_context *ctx, const u8 *input, u8 inputlen
 	nn_uninit(s);
 
 	/* 5. Compute u = (s^-1)e mod q */
-	ret = nn_mul_mod(&uv, &e, &sinv, q); EG(ret, err);
+	ret = nn_mod_mul(&uv, &e, &sinv, q); EG(ret, err);
 	dbg_nn_print("u = (s^-1)e mod q", &uv);
 	ret = prj_pt_mul(&uG, &uv, G); EG(ret, err);
 
 	/* 6. Compute v = (s^-1)r mod q */
-	ret = nn_mul_mod(&uv, r, &sinv, q); EG(ret, err);
+	ret = nn_mod_mul(&uv, r, &sinv, q); EG(ret, err);
 	dbg_nn_print("v = (s^-1)r mod q", &uv);
 	ret = prj_pt_mul(&vY, &uv, Y); EG(ret, err);
 

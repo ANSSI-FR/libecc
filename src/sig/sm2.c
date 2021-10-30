@@ -419,17 +419,17 @@ int _sm2_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	ret = nn_get_random_mod(&b, q); EG(ret, err);
 	dbg_nn_print("b", &b);
 	ret = nn_inc(&tmp2, x); EG(ret, err);
-	ret = nn_mul_mod(&tmp2, &tmp2, &b, q); EG(ret, err);
+	ret = nn_mod_mul(&tmp2, &tmp2, &b, q); EG(ret, err);
         /* NOTE: we use Fermat's little theorem inversion for
          * constant time here. This is possible since q is prime.
          */
 	ret = nn_modinv_fermat(&tmp, &tmp2, q); EG(ret, err); /* tmp = (b*(1 + x))^(-1) */
 	dbg_nn_print("(b*(1 + x))^(-1)", &tmp);
-	ret = nn_mul_mod(&tmp3, &r, &b, q); EG(ret, err); /* rb */
-	ret = nn_mul_mod(&k, &k, &b, q); EG(ret, err); /* kb */
-	ret = nn_mul_mod(&tmp3, &tmp3, x, q); EG(ret, err); /* (rb)x mod q */
+	ret = nn_mod_mul(&tmp3, &r, &b, q); EG(ret, err); /* rb */
+	ret = nn_mod_mul(&k, &k, &b, q); EG(ret, err); /* kb */
+	ret = nn_mod_mul(&tmp3, &tmp3, x, q); EG(ret, err); /* (rb)x mod q */
 	ret = nn_mod_sub(&tmp2, &k, &tmp3, q); EG(ret, err); /* tmp2 = (kb - (rb)x) mod q */
-	ret = nn_mul_mod(&s, &tmp, &tmp2, q); EG(ret, err);
+	ret = nn_mod_mul(&s, &tmp, &tmp2, q); EG(ret, err);
 	dbg_nn_print("s", &s);
 #else
 	ret = nn_inc(&tmp2, x); EG(ret, err);
@@ -438,9 +438,9 @@ int _sm2_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
          */
 	ret = nn_modinv_fermat(&tmp, &tmp2, q); EG(ret, err); /* tmp = (1 + x)^(-1) */
 	dbg_nn_print("(1 + x)^(-1)", &tmp);
-	ret = nn_mul_mod(&tmp3, &r, x, q); EG(ret, err); /* rx mod q */
+	ret = nn_mod_mul(&tmp3, &r, x, q); EG(ret, err); /* rx mod q */
 	ret = nn_mod_sub(&tmp2, &k, &tmp3, q); EG(ret, err); /* tmp2 = (k - rx) mod q */
-	ret = nn_mul_mod(&s, &tmp, &tmp2, q); EG(ret, err);
+	ret = nn_mod_mul(&s, &tmp, &tmp2, q); EG(ret, err);
 	dbg_nn_print("s", &s);
 #endif
 

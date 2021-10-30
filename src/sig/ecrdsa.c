@@ -317,13 +317,13 @@ int _ecrdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 
 #ifdef USE_SIG_BLINDING
 	/* In case of blinding, we blind r and e */
-	ret = nn_mul_mod(&r, &r, &b, q); EG(ret, err);
-	ret = nn_mul_mod(&e, &e, &b, q); EG(ret, err);
+	ret = nn_mod_mul(&r, &r, &b, q); EG(ret, err);
+	ret = nn_mod_mul(&e, &e, &b, q); EG(ret, err);
 #endif /* USE_SIG_BLINDING */
 
 	/* Compute s = (rx + ke) mod q */
-	ret = nn_mul_mod(&rx, &r, x, q); EG(ret, err);
-	ret = nn_mul_mod(&ke, &k, &e, q); EG(ret, err);
+	ret = nn_mod_mul(&rx, &r, x, q); EG(ret, err);
+	ret = nn_mod_mul(&ke, &k, &e, q); EG(ret, err);
 	ret = nn_mod_add(&s, &rx, &ke, q); EG(ret, err);
 #ifdef USE_SIG_BLINDING
 	/* Unblind s */
@@ -331,7 +331,7 @@ int _ecrdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
          * constant time here. This is possible since q is prime.
          */
 	ret = nn_modinv_fermat(&binv, &b, q); EG(ret, err);
-	ret = nn_mul_mod(&s, &s, &binv, q); EG(ret, err);
+	ret = nn_mod_mul(&s, &s, &binv, q); EG(ret, err);
 #endif /* USE_SIG_BLINDING */
 
 	/* If s is 0, restart the process at step 2. */
@@ -557,7 +557,7 @@ int _ecrdsa_verify_finalize(struct ec_verify_context *ctx)
 	ret = nn_modinv(&e, &h, q); EG(ret, err); /* e = h^-1 mod q */
 
 	/* 4. Compute u = es mod q */
-	ret = nn_mul_mod(&u, &e, s, q); EG(ret, err);
+	ret = nn_mod_mul(&u, &e, s, q); EG(ret, err);
 
 	/* 5. Compute v = -er mod q
 	 *
@@ -566,7 +566,7 @@ int _ecrdsa_verify_finalize(struct ec_verify_context *ctx)
 	 * NOTE: we reuse e for er computation to avoid losing
 	 * a variable.
 	 */
-	ret = nn_mul_mod(&e, &e, r, q); EG(ret, err);
+	ret = nn_mod_mul(&e, &e, r, q); EG(ret, err);
 	ret = nn_iszero(&e, &iszero); EG(ret, err);
 	if (iszero) {
 		ret = nn_zero(&v); EG(ret, err);

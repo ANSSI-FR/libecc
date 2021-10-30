@@ -264,10 +264,11 @@ err:
 }
 
 /*
- * Compute in1 * in2 mod p where in1 and in2 are numbers < p and
- * p is an odd number. The function redcifies in1 and in2
+ * Compute in1 * in2 mod p where in1 and in2 are numbers < p.
+ * When p is an odd number, the function redcifies in1 and in2
  * parameters, does the computation and then unredcifies the
- * result.
+ * result. When p is an even number, we use an unoptimized mul
+ * then mod operations sequence.
  *
  * From a mathematical standpoint, the computation is equivalent
  * to performing:
@@ -276,48 +277,58 @@ err:
  *   nn_mod(&out, &tmp2, q);
  *
  * but the modular reduction is done progressively during
- * Montgomery reduction.
+ * Montgomery reduction when p is odd (which brings more efficiency).
  *
  * The function returns 0 on success, -1 on error.
  */
-int nn_mul_mod(nn_t out, nn_src_t in1, nn_src_t in2, nn_src_t p_in)
+int nn_mod_mul(nn_t out, nn_src_t in1, nn_src_t in2, nn_src_t p_in)
 {
 	nn r_square, p;
 	nn in1_tmp, in2_tmp;
 	word_t mpinv;
-	int ret;
+	int ret, isodd;
 	r_square.magic = in1_tmp.magic = in2_tmp.magic = p.magic = WORD(0);
 
-	ret = nn_copy(&p, p_in); EG(ret, err);
-
-	/*
-	 * In order for our reciprocal division routines to work, it is
-	 * expected that the bit length (including leading zeroes) of
-	 * input prime p is >= 2 * wlen where wlen is the number of bits
-	 * of a word size.
-	 */
-	if (p.wlen < 2) {
-		ret = nn_set_wlen(&p, 2); EG(ret, err);
+	/* When p_in is even, we cannot work with Montgomery multiplication */
+	ret = nn_isodd(p_in, &isodd); EG(ret, err);
+	if(!isodd){
+		/* When p_in is even, we fallback to less efficient mul then mod */
+		ret = nn_mul(out, in1, in2); EG(ret, err);
+		ret = nn_mod(out, out, p_in); EG(ret, err);
 	}
+	else{
+		/* Here, p_in is odd and we can use redcification */
+		ret = nn_copy(&p, p_in); EG(ret, err);
 
-	/* Compute Mongtomery coefs.
-	 * NOTE: in1_tmp holds a dummy value here after the operation.
-	 */
-	ret = nn_compute_redc1_coefs(&in1_tmp, &r_square, &p, &mpinv); EG(ret, err);
+		/*
+		 * In order for our reciprocal division routines to work, it is
+		 * expected that the bit length (including leading zeroes) of
+		 * input prime p is >= 2 * wlen where wlen is the number of bits
+		 * of a word size.
+		 */
+		if (p.wlen < 2) {
+			ret = nn_set_wlen(&p, 2); EG(ret, err);
+		}
 
-	/* redcify in1 and in2 */
-	ret = nn_mul_redc1(&in1_tmp, in1, &r_square, &p, mpinv); EG(ret, err);
-	ret = nn_mul_redc1(&in2_tmp, in2, &r_square, &p, mpinv); EG(ret, err);
+		/* Compute Mongtomery coefs.
+		 * NOTE: in1_tmp holds a dummy value here after the operation.
+		 */
+		ret = nn_compute_redc1_coefs(&in1_tmp, &r_square, &p, &mpinv); EG(ret, err);
 
-	/* Compute in1 * in2 mod p in montgomery world.
-	 * NOTE: r_square holds the result after the operation.
-	 */
-	ret = nn_mul_redc1(&r_square, &in1_tmp, &in2_tmp, &p, mpinv); EG(ret, err);
+		/* redcify in1 and in2 */
+		ret = nn_mul_redc1(&in1_tmp, in1, &r_square, &p, mpinv); EG(ret, err);
+		ret = nn_mul_redc1(&in2_tmp, in2, &r_square, &p, mpinv); EG(ret, err);
 
-	/* Come back to real world by unredcifying result */
-	ret = nn_init(&in1_tmp, 0); EG(ret, err);
-	ret = nn_one(&in1_tmp); EG(ret, err);
-	ret = nn_mul_redc1(out, &r_square, &in1_tmp, &p, mpinv);
+		/* Compute in1 * in2 mod p in montgomery world.
+		 * NOTE: r_square holds the result after the operation.
+		 */
+		ret = nn_mul_redc1(&r_square, &in1_tmp, &in2_tmp, &p, mpinv); EG(ret, err);
+
+		/* Come back to real world by unredcifying result */
+		ret = nn_init(&in1_tmp, 0); EG(ret, err);
+		ret = nn_one(&in1_tmp); EG(ret, err);
+		ret = nn_mul_redc1(out, &r_square, &in1_tmp, &p, mpinv); EG(ret, err);
+	}
 
 err:
 	nn_uninit(&p);

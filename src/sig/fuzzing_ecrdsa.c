@@ -207,13 +207,13 @@ int ecrdsa_sign_raw(struct ec_sign_context *ctx, const u8 *input, u8 inputlen, u
 
 #ifdef USE_SIG_BLINDING
         /* In case of blinding, we blind r and e */
-        ret = nn_mul_mod(&r, &r, &b, q); EG(ret, err);
-        ret = nn_mul_mod(&e, &e, &b, q); EG(ret, err);
+        ret = nn_mod_mul(&r, &r, &b, q); EG(ret, err);
+        ret = nn_mod_mul(&e, &e, &b, q); EG(ret, err);
 #endif /* USE_SIG_BLINDING */
 
 	/* Compute s = (rx + ke) mod q */
-	ret = nn_mul_mod(&rx, &r, x, q); EG(ret, err);
-	ret = nn_mul_mod(&ke, &k, &e, q); EG(ret, err);
+	ret = nn_mod_mul(&rx, &r, x, q); EG(ret, err);
+	ret = nn_mod_mul(&ke, &k, &e, q); EG(ret, err);
 	ret = nn_mod_add(&s, &rx, &ke, q); EG(ret, err);
 #ifdef USE_SIG_BLINDING
 	/* Unblind s */
@@ -221,7 +221,7 @@ int ecrdsa_sign_raw(struct ec_sign_context *ctx, const u8 *input, u8 inputlen, u
          * constant time here. This is possible since q is prime.
          */
         ret = nn_modinv_fermat(&binv, &b, q); EG(ret, err);
-	ret = nn_mul_mod(&s, &s, &binv, q); EG(ret, err);
+	ret = nn_mod_mul(&s, &s, &binv, q); EG(ret, err);
 #endif /* USE_SIG_BLINDING */
 
 	/* If s is 0, restart the process at step 2. */

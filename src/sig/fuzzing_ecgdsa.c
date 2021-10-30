@@ -183,20 +183,20 @@ int ecgdsa_sign_raw(struct ec_sign_context *ctx, const u8 *input, u8 inputlen, u
 
 #ifdef USE_SIG_BLINDING
 	/* Blind e and r with b */
-	ret = nn_mul_mod(&e, &e, &b, q); EG(ret, err);
-	ret = nn_mul_mod(&r, &r, &b, q); EG(ret, err);
+	ret = nn_mod_mul(&e, &e, &b, q); EG(ret, err);
+	ret = nn_mod_mul(&r, &r, &b, q); EG(ret, err);
 #endif /* USE_SIG_BLINDING */
 	/* 7. Compute s = x(kr + e) mod q */
-	ret = nn_mul_mod(&kr, &k, &r, q); EG(ret, err);
+	ret = nn_mod_mul(&kr, &k, &r, q); EG(ret, err);
 	ret = nn_mod_add(&tmp2, &kr, &e, q); EG(ret, err);
-	ret = nn_mul_mod(&s, x, &tmp2, q); EG(ret, err);
+	ret = nn_mod_mul(&s, x, &tmp2, q); EG(ret, err);
 #ifdef USE_SIG_BLINDING
 	/* Unblind s */
         /* NOTE: we use Fermat's little theorem inversion for
          * constant time here. This is possible since q is prime.
          */
 	ret = nn_modinv_fermat(&binv, &b, q); EG(ret, err);
-	ret = nn_mul_mod(&s, &s, &binv, q); EG(ret, err);
+	ret = nn_mod_mul(&s, &s, &binv, q); EG(ret, err);
 #endif
 	dbg_nn_print("s", &s);
 
