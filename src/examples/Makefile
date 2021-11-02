@@ -5,10 +5,10 @@ include $(ROOT_DIR)/common.mk
 
 CFLAGS += -I$(ROOT_DIR)/src/ -I$(ROOT_DIR)/src/external_deps
 
-all:	nn_example fp_example curve_basic_examples curve_ecdh
+all:	nn_example fp_example curve_basic_examples curve_ecdh rsa
 ifeq ($(WITH_DYNAMIC_LIBS),1)
 # If the user asked for dynamic libraries, compile versions of our binaries against them
-all:	nn_example_dyn fp_example_dyn curve_basic_examples_dyn curve_ecdh_dyn
+all:	nn_example_dyn fp_example_dyn curve_basic_examples_dyn curve_ecdh_dyn rsa_dyn
 endif
 
 nn_example:
@@ -22,6 +22,8 @@ curve_basic_examples:
 curve_ecdh:
 	$(CC) $(BIN_CFLAGS) -DCURVE_ECDH curve_ecdh.c $(ROOT_DIR)/src/external_deps/print.c $(ROOT_DIR)/src/external_deps/rand.c $(BIN_LDFLAGS) $(LIBEC) -o curve_ecdh
 
+rsa:
+	$(CC) $(BIN_CFLAGS) rsa.c rsa_hash.c $(ROOT_DIR)/src/external_deps/print.c $(ROOT_DIR)/src/external_deps/rand.c $(BIN_LDFLAGS) $(LIBSIGN) -o rsa
 
 # If the user asked for dynamic libraries, compile versions of our binaries against them
 ifeq ($(WITH_DYNAMIC_LIBS),1)
@@ -35,11 +37,14 @@ curve_basic_examples_dyn:
 	$(CC) $(BIN_CFLAGS) -DCURVE_BASIC_EXAMPLES fp_square_residue.c curve_basic_examples.c $(ROOT_DIR)/src/external_deps/print.c $(ROOT_DIR)/src/external_deps/rand.c $(ROOT_DIR)/src/external_deps/time.c  $(BIN_LDFLAGS) -L$(BUILD_DIR) -lec -o curve_basic_examples_dyn
 curve_ecdh_dyn:
 	$(CC) $(BIN_CFLAGS) -DCURVE_ECDH curve_ecdh.c $(ROOT_DIR)/src/external_deps/print.c $(ROOT_DIR)/src/external_deps/rand.c $(BIN_LDFLAGS) -L$(BUILD_DIR) -lec -o curve_ecdh_dyn
+
+rsa_dyn:
+	$(CC) $(BIN_CFLAGS) rsa.c rsa_hash.c $(ROOT_DIR)/src/external_deps/print.c $(ROOT_DIR)/src/external_deps/rand.c $(BIN_LDFLAGS) $(LIBEC) -L$(BUILD_DIR) -lsign -o rsa
 endif
 
 
 clean:
-	@rm -f nn_pollard_rho fp_square_residue curve_basic_examples curve_ecdh
-	@rm -f nn_pollard_rho_dyn fp_square_residue_dyn curve_basic_examples_dyn curve_ecdh_dyn
+	@rm -f nn_pollard_rho fp_square_residue curve_basic_examples curve_ecdh rsa
+	@rm -f nn_pollard_rho_dyn fp_square_residue_dyn curve_basic_examples_dyn curve_ecdh_dyn rsa_dyn
 
 .PHONY: all clean 16 32 64 debug debug16 debug32 debug64 force_arch32 force_arch64
