@@ -352,7 +352,7 @@ int emsa_pss_encode(const u8 *m, u16 mlen, u8 *em, u32 embits, u16 *eminlen, rsa
 	u8 h[MAX_DIGEST_SIZE];
 	u8 zeroes[8];
 	/* Reasonable sizes */
-	u8 salt[4096];
+	u8 salt[NN_USABLE_MAX_BYTE_LEN];
 	u8 *dbmask = em;
 	const u8 *input[2] = { m, NULL };
 	u32 ilens[2] = { mlen, 0 };
@@ -447,7 +447,7 @@ int emsa_pss_verify(const u8 *m, u16 mlen, const u8 *em, u32 embits, u16 emlen, 
 	unsigned int i;
 	u8 mask;
 	u16 _emlen;
-	u8 dbmask[4096];
+	u8 dbmask[NN_USABLE_MAX_BYTE_LEN];
 	u8 *db;
 	const u8 *h, *salt, *maskeddb = em;
 
@@ -720,8 +720,8 @@ int rsaes_oaep_encrypt(const rsa_pub_key *pub, const u8 *m, u16 mlen, u8 *c, u16
 	u8 *em = c;
 	/* Reasonable sizes */
 	u8 seed[MAX_DIGEST_SIZE];
-	u8 dbmask[4096];
-	u8 db[4096];
+	u8 dbmask[NN_USABLE_MAX_BYTE_LEN];
+	u8 db[NN_USABLE_MAX_BYTE_LEN];
 	u8 *seedmask = dbmask, *maskedseed = NULL, *maskeddb = NULL;
 	nn m_, c_;
 	m_.magic = c_.magic = WORD(0);
@@ -831,7 +831,7 @@ int rsaes_oaep_decrypt(const rsa_priv_key *priv, const u8 *c, u16 clen, u8 *m, u
 	/* Reasonable sizes */
 	u8 lhash[MAX_DIGEST_SIZE];
 	u8 seedmask[MAX_DIGEST_SIZE];
-	u8 dbmask[4096];
+	u8 dbmask[NN_USABLE_MAX_BYTE_LEN];
 	u8 *seed = seedmask, *maskedseed = NULL, *maskeddb = NULL, *db = NULL;
 	nn m_, c_;
 	m_.magic = c_.magic = WORD(0);
@@ -990,8 +990,8 @@ int rsassa_pkcs1_v1_5_verify(const rsa_pub_key *pub, const u8 *m, u16 mlen, cons
 {
 	int ret, cmp;
 	/* Get a large enough buffer to hold the result */
-	u8 em[4096];
-	u8 em_[4096];
+	u8 em[NN_USABLE_MAX_BYTE_LEN];
+	u8 em_[NN_USABLE_MAX_BYTE_LEN];
 	u32 k;
 	nn m_, s_;
 	m_.magic = s_.magic = WORD(0);
@@ -1093,7 +1093,7 @@ int rsassa_pss_verify(const rsa_pub_key *pub, const u8 *m, u16 mlen, const u8 *s
 {
 	int ret;
 	/* Get a large enough buffer to hold the result */
-	u8 em[4096];
+	u8 em[NN_USABLE_MAX_BYTE_LEN];
 	u16 emlen;
 	u32 k;
 	nn m_, s_;
