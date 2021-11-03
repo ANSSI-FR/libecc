@@ -33,13 +33,21 @@
  * All in all, please see this as a proof of concept of implementing
  * RFC 8017 rather than a production code. Use it at your own risk!
  *
- * Finally, although our underlying NN primitive should be (for most of
- * them) constant time, no particular efforts have been deployed to
- * make the RSA functions handling sensitive secrets robust against
- * SCA (side-channel attacks) or fault injection (e.g. Bellcore attack
- * and so on). Some efforts have been made to keep the primitives that
- * are prone to padding oracle attacks (PKCS#1 v1.5 and OAEP decryption)
- * constant time to limit such oracles.
+ * !! DISCLAIMER !!
+ * ================
+ * Although some efforts have been put on providing a clean code and although many of
+ * the underlying arithmetic primitives are constant time, no particular effort has
+ * been deployed to prevent advanced side channels (e.g. to protect the private keys
+ * against cache based side-channels and so on). Padding oracles (Bleichenbacher,
+ * Manger) in RSA PKCS#1 v1.5 and RSA-OAEP decryption primitives are taken into
+ * account, although no guarantee can be made on this (and mostly: these oracles
+ * also heavily depend on what the upper layer callers do). Fault injection
+ * (e.g. Bellcore attack and so on) are not taken into account.
+ *
+ * All-in-all, this piece of code can be useful in some contexts, or risky to
+ * use in other sensitive ones where advanced side-channels or fault attacks
+ * have to be considered. Use this RSA code knowingly and at your own risk!
+ *
  */
 
 ATTRIBUTE_WARN_UNUSED_RET int rsa_import_pub_key(rsa_pub_key *pub, const u8 *n, u16 nlen, const u8 *e, u16 elen)
