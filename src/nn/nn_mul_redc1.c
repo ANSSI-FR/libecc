@@ -279,6 +279,8 @@ err:
  * but the modular reduction is done progressively during
  * Montgomery reduction when p is odd (which brings more efficiency).
  *
+ * Inputs are supposed to be < p (i.e. taken modulo p).
+ *
  * The function returns 0 on success, -1 on error.
  */
 int nn_mod_mul(nn_t out, nn_src_t in1, nn_src_t in2, nn_src_t p_in)

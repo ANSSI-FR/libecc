@@ -17,7 +17,142 @@
 #include "nn_div.h"
 #include "nn_logical.h"
 #include "nn_mod_pow.h"
+#include "nn_rand.h"
 #include "nn.h"
+
+/*
+ * NOT constant time with regard to the bitlength of exp.
+ *
+ * Implements a left to right Montgomery Ladder for modular exponentiation.
+ * This is an internal common helper and assumes that all the initialization
+ * and aliasing of inputs/outputs are handled by the callers. Depending on
+ * the inputs, redcification is optionally used.
+ * The base is reduced if necessary.
+ *
+ * Montgomery Ladder is masked using Itoh et al. anti-ADPA
+ * (Address-bit DPA) countermeasure.
+ * See "A Practical Countermeasure against Address-Bit Differential Power Analysis"
+ * by Itoh, Izu and Takenaka for more information.
+
+ * Returns 0 on success, -1 on error.
+ */
+ATTRIBUTE_WARN_UNUSED_RET static int _nn_exp_monty_ladder_ltr(nn_t out, nn_src_t base, nn_src_t exp, nn_src_t mod, nn_src_t r, nn_src_t r_square, word_t mpinv)
+{
+	nn T[3];
+	nn mask;
+	bitcnt_t explen, oldexplen;
+ 	u8 expbit, rbit;
+	int ret, cmp;
+	T[0].magic = T[1].magic = T[2].magic = mask.magic = WORD(0);
+
+	/* Initialize out */
+	ret = nn_init(out, 0); EG(ret, err);
+
+	ret = nn_init(&T[0], 0); EG(ret, err);
+	ret = nn_init(&T[1], 0); EG(ret, err);
+	ret = nn_init(&T[2], 0); EG(ret, err);
+
+	/* Generate our Itoh random mask */
+	ret = nn_get_random_len(&mask, NN_MAX_BYTE_LEN); EG(ret, err);
+
+	ret = nn_bitlen(exp, &explen); EG(ret, err);
+
+
+	/* From now on, since we deal with Itoh's countermeasure, we must have at
+	 * least 2 bits in the exponent. We will deal with the particular cases of 0 and 1
+	 * bit exponents later.
+	 */
+	oldexplen = explen;
+	explen = (explen < 2) ? 2 : explen;
+
+	ret = nn_getbit(&mask, (explen - 1), &rbit); EG(ret, err);
+
+	/* Reduce the base if necessary */
+	ret = nn_cmp(base, mod, &cmp); EG(ret, err);
+	if(cmp >= 0){
+		/* Modular reduction */
+		ret = nn_mod(&T[rbit], base, mod); EG(ret, err);
+		if(r != NULL){
+			/* Redcify the base if necessary */
+			ret = nn_mul_redc1(&T[rbit], &T[rbit], r_square, mod, mpinv); EG(ret, err);
+		}
+	}
+	else{
+		if(r != NULL){
+			/* Redcify the base if necessary */
+			ret = nn_mul_redc1(&T[rbit], base, r_square, mod, mpinv); EG(ret, err);
+		}
+		else{
+			ret = nn_copy(&T[rbit], base); EG(ret, err);
+		}
+	}
+
+	/* We implement the Montgomery ladder exponentiation with Itoh masking using three
+	 * registers T[0], T[1] and T[2]. The random mask is in 'mask'.
+	 */
+	if(r != NULL){
+		ret = nn_mul_redc1(&T[1-rbit], &T[rbit], &T[rbit], mod, mpinv); EG(ret, err);
+	}
+	else{
+		ret = nn_mod_mul(&T[1-rbit], &T[rbit], &T[rbit], mod); EG(ret, err);
+	}
+
+	/* Now proceed with the Montgomery Ladder algorithm.
+	 */
+	explen -= (bitcnt_t)1;
+	while (explen > 0) {
+		u8 rbit_next;
+		explen -= (bitcnt_t)1;
+
+		/* rbit is r[i+1], and rbit_next is r[i] */
+		ret = nn_getbit(&mask, explen, &rbit_next); EG(ret, err);
+		/* Get the exponent bit */
+		ret = nn_getbit(exp, explen, &expbit); EG(ret, err);
+
+		/* Square */
+		if(r != NULL){
+			ret = nn_mul_redc1(&T[2], &T[expbit ^ rbit], &T[expbit ^ rbit], mod, mpinv); EG(ret, err);
+		}
+		else{
+			ret = nn_mod_mul(&T[2], &T[expbit ^ rbit], &T[expbit ^ rbit], mod); EG(ret, err);
+		}
+		/* Multiply */
+		if(r != NULL){
+			ret = nn_mul_redc1(&T[1], &T[0], &T[1], mod, mpinv); EG(ret, err);
+		}
+		else{
+			ret = nn_mod_mul(&T[1], &T[0], &T[1], mod); EG(ret, err);
+		}
+		/* Copy */
+		ret = nn_copy(&T[0], &T[2 - (expbit ^ rbit_next)]); EG(ret, err);
+		ret = nn_copy(&T[1], &T[1 + (expbit ^ rbit_next)]); EG(ret, err);
+		/* Update rbit */
+		rbit = rbit_next;
+	}
+	ret = nn_one(&T[1 - rbit]);
+	if(r != NULL){
+		/* Unredcify in out */
+		ret = nn_mul_redc1(&T[rbit], &T[rbit], &T[1 - rbit], mod, mpinv); EG(ret, err);
+	}
+
+	/* Deal with the particular cases of 0 and 1 bit exponents */
+	/* Case with 0 bit exponent: T[1 - rbit] contains 1 modulo mod */
+	ret = nn_mod(&T[1 - rbit], &T[1 - rbit], mod); EG(ret, err);
+	/* Case with 1 bit exponent */
+	ret = nn_mod(&T[2], base, mod); EG(ret, err);
+	/* Proceed with the output */
+	ret = nn_cnd_swap((oldexplen == 0), out, &T[1 - rbit]);
+	ret = nn_cnd_swap((oldexplen == 1), out, &T[2]);
+	ret = nn_cnd_swap(((oldexplen != 0) && (oldexplen != 1)), out, &T[rbit]);
+
+err:
+	nn_uninit(&T[0]);
+	nn_uninit(&T[1]);
+	nn_uninit(&T[2]);
+	nn_uninit(&mask);
+
+	return ret;
+}
 
 /*
  * NOT constant time with regard to the bitlength of exp.
@@ -36,68 +171,9 @@
  *
  * Returns 0 on success, -1 on error.
  */
-#define TAB_ENTRIES 2
 ATTRIBUTE_WARN_UNUSED_RET static int _nn_mod_pow_redc(nn_t out, nn_src_t base, nn_src_t exp, nn_src_t mod, nn_src_t r, nn_src_t r_square, word_t mpinv)
 {
-	nn base_monty, one, r_monty;
-	nn_t tab_monty[TAB_ENTRIES];
-	bitcnt_t explen;
- 	u8 expbit;
-	int ret, cmp;
-	base_monty.magic = one.magic = r_monty.magic = WORD(0);
-
-	MUST_HAVE((out != NULL), ret, err);
-
-	/* Initialize out */
-	ret = nn_init(out, 0); EG(ret, err);
-
-	ret = nn_init(&base_monty, 0); EG(ret, err);
-	ret = nn_init(&r_monty, 0); EG(ret, err);
-
-	ret = nn_init(&one, 0); EG(ret, err);
-	ret = nn_one(&one); EG(ret, err);
-
-	ret = nn_bitlen(exp, &explen); EG(ret, err);
-
-	/* Reduce the base if necessary */
-	ret = nn_cmp(base, mod, &cmp); EG(ret, err);
-	if(cmp >= 0){
-		ret = nn_mod(&base_monty, base, mod); EG(ret, err);
-		/* Redcify the base */
-		ret = nn_mul_redc1(&base_monty, &base_monty, r_square, mod, mpinv); EG(ret, err);
-	}
-	else{
-		/* Redcify the base */
-		ret = nn_mul_redc1(&base_monty, base, r_square, mod, mpinv); EG(ret, err);
-	}
-
-	/* We implement the Montgomery ladder exponentiation with tegisters R0 and R1,
-	 * tab_monty[0] is R0 and tab_monty[1] is R1.
-	 */
-	ret = nn_copy(&r_monty, r); EG(ret, err);
-	tab_monty[0] = &r_monty; /* r is redcified one */
-	tab_monty[1] = &base_monty;
-
-	/* Now proceed with the Montgomery Ladder algorithm.
-	 */
-	while (explen > 0) {
-		explen -= (bitcnt_t)1;
-		/* Get the exponent bit */
-		ret = nn_getbit(exp, explen, &expbit); EG(ret, err);
-		/* Multiply */
-		ret = nn_mul_redc1(tab_monty[(~expbit) & 0x1], tab_monty[0], tab_monty[1], mod, mpinv); EG(ret, err);
-		/* Square */
-		ret = nn_mul_redc1(tab_monty[expbit], tab_monty[expbit], tab_monty[expbit], mod, mpinv); EG(ret, err);
-	}
-	/* Now unredcify */
-	ret = nn_mul_redc1(out, tab_monty[0], &one, mod, mpinv);
-
-err:
-	nn_uninit(&base_monty);
-	nn_uninit(&r_monty);
-	nn_uninit(&one);
-
-	return ret;
+	return _nn_exp_monty_ladder_ltr(out, base, exp, mod, r, r_square, mpinv);
 }
 
 /*
@@ -108,7 +184,7 @@ err:
  * the information that base <= mod or not: please use with care
  * in the callers if this information is sensitive.
  *
- * Aliasing not supported. Expects caller to check parameters
+ * Aliasing is supported. Expects caller to check parameters
  * have been initialized. This is an internal helper.
  *
  * Compute (base ** exp) mod (mod) using a Montgomery Ladder algorithm.
@@ -118,64 +194,6 @@ err:
  *
  * Returns 0 on success, -1 on error.
  */
-ATTRIBUTE_WARN_UNUSED_RET static int __nn_mod_pow(nn_t out, nn_src_t base, nn_src_t exp, nn_src_t mod)
-{
-	nn _base, one;
-	nn_t tab[TAB_ENTRIES];
-	bitcnt_t explen;
- 	u8 expbit;
-	int ret, cmp;
-	_base.magic = one.magic =  WORD(0);
-
-	MUST_HAVE((out != NULL), ret, err);
-
-	/* Initialize out */
-	ret = nn_init(out, 0); EG(ret, err);
-
-	ret = nn_init(&_base, 0); EG(ret, err);
-
-	ret = nn_init(&one, 0); EG(ret, err);
-	ret = nn_one(&one); EG(ret, err);
-
-	ret = nn_bitlen(exp, &explen); EG(ret, err);
-
-	/* Reduce the base if necessary */
-	ret = nn_cmp(base, mod, &cmp); EG(ret, err);
-	if(cmp >= 0){
-		ret = nn_mod(&_base, base, mod); EG(ret, err);
-	}
-	else{
-		ret = nn_copy(&_base, base); EG(ret, err);
-	}
-
-	/* We implement the Montgomery ladder exponentiation with tegisters R0 and R1,
-	 * tab_monty[0] is R0 and tab[1] is R1.
-	 */
-	tab[0] = &one;
-	tab[1] = &_base;
-
-	/* Now proceed with the Montgomery Ladder algorithm.
-	 */
-	while (explen > 0) {
-		explen -= (bitcnt_t)1;
-		/* Get the exponent bit */
-		ret = nn_getbit(exp, explen, &expbit); EG(ret, err);
-		/* Multiply */
-		ret = nn_mod_mul(tab[(~expbit) & 0x1], tab[0], tab[1], mod); EG(ret, err);
-		/* Square */
-		ret = nn_mod_mul(tab[expbit], tab[expbit], tab[expbit], mod); EG(ret, err);
-	}
-	/* Copy the result in out */
-	ret = nn_copy(out, tab[0]);
-
-err:
-	nn_uninit(&_base);
-	nn_uninit(&one);
-
-	return ret;
-}
-
-/* Aliased version of generic nn_mod_pow */
 ATTRIBUTE_WARN_UNUSED_RET static int _nn_mod_pow(nn_t out, nn_src_t base, nn_src_t exp, nn_src_t mod)
 {
 	int ret;
@@ -185,11 +203,11 @@ ATTRIBUTE_WARN_UNUSED_RET static int _nn_mod_pow(nn_t out, nn_src_t base, nn_src
 		_out.magic = WORD(0);
 
 		ret = nn_init(&_out, 0); EG(ret, err);
-		ret = __nn_mod_pow(&_out, base, exp, mod); EG(ret, err);
+		ret = _nn_exp_monty_ladder_ltr(&_out, base, exp, mod, NULL, NULL, WORD(0));
 		ret = nn_copy(out, &_out);
 	}
 	else{
-		ret = __nn_mod_pow(out, base, exp, mod);
+		ret = _nn_exp_monty_ladder_ltr(out, base, exp, mod, NULL, NULL, WORD(0));
 	}
 
 err:
