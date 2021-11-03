@@ -5694,7 +5694,7 @@ err:
 	return ret;
 }
 
-static int ecdh_encode_error_value(const ecdh_test_case *c, test_err_kind failed_test, u32 *err_val)
+static inline int ecdh_encode_error_value(const ecdh_test_case *c, test_err_kind failed_test, u32 *err_val)
 {
 	ec_curve_type ctype;
 	ec_alg_type stype = c->ecdh_type;

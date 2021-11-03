@@ -706,6 +706,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int ec_sig_known_vector_tests_one(const ec_test
 	return ret;
 }
 
+#if defined(WITH_ECCCDH) || defined(WITH_X25519) || defined(WITH_X448)
 /*
  * ECC generic self tests (ecdh on known test vectors). Returns
  * 0 if given test succeeded, or a non-zero value otherwise. In that
@@ -895,6 +896,7 @@ err:
 
 	return ret;
 }
+#endif
 
 ATTRIBUTE_WARN_UNUSED_RET int perform_known_test_vectors_test(const char *sig, const char *hash, const char *curve)
 {
