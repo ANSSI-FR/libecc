@@ -72,8 +72,8 @@ typedef struct {
 
 typedef nn *nn_t;
 typedef const nn *nn_src_t;
-
-void nn_check_initialized(nn_src_t A);
+#define nn_check_initialized(a) ((void)(a))
+//void nn_check_initialized(nn_src_t A);
 int nn_is_initialized(nn_src_t A);
 void nn_zero(nn_t A);
 void nn_one(nn_t A);

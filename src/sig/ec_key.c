@@ -98,7 +98,7 @@ int pub_key_is_initialized(const ec_pub_key *A)
 void pub_key_check_initialized_and_type(const ec_pub_key *A,
 					ec_sig_alg_type sig_type)
 {
-	MUST_HAVE((A != NULL) && (A->magic == PUB_KEY_MAGIC) &&
+	MUST_HAVE_SELECTION((A != NULL) && (A->magic == PUB_KEY_MAGIC) &&
 		  (A->key_type == sig_type));
 }
 
@@ -266,7 +266,6 @@ int ec_key_pair_import_from_priv_key_buf(ec_key_pair *kp,
 	int ret;
 
 	MUST_HAVE(kp != NULL);
-
 	/* Import private key */
 	ec_priv_key_import_from_buf(&(kp->priv_key), params, priv_key,
 				    priv_key_len, ec_key_alg);

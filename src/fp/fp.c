@@ -123,12 +123,13 @@ void fp_ctx_init_from_p(fp_ctx_t ctx, nn_src_t p_in)
  * Verify given Fp element has been correctly intialized, by checking
  * given pointer is valid and structure magic has expected value.
  */
+/*
 void fp_check_initialized(fp_src_t in)
 {
 	MUST_HAVE((in != NULL) && (in->magic == FP_MAGIC)
 		  && (in->ctx != NULL));
 }
-
+*/
 /*
  * Verify given Fp element has been correctly intialized, by checking
  * given pointer is valid and structure magic has expected value.

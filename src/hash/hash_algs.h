@@ -95,14 +95,15 @@ typedef void (*_hfunc_finalize) (hash_context * hctx, unsigned char *output);
 typedef void (*_hfunc_scattered) (const unsigned char **inputs,
 				  const u32 *ilens, unsigned char *output);
 
-#define HASH_MAPPING_SANITY_CHECK(A)			\
+/*#define HASH_MAPPING_SANITY_CHECK(A)			\
 	MUST_HAVE(((A) != NULL) && 			\
 		  ((A)->name != NULL) &&		\
 		  ((A)->hfunc_init != NULL) &&		\
 		  ((A)->hfunc_update != NULL) &&	\
 		  ((A)->hfunc_finalize != NULL) &&	\
 		  ((A)->hfunc_scattered != NULL))
-
+*/
+#define HASH_MAPPING_SANITY_CHECK(A)
 /*
  * All the hash algorithms we support are abstracted using the following
  * structure (and following map) which provides for each hash alg its
@@ -135,8 +136,8 @@ static const hash_mapping hash_maps[] = {
 #define MAX_HASH_ALG_NAME_LEN 7
 #endif /* MAX_HASH_ALG_NAME_LEN */
 #endif /* WITH_HASH_SHA224 */
-#ifdef WITH_HASH_SHA256
-	{.type = SHA256,	/* SHA256 */
+/*#ifdef WITH_HASH_SHA256
+	{.type = SHA256,	// SHA256
 	 .name = "SHA256",
 	 .digest_size = SHA256_DIGEST_SIZE,
 	 .block_size = SHA256_BLOCK_SIZE,
@@ -144,6 +145,17 @@ static const hash_mapping hash_maps[] = {
 	 .hfunc_update = (_hfunc_update) sha256_update,
 	 .hfunc_finalize = (_hfunc_finalize) sha256_final,
 	 .hfunc_scattered = sha256_scattered},
+	 */
+#ifdef WITH_HASH_SHA256
+	{.type = SHA256,	// SHA256
+	 .name = "SHA256",
+	 .digest_size = SHA256_DIGEST_SIZE,
+	 .block_size = SHA256_BLOCK_SIZE,
+	 .hfunc_init = NULL,
+	 .hfunc_update = NULL,
+	 .hfunc_finalize = NULL,
+	 .hfunc_scattered = NULL},
+
 #if (MAX_HASH_ALG_NAME_LEN < 7)
 #undef MAX_HASH_ALG_NAME_LEN
 #define MAX_HASH_ALG_NAME_LEN 7

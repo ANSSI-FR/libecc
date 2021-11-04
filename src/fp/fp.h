@@ -80,7 +80,9 @@ typedef struct {
 typedef fp *fp_t;
 typedef const fp *fp_src_t;
 
-void fp_check_initialized(fp_src_t in);
+#define fp_check_initialized(a) 	((void)a)
+
+//void fp_check_initialized(fp_src_t in);
 int fp_is_initialized(fp_src_t in);
 void fp_init(fp_t A, fp_ctx_src_t fpctx);
 void fp_init_from_buf(fp_t A, fp_ctx_src_t fpctx, const u8 *buf, u16 buflen);

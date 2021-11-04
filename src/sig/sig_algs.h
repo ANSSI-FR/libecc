@@ -38,8 +38,8 @@ const ec_sig_mapping *get_sig_by_type(ec_sig_alg_type sig_type);
 /* Sanity checks for calbacks */
 int ec_sig_mapping_callbacks_sanity_check(const ec_sig_mapping *sig);
 int ec_sig_ctx_callbacks_sanity_check(const struct ec_sign_context *sig_ctx);
-int ec_verify_ctx_callbacks_sanity_check(const struct ec_verify_context *verify_ctx);
-
+//int ec_verify_ctx_callbacks_sanity_check(const struct ec_verify_context *verify_ctx);
+#define ec_verify_ctx_callbacks_sanity_check(a) 0
 /*
  * Compute generic effective signature length depending on the curve parameters,
  * the signature algorithm and the hash function

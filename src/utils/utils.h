@@ -115,7 +115,9 @@ extern unsigned char cryptofuzz_longjmp_triggered;
 /* Print some information and exit if we are asked to */
 #define MUST_HAVE(x) do { if (!(x)) { ext_printf("MUST_HAVE error: %s at %d\n", __FILE__,__LINE__); while(1){}; } } while (0)
 #else
-#define MUST_HAVE(x) do { if (!(x)) { while (1); } } while (0)
+//#define MUST_HAVE(x) do { if (!(x)) { while (1); } } while (0)
+#define MUST_HAVE_SELECTION(x) do { if (!(x)) { while (1); } } while (0)
+#define MUST_HAVE(x) 
 #endif
 #define SHOULD_HAVE(x)
 #define KNOWN_FACT(x)

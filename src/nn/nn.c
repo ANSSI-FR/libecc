@@ -49,12 +49,12 @@ static int ATTRIBUTE_UNUSED __nn_is_wlen_consistent(nn_src_t A)
  * should be used as a safety net in all function before using a nn
  * received as parameter.
  */
-void nn_check_initialized(nn_src_t A)
+/*void nn_check_initialized(nn_src_t A)
 {
 	MUST_HAVE((A != NULL) && (A->magic == NN_MAGIC) &&
 		  (A->wlen <= NN_MAX_WORD_LEN));
 	SHOULD_HAVE(__nn_is_wlen_consistent(A));
-}
+}*/
 
 /*
  * Verify that pointed nn has already been initialized and return 0 or 1.
