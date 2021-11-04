@@ -1,0 +1,11 @@
+Compile the ecc lib
+make 32  CC=dpu-upmem-dpurte-clang
+
+Check the dump file
+llvm-objdump -x  src/examples/ecdsa_dpu > ecdsa_dpu.objdump
+
+Compile the DPU binary
+make 32  CC=dpu-upmem-dpurte-clang -C src/examples/ 
+
+Execute the DPU binary
+cd src/examples/ && ./ecdsa_host  && cd -
