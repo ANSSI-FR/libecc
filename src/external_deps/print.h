@@ -15,7 +15,8 @@
  */
 #ifndef __PRINT_H__
 #define __PRINT_H__
-
-void ext_printf(const char *format, ...);
+#include <stdio.h>
+#define ext_printf printf
+//void ext_printf(const char *format, ...);
 
 #endif /* __PRINT_H__ */

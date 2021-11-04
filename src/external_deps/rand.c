@@ -40,7 +40,6 @@ static int fimport(unsigned char *buf, u16 buflen, const char *path)
 
 	fd = open(path, O_RDONLY);
 	if (fd == -1) {
-		printf("Unable to open input file %s\n", path);
 		return -1;
 	}
 
@@ -97,5 +96,12 @@ int get_random(unsigned char *buf, u16 len)
  *	and caches with other possibly malicious processes, a microcontroller
  *	that can be observed using EM probes or power consumtion, ...).
  */
-#error "rand.c: you have to implement get_random with a proper entropy source!"
+int get_random(unsigned char *buf, u16 len)
+{
+	/*stub*/
+	for(u16 i=0 ; i<len; i++) {
+		buf[i] = (unsigned char)i;
+	}
+	return 0;
+}
 #endif

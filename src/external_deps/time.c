@@ -53,5 +53,10 @@ int get_ms_time(u64 *time)
 
 /* No platform detected, the used must provide an implementation! */
 #else
-#error "time.c: you have to implement get_ms_time()"
+int get_ms_time(u64 *time)
+{
+	/*stub*/
+	*time = 1;
+	return 0;
+}
 #endif
