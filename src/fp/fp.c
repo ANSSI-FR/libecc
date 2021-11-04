@@ -272,7 +272,7 @@ int fp_set_word_value(fp_t out, word_t val)
 	MUST_HAVE((cmp > 0), ret, err);
 
 	/* Set the word in the NN layer */
-	ret = nn_set_word_value(&(out->fp_val), val);
+	ret = nn_set_word_value(&(out->fp_val), val); EG(ret, err);
 
 	/* Set the wlen to the length of p */
 	ret = nn_set_wlen(&(out->fp_val), out->ctx->p.wlen);
