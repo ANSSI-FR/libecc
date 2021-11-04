@@ -7,17 +7,18 @@ APPLE := $(shell $(CC) -dumpmachine 2>&1 | grep -v apple)
 ifneq ($(MINGW),)
 FPIC_CFLAG=-fPIC
 ifneq ($(APPLE),)
-FPIE_CFLAG=-fPIE
-FPIE_LDFLAGS=-pie -Wl,-z,relro,-z,now
+#FPIE_LDFLAGS=-pie -Wl,-z,relro,-z,now
+FPIE_LDFLAGS= -Wl,-z,relro,-z,now
+
 endif
 endif
 
 # NOTE: with mingw, FORTIFY_SOURCE=2 must be used
 # in conjuction with stack-protector as check functions
 # are implemented in libssp
-STACK_PROT_FLAG=-fstack-protector-strong
+#STACK_PROT_FLAG=-fstack-protector-strong
+STACK_PROT_FLAG=
 FORTIFY_FLAGS=-D_FORTIFY_SOURCE=2
-
 # The first goal here is to define a meaningful set of CFLAGS based on compiler,
 # debug mode, expected word size (16, 32, 64), etc. Those are then used to
 # define two differents kinds of CFLAGS we will use for building our library
@@ -34,8 +35,9 @@ FORTIFY_FLAGS=-D_FORTIFY_SOURCE=2
 #
 CLANG :=  $(shell $(CC) -v 2>&1 | grep clang)
 ifneq ($(CLANG),)
-WARNING_CFLAGS = -Weverything -Werror \
-		 -Wno-reserved-id-macro -Wno-padded \
+#WARNING_CFLAGS = -Weverything -Werror \
+WARNING_CFLAGS = -Weverything  \
+                 -Wno-reserved-id-macro -Wno-padded \
 		 -Wno-packed -Wno-covered-switch-default \
 		 -Wno-used-but-marked-unused -Wno-switch-enum
 # Clang version >= 13? Adapt
@@ -63,7 +65,7 @@ USER_DEFINED_LDFLAGS = $(LDFLAGS)
 endif
 
 CFLAGS ?= $(WARNING_CFLAGS) -pedantic -fno-builtin -std=c99 \
-	  $(FORTIFY_FLAGS) $(STACK_PROT_FLAG) -O3
+	  $(FORTIFY_FLAGS) $(STACK_PROT_FLAG) -Os
 LDFLAGS ?=
 
 # Default AR and RANLIB if not overriden by user

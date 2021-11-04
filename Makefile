@@ -14,7 +14,8 @@ LIBS += $(LIBARITH_DYN) $(LIBEC_DYN) $(LIBSIGN_DYN)
 endif
 
 # Executables to build
-TESTS_EXEC = $(BUILD_DIR)/ec_self_tests $(BUILD_DIR)/ec_utils
+#TESTS_EXEC = $(BUILD_DIR)/ec_self_tests $(BUILD_DIR)/ec_utils
+TESTS_EXEC =
 # We also compile executables with dynamic linking if asked to
 ifeq ($(WITH_DYNAMIC_LIBS),1)
 TESTS_EXEC += $(BUILD_DIR)/ec_self_tests_dyn $(BUILD_DIR)/ec_utils_dyn
