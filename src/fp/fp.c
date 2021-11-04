@@ -274,6 +274,9 @@ int fp_set_word_value(fp_t out, word_t val)
 	/* Set the word in the NN layer */
 	ret = nn_set_word_value(&(out->fp_val), val);
 
+	/* Set the wlen to the length of p */
+	ret = nn_set_wlen(&(out->fp_val), out->ctx->p.wlen);
+
 err:
 	return ret;
 }
