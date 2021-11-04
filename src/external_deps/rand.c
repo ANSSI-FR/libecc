@@ -99,8 +99,9 @@ int get_random(unsigned char *buf, u16 len)
 int get_random(unsigned char *buf, u16 len)
 {
 	/*stub*/
-	for(u16 i=0 ; i<len; i++) {
-		buf[i] = (unsigned char)i;
+	static u64 rand =1;
+	for(u64 i=0 ; i<len; i++) {
+		buf[i] = (unsigned char)rand++;
 	}
 	return 0;
 }
