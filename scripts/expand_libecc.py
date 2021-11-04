@@ -1090,6 +1090,8 @@ def gen_self_test(curve, hashfunc, sig_alg_sign, sig_alg_verify, sig_alg_genkeyp
         out_vectors += "\tconst u8 k_buf[] = "+bigint_to_C_array(k, getbytelen(curve.q))
         out_vectors += "\tnn_init_from_buf(out, k_buf, sizeof(k_buf));\n\treturn (nn_cmp(out, q) >= 0);\n}\n"
         out_vectors += "static const u8 "+test_name+"_test_vectors_priv_key[] = \n"+bigint_to_C_array(keypair.privkey.x, getbytelen(keypair.privkey.x))
+        out_vectors += "static const u8 "+test_name+"_test_vectors_pub_key_x[] = \n"+bigint_to_C_array(keypair.pubkey.Y.x,  getbytelen(keypair.pubkey.curve.p))
+        out_vectors += "static const u8 "+test_name+"_test_vectors_pub_key_y[] = \n"+bigint_to_C_array(keypair.pubkey.Y.y,  getbytelen(keypair.pubkey.curve.p))
         out_vectors += "static const u8 "+test_name+"_test_vectors_expected_sig[] = \n"+bigint_to_C_array(stringtoint(sig), len(sig))
         out_vectors += "static const ec_test_case "+test_name+"_test_case = {\n"
         out_vectors += "\t.name = \""+test_name+"\",\n"
@@ -1872,7 +1874,7 @@ def parse_cmd_line(args):
         return False
     if (check_in_file(curves_list_path + "curves_list.h", "ec_params_"+name+"_str_params") == True) or (check_in_file(curves_list_path + "curves_list.h", "WITH_CURVE_"+name.upper()+"\n") == True) or (check_in_file(lib_ecc_types_path + "lib_ecc_types.h", "WITH_CURVE_"+name.upper()+"\n") == True):
         print("Error: name %s already exists in files" % ("ec_params_"+name))
-        return False
+        #return False
     # Create a new file with the parameters
     if not os.path.exists(ec_params_path):
         # Create the "user_defined" folder if it does not exist
