@@ -216,8 +216,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int x25519_448_core(const u8 *k, const u8 *u, u
 	ret = curve_shortw_to_montgomery(shortw_curve, &montgomery_curve, alpha_montgomery,
 			gamma_montgomery); EG(ret, err);
 
-	/* Import the scalar and u coordinate as a big integer and Fp element */
-	ret = nn_init_from_buf(&scalar, k_, len); EG(ret, err);
+	/* Import the u coordinate as a big integer and Fp element */
 	ret = nn_init_from_buf(v_coord_nn, u_, len); EG(ret, err);
 	/* Reject non canonical u values.
 	 * NOTE: we use v here as a temporary value.
@@ -265,6 +264,8 @@ ATTRIBUTE_WARN_UNUSED_RET static int x25519_448_core(const u8 *k, const u8 *u, u
 	ret = check_prj_pt_order(&Q, cofactor, PUBLIC_PT, &cmp); EG(ret, err);
 	MUST_HAVE((!cmp), ret, err);
 
+	/* Import the scalar as big number NN value */
+	ret = nn_init_from_buf(&scalar, k_, len); EG(ret, err);
 	/* Now proceed with the scalar multiplication */
 #ifdef USE_SIG_BLINDING
 	ret = prj_pt_mul_blind(&Q, &scalar, &Q); EG(ret, err);
@@ -289,6 +290,7 @@ err:
 	IGNORE_RET_VAL(local_memset(k_, 0, sizeof(k_)));
 	IGNORE_RET_VAL(local_memset(&shortw_curve_params, 0, sizeof(shortw_curve_params)));
 
+	nn_uninit(&scalar);
 	aff_pt_montgomery_uninit(&_Tmp);
 	prj_pt_uninit(&Q);
 	ec_montgomery_crv_uninit(&montgomery_curve);
