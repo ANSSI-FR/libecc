@@ -173,31 +173,29 @@ int ecccdh_derive_secret(const ec_priv_key *our_priv_key, const u8 *peer_pub_key
 	ret = ec_pub_key_import_from_aff_buf(&peer_pub_key, our_priv_key->params, peer_pub_key_buf, peer_pub_key_buf_len, ECCCDH); EG(ret, err);
 	Q = &(peer_pub_key.y);
 
+	ret = nn_isone(&(our_priv_key->params->ec_gen_cofactor), &isone); EG(ret, err);
+	if(!isone){
+		/* Perform a cofactor multiplication if necessary.
+		 * NOTE: since the cofactor and the base point are public, we perform an unprotected
+		 * scalar multiplication here.
+		 */
+		ret = _prj_pt_unprotected_mult(Q, &(our_priv_key->params->ec_gen_cofactor), Q); EG(ret, err);
+	}
+
 	/*
-	 * Reject the point at infinity as input as a trivial wrong public key.
+	 * Reject the point at infinity or low order point as input as a trivial wrong public key.
 	 * This would be rejected in any case by the check post scalar multiplication below, but we
 	 * do not want to use and possibly leak the secret scalar if not necessary!
 	 */
 	ret = prj_pt_iszero(Q, &iszero); EG(ret, err);
 	MUST_HAVE((!iszero), ret, err);
 
-	ret = nn_isone(&(our_priv_key->params->ec_gen_cofactor), &isone); EG(ret, err);
-	if(!isone){
-		/* Cofactor multiplication if necessary */
-		nn cofactor;
-		cofactor.magic = 0;
-		/* Multiply the private key by the cofactor */
-		ret = nn_mul(&cofactor, &(our_priv_key->params->ec_gen_cofactor), &(our_priv_key->x)); EG(ret, err1);
-		/* Compute the shared secret using a blind scalar multiplication */
-		ret = prj_pt_mul_blind(Q, &cofactor, Q);
-
-err1:
-		nn_uninit(&cofactor); EG(ret, err);
-	}
-	else{
-		/* Compute the shared secret using a blind scalar multiplication */
-		ret = prj_pt_mul_blind(Q, &(our_priv_key->x), Q); EG(ret, err);
-	}
+	/* Compute the shared secret using scalar multiplication */
+#ifdef USE_SIG_BLINDING
+	ret = prj_pt_mul_blind(Q, &(our_priv_key->x), Q); EG(ret, err);
+#else
+	ret = prj_pt_mul(Q, &(our_priv_key->x), Q); EG(ret, err);
+#endif
 
 	/* NOTE: scalar multiplication primitive checks that the resulting point is on
 	 * the curve.
