@@ -508,7 +508,7 @@ int nn_modinv_fermat(nn_t out, nn_src_t x, nn_src_t p)
 	p_minus_two.magic = WORD(0);
 
 	/* Call our helper.
-	 * NOTE: "marginal" cases where x = 0 and p <= 0 should be caught in this helper.
+	 * NOTE: "marginal" cases where x = 0 and p <= 2 should be caught in this helper.
 	 */
 	ret = _nn_modinv_fermat_common(out, x, p, &p_minus_two, &lesstwo); EG(ret, err);
 
@@ -542,7 +542,7 @@ int nn_modinv_fermat_redc(nn_t out, nn_src_t x, nn_src_t p, nn_src_t r, nn_src_t
 	p_minus_two.magic = WORD(0);
 
 	/* Call our helper.
-	 * NOTE: "marginal" cases where x = 0 and p <= 0 should be caught in this helper.
+	 * NOTE: "marginal" cases where x = 0 and p <= 2 should be caught in this helper.
 	 */
 	ret = _nn_modinv_fermat_common(out, x, p, &p_minus_two, &lesstwo); EG(ret, err);
 
