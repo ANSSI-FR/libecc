@@ -44,6 +44,13 @@
  * also heavily depend on what the upper layer callers do). Fault injection
  * (e.g. Bellcore attack and so on) are not taken into account.
  *
+ * Also, as for all other libecc primitives, beware of randomness sources. By default,
+ * the library uses the OS random sources (e.g. "/dev/urandom"), but the user
+ * is encouraged to adapt the ../external_deps/rand.c source file to combine
+ * multiple sources and add entropy there depending on the context where this
+ * code is integrated. The security level of all the cryptographic primitives
+ * heavily relies on random sources quality.
+ *
  * All-in-all, this piece of code can be useful in some contexts, or risky to
  * use in other sensitive ones where advanced side-channels or fault attacks
  * have to be considered. Use this RSA code knowingly and at your own risk!
@@ -1143,6 +1150,7 @@ err:
 	return ret;
 }
 
+#ifdef RSA
 /* RSA PKCS#1 test vectors taken from:
  *     https://github.com/bdauvergne/python-pkcs1/tree/master/tests/data
  */
@@ -1170,3 +1178,4 @@ int main(int argc, char *argv[])
 err:
 	return ret;
 }
+#endif

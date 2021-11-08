@@ -5,10 +5,10 @@ include $(ROOT_DIR)/common.mk
 
 CFLAGS += -I$(ROOT_DIR)/src/ -I$(ROOT_DIR)/src/external_deps
 
-all:	nn_example fp_example curve_basic_examples curve_ecdh rsa
+all:	nn_example fp_example curve_basic_examples curve_ecdh rsa sss
 ifeq ($(WITH_DYNAMIC_LIBS),1)
 # If the user asked for dynamic libraries, compile versions of our binaries against them
-all:	nn_example_dyn fp_example_dyn curve_basic_examples_dyn curve_ecdh_dyn rsa_dyn
+all:	nn_example_dyn fp_example_dyn curve_basic_examples_dyn curve_ecdh_dyn rsa_dyn sss_dyn
 endif
 
 nn_example:
@@ -23,7 +23,10 @@ curve_ecdh:
 	$(CC) $(BIN_CFLAGS) -DCURVE_ECDH curve_ecdh.c $(ROOT_DIR)/src/external_deps/print.c $(ROOT_DIR)/src/external_deps/rand.c $(BIN_LDFLAGS) $(LIBEC) -o curve_ecdh
 
 rsa:
-	$(CC) $(BIN_CFLAGS) rsa.c rsa_hash.c $(ROOT_DIR)/src/external_deps/print.c $(ROOT_DIR)/src/external_deps/rand.c $(BIN_LDFLAGS) $(LIBSIGN) -o rsa
+	$(CC) $(BIN_CFLAGS) -DRSA rsa.c rsa_hash.c $(ROOT_DIR)/src/external_deps/print.c $(ROOT_DIR)/src/external_deps/rand.c $(BIN_LDFLAGS) $(LIBSIGN) -o rsa
+
+sss:
+	$(CC) $(BIN_CFLAGS) -DSSS sss.c $(ROOT_DIR)/src/external_deps/print.c $(ROOT_DIR)/src/external_deps/rand.c $(BIN_LDFLAGS) $(LIBSIGN) -o sss
 
 # If the user asked for dynamic libraries, compile versions of our binaries against them
 ifeq ($(WITH_DYNAMIC_LIBS),1)
@@ -39,12 +42,14 @@ curve_ecdh_dyn:
 	$(CC) $(BIN_CFLAGS) -DCURVE_ECDH curve_ecdh.c $(ROOT_DIR)/src/external_deps/print.c $(ROOT_DIR)/src/external_deps/rand.c $(BIN_LDFLAGS) -L$(BUILD_DIR) -lec -o curve_ecdh_dyn
 
 rsa_dyn:
-	$(CC) $(BIN_CFLAGS) rsa.c rsa_hash.c $(ROOT_DIR)/src/external_deps/print.c $(ROOT_DIR)/src/external_deps/rand.c $(BIN_LDFLAGS) $(LIBEC) -L$(BUILD_DIR) -lsign -o rsa
+	$(CC) $(BIN_CFLAGS) -DRSA rsa.c rsa_hash.c $(ROOT_DIR)/src/external_deps/print.c $(ROOT_DIR)/src/external_deps/rand.c $(BIN_LDFLAGS) $(LIBEC) -L$(BUILD_DIR) -lsign -o rsa_dyn
+sss_dyn:
+	$(CC) $(BIN_CFLAGS) -DSSS sss.c $(ROOT_DIR)/src/external_deps/print.c $(ROOT_DIR)/src/external_deps/rand.c $(BIN_LDFLAGS) $(LIBEC) -L$(BUILD_DIR) -lsign -o sss_dyn
 endif
 
 
 clean:
-	@rm -f nn_pollard_rho fp_square_residue curve_basic_examples curve_ecdh rsa
-	@rm -f nn_pollard_rho_dyn fp_square_residue_dyn curve_basic_examples_dyn curve_ecdh_dyn rsa_dyn
+	@rm -f nn_pollard_rho fp_square_residue curve_basic_examples curve_ecdh rsa sss
+	@rm -f nn_pollard_rho_dyn fp_square_residue_dyn curve_basic_examples_dyn curve_ecdh_dyn rsa_dyn sss_dyn
 
 .PHONY: all clean 16 32 64 debug debug16 debug32 debug64 force_arch32 force_arch64
