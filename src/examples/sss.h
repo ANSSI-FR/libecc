@@ -40,9 +40,13 @@ typedef struct ATTRIBUTE_PACKED {
 	u8 share[SSS_SECRET_SIZE];
 } _sss_raw_share;
 
+#define SSS_SESSION_ID_SIZE 16
+
 /* Security wrapper for the secret for "secured" SSS */
 typedef struct ATTRIBUTE_PACKED {
 	_sss_raw_share raw_share;
+	/* 128 bits session id */
+	u8 session_id[SSS_SESSION_ID_SIZE];
 	u8 raw_share_hmac[SHA256_DIGEST_SIZE];
 } sss_share;
 

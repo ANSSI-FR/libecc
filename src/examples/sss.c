@@ -337,6 +337,7 @@ int sss_generate(sss_share *shares, u16 k, u16 n, sss_secret *secret, bool input
 	int ret;
 	unsigned int i;
 	u8 len;
+	u8 session_id[SSS_SESSION_ID_SIZE];
 
 	/* Generate raw shares */
 	ret = _sss_raw_generate(shares, k, n, secret, input_secret); EG(ret, err);
@@ -344,13 +345,22 @@ int sss_generate(sss_share *shares, u16 k, u16 n, sss_secret *secret, bool input
 	/* Sanity check */
 	MUST_HAVE((SHA512_DIGEST_SIZE >= sizeof(shares[0].raw_share_hmac)), ret, err);
 
-	/* Compute the authenticity seal for each HMAC */
+	/* Generate a random session ID */
+	ret = get_random(session_id, sizeof(session_id)); EG(ret, err);
+
+	/* Compute the authenticity seal for each share with HMAC */
 	for(i = 0; i < n; i++){
-		len = sizeof(shares[i].raw_share_hmac);
 		/* NOTE: we 'abuse' casts here for shares[i].raw_share to u8*, but this should be OK since
 		 * our structures are packed.
 		 */
-		ret = hmac((const u8*)secret, SSS_SECRET_SIZE, SHA256, (const u8*)&(shares[i].raw_share), sizeof(shares[i].raw_share), shares[i].raw_share_hmac, &len); EG(ret, err);
+		const u8 *inputs[3] = { (const u8*)&(shares[i].raw_share), shares[i].session_id, NULL };
+		const u32 ilens[3] = { sizeof(shares[i].raw_share), sizeof(shares[i].session_id), 0 };
+
+		/* Copy the session ID */
+		ret = local_memcpy(shares[i].session_id, session_id, sizeof(shares[i].session_id)); EG(ret, err);
+
+		len = sizeof(shares[i].raw_share_hmac);
+		ret = hmac_scattered((const u8*)secret, SSS_SECRET_SIZE, SHA256, inputs, ilens, shares[i].raw_share_hmac, &len); EG(ret, err);
 	}
 
 err:
@@ -374,8 +384,26 @@ int sss_combine(const sss_share *shares, u16 k, sss_secret *secret)
 
 	/* Compute and check the authenticity seal for each HMAC */
 	for(i = 0; i < k; i++){
-		len = sizeof(shares[i].raw_share_hmac);
-		ret = hmac((const u8*)secret, SSS_SECRET_SIZE, SHA256, (const u8*)&(shares[i].raw_share), sizeof(shares[i].raw_share), hmac_val, &len); EG(ret, err);
+		/* NOTE: we 'abuse' casts here for shares[i].raw_share to u8*, but this should be OK since
+		 * our structures are packed.
+		 */
+		const u8 *inputs[3] = { (const u8*)&(shares[i].raw_share), shares[i].session_id, NULL };
+		const u32 ilens[3] = { sizeof(shares[i].raw_share), sizeof(shares[i].session_id), 0 };
+
+		/* Check that all our shares have the same session ID, return an error otherwise */
+		ret = are_equal(shares[i].session_id, shares[0].session_id, sizeof(shares[i].session_id), &cmp); EG(ret, err);
+		if(!cmp){
+#ifdef VERBOSE
+			ext_printf("[-] sss_combine error for share %d / %d: session ID is not OK!\n", i, k);
+#endif
+			ret = -1;
+			goto err;
+		}
+
+		len = sizeof(hmac_val);
+		ret = hmac_scattered((const u8*)secret, SSS_SECRET_SIZE, SHA256, inputs, ilens, hmac_val, &len); EG(ret, err);
+
+		/* Check the HMAC */
 		ret = are_equal(hmac_val, shares[i].raw_share_hmac, len, &cmp); EG(ret, err);
 		if(!cmp){
 #ifdef VERBOSE
@@ -410,15 +438,28 @@ int sss_regenerate(sss_share *shares, u16 k, u16 n, sss_secret *secret)
 	ret = _sss_raw_lagrange(shares, k, secret, 0);
 	/* Check the authenticity of our shares */
 	for(i = 0; i < k; i++){
-		len = sizeof(shares[i].raw_share_hmac);
 		/* NOTE: we 'abuse' casts here for shares[i].raw_share to u8*, but this should be OK since
 		 * our structures are packed.
 		 */
-		ret = hmac((const u8*)secret, SSS_SECRET_SIZE, SHA256, (const u8*)&(shares[i].raw_share), sizeof(shares[i].raw_share), hmac_val, &len); EG(ret, err);
+		const u8 *inputs[3] = { (const u8*)&(shares[i].raw_share), shares[i].session_id, NULL };
+		const u32 ilens[3] = { sizeof(shares[i].raw_share), sizeof(shares[i].session_id), 0 };
+
+		/* Check that all our shares have the same session ID, return an error otherwise */
+		ret = are_equal(shares[i].session_id, shares[0].session_id, sizeof(shares[i].session_id), &cmp); EG(ret, err);
+		if(!cmp){
+#ifdef VERBOSE
+			ext_printf("[-] sss_regenerate error for share %d / %d: session ID is not OK!\n", i, k);
+#endif
+			ret = -1;
+			goto err;
+		}
+
+		len = sizeof(hmac_val);
+		ret = hmac_scattered((const u8*)secret, SSS_SECRET_SIZE, SHA256, inputs, ilens, hmac_val, &len); EG(ret, err);
 		ret = are_equal(hmac_val, shares[i].raw_share_hmac, len, &cmp); EG(ret, err);
 		if(!cmp){
 #ifdef VERBOSE
-			ext_printf("[-] sss_combine error for share %d / %d: HMAC is not OK!\n", i, k);
+			ext_printf("[-] sss_regenerate error for share %d / %d: HMAC is not OK!\n", i, k);
 #endif
 			ret = -1;
 			goto err;
@@ -440,14 +481,18 @@ int sss_regenerate(sss_share *shares, u16 k, u16 n, sss_secret *secret)
 		 * our shares[i].raw_share.share is a SSS_SECRET_SIZE as the sss_secret.secret type encapsulates and our
 		 * structures are packed.
 		 */
+		const u8 *inputs[3] = { (const u8*)&(shares[i].raw_share), shares[i].session_id, NULL };
+		const u32 ilens[3] = { sizeof(shares[i].raw_share), sizeof(shares[i].session_id), 0 };
+
+		/* Copy our session ID */
+		ret = local_memcpy(shares[i].session_id, shares[0].session_id, sizeof(shares[i].session_id)); EG(ret, err);
+
 		ret = _sss_raw_lagrange(shares, k, (sss_secret*)shares[i].raw_share.share, (max_idx + (u16)(i - k + 1))); EG(ret, err);
 		shares[i].raw_share.index = (max_idx + (u16)(i - k + 1));
+
 		/* Compute the HMAC */
 		len = sizeof(shares[i].raw_share_hmac);
-		/* NOTE: we 'abuse' casts here for shares[i].raw_share to u8*, but this should be OK since
-		 * our structures are packed.
-		 */
-		ret = hmac((const u8*)secret, SSS_SECRET_SIZE, SHA256, (const u8*)&(shares[i].raw_share), sizeof(shares[i].raw_share), (u8*)&(shares[i].raw_share_hmac), &len); EG(ret, err);
+		ret = hmac_scattered((const u8*)secret, SSS_SECRET_SIZE, SHA256, inputs, ilens, shares[i].raw_share_hmac, &len); EG(ret, err);
 	}
 
 err:
@@ -456,6 +501,8 @@ err:
 	return ret;
 }
 
+
+/********* main test program for SSS *************/
 #ifdef SSS
 #include "../utils/print_buf.h"
 
@@ -552,6 +599,17 @@ int main(int argc, char *argv[])
 	/* Combine newly generated shares: call should be OK */
 	ext_printf("[+] Combining the secrets with newly generated shares: call should be OK\n");
 	ret = local_memset(&secret, 0x00, sizeof(secret)); EG(ret, err);
+	ret = sss_combine(shares_, K, &secret);
+	if (ret) {
+		ext_printf("  [X] Error: sss_combine error\n");
+	} else {
+		buf_print("  secret", (u8*)&secret, SSS_SECRET_SIZE);
+	}
+
+	/* Modify the session ID of one of the shares: call should trigger an error */
+	ext_printf("[+] Combining the secrets with newly generated shares and a bad session ID: call should trigger an error\n");
+	ret = local_memset(&secret, 0x00, sizeof(secret)); EG(ret, err);
+	shares_[1].session_id[0] = 0x00;
 	ret = sss_combine(shares_, K, &secret);
 	if (ret) {
 		ext_printf("  [X] Error: sss_combine error\n");
