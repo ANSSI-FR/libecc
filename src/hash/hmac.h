@@ -31,6 +31,8 @@ ATTRIBUTE_WARN_UNUSED_RET int hmac_finalize(hmac_context *ctx, u8 *output, u8 *o
 
 ATTRIBUTE_WARN_UNUSED_RET int hmac(const u8 *hmackey, u32 hmackey_len, hash_alg_type hash_type, const u8 *input, u32 ilen, u8 *output, u8 *outlen);
 
+ATTRIBUTE_WARN_UNUSED_RET int hmac_scattered(const u8 *hmackey, u32 hmackey_len, hash_alg_type hash_type, const u8 **inputs, const u32 *ilens, u8 *output, u8 *outlen);
+
 #endif /* WITH_HMAC */
 
 #endif /* __HMAC_H__ */

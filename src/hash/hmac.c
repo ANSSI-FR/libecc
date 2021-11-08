@@ -150,6 +150,31 @@ err:
 	return ret;
 }
 
+/* Scattered version */
+int hmac_scattered(const u8 *hmackey, u32 hmackey_len, hash_alg_type hash_type,
+	 const u8 **inputs, const u32 *ilens, u8 *output, u8 *outlen)
+{
+	int ret, pos = 0;
+	hmac_context ctx;
+
+	MUST_HAVE((inputs != NULL) && (ilens != NULL) && (output != NULL), ret, err);
+
+	ret = hmac_init(&ctx, hmackey, hmackey_len, hash_type); EG(ret, err);
+
+	while (inputs[pos] != NULL) {
+		ret = hmac_update(&ctx, inputs[pos], ilens[pos]); EG(ret, err);
+		pos += 1;
+	}
+
+	ret = hmac_finalize(&ctx, output, outlen);
+
+err:
+	/* Clean our context as it can contain sensitive data */
+	IGNORE_RET_VAL(local_memset(&ctx, 0, sizeof(hmac_context)));
+
+	return ret;
+}
+
 
 #else /* WITH_HMAC */
 
