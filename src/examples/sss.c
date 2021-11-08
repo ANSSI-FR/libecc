@@ -145,11 +145,12 @@ ATTRIBUTE_WARN_UNUSED_RET static int _sss_raw_generate(sss_share *shares, u16 k,
 	 * avoids "malloc" usage (preserving the "no dynamic allocation" philosophy of libecc).
 	 *
 	 * Our secret seed is SSS_SECRET_SIZE long, so on the security side there should be no
-	 * no loss of strength/entropy. For each inded i, a[i] is computed as follows:
+	 * loss of strength/entropy. For each index i, a[i] is computed as follows:
 	 *
-	 * a[i] = HMAC(secret_seed, i) where the HMAC is interpreted as a value in Fp (i.e. modulo
-	 * p), and i is represented as a string of 2 elements. The HMAC uses a hash function of at
-	 * least twice the size of the secret to avoid biases in modular reduction.
+	 *        a[i] = HMAC(secret_seed, i)
+	 * where the HMAC is interpreted as a value in Fp (i.e. modulo p), and i is represented
+	 * as a string of 2 elements. The HMAC uses a hash function of at least twice the
+	 * size of the secret to avoid biases in modular reduction.
 	 */
 
 	/* a0 is either derived from the secret seed or taken from input if
@@ -159,7 +160,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int _sss_raw_generate(sss_share *shares, u16 k,
 	if(input_secret == true){
 		/* Import the secret the user provides
 		 * XXX: NOTE: the user shared secret MUST be in Fp! Since our prime is < (2**256 - 1),
-		 * some 256 bit strings can be rejected here.
+		 * some 256 bit strings can be rejected here (namely those >= p and < (2**256 - 1)).
 		 */
 		ret = fp_import_from_buf(&a0, secret->secret, SSS_SECRET_SIZE); EG(ret, err);
 	}
@@ -174,7 +175,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int _sss_raw_generate(sss_share *shares, u16 k,
 	ret = fp_init(&tmp, &ctx); EG(ret, err);
 	ret = fp_init(&s, &ctx); EG(ret, err);
 	ret = fp_init(&a, &ctx); EG(ret, err);
-	/* Get a random blind mask and inverse it */
+	/* Get a random blind mask and invert it */
 	ret = fp_get_random(&blind, &ctx); EG(ret, err);
 	ret = fp_init(&blind_inv, &ctx); EG(ret, err);
 	ret = fp_inv(&blind_inv, &blind); EG(ret, err);
@@ -264,7 +265,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int _sss_raw_lagrange(const sss_share *shares, 
 		ret = fp_init(&x, &ctx); EG(ret, err);
 		ret = fp_set_word_value(&x, (word_t)val); EG(ret, err);
 	}
-	/* Get a random blind mask and inverse it */
+	/* Get a random blind mask and invert it */
 	ret = fp_get_random(&blind, &ctx); EG(ret, err);
 	ret = fp_init(&blind_inv, &ctx); EG(ret, err);
 	ret = fp_inv(&blind_inv, &blind); EG(ret, err);
