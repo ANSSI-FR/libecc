@@ -429,9 +429,11 @@ err:
  * Internal function for nn_modinv_fermat and nn_modinv_fermat_redc used
  * hereafter.
  */
-ATTRIBUTE_WARN_UNUSED_RET static int _nn_modinv_fermat_common(nn_t out, nn_src_t x, nn_src_t p, nn_t p_minus_two, nn_t two, int *lesstwo)
+ATTRIBUTE_WARN_UNUSED_RET static int _nn_modinv_fermat_common(nn_t out, nn_src_t x, nn_src_t p, nn_t p_minus_two, int *lesstwo)
 {
-	int ret, cmp;
+	int ret, cmp, isodd;
+	nn two;
+	two.magic = WORD(0);
 
 	/* Sanity checks on inputs */
 	ret = nn_check_initialized(x); EG(ret, err);
@@ -440,24 +442,47 @@ ATTRIBUTE_WARN_UNUSED_RET static int _nn_modinv_fermat_common(nn_t out, nn_src_t
 	 * two and regular are OK.
 	 */
 
-	/* For p <= 2, we use regular modinv */
+	/* 0 is not invertible in any case */
+	ret = nn_iszero(x, &cmp); EG(ret, err);
+	MUST_HAVE((!cmp), ret, err);
+
+	/* For p <= 2, p being prime either p = 1 or p = 2.
+	 * When p = 2, only 1 has an inverse, if p = 1 no one has an inverse.
+	 */
 	(*lesstwo) = 0;
 	ret = nn_cmp_word(p, WORD(2), &cmp); EG(ret, err);
-        if(cmp <= 0){
-		ret = nn_modinv(out, x, p);
+        if(cmp == 0){
+		/* This is the p = 2 case, parity of x provides the result */
+		ret = nn_isodd(x, &isodd);
+		if(isodd){
+			/* x is odd, 1 is its inverse */
+			ret = nn_init(out, 0); EG(ret, err);
+			ret = nn_one(out); EG(ret, err);
+			ret = 0;
+		}
+		else{
+			/* x is even, no inverse */
+			ret = -1;
+		}
 		(*lesstwo) = 1;
 		goto err;
-        }
+        } else if (cmp < 0){
+		/* This is the p = 1 case, no inverse here: hence return an error */
+		ret = -1;
+		(*lesstwo) = 1;
+		goto err;
+	}
 
-	/* Else we compute x^(p-2) mod (p) */
+	/* Else we compute (p-2) for the upper layer */
 	ret = nn_init(p_minus_two, 0); EG(ret, err);
 
-	ret = nn_init(two, 0); EG(ret, err);
-	ret = nn_set_word_value(two, WORD(2)); EG(ret, err);
-
-	ret = nn_sub(p_minus_two, p, two);
+	ret = nn_init(&two, 0); EG(ret, err);
+	ret = nn_set_word_value(&two, WORD(2)); EG(ret, err);
+	ret = nn_sub(p_minus_two, p, &two);
 
 err:
+	nn_uninit(&two);
+
 	return ret;
 }
 
@@ -467,28 +492,33 @@ err:
  *    p prime means that:
  *    x^(p-1) = 1 mod (p)
  *    which means that x^(p-2) mod(p) is the modular inverse of x mod (p)
+ *    for x != 0
  *
  * NOTE: the input hypothesis is that p is prime.
  * XXX WARNING: using this function with p not prime will produce wrong
  * results without triggering an error!
  *
- * The function supports aliasing.
+ * The function supports aliasing. It returns 0 on success, -1 on error
+ * (e.g. if x has no inverse modulo p, i.e. x = 0).
  */
 int nn_modinv_fermat(nn_t out, nn_src_t x, nn_src_t p)
 {
 	int ret, lesstwo;
-	nn p_minus_two, two;
+	nn p_minus_two;
+	p_minus_two.magic = WORD(0);
 
-	/* Call our helper */
-	ret = _nn_modinv_fermat_common(out, x, p, &p_minus_two, &two, &lesstwo); EG(ret, err);
+	/* Call our helper.
+	 * NOTE: "marginal" cases where x = 0 and p <= 0 should be caught in this helper.
+	 */
+	ret = _nn_modinv_fermat_common(out, x, p, &p_minus_two, &lesstwo); EG(ret, err);
 
 	if(!lesstwo){
+		/* Compute x^(p-2) mod (p) */
 		ret = nn_mod_pow(out, x, &p_minus_two, p);
 	}
 
 err:
 	nn_uninit(&p_minus_two);
-	nn_uninit(&two);
 
 	return ret;
 }
@@ -502,23 +532,27 @@ err:
  * XXX WARNING: using this function with p not prime will produce wrong
  * results without triggering an error!
  *
- * The function supports aliasing.
+ * The function supports aliasing. It returns 0 on success, -1 on error
+ * (e.g. if x has no inverse modulo p, i.e. x = 0).
  */
 int nn_modinv_fermat_redc(nn_t out, nn_src_t x, nn_src_t p, nn_src_t r, nn_src_t r_square, word_t mpinv)
 {
 	int ret, lesstwo;
-	nn p_minus_two, two;
+	nn p_minus_two;
+	p_minus_two.magic = WORD(0);
 
-	/* Call our helper */
-	ret = _nn_modinv_fermat_common(out, x, p, &p_minus_two, &two, &lesstwo); EG(ret, err);
+	/* Call our helper.
+	 * NOTE: "marginal" cases where x = 0 and p <= 0 should be caught in this helper.
+	 */
+	ret = _nn_modinv_fermat_common(out, x, p, &p_minus_two, &lesstwo); EG(ret, err);
 
 	if(!lesstwo){
+		/* Compute x^(p-2) mod (p) using precomputed Montgomery coefficients as input */
 		ret = nn_mod_pow_redc(out, x, &p_minus_two, p, r, r_square, mpinv);
 	}
 
 err:
 	nn_uninit(&p_minus_two);
-	nn_uninit(&two);
 
 	return ret;
 }
