@@ -164,6 +164,86 @@ err:
 	return ret;
 }
 
+/*
+ * NOT constant time at all and not secure against side-channels. This is
+ * an internal function only used for RSA decryption on public data.
+ *
+ * Compute (base ** exp) mod (mod) using a square and multiply algorithm.
+ * Internally, this computes Montgomery coefficients and uses the redc
+ * function.
+ *
+ * Returns 0 on success, -1 on error.
+ */
+ATTRIBUTE_WARN_UNUSED_RET static int _nn_mod_pow_insecure(nn_t out, nn_src_t base, nn_src_t exp, nn_src_t mod)
+{
+	int ret, isodd, cmp;
+	bitcnt_t explen;
+	u8 expbit;
+	nn r, r_square, _base, one;
+	word_t mpinv;
+	r.magic = r_square.magic = _base.magic = one.magic = WORD(0);
+
+	/* Aliasing is not supported for this internal helper */
+	MUST_HAVE((out != base) && (out != exp) && (out != mod), ret, err);
+
+	/* Check initializations */
+	ret = nn_check_initialized(base); EG(ret, err);
+	ret = nn_check_initialized(exp); EG(ret, err);
+	ret = nn_check_initialized(mod); EG(ret, err);
+
+	ret = nn_bitlen(exp, &explen); EG(ret, err);
+	/* Sanity check */
+	MUST_HAVE((explen > 0), ret, err);
+
+	/* Check that the modulo is indeed odd */
+	ret = nn_isodd(mod, &isodd); EG(ret, err);
+	MUST_HAVE(isodd, ret, err);
+
+	/* Compute the Montgomery coefficients */
+	ret = nn_compute_redc1_coefs(&r, &r_square, mod, &mpinv); EG(ret, err);
+
+	/* Reduce the base if necessary */
+	ret = nn_cmp(base, mod, &cmp); EG(ret, err);
+	if(cmp >= 0){
+		ret = nn_mod(&_base, base, mod); EG(ret, err);
+	}
+	else{
+		ret = nn_copy(&_base, base); EG(ret, err);
+	}
+
+	ret = nn_mul_redc1(&_base, &_base, &r_square, mod, mpinv); EG(ret, err);
+	ret = nn_copy(out, &r); EG(ret, err);
+
+	ret = nn_init(&one, 0); EG(ret, err);
+	ret = nn_one(&one); EG(ret, err);
+
+	while (explen > 0) {
+		explen -= (bitcnt_t)1;
+
+		/* Get the bit */
+		ret = nn_getbit(exp, explen, &expbit); EG(ret, err);
+
+		/* Square */
+		ret = nn_mul_redc1(out, out, out, mod, mpinv); EG(ret, err);
+
+		if(expbit){
+			/* Multiply */
+			ret = nn_mul_redc1(out, out, &_base, mod, mpinv); EG(ret, err);
+		}
+	}
+	/* Unredcify the output */
+	ret = nn_mul_redc1(out, out, &one, mod, mpinv);
+
+err:
+	nn_uninit(&r);
+	nn_uninit(&r_square);
+	nn_uninit(&_base);
+	nn_uninit(&one);
+
+	return ret;
+}
+
+
 /* The raw RSAEP function as defined in RFC 8017 section 5.1.1
  *     Input: an RSA public key and a big int message
  *     Output: a big int ciphertext
@@ -185,8 +265,11 @@ int rsaep(const rsa_pub_key *pub, nn_src_t m, nn_t c)
 	ret = nn_cmp(m, n, &cmp); EG(ret, err);
 	MUST_HAVE((cmp < 0), ret, err);
 
-	/* Compute c = m^e mod n */
-	ret = nn_mod_pow(c, m, e, n);
+	/* Compute c = m^e mod n
+	 * NOTE: we use our internal *insecure* modular exponentation as we
+	 * are handling public key and data.
+	 */
+	ret = _nn_mod_pow_insecure(c, m, e, n);
 
 err:
 	return ret;
@@ -1155,7 +1238,61 @@ err:
  *     https://github.com/bdauvergne/python-pkcs1/tree/master/tests/data
  */
 #include "rsa_pkcs1_tests.h"
+#include "../external_deps/time.h"
 
+int main(int argc, char *argv[])
+{
+	int ret = 0;
+	FORCE_USED_VAR(argc);
+	FORCE_USED_VAR(argv);
+
+	/* Sanity check on size for RSA.
+	 * NOTE: the double parentheses are here to handle -Wunreachable-code
+	 */
+	if((NN_USABLE_MAX_BIT_LEN) < (4096)){
+		ext_printf("Error: you seem to have compiled libecc with usable NN size < 4096, not suitable for RSA.\n");
+		ext_printf("  => Please recompile libecc with EXTRA_CFLAGS=\"-DUSER_NN_BIT_LEN=4096\"\n");
+		ext_printf("     This will increase usable NN for proper RSA up to 4096 bits.\n");
+		ext_printf("     Then recompile the current examples with the same EXTRA_CFLAGS=\"-DUSER_NN_BIT_LEN=4096\" flag and execute again!\n");
+		ret = -1;
+		goto err;
+	}
+
+	unsigned int i, j, num = 0;
+	u64 t1, t2, total_t = 0;
+	for(j = 0; j < 1000; j++){
+		for(i = 0; i < sizeof(all_rsa_tests) / sizeof(rsa_test*); i++){
+			const rsa_test *t = all_rsa_tests[i];
+                	u32 modbits = t->modbits;
+	                rsa_pub_key pub;
+        	        rsa_priv_key priv;
+
+			if((t->type == RSA_PKCS1_v1_5_SIG) && (modbits == 2048)){
+	                	/* Import the keys */
+	        	        ret = rsa_import_pub_key(&pub, t->n, (u16)t->nlen, t->e, (u16)t->elen); EG(ret, err);
+        	        	if(t->p == NULL){
+                	        	ret = rsa_import_simple_priv_key(&priv, t->n, (u16)t->nlen, t->d, (u16)t->dlen); EG(ret, err);
+	                	}
+	        	        else{
+        	        	        ret = rsa_import_crt_priv_key(&priv, t->p, (u16)t->plen, t->q, (u16)t->qlen, t->dP, (u16)t->dPlen, t->dQ, (u16)t->dQlen, t->qInv, (u16)t->qInvlen, NULL, NULL, 0); EG(ret, err);
+                		}
+				num++;
+				ret = get_ms_time(&t1); EG(ret, err);
+				ret = rsassa_pkcs1_v1_5_verify(&pub, t->m, t->mlen, t->res, t->reslen, modbits, t->hash); EG(ret, err);
+				ret = get_ms_time(&t2); EG(ret, err);
+				total_t += (t2 - t1);
+			}
+		}
+	}
+	ext_printf("[+] Finished RSA %d, total time = %f, %f RSA per second\n", num, ((double)total_t / (double)1000), ((double)(num * 1000) / (double)total_t));
+
+	return 0;
+err:
+	ext_printf("[-] Error!\n");
+	return -1;
+}
+
+#if 0
 int main(int argc, char *argv[])
 {
 	int ret = 0;
@@ -1178,4 +1315,5 @@ int main(int argc, char *argv[])
 err:
 	return ret;
 }
+#endif
 #endif
