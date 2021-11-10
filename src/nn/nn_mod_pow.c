@@ -291,8 +291,7 @@ err:
 
 /*
  * NOT constant time with regard to the bitlength of exp.
- * Aliasing not supported. Expects caller to check parameters
- * have been initialized. This is an internal helper.
+ * Aliasing is supported.
  *
  * Compute (base ** exp) mod (mod) using a Montgomery Ladder algorithm.
  * Internally, this computes Montgomery coefficients and uses the redc
