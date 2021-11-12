@@ -74,12 +74,15 @@ ATTRIBUTE_WARN_UNUSED_RET static inline int perform_rsa_tests(const rsa_test **t
 		switch(t->type){
 			case RSA_PKCS1_v1_5_ENC:{
 				u8 cipher[4096];
-				u16 clen = sizeof(cipher);
-				ret = rsaes_pkcs1_v1_5_encrypt(&pub, t->m, t->mlen, cipher, &clen, modbits, t->salt, t->saltlen); EG(ret, err1);
-				/* Check the result */
-				MUST_HAVE((clen == t->reslen), ret, err1);
-				ret = are_equal(t->res, cipher, t->reslen, &cmp); EG(ret, err1);
-				MUST_HAVE(cmp, ret, err1);
+				u16 clen;
+				if(t->salt != NULL){
+					clen = sizeof(cipher);
+					ret = rsaes_pkcs1_v1_5_encrypt(&pub, t->m, t->mlen, cipher, &clen, modbits, t->salt, t->saltlen); EG(ret, err1);
+					/* Check the result */
+					MUST_HAVE((clen == t->reslen), ret, err1);
+					ret = are_equal(t->res, cipher, t->reslen, &cmp); EG(ret, err1);
+					MUST_HAVE(cmp, ret, err1);
+				}
 				/* Try to decrypt */
 				clen = sizeof(cipher);
 				ret = rsaes_pkcs1_v1_5_decrypt(&priv, t->res, t->reslen, cipher, &clen, modbits); EG(ret, err1);
@@ -91,12 +94,15 @@ ATTRIBUTE_WARN_UNUSED_RET static inline int perform_rsa_tests(const rsa_test **t
 			}
 			case RSA_OAEP_ENC:{
 				u8 cipher[4096];
-				u16 clen = sizeof(cipher);
-				ret = rsaes_oaep_encrypt(&pub, t->m, t->mlen, cipher, &clen, modbits, NULL, 0, t->hash,  t->salt, t->saltlen); EG(ret, err1);
-				/* Check the result */
-				MUST_HAVE((clen == t->reslen), ret, err1);
-				ret = are_equal(t->res, cipher, t->reslen, &cmp); EG(ret, err1);
-				MUST_HAVE(cmp, ret, err1);
+				u16 clen;
+				if(t->salt != NULL){
+					clen = sizeof(cipher);
+					ret = rsaes_oaep_encrypt(&pub, t->m, t->mlen, cipher, &clen, modbits, NULL, 0, t->hash,  t->salt, t->saltlen); EG(ret, err1);
+					/* Check the result */
+					MUST_HAVE((clen == t->reslen), ret, err1);
+					ret = are_equal(t->res, cipher, t->reslen, &cmp); EG(ret, err1);
+					MUST_HAVE(cmp, ret, err1);
+				}
 				/* Try to decrypt */
 				clen = sizeof(cipher);
 				ret = rsaes_oaep_decrypt(&priv, t->res, t->reslen, cipher, &clen, modbits, NULL, 0, t->hash); EG(ret, err1);
@@ -119,15 +125,25 @@ ATTRIBUTE_WARN_UNUSED_RET static inline int perform_rsa_tests(const rsa_test **t
 				break;
 			}
 			case RSA_PSS_SIG:{
-				ret = rsassa_pss_verify(&pub, t->m, t->mlen, t->res, t->reslen, modbits, t->hash, t->saltlen); EG(ret, err1);
-				/* Try to sign */
-				u8 sig[4096];
-				u16 siglen = sizeof(sig);
-				ret = rsassa_pss_sign(&priv, t->m, t->mlen, sig, &siglen, modbits, t->hash, t->saltlen, t->salt); EG(ret, err1);
-				/* Check the result */
-				MUST_HAVE((siglen == t->reslen), ret, err1);
-				ret = are_equal(t->res, sig, t->reslen, &cmp); EG(ret, err1);
-				MUST_HAVE(cmp, ret, err1);
+				if(t->salt == NULL){
+					/* In case of NULL salt, default saltlen value is the digest size */
+					u8 digestsize, blocksize;
+					ret = rsa_get_hash_sizes(t->hash, &digestsize, &blocksize); EG(ret, err1);
+					ret = rsassa_pss_verify(&pub, t->m, t->mlen, t->res, t->reslen, modbits, t->hash, digestsize); EG(ret, err1);
+				}
+				else{
+					ret = rsassa_pss_verify(&pub, t->m, t->mlen, t->res, t->reslen, modbits, t->hash, t->saltlen); EG(ret, err1);
+				}
+				if(t->salt != NULL){
+					/* Try to sign */
+					u8 sig[4096];
+					u16 siglen = sizeof(sig);
+					ret = rsassa_pss_sign(&priv, t->m, t->mlen, sig, &siglen, modbits, t->hash, t->saltlen, t->salt); EG(ret, err1);
+					/* Check the result */
+					MUST_HAVE((siglen == t->reslen), ret, err1);
+					ret = are_equal(t->res, sig, t->reslen, &cmp); EG(ret, err1);
+					MUST_HAVE(cmp, ret, err1);
+				}
 				break;
 			}
 			default:{
