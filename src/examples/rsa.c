@@ -325,7 +325,8 @@ int rsadp(const rsa_priv_key *priv, nn_src_t c, nn_t m)
 		/* m_2 = c^dQ mod q */
 		ret = nn_mod_pow(&m_2, c, dQ, q); EG(ret, err1);
 		/* h = (m_1 - m_2) * qInv mod p */
-		ret = nn_mod_sub(&h, &m_1, &m_2, p); EG(ret, err1);
+		ret = nn_mod(&h, &m_2, p); EG(ret, err1);
+		ret = nn_mod_sub(&h, &m_1, &h, p); EG(ret, err1);
 		ret = nn_mod_mul(&h, &h, qInv, p); EG(ret, err1);
 		/* m = m_2 + q * h */
 		ret = nn_mul(m, &h, q); EG(ret, err1);
@@ -1257,63 +1258,9 @@ int main(int argc, char *argv[])
 		ret = -1;
 		goto err;
 	}
-
-	unsigned int i, j, num = 0;
-	u64 t1, t2, total_t = 0;
-	for(j = 0; j < 1000; j++){
-		for(i = 0; i < sizeof(all_rsa_tests) / sizeof(rsa_test*); i++){
-			const rsa_test *t = all_rsa_tests[i];
-                	u32 modbits = t->modbits;
-	                rsa_pub_key pub;
-        	        rsa_priv_key priv;
-
-			if((t->type == RSA_PKCS1_v1_5_SIG) && (modbits == 2048)){
-	                	/* Import the keys */
-	        	        ret = rsa_import_pub_key(&pub, t->n, (u16)t->nlen, t->e, (u16)t->elen); EG(ret, err);
-        	        	if(t->p == NULL){
-                	        	ret = rsa_import_simple_priv_key(&priv, t->n, (u16)t->nlen, t->d, (u16)t->dlen); EG(ret, err);
-	                	}
-	        	        else{
-        	        	        ret = rsa_import_crt_priv_key(&priv, t->p, (u16)t->plen, t->q, (u16)t->qlen, t->dP, (u16)t->dPlen, t->dQ, (u16)t->dQlen, t->qInv, (u16)t->qInvlen, NULL, NULL, 0); EG(ret, err);
-                		}
-				num++;
-				ret = get_ms_time(&t1); EG(ret, err);
-				ret = rsassa_pkcs1_v1_5_verify(&pub, t->m, t->mlen, t->res, t->reslen, modbits, t->hash); EG(ret, err);
-				ret = get_ms_time(&t2); EG(ret, err);
-				total_t += (t2 - t1);
-			}
-		}
-	}
-	ext_printf("[+] Finished RSA %d, total time = %f, %f RSA per second\n", num, ((double)total_t / (double)1000), ((double)(num * 1000) / (double)total_t));
-
-	return 0;
-err:
-	ext_printf("[-] Error!\n");
-	return -1;
-}
-
-#if 0
-int main(int argc, char *argv[])
-{
-	int ret = 0;
-	FORCE_USED_VAR(argc);
-	FORCE_USED_VAR(argv);
-
-	/* Sanity check on size for RSA.
-	 * NOTE: the double parentheses are here to handle -Wunreachable-code
-	 */
-	if((NN_USABLE_MAX_BIT_LEN) < (4096)){
-		ext_printf("Error: you seem to have compiled libecc with usable NN size < 4096, not suitable for RSA.\n");
-		ext_printf("  => Please recompile libecc with EXTRA_CFLAGS=\"-DUSER_NN_BIT_LEN=4096\"\n");
-		ext_printf("     This will increase usable NN for proper RSA up to 4096 bits.\n");
-		ext_printf("     Then recompile the current examples with the same EXTRA_CFLAGS=\"-DUSER_NN_BIT_LEN=4096\" flag and execute again!\n");
-		ret = -1;
-		goto err;
-	}
 	ret = perform_rsa_tests(all_rsa_tests, sizeof(all_rsa_tests) / sizeof(rsa_test*));
 
 err:
 	return ret;
 }
-#endif
 #endif
