@@ -161,6 +161,9 @@ err1:
 		}
 	}
 
+	if(!ret){
+		ext_printf("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n\t=== [+] All RSA tests went OK! ===\n");
+	}
 err:
 	return ret;
 }
