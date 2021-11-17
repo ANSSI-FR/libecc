@@ -115,7 +115,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int _sss_raw_generate(sss_share *shares, u16 k,
 	fp exp, base, tmp;
 	fp blind, blind_inv;
 	u8 secret_seed[SSS_SECRET_SIZE];
-	u16 idx;
+	u16 idx_shift;
 	int ret;
 	unsigned int i, j;
 	p.magic = WORD(0);
@@ -169,7 +169,9 @@ ATTRIBUTE_WARN_UNUSED_RET static int _sss_raw_generate(sss_share *shares, u16 k,
 		ret = _sss_derive_seed(&a0, secret_seed, 0);
 	}
 
-	/* Compute the shares P(x) for x in [1, ..., n] */
+	/* Compute the shares P(x) for x in [idx_shift + 0, ..., idx_shift + n]
+	 * with idx_shift a non-zero random index shift to avoid leaking the number of shares.
+	 */
 	ret = fp_init(&base, &ctx); EG(ret, err);
 	ret = fp_init(&exp, &ctx); EG(ret, err);
 	ret = fp_init(&tmp, &ctx); EG(ret, err);
@@ -179,12 +181,15 @@ ATTRIBUTE_WARN_UNUSED_RET static int _sss_raw_generate(sss_share *shares, u16 k,
 	ret = fp_get_random(&blind, &ctx); EG(ret, err);
 	ret = fp_init(&blind_inv, &ctx); EG(ret, err);
 	ret = fp_inv(&blind_inv, &blind); EG(ret, err);
-	/* Generate a random index base for x to avoid leaking
+	/* Generate a non-zero random index base for x to avoid leaking
 	 * the number of shares.
 	 */
-	ret = get_random((u8*)&idx, sizeof(idx)); EG(ret, err);
+	idx_shift = 0;
+	while(idx_shift == 0){
+		ret = get_random((u8*)&idx_shift, sizeof(idx_shift)); EG(ret, err);
+	}
 	for(i = 0; i < n; i++){
-		u16 curr_idx = (u16)(idx + i);
+		u16 curr_idx = (u16)(idx_shift + i);
 		/* Set s[i] to the a[0] as blinded initial value */
 		ret = fp_mul(&s, &blind, &a0); EG(ret, err);
 		/* Get a random base x as u16 for share index */
@@ -193,13 +198,18 @@ ATTRIBUTE_WARN_UNUSED_RET static int _sss_raw_generate(sss_share *shares, u16 k,
 		ret = fp_one(&exp);
 		for(j = 1; j < k; j++){
 			/* Compute x**j by iterative multiplications */
-			ret = fp_mul(&exp, &exp, &base); EG(ret, err);
+			ret = fp_mul_redc1(&exp, &exp, &base); EG(ret, err);
 			/* Compute our a[j] coefficient */
 			ret = _sss_derive_seed(&a, secret_seed, (u16)j); EG(ret, err);
 			/* Blind a[j] */
-			ret = fp_mul(&a, &a, &blind); EG(ret, err);
+			ret = fp_mul_redc1(&a, &a, &blind); EG(ret, err);
+			/* NOTE: actually, the real a[j] coefficients are _sss_derive_seed(secret_seed, j)
+			 * multiplied by some power of r^-1 (the Montgomery constant), but this is OK as
+			 * we need any random values (computable from the secret seed) here. We use this "trick"
+			 * to be able to use our more performant redcified versions of Fp multiplication.
+			 */
 			/* Accumulate */
-			ret = fp_mul(&tmp, &exp, &a); EG(ret, err);
+			ret = fp_mul_redc1(&tmp, &exp, &a); EG(ret, err);
 			ret = fp_add(&s, &s, &tmp); EG(ret, err);
 		}
 		/* Export the computed share */
@@ -238,12 +248,12 @@ ATTRIBUTE_WARN_UNUSED_RET static int _sss_raw_lagrange(const sss_share *shares, 
 	nn p;
 	fp s, x, y;
 	fp x_i, x_j, tmp, tmp2;
-	fp blind, blind_inv;
+	fp blind, blind_inv, r_inv;
 	int ret;
 	unsigned int i, j;
 	p.magic = WORD(0);
 	x_i.magic = x_j.magic = tmp.magic = tmp2.magic = s.magic = y.magic = x.magic = WORD(0);
-	blind.magic = blind_inv.magic = WORD(0);
+	blind.magic = blind_inv.magic = r_inv.magic = WORD(0);
 
 	MUST_HAVE((shares != NULL) && (secret != NULL), ret, err);
 	/* Sanity checks */
@@ -269,38 +279,48 @@ ATTRIBUTE_WARN_UNUSED_RET static int _sss_raw_lagrange(const sss_share *shares, 
 	ret = fp_get_random(&blind, &ctx); EG(ret, err);
 	ret = fp_init(&blind_inv, &ctx); EG(ret, err);
 	ret = fp_inv(&blind_inv, &blind); EG(ret, err);
+	/* Perform the computation of r^-1 to optimize our multiplications using Montgomery
+	 * multiplication in the main loop.
+	 */
+	ret = fp_init(&r_inv, &ctx); EG(ret, err);
+	ret = fp_set_nn(&r_inv, &(ctx.r)); EG(ret, err);
+	ret = fp_inv(&r_inv, &r_inv); EG(ret, err);
 	/* Proceed with the interpolation */
 	for(i = 0; i < k; i++){
 		/* Import s[i] */
 		ret = fp_import_from_buf(&s, shares[i].raw_share.share, SSS_SECRET_SIZE); EG(ret, err);
 		/* Blind s[i] */
-		ret = fp_mul(&s, &s, &blind); EG(ret, err);
+		ret = fp_mul_redc1(&s, &s, &blind); EG(ret, err);
 		/* Get the index */
 		ret = fp_set_word_value(&x_i, (word_t)(shares[i].raw_share.index)); EG(ret, err);
-		/* Initialize multiplication with one */
-		ret = fp_one(&tmp2); EG(ret, err);
-		/* Compute the product for all k other than i */
+		/* Initialize multiplication with "one" (actually Montgomery r^-1 for multiplication optimization) */
+		ret = fp_copy(&tmp2, &r_inv); EG(ret, err);
+		/* Compute the product for all k other than i
+		 * NOTE: we use fp_mul in its redcified version as the multiplication by r^-1 is
+		 * cancelled by the fraction of (x_j - x) * r^-1 / (x_j - x_i) * r^-1 = (x_j - x) / (x_j - x_i)
+		 */
 		for(j = 0; j < k; j++){
 			ret = fp_set_word_value(&x_j, (word_t)(shares[j].raw_share.index)); EG(ret, err);
 			if(j != i){
 				if(val != 0){
 					ret = fp_sub(&tmp, &x_j, &x); EG(ret, err);
-					ret = fp_mul(&s, &s, &tmp); EG(ret, err);
+					ret = fp_mul_redc1(&s, &s, &tmp); EG(ret, err);
 				}
 				else{
-					ret = fp_mul(&s, &s, &x_j); EG(ret, err);
+					ret = fp_mul_redc1(&s, &s, &x_j); EG(ret, err);
 				}
 				ret = fp_sub(&tmp, &x_j, &x_i); EG(ret, err);
-				ret = fp_mul(&tmp2, &tmp2, &tmp); EG(ret, err);
+				ret = fp_mul_redc1(&tmp2, &tmp2, &tmp); EG(ret, err);
 			}
 		}
 		/* Inverse all the (x_j - x_i) poducts */
 		ret = fp_inv(&tmp, &tmp2); EG(ret, err);
-		ret = fp_mul(&s, &s, &tmp); EG(ret, err);
+		ret = fp_mul_redc1(&s, &s, &tmp); EG(ret, err);
 		/* Accumulate in secret */
 		ret = fp_add(&y, &y, &s); EG(ret, err);
 	}
 	/* Unblind y */
+	ret = fp_redcify(&y, &y); EG(ret, err);
 	ret = fp_mul(&y, &y, &blind_inv); EG(ret, err);
 	/* We should have our secret in y */
 	ret = fp_export_to_buf(secret->secret, SSS_SECRET_SIZE, &y);
@@ -316,6 +336,7 @@ err:
 	fp_uninit(&tmp2);
 	fp_uninit(&blind);
 	fp_uninit(&blind_inv);
+	fp_uninit(&r_inv);
 	if(val != 0){
 		fp_uninit(&x);
 	}
