@@ -527,9 +527,9 @@ static void _prj_pt_mul_ltr_monty_dbl_add_always(prj_pt_t out, nn_src_t m, prj_p
 	mlen--;
 
 	/* Get a random r with the same size of m_msb_fixed */
-	MUST_HAVE(!nn_get_random_len(&r, m_msb_fixed.wlen * WORD_BYTES));
+	MUST_HAVE_SELECTION(!nn_get_random_len(&r, m_msb_fixed.wlen * WORD_BYTES));
         /* Get a random value l in Fp */
-	MUST_HAVE(!fp_get_random(&l, in->X.ctx));
+	MUST_HAVE_SELECTION(!fp_get_random(&l, in->X.ctx));
 	rbit = nn_getbit(&r, mlen);
 
 	/* Initialize points */
@@ -648,6 +648,7 @@ static void _prj_pt_mul_ltr_monty_ladder(prj_pt_t out, nn_src_t m, prj_pt_src_t 
 	curve_order = &(in->crv->order);
 	/* First compute q**2 */
 	nn_sqr(&curve_order_square, curve_order);
+
 	/* Then compute m' depending on m size */
 	if(nn_cmp(m, curve_order) < 0){
 		/* Case where m < q */
@@ -669,6 +670,7 @@ static void _prj_pt_mul_ltr_monty_ladder(prj_pt_t out, nn_src_t m, prj_pt_src_t 
 		nn_copy(&m_msb_fixed, m);
 	}
 	mlen = nn_bitlen(&m_msb_fixed);
+
 	if(mlen == 0){
 		/* Should not happen thanks to our MSB fixing trick, but in case ...
 		 * Return the infinite point.
@@ -680,9 +682,9 @@ static void _prj_pt_mul_ltr_monty_ladder(prj_pt_t out, nn_src_t m, prj_pt_src_t 
 	mlen--;
 
 	/* Get a random r with the same size of m_msb_fixed */
-	MUST_HAVE(!nn_get_random_len(&r, m_msb_fixed.wlen * WORD_BYTES));
+	MUST_HAVE_SELECTION(!nn_get_random_len(&r, m_msb_fixed.wlen * WORD_BYTES));
         /* Get a random value l in Fp */
-	MUST_HAVE(!fp_get_random(&l, in->X.ctx));
+	MUST_HAVE_SELECTION(!fp_get_random(&l, in->X.ctx));
 	rbit = nn_getbit(&r, mlen);
 
 	/* Initialize points */
@@ -746,6 +748,7 @@ static void _prj_pt_mul_ltr_monty_ladder(prj_pt_t out, nn_src_t m, prj_pt_src_t 
 	}
 	/* Output: T[r[0]] */
 	prj_pt_copy(out, &T[rbit]);
+
 	/* Check that the output is on the curve */
 	MUST_HAVE(prj_pt_is_on_curve(out) == 1);
 
