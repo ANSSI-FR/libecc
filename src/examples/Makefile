@@ -24,7 +24,7 @@ curve_ecdh:
 	$(CC) $(BIN_CFLAGS) -DCURVE_ECDH curve_ecdh.c $(ROOT_DIR)/src/external_deps/print.c $(ROOT_DIR)/src/external_deps/rand.c $(BIN_LDFLAGS) $(LIBEC) -o curve_ecdh
 
 _rsa:
-	cd $(RSA_DIR) && make
+	cd $(RSA_DIR) && EXTRA_CFLAGS="$(CFLAGS)" make
 sss:
 	$(CC) $(BIN_CFLAGS) -DSSS sss.c $(ROOT_DIR)/src/external_deps/print.c $(ROOT_DIR)/src/external_deps/rand.c $(BIN_LDFLAGS) $(LIBSIGN) -o sss
 
@@ -42,14 +42,14 @@ curve_ecdh_dyn:
 	$(CC) $(BIN_CFLAGS) -DCURVE_ECDH curve_ecdh.c $(ROOT_DIR)/src/external_deps/print.c $(ROOT_DIR)/src/external_deps/rand.c $(BIN_LDFLAGS) -L$(BUILD_DIR) -lec -o curve_ecdh_dyn
 
 _rsa_dyn:
-	cd $(RSA_DIR) && make
+	cd $(RSA_DIR) && EXTRA_CFLAGS="$(CFLAGS)" make
 sss_dyn:
 	$(CC) $(BIN_CFLAGS) -DSSS sss.c $(ROOT_DIR)/src/external_deps/print.c $(ROOT_DIR)/src/external_deps/rand.c $(BIN_LDFLAGS) $(LIBEC) -L$(BUILD_DIR) -lsign -o sss_dyn
 endif
 
 
 clean:
-	@rm -f nn_pollard_rho fp_square_residue curve_basic_examples curve_ecdh
+	@rm -f nn_pollard_rho fp_square_residue curve_basic_examples curve_ecdh sss
 	@rm -f nn_pollard_rho_dyn fp_square_residue_dyn curve_basic_examples_dyn curve_ecdh_dyn sss_dyn
 	cd $(RSA_DIR) && make clean
 

@@ -47,7 +47,8 @@
 
 /* The prime number we use: it is close to (2**256-1) but still stricly less
  * than this value, hence a theoretical security of more than 255 bits but less than
- * 256 bits.
+ * 256 bits. This prime p is used in the prime field of secp256k1, the "bitcoin"
+ * curve.
  *
  * This can be modified with another prime, beware however of the size
  * of the prime to be in line with the shared secrets sizes, and also
@@ -182,13 +183,18 @@ ATTRIBUTE_WARN_UNUSED_RET static int _sss_raw_generate(sss_share *shares, u16 k,
 	ret = fp_init(&blind_inv, &ctx); EG(ret, err);
 	ret = fp_inv(&blind_inv, &blind); EG(ret, err);
 	/* Generate a non-zero random index base for x to avoid leaking
-	 * the number of shares.
+	 * the number of shares. We could use a static sequence from x = 0 to n
+	 * but this would leak some information to the participants about the number
+	 * of shares (e.g. if a participant gets the share with x = 4, she surely knows
+	 * that n >= 4). To avoid the leak we randomize the base value of the index where
+	 * we begin our x.
 	 */
 	idx_shift = 0;
 	while(idx_shift == 0){
 		ret = get_random((u8*)&idx_shift, sizeof(idx_shift)); EG(ret, err);
 	}
 	for(i = 0; i < n; i++){
+		_sss_raw_share *cur_share_i = &(shares[i].raw_share);
 		u16 curr_idx = (u16)(idx_shift + i);
 		/* Set s[i] to the a[0] as blinded initial value */
 		ret = fp_mul(&s, &blind, &a0); EG(ret, err);
@@ -213,10 +219,10 @@ ATTRIBUTE_WARN_UNUSED_RET static int _sss_raw_generate(sss_share *shares, u16 k,
 			ret = fp_add(&s, &s, &tmp); EG(ret, err);
 		}
 		/* Export the computed share */
-		shares[i].raw_share.index = curr_idx;
+		cur_share_i->index = curr_idx;
 		/* Unblind */
 		ret = fp_mul(&s, &s, &blind_inv); EG(ret, err);
-		ret = fp_export_to_buf(shares[i].raw_share.share, SSS_SECRET_SIZE, &s); EG(ret, err);
+		ret = fp_export_to_buf(cur_share_i->share, SSS_SECRET_SIZE, &s); EG(ret, err);
 	}
 	/* The secret is a[0] */
 	ret = fp_export_to_buf(secret->secret, SSS_SECRET_SIZE, &a0);
@@ -240,7 +246,13 @@ err:
 	return ret;
 }
 
-/* SSS helper to compute lagrange interpolation on an input value.
+/* SSS helper to compute Lagrange interpolation on an input value.
+ *     - k is the number of shares pointed by the shares pointer
+ *     - secret is the computed secret
+ *     - val is the 'index' on which the Lagrange interpolation must be computed, i.e.
+ *       the idea is to have using Lagrage formulas the value f(val) where f is our polynomial. Of course
+ *       the proper value can only be computed if enough shares k are provided (the interpolation
+ *       does not hold in other cases and the result will be an incorrect value)
  */
 ATTRIBUTE_WARN_UNUSED_RET static int _sss_raw_lagrange(const sss_share *shares, u16 k, sss_secret *secret, u16 val)
 {
@@ -272,6 +284,12 @@ ATTRIBUTE_WARN_UNUSED_RET static int _sss_raw_lagrange(const sss_share *shares, 
 	ret = fp_init(&tmp, &ctx); EG(ret, err);
 	ret = fp_init(&tmp2, &ctx); EG(ret, err);
 	if(val != 0){
+		/* NOTE: we treat the case 'val = 0' in a specific case for
+		 * optimization. This optimization is of interest since computing
+		 * f(0) (where f(.) is our polynomial) is the formula for getting the
+		 * SSS secret (which happens to be the constant of degree 0 of the
+		 * polynomial).
+		 */
 		ret = fp_init(&x, &ctx); EG(ret, err);
 		ret = fp_set_word_value(&x, (word_t)val); EG(ret, err);
 	}
@@ -287,12 +305,13 @@ ATTRIBUTE_WARN_UNUSED_RET static int _sss_raw_lagrange(const sss_share *shares, 
 	ret = fp_inv(&r_inv, &r_inv); EG(ret, err);
 	/* Proceed with the interpolation */
 	for(i = 0; i < k; i++){
+		const _sss_raw_share *cur_share_i = &(shares[i].raw_share);
 		/* Import s[i] */
-		ret = fp_import_from_buf(&s, shares[i].raw_share.share, SSS_SECRET_SIZE); EG(ret, err);
+		ret = fp_import_from_buf(&s, cur_share_i->share, SSS_SECRET_SIZE); EG(ret, err);
 		/* Blind s[i] */
 		ret = fp_mul_redc1(&s, &s, &blind); EG(ret, err);
 		/* Get the index */
-		ret = fp_set_word_value(&x_i, (word_t)(shares[i].raw_share.index)); EG(ret, err);
+		ret = fp_set_word_value(&x_i, (word_t)(cur_share_i->index)); EG(ret, err);
 		/* Initialize multiplication with "one" (actually Montgomery r^-1 for multiplication optimization) */
 		ret = fp_copy(&tmp2, &r_inv); EG(ret, err);
 		/* Compute the product for all k other than i
@@ -300,13 +319,20 @@ ATTRIBUTE_WARN_UNUSED_RET static int _sss_raw_lagrange(const sss_share *shares, 
 		 * cancelled by the fraction of (x_j - x) * r^-1 / (x_j - x_i) * r^-1 = (x_j - x) / (x_j - x_i)
 		 */
 		for(j = 0; j < k; j++){
-			ret = fp_set_word_value(&x_j, (word_t)(shares[j].raw_share.index)); EG(ret, err);
+			const _sss_raw_share *cur_share_j = &(shares[j].raw_share);
+			ret = fp_set_word_value(&x_j, (word_t)(cur_share_j->index)); EG(ret, err);
 			if(j != i){
 				if(val != 0){
 					ret = fp_sub(&tmp, &x_j, &x); EG(ret, err);
 					ret = fp_mul_redc1(&s, &s, &tmp); EG(ret, err);
 				}
 				else{
+					/* NOTE: we treat the case 'val = 0' in a specific case for
+					 * optimization. This optimization is of interest since computing
+					 * f(0) (where f(.) is our polynomial) is the formula for getting the
+					 * SSS secret (which happens to be the constant of degree 0 of the
+					 * polynomial).
+					 */
 					ret = fp_mul_redc1(&s, &s, &x_j); EG(ret, err);
 				}
 				ret = fp_sub(&tmp, &x_j, &x_i); EG(ret, err);
@@ -351,8 +377,17 @@ ATTRIBUTE_WARN_UNUSED_RET static int _sss_raw_combine(const sss_share *shares, u
 	return _sss_raw_lagrange(shares, k, secret, 0);
 }
 
-/***** Secure versions ***********************/
-/* SSS shares and secret generation */
+/***** Secure versions (public APIs) ***********************/
+/* SSS shares and secret generation:
+ *     Inputs:
+ *         - n: is the number of shares to generate
+ *         - k: the quorum of shares to regenerate the secret (of course k <= n)
+ *         - secret: the secret value when input_secret is set to 'true'
+ *     Output:
+ *         - shares: a pointer to the generated n shares
+ *         - secret: the secret value when input_secret is set to 'false', this
+ *           value being randomly generated
+ */
 int sss_generate(sss_share *shares, u16 k, u16 n, sss_secret *secret, bool input_secret)
 {
 	int ret;
@@ -371,32 +406,39 @@ int sss_generate(sss_share *shares, u16 k, u16 n, sss_secret *secret, bool input
 
 	/* Compute the authenticity seal for each share with HMAC */
 	for(i = 0; i < n; i++){
+		_sss_raw_share *cur_share = &(shares[i].raw_share);
+		u8 *cur_id = (u8*)&(shares[i].session_id);
+		u8 *cur_share_hmac = (u8*)&(shares[i].raw_share_hmac);
 		/* NOTE: we 'abuse' casts here for shares[i].raw_share to u8*, but this should be OK since
 		 * our structures are packed.
 		 */
-		const u8 *inputs[3] = { (const u8*)&(shares[i].raw_share), shares[i].session_id, NULL };
-		const u32 ilens[3] = { sizeof(shares[i].raw_share), sizeof(shares[i].session_id), 0 };
+		const u8 *inputs[3] = { (const u8*)cur_share, cur_id, NULL };
+		const u32 ilens[3] = { sizeof(*cur_share), SSS_SESSION_ID_SIZE, 0 };
 
 		/* Copy the session ID */
-		ret = local_memcpy(shares[i].session_id, session_id, sizeof(shares[i].session_id)); EG(ret, err);
+		ret = local_memcpy(cur_id, session_id, SSS_SESSION_ID_SIZE); EG(ret, err);
 
-		len = sizeof(shares[i].raw_share_hmac);
-		ret = hmac_scattered((const u8*)secret, SSS_SECRET_SIZE, SHA256, inputs, ilens, shares[i].raw_share_hmac, &len); EG(ret, err);
+		len = SSS_HMAC_SIZE;
+		ret = hmac_scattered((const u8*)secret, SSS_SECRET_SIZE, SHA256, inputs, ilens, cur_share_hmac, &len); EG(ret, err);
 	}
 
 err:
 	return ret;
 }
 
-
-/* SSS shares and secret combination */
+/* SSS shares and secret combination
+ *     Inputs:
+ *         - k: the quorum of shares to regenerate the secret
+ *         - shares: a pointer to the k shares
+ *     Output:
+ *         - secret: the secret value computed from the k shares
+ */
 int sss_combine(const sss_share *shares, u16 k, sss_secret *secret)
 {
 	int ret, cmp;
 	unsigned int i;
-	u8 hmac_val[SHA256_DIGEST_SIZE];
+	u8 hmac_val[SSS_HMAC_SIZE];
 	u8 len;
-
 
 	ret = local_memset(hmac_val, 0, sizeof(hmac_val)); EG(ret, err);
 
@@ -405,14 +447,18 @@ int sss_combine(const sss_share *shares, u16 k, sss_secret *secret)
 
 	/* Compute and check the authenticity seal for each HMAC */
 	for(i = 0; i < k; i++){
+		const _sss_raw_share *cur_share = &(shares[i].raw_share);
+		const u8 *cur_id = (const u8*)&(shares[i].session_id);
+		const u8 *cur_id0 = (const u8*)&(shares[0].session_id);
+		const u8 *cur_share_hmac = (const u8*)&(shares[i].raw_share_hmac);
 		/* NOTE: we 'abuse' casts here for shares[i].raw_share to u8*, but this should be OK since
 		 * our structures are packed.
 		 */
-		const u8 *inputs[3] = { (const u8*)&(shares[i].raw_share), shares[i].session_id, NULL };
-		const u32 ilens[3] = { sizeof(shares[i].raw_share), sizeof(shares[i].session_id), 0 };
+		const u8 *inputs[3] = { (const u8*)cur_share, cur_id, NULL };
+		const u32 ilens[3] = { sizeof(*cur_share), SSS_SESSION_ID_SIZE, 0 };
 
 		/* Check that all our shares have the same session ID, return an error otherwise */
-		ret = are_equal(shares[i].session_id, shares[0].session_id, sizeof(shares[i].session_id), &cmp); EG(ret, err);
+		ret = are_equal(cur_id, cur_id0, SSS_SESSION_ID_SIZE, &cmp); EG(ret, err);
 		if(!cmp){
 #ifdef VERBOSE
 			ext_printf("[-] sss_combine error for share %d / %d: session ID is not OK!\n", i, k);
@@ -425,7 +471,7 @@ int sss_combine(const sss_share *shares, u16 k, sss_secret *secret)
 		ret = hmac_scattered((const u8*)secret, SSS_SECRET_SIZE, SHA256, inputs, ilens, hmac_val, &len); EG(ret, err);
 
 		/* Check the HMAC */
-		ret = are_equal(hmac_val, shares[i].raw_share_hmac, len, &cmp); EG(ret, err);
+		ret = are_equal(hmac_val, cur_share_hmac, len, &cmp); EG(ret, err);
 		if(!cmp){
 #ifdef VERBOSE
 			ext_printf("[-] sss_combine error for share %d / %d: HMAC is not OK!\n", i, k);
@@ -441,13 +487,22 @@ err:
 	return ret;
 }
 
-/* SSS shares regeneration */
+/* SSS shares regeneration from existing shares
+ *     Inputs:
+ *         - shares: a pointer to the input k shares allowing the regeneration
+ *         - n: is the number of shares to regenerate
+ *         - k: the input shares (of course k <= n)
+ *     Output:
+ *         - shares: a pointer to the generated n shares (among which the k first are
+ *           the ones provided as inputs)
+ *         - secret: the recomputed secret value
+ */
 int sss_regenerate(sss_share *shares, u16 k, u16 n, sss_secret *secret)
 {
 	int ret, cmp;
 	unsigned int i;
 	u16 max_idx;
-	u8 hmac_val[SHA256_DIGEST_SIZE];
+	u8 hmac_val[SSS_HMAC_SIZE];
 	u8 len;
 
 	/* Sanity check */
@@ -459,14 +514,18 @@ int sss_regenerate(sss_share *shares, u16 k, u16 n, sss_secret *secret)
 	ret = _sss_raw_lagrange(shares, k, secret, 0);
 	/* Check the authenticity of our shares */
 	for(i = 0; i < k; i++){
+		_sss_raw_share *cur_share = &(shares[i].raw_share);
+		u8 *cur_id = (u8*)&(shares[i].session_id);
+		u8 *cur_id0 = (u8*)&(shares[0].session_id);
+		u8 *cur_share_hmac = (u8*)&(shares[i].raw_share_hmac);
 		/* NOTE: we 'abuse' casts here for shares[i].raw_share to u8*, but this should be OK since
 		 * our structures are packed.
 		 */
-		const u8 *inputs[3] = { (const u8*)&(shares[i].raw_share), shares[i].session_id, NULL };
-		const u32 ilens[3] = { sizeof(shares[i].raw_share), sizeof(shares[i].session_id), 0 };
+		const u8 *inputs[3] = { (const u8*)cur_share, cur_id, NULL };
+		const u32 ilens[3] = { sizeof(*cur_share), SSS_SESSION_ID_SIZE, 0 };
 
 		/* Check that all our shares have the same session ID, return an error otherwise */
-		ret = are_equal(shares[i].session_id, shares[0].session_id, sizeof(shares[i].session_id), &cmp); EG(ret, err);
+		ret = are_equal(cur_id, cur_id0, SSS_SESSION_ID_SIZE, &cmp); EG(ret, err);
 		if(!cmp){
 #ifdef VERBOSE
 			ext_printf("[-] sss_regenerate error for share %d / %d: session ID is not OK!\n", i, k);
@@ -476,8 +535,11 @@ int sss_regenerate(sss_share *shares, u16 k, u16 n, sss_secret *secret)
 		}
 
 		len = sizeof(hmac_val);
+		/* NOTE: we 'abuse' cast here for secret to (const u8*), but this should be OK since our
+		 * structures are packed.
+		 */
 		ret = hmac_scattered((const u8*)secret, SSS_SECRET_SIZE, SHA256, inputs, ilens, hmac_val, &len); EG(ret, err);
-		ret = are_equal(hmac_val, shares[i].raw_share_hmac, len, &cmp); EG(ret, err);
+		ret = are_equal(hmac_val, cur_share_hmac, len, &cmp); EG(ret, err);
 		if(!cmp){
 #ifdef VERBOSE
 			ext_printf("[-] sss_regenerate error for share %d / %d: HMAC is not OK!\n", i, k);
@@ -498,22 +560,26 @@ int sss_regenerate(sss_share *shares, u16 k, u16 n, sss_secret *secret)
 	}
 	/* Now regenerate as many shares as we need */
 	for(i = k; i < n; i++){
+		_sss_raw_share *cur_share = &(shares[i].raw_share);
+		u8 *cur_id = (u8*)&(shares[i].session_id);
+		u8 *cur_id0 = (u8*)&(shares[0].session_id);
+		u8 *cur_share_hmac = (u8*)&(shares[i].raw_share_hmac);
 		/* NOTE: we 'abuse' casts here for shares[i].raw_share.share to sss_secret*, but this should be OK since
 		 * our shares[i].raw_share.share is a SSS_SECRET_SIZE as the sss_secret.secret type encapsulates and our
 		 * structures are packed.
 		 */
-		const u8 *inputs[3] = { (const u8*)&(shares[i].raw_share), shares[i].session_id, NULL };
-		const u32 ilens[3] = { sizeof(shares[i].raw_share), sizeof(shares[i].session_id), 0 };
+		const u8 *inputs[3] = { (const u8*)cur_share, cur_id, NULL };
+		const u32 ilens[3] = { sizeof(*cur_share), SSS_SESSION_ID_SIZE, 0 };
 
 		/* Copy our session ID */
-		ret = local_memcpy(shares[i].session_id, shares[0].session_id, sizeof(shares[i].session_id)); EG(ret, err);
+		ret = local_memcpy(cur_id, cur_id0, SSS_SESSION_ID_SIZE); EG(ret, err);
 
-		ret = _sss_raw_lagrange(shares, k, (sss_secret*)shares[i].raw_share.share, (max_idx + (u16)(i - k + 1))); EG(ret, err);
-		shares[i].raw_share.index = (max_idx + (u16)(i - k + 1));
+		ret = _sss_raw_lagrange(shares, k, (sss_secret*)(cur_share->share), (max_idx + (u16)(i - k + 1))); EG(ret, err);
+		cur_share->index = (max_idx + (u16)(i - k + 1));
 
 		/* Compute the HMAC */
-		len = sizeof(shares[i].raw_share_hmac);
-		ret = hmac_scattered((const u8*)secret, SSS_SECRET_SIZE, SHA256, inputs, ilens, shares[i].raw_share_hmac, &len); EG(ret, err);
+		len = SSS_HMAC_SIZE;
+		ret = hmac_scattered((const u8*)secret, SSS_SECRET_SIZE, SHA256, inputs, ilens, cur_share_hmac, &len); EG(ret, err);
 	}
 
 err:
@@ -542,7 +608,7 @@ int main(int argc, char *argv[])
 	FORCE_USED_VAR(argc);
 	FORCE_USED_VAR(argv);
 
-	/* Generate n = 400 shares for SSS with at least K shares OK among N */
+	/* Generate N shares for SSS with at least K shares OK among N */
 	ext_printf("[+] Generating the secrets %d / %d, call should be OK\n", K, N);
 	ret = local_memset(&secret, 0x00, sizeof(secret)); EG(ret, err);
 	/* NOTE: 'false' here means that we let the library generate the secret randomly */
