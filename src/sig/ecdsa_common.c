@@ -273,6 +273,7 @@ int __ecdsa_init_pub_key(ec_pub_key *out_pub, const ec_priv_key *in_priv,
 	if(prj_pt_mul_monty_blind(&(out_pub->y), &(in_priv->x), G)){
 		goto err;
 	}
+
 	out_pub->key_type = key_type;
 	out_pub->params = in_priv->params;
 	out_pub->magic = PUB_KEY_MAGIC;
@@ -736,8 +737,6 @@ int __ecdsa_verify_init(struct ec_verify_context *ctx, const u8 *sig, u8 siglen,
 	/* Check given signature length is the expected one */
 	if (siglen != ECDSA_SIGLEN(q_bit_len)) {
 		dpu_debug = VERIFY_INIT_1;
-		dpu_val1 = siglen;
-		dpu_val2 = ECDSA_SIGLEN(q_bit_len);
 		ret = -1;
 		goto err;
 	}
@@ -838,9 +837,7 @@ int __ecdsa_verify_finalize(struct ec_verify_context *ctx,
 
 	/* Make things more readable */
 	G = &(ctx->pub_key->params->ec_gen);
-	dpu_val1 = *(uint32_t*)(uintptr_t)&G->X;
 	Y = &(ctx->pub_key->y);
-	dpu_val2 = *(uint32_t*)(uintptr_t)&Y->X;
 	q = &(ctx->pub_key->params->ec_gen_order);
 	q_bit_len = ctx->pub_key->params->ec_gen_order_bitlen;
 	//hsize = ctx->h->digest_size;

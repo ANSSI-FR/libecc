@@ -650,12 +650,14 @@ int generic_ec_verify(const u8 *sig, u8 siglen, const ec_pub_key *pub_key,
 	if (ret) {
 		goto err;
 	}
-/*
+#if 0
 	ret = ec_verify_update(&ctx, m, mlen);
 	if (ret) {
 		goto err;
 	}
-*/
+#else
+	local_memset(&ctx, 0, sizeof(struct ec_verify_context));
+#endif
 	ret = ec_verify_finalize(&ctx);
 
  err:

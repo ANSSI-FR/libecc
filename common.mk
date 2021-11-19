@@ -68,6 +68,10 @@ CFLAGS ?= $(WARNING_CFLAGS) -pedantic -fno-builtin -std=c99 \
 	  $(FORTIFY_FLAGS) $(STACK_PROT_FLAG) -Os
 LDFLAGS ?=
 
+ifdef SW
+CFLAGS += -DGEN_BY_SW=1 -DLOG_GENERATED=1
+endif
+
 # Default AR and RANLIB if not overriden by user
 AR ?= ar
 RANLIB ?= ranlib

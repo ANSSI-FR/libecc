@@ -24,7 +24,9 @@ main(void)
     DPU_ASSERT(dpu_launch(set, DPU_SYNCHRONOUS));
 
     DPU_FOREACH (set, dpu) {
-        //DPU_ASSERT(dpu_log_read(dpu, stdout));
+#ifdef GEN_BY_SW
+        DPU_ASSERT(dpu_log_read(dpu, stdout));
+#endif
         DPU_ASSERT(dpu_copy_from(dpu, "ret", 0, (uint8_t *)&dpu_ret, sizeof(dpu_ret)));
         DPU_ASSERT(dpu_copy_from(dpu, "dpu_debug", 0, (uint8_t *)&dpu_debug, sizeof(dpu_debug)));
         DPU_ASSERT(dpu_copy_from(dpu, "dpu_val1", 0, (uint8_t *)&dpu_val1, sizeof(dpu_val1)));
