@@ -52,6 +52,9 @@ ATTRIBUTE_WARN_UNUSED_RET int ecccdh_serialize_pub_key(const ec_pub_key *our_pub
 
 /* Derive the ECCCDH shared secret and store it in a buffer given the peer
  * public key and our private key.
+ *
+ * The shared_secret_len length MUST be exactly equal to the expected shared secret size:
+ * the function fails otherwise.
  */
 ATTRIBUTE_WARN_UNUSED_RET int ecccdh_derive_secret(const ec_priv_key *our_priv_key, const u8 *peer_pub_key, u8 peer_pub_key_len, u8 *shared_secret, u8 shared_secret_len);
 

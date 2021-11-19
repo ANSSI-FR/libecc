@@ -120,8 +120,8 @@ static int check_wycheproof_eddsa(void)
 		ec_priv_key priv_key;
 		ec_params params;
 		int check;
-		u8 exported_pub_key[56];
-		u8 exported_pub_key_check[56];
+		u8 exported_pub_key[EDDSA_MAX_PUB_KEY_ENCODED_LEN];
+		u8 exported_pub_key_check[EDDSA_MAX_PUB_KEY_ENCODED_LEN];
 
 		if (t == NULL){
 			continue;
@@ -235,8 +235,8 @@ static int check_wycheproof_xdh(void)
 		const wycheproof_xdh_test *t = wycheproof_xdh_all_tests[i];
 		unsigned int alglen = 0;
 		/* Max size buffer */
-		u8 pubkey_check[56];
-		u8 sharedsecret_check[56];
+		u8 pubkey_check[X448_SIZE];
+		u8 sharedsecret_check[X448_SIZE];
 
 		if (t == NULL){
 			continue;
@@ -247,13 +247,13 @@ static int check_wycheproof_xdh(void)
 #if defined(WITH_X25519)
 		if(t->xdh_alg == X25519){
 			MUST_HAVE(((t->curve) == &wei25519_str_params), ret, err);
-			alglen = 32;
+			alglen = X25519_SIZE;
 		}
 #endif
 #if defined(WITH_X448)
 		if(t->xdh_alg == X448){
 			MUST_HAVE(((t->curve) == &wei448_str_params), ret, err);
-			alglen = 56;
+			alglen = X448_SIZE;
 		}
 #endif
 		if(alglen == 0){
@@ -459,16 +459,13 @@ static int uncompress_ecc_point(const ec_params *params, const u8 *peerpubkey, u
 	/* Get the two square roots */
 	ret = fp_sqrt(&x, &tmp, &tmp); EG(ret, err);
 
-	/* Choose the quare root depending on the compression information */
+	/* Choose the square root depending on the compression information */
 	sign = (compression - 2);
 
 	ret = fp_cmp(&x, &tmp, &check); EG(ret, err);
-	if(check <= 0){
-		y = (sign) ? &tmp : &x;
-	}
-	else{
-		y = (sign) ? &x : &tmp;
-	}
+
+	y = ((check > 0) == sign) ? &x : &tmp;
+
 	/* Export the point to our buffer */
 	ret = local_memcpy(&serialized_pub_key[0], &peerpubkey[0], (serialized_pub_key_size / 2)); EG(ret, err);
 	ret = fp_export_to_buf(&serialized_pub_key[(serialized_pub_key_size / 2)], (serialized_pub_key_size / 2), y);

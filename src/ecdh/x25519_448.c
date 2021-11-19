@@ -35,30 +35,42 @@
 /* For randomness source */
 #include "../external_deps/rand.h"
 
-/* This module mainly implements the X25519 and X448 functions stricly as defined in
+/* This module mainly implements the X25519 and X448 functions strictly as defined in
  * RFC7748.
  */
 
 
-/* Scalar clamping/decoding */
-ATTRIBUTE_WARN_UNUSED_RET static int decodeScalar(const u8 *scalar, u8 *scalar_decoded, u8 len)
+/* Scalar clamping/decoding
+ *
+ * NOTE: the scalar encoding is mainly here to ensure that it is of the form
+ * 2^254 plus eight times a value between 0 and 2^251 - 1 inclusive for X25519
+ * (2^447 plus four times a value between 0 and 2^445 - 1 inclusive for X448).
+ *
+ * This ensures "clearing the cofactor" to avoid small subgroup attacks as well
+ * as setting the scalar MSB to avoid timing/SCA attacks on scalar multiplication.
+ * These two desirable properties are part of the rationale behind X25519/X448).
+ */
+ATTRIBUTE_WARN_UNUSED_RET static int decode_scalar(u8 *scalar_decoded, const u8 *scalar, u8 len)
 {
         int ret;
         unsigned int i;
 
         /* Aliasing is not supported */
         MUST_HAVE((scalar != scalar_decoded), ret, err);
+	/* Zero length is not accepted */
+	MUST_HAVE((len > 0), ret, err);
 
+	/* Endianness swapping */
         for(i = 0; i < len; i++){
                 scalar_decoded[len - 1 - i] = scalar[i];
         }
-	if(len == 32){
+	if(len == X25519_SIZE){
 		/* Curve25519 */
-	        scalar_decoded[len - 1] &= 248;
+		scalar_decoded[len - 1] &= 248;
         	scalar_decoded[0]       &= 127;
-	        scalar_decoded[0]       |= 64;
+		scalar_decoded[0]       |= 64;
 	}
-	else if(len == 56){
+	else if(len == X448_SIZE){
 		/* Curve448 */
 		scalar_decoded[len - 1] &= 252;
 		scalar_decoded[0]       |= 128;
@@ -75,70 +87,73 @@ err:
         return ret;
 }
 
-ATTRIBUTE_WARN_UNUSED_RET static int decodeUCoordinate(const u8 *u, u8 *u_decoded, u8 len)
+/* U coordinate decoding, mainly endianness swapping  */
+ATTRIBUTE_WARN_UNUSED_RET static int decode_u_coordinate(u8 *u_decoded, const u8 *u, u8 len)
 {
-        int ret;
-        unsigned int i;
+	int ret;
+	unsigned int i;
 
-        /* Aliasing is not supported */
-        MUST_HAVE((u != u_decoded), ret, err);
+	/* Aliasing is not supported */
+	MUST_HAVE((u != u_decoded), ret, err);
+	/* Zero length is not accepted */
+	MUST_HAVE((len > 0), ret, err);
 
-        for(i = 0; i < len; i++){
-                u_decoded[len - 1 - i] = u[i];
+	for(i = 0; i < len; i++){
+		u_decoded[len - 1 - i] = u[i];
         }
 
-        ret = 0;
+	ret = 0;
 
 err:
-        return ret;
+	return ret;
 }
 
-/* U coordinate encoding */
-ATTRIBUTE_WARN_UNUSED_RET static int encodeUCoordinate(const u8 *u, u8 *u_encoded, u8 len)
+/* U coordinate encoding, mainly endianness swapping */
+ATTRIBUTE_WARN_UNUSED_RET static int encode_u_coordinate(u8 *u_encoded, const u8 *u, u8 len)
 {
-	return decodeUCoordinate(u, u_encoded, len);
+	return decode_u_coordinate(u_encoded, u, len);
 }
 
 
 /* Find V coordinate from U coordinate on Curve25519 or Curve448 */
-ATTRIBUTE_WARN_UNUSED_RET static int computeVfromU(fp_src_t u, fp_t v, ec_montgomery_crv_src_t crv)
+ATTRIBUTE_WARN_UNUSED_RET static int compute_v_from_u(fp_src_t u, fp_t v, ec_montgomery_crv_src_t crv)
 {
-        int ret;
-        fp tmp;
+	int ret;
+	fp tmp;
 
-        tmp.magic = 0;
+	tmp.magic = 0;
 
-        /* Sanity checks */
-        ret = fp_check_initialized(u); EG(ret, err);
-        ret = ec_montgomery_crv_check_initialized(crv); EG(ret, err);
-        MUST_HAVE((u->ctx == crv->A.ctx) && (u->ctx == crv->B.ctx), ret, err);
+	/* Sanity checks */
+	ret = fp_check_initialized(u); EG(ret, err);
+	ret = ec_montgomery_crv_check_initialized(crv); EG(ret, err);
+	MUST_HAVE((u->ctx == crv->A.ctx) && (u->ctx == crv->B.ctx), ret, err);
 
-        /* Initialize v with context */
-        ret = fp_init(v, u->ctx); EG(ret, err);
-        ret = fp_init(&tmp, u->ctx); EG(ret, err);
+	/* Initialize v with context */
+	ret = fp_init(v, u->ctx); EG(ret, err);
+	ret = fp_init(&tmp, u->ctx); EG(ret, err);
 
-        /* v must satisfy the equation B v^2 = u^3 + A u^2 + u,
-         * so we compute square root for B^-1 * (u^3 + A u^2 + u)
-         */
-        ret = fp_sqr(&tmp, u); EG(ret, err);
-        ret = fp_mul(v, &tmp, u); EG(ret, err);
-        ret = fp_mul(&tmp, &tmp, &(crv->A)); EG(ret, err);
-        ret = fp_add(v, v, &tmp); EG(ret, err);
-        ret = fp_add(v, v, u); EG(ret, err);
-        ret = fp_inv(&tmp, &(crv->B)); EG(ret, err);
-        ret = fp_mul(v, v, &tmp); EG(ret, err);
+	/* v must satisfy the equation B v^2 = u^3 + A u^2 + u,
+	 * so we compute square root for B^-1 * (u^3 + A u^2 + u)
+	 */
+	ret = fp_sqr(&tmp, u); EG(ret, err);
+	ret = fp_mul(v, &tmp, u); EG(ret, err);
+	ret = fp_mul(&tmp, &tmp, &(crv->A)); EG(ret, err);
+	ret = fp_add(v, v, &tmp); EG(ret, err);
+	ret = fp_add(v, v, u); EG(ret, err);
+	ret = fp_inv(&tmp, &(crv->B)); EG(ret, err);
+	ret = fp_mul(v, v, &tmp); EG(ret, err);
 
-        /* Choose any of the two square roots as the solution */
-        ret = fp_sqrt(v, &tmp, v);
+	/* Choose any of the two square roots as the solution */
+	ret = fp_sqrt(v, &tmp, v);
 	/* NOTE: this square root is possibly non-existing if the
 	 * u coordinate is on the quadratic twist of the curve.
 	 * An error is returned in this case.
 	 */
 
 err:
-        fp_uninit(&tmp);
+	fp_uninit(&tmp);
 
-        return ret;
+	return ret;
 }
 
 
@@ -153,11 +168,13 @@ err:
 ATTRIBUTE_WARN_UNUSED_RET static int x25519_448_core(const u8 *k, const u8 *u, u8 *res, u8 len)
 {
 	int ret, iszero, loaded, cmp;
-	/* Note: our local variables holding scalar and coordinate have the maximum size */
+	/* Note: our local variables holding scalar and coordinate have the maximum size
+	 * (X448 size if it is defined, X25519 else).
+	 */
 #if defined(WITH_X448)
-	u8 k_[56], u_[56];
+	u8 k_[X448_SIZE], u_[X448_SIZE];
 #else
-	u8 k_[32], u_[32];
+	u8 k_[X25519_SIZE], u_[X25519_SIZE];
 #endif
 	aff_pt_montgomery _Tmp;
 	prj_pt Q;
@@ -176,23 +193,23 @@ ATTRIBUTE_WARN_UNUSED_RET static int x25519_448_core(const u8 *k, const u8 *u, u
 
 	MUST_HAVE((k != NULL) && (u != NULL) && (res != NULL), ret, err);
 	/* Sanity check on sizes */
-	MUST_HAVE(((len == 32) || (len == 56)), ret, err);
+	MUST_HAVE(((len == X25519_SIZE) || (len == X448_SIZE)), ret, err);
 	MUST_HAVE(((sizeof(k_) >= len) && (sizeof(u_) >= len)), ret, err);
 
 	/* First of all, we clamp and decode the scalar and u */
-	ret = decodeScalar(k, k_, len); EG(ret, err);
-	ret = decodeUCoordinate(u, u_, len); EG(ret, err);
+	ret = decode_scalar(k_, k, len); EG(ret, err);
+	ret = decode_u_coordinate(u_, u, len); EG(ret, err);
 
 	/* Import curve parameters */
 	loaded = 0;
 #if defined(WITH_X25519)
-	if(len == 32){
+	if(len == X25519_SIZE){
 		ret = import_params(&shortw_curve_params, &wei25519_str_params); EG(ret, err);
 		loaded = 1;
 	}
 #endif
 #if defined(WITH_X448)
-	if(len == 56){
+	if(len == X448_SIZE){
 		ret = import_params(&shortw_curve_params, &wei448_str_params); EG(ret, err);
 		loaded = 1;
 	}
@@ -228,7 +245,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int x25519_448_core(const u8 *k, const u8 *u, u
 	ret = fp_set_nn(u_coord, v_coord_nn); EG(ret, err);
 
 	/* Compute the v coordinate from u */
-	ret = computeVfromU(u_coord, v_coord, &montgomery_curve); EG(ret, err);
+	ret = compute_v_from_u(u_coord, v_coord, &montgomery_curve); EG(ret, err);
 	/* NOTE: since we use isogenies of the Curve25519/448, we must stick to points
 	 * belonging to this curve. Since not all u coordinates provide a v coordinate
 	 * (i.e. a square residue from the curve formula), the computation above can trigger an error.
@@ -283,7 +300,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int x25519_448_core(const u8 *k, const u8 *u, u
 	/* Now export the resulting u coordinate ... */
 	ret = fp_export_to_buf(u_, len, &(_Tmp.u)); EG(ret, err);
 	/* ... and encode it in the output */
-	ret = encodeUCoordinate(u_, res, len);
+	ret = encode_u_coordinate(res, u_, len);
 
 err:
 	IGNORE_RET_VAL(local_memset(u_, 0, sizeof(u_)));
@@ -311,7 +328,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int x25519_448_gen_priv_key(u8 *priv_key, u8 le
 	int ret;
 
 	MUST_HAVE((priv_key != NULL), ret, err);
-	MUST_HAVE(((len == 32) || (len == 56)), ret, err);
+	MUST_HAVE(((len == X25519_SIZE) || (len == X448_SIZE)), ret, err);
 
 	/* Generating a private key consists in generating a random byte string */
 	ret = get_random(priv_key, len);
@@ -326,7 +343,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int x25519_448_init_pub_key(const u8 *priv_key,
 	int ret;
 
 	MUST_HAVE((priv_key != NULL) && (pub_key != NULL), ret, err);
-	MUST_HAVE(((len == 32) || (len == 56)), ret, err);
+	MUST_HAVE(((len == X25519_SIZE) || (len == X448_SIZE)), ret, err);
 
 	/* Computing the public key is x25519(priv_key, 9) or x448(priv_key, 5)
 	 *
@@ -338,16 +355,16 @@ ATTRIBUTE_WARN_UNUSED_RET static int x25519_448_init_pub_key(const u8 *priv_key,
 	 * cycles ...).
 	 *
 	 */
-	if(len == 32){
-		u8 u[32];
+	if(len == X25519_SIZE){
+		u8 u[X25519_SIZE];
 
 		ret = local_memset(u, 0, sizeof(u)); EG(ret, err);
 		/* X25519 uses the base point with x-coordinate = 0x09 */
 		u[0] = 0x09;
 		ret = x25519_448_core(priv_key, u, pub_key, len);
 	}
-	else if(len == 56){
-		u8 u[56];
+	else if(len == X448_SIZE){
+		u8 u[X448_SIZE];
 
 		ret = local_memset(u, 0, sizeof(u)); EG(ret, err);
 		/* X448 uses the base point with x-coordinate = 0x05 */
@@ -366,7 +383,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int x25519_448_derive_secret(const u8 *priv_key
 	int ret;
 
 	MUST_HAVE((priv_key != NULL) && (peer_pub_key != NULL) && (shared_secret != NULL), ret, err);
-	MUST_HAVE(((len == 32) || (len == 56)), ret, err);
+	MUST_HAVE(((len == X25519_SIZE) || (len == X448_SIZE)), ret, err);
 
 	/* Computing the shared secret is x25519(priv_key, peer_pub_key) or x448(priv_key, peer_pub_key) */
 	ret = x25519_448_core(priv_key, peer_pub_key, shared_secret, len);
@@ -382,24 +399,24 @@ err:
  * NOTE: we use isogenies between Montgomery Curve25519 and short Weierstrass
  * WEI25519 to perform the Elliptic Curves computations.
  */
-int x25519(const u8 k[32], const u8 u[32], u8 res[32])
+int x25519(const u8 k[X25519_SIZE], const u8 u[X25519_SIZE], u8 res[X25519_SIZE])
 {
-	return x25519_448_core(k, u, res, 32);
+	return x25519_448_core(k, u, res, X25519_SIZE);
 }
 
-int x25519_gen_priv_key(u8 priv_key[32])
+int x25519_gen_priv_key(u8 priv_key[X25519_SIZE])
 {
-	return x25519_448_gen_priv_key(priv_key, 32);
+	return x25519_448_gen_priv_key(priv_key, X25519_SIZE);
 }
 
-int x25519_init_pub_key(const u8 priv_key[32], u8 pub_key[32])
+int x25519_init_pub_key(const u8 priv_key[X25519_SIZE], u8 pub_key[X25519_SIZE])
 {
-	return x25519_448_init_pub_key(priv_key, pub_key, 32);
+	return x25519_448_init_pub_key(priv_key, pub_key, X25519_SIZE);
 }
 
-int x25519_derive_secret(const u8 priv_key[32], const u8 peer_pub_key[32], u8 shared_secret[32])
+int x25519_derive_secret(const u8 priv_key[X25519_SIZE], const u8 peer_pub_key[X25519_SIZE], u8 shared_secret[X25519_SIZE])
 {
-	return x25519_448_derive_secret(priv_key, peer_pub_key, shared_secret, 32);
+	return x25519_448_derive_secret(priv_key, peer_pub_key, shared_secret, X25519_SIZE);
 }
 #endif
 
@@ -409,24 +426,24 @@ int x25519_derive_secret(const u8 priv_key[32], const u8 peer_pub_key[32], u8 sh
  * NOTE: we use isogenies between Montgomery Curve448 and short Weierstrass
  * WEI448 to perform the Elliptic Curves computations.
  */
-int x448(const u8 k[56], const u8 u[56], u8 res[56])
+int x448(const u8 k[X448_SIZE], const u8 u[X448_SIZE], u8 res[X448_SIZE])
 {
-	return x25519_448_core(k, u, res, 56);
+	return x25519_448_core(k, u, res, X448_SIZE);
 }
 
-int x448_gen_priv_key(u8 priv_key[56])
+int x448_gen_priv_key(u8 priv_key[X448_SIZE])
 {
-	return x25519_448_gen_priv_key(priv_key, 56);
+	return x25519_448_gen_priv_key(priv_key, X448_SIZE);
 }
 
-int x448_init_pub_key(const u8 priv_key[56], u8 pub_key[56])
+int x448_init_pub_key(const u8 priv_key[X448_SIZE], u8 pub_key[X448_SIZE])
 {
-	return x25519_448_init_pub_key(priv_key, pub_key, 56);
+	return x25519_448_init_pub_key(priv_key, pub_key, X448_SIZE);
 }
 
-int x448_derive_secret(const u8 priv_key[56], const u8 peer_pub_key[56], u8 shared_secret[56])
+int x448_derive_secret(const u8 priv_key[X448_SIZE], const u8 peer_pub_key[X448_SIZE], u8 shared_secret[X448_SIZE])
 {
-	return x25519_448_derive_secret(priv_key, peer_pub_key, shared_secret, 56);
+	return x25519_448_derive_secret(priv_key, peer_pub_key, shared_secret, X448_SIZE);
 }
 #endif
 

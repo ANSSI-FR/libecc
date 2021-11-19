@@ -1772,16 +1772,18 @@ err:
  * countermeasures, and it is usually faster as scalar can be small with few bits
  * to process (e.g. cofactors, etc.).
  *
+ * out is initialized by the function.
+ *
  * XXX: WARNING: this function must only be used on public points!
  *
  */
-int _prj_pt_unprotected_mult(prj_pt_t out, nn_src_t scalar, prj_pt_src_t in)
+int _prj_pt_unprotected_mult(prj_pt_t out, nn_src_t scalar, prj_pt_src_t public_in)
 {
         u8 expbit;
         bitcnt_t explen;
         int ret, iszero;
 
-        ret = prj_pt_check_initialized(in); EG(ret, err);
+        ret = prj_pt_check_initialized(public_in); EG(ret, err);
         ret = nn_check_initialized(scalar); EG(ret, err);
 
         ret = nn_iszero(scalar, &iszero); EG(ret, err);
@@ -1795,13 +1797,13 @@ int _prj_pt_unprotected_mult(prj_pt_t out, nn_src_t scalar, prj_pt_src_t in)
         /* Sanity check */
         MUST_HAVE((explen > 0), ret, err);
         explen -= (bitcnt_t)1;
-        ret = prj_pt_copy(out, in); EG(ret, err);
+        ret = prj_pt_copy(out, public_in); EG(ret, err);
         while (explen > 0) {
                 explen -= (bitcnt_t)1;
                 ret = nn_getbit(scalar, explen, &expbit); EG(ret, err);
                 ret = prj_pt_dbl(out, out); EG(ret, err);
                 if(expbit){
-                        ret = prj_pt_add(out, out, in); EG(ret, err);
+                        ret = prj_pt_add(out, out, public_in); EG(ret, err);
                 }
         }
 

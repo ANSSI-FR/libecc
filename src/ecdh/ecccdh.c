@@ -19,8 +19,8 @@
  *
  */
 
-/* Get the size of the shared secret associated to the curve parameters.
- *
+/*
+ * Get the size of the shared secret associated to the curve parameters.
  */
 int ecccdh_shared_secret_size(const ec_params *params, u8 *size)
 {
@@ -36,8 +36,8 @@ err:
 	return ret;
 }
 
-/* Get the size of the serialized public key associated to the curve parameters.
- *
+/*
+ * Get the size of the serialized public key associated to the curve parameters.
  */
 int ecccdh_serialized_pub_key_size(const ec_params *params, u8 *size)
 {
@@ -54,16 +54,16 @@ err:
 }
 
 
-/* Initialize ECCCDH public key from an initialized private key.
- *
+/*
+ * Initialize ECCCDH public key from an initialized private key.
  */
 int ecccdh_init_pub_key(ec_pub_key *out_pub, const ec_priv_key *in_priv)
 {
-        prj_pt_src_t G;
-        int ret, cmp;
-        nn_src_t q;
+	prj_pt_src_t G;
+	int ret, cmp;
+	nn_src_t q;
 
-        MUST_HAVE((out_pub != NULL), ret, err);
+	MUST_HAVE((out_pub != NULL), ret, err);
 
 	/* Zero init public key to be generated */
 	ret = local_memset(out_pub, 0, sizeof(ec_pub_key)); EG(ret, err);
@@ -87,8 +87,8 @@ err:
         return ret;
 }
 
-/* Generate a key pair for ECCCDH given curve parameters as input.
- *
+/*
+ * Generate a key pair for ECCCDH given curve parameters as input.
  */
 int ecccdh_gen_key_pair(ec_key_pair *kp, const ec_params *params)
 {
@@ -97,7 +97,7 @@ int ecccdh_gen_key_pair(ec_key_pair *kp, const ec_params *params)
 	MUST_HAVE((kp != NULL) && (params != NULL), ret, err);
 
 	/* Use our generic key pair generation primitive */
-	kp->priv_key.magic = EC_PRIVKEY;
+	kp->priv_key.magic = PRIV_KEY_MAGIC;
 	kp->priv_key.key_type = ECCCDH;
 	kp->priv_key.params = params;
 	ret = generic_gen_priv_key(&(kp->priv_key)); EG(ret, err);
@@ -106,11 +106,17 @@ int ecccdh_gen_key_pair(ec_key_pair *kp, const ec_params *params)
 	ret = ecccdh_init_pub_key(&(kp->pub_key), &(kp->priv_key));
 
 err:
+	/* If we have failed our generation, uninitialize
+	 * the key pair.
+	 */
+	if(ret && (kp != NULL)){
+		IGNORE_RET_VAL(local_memset(kp, 0, sizeof(ec_key_pair)));
+	}
 	return ret;
 }
 
-/* Create a key pair from a serialized private key.
- *
+/*
+ * Create a key pair from a serialized private key.
  */
 int ecccdh_import_key_pair_from_priv_key_buf(ec_key_pair *kp, const ec_params *params, const u8 *priv_key_buf, u8 priv_key_buf_len)
 {
@@ -128,8 +134,8 @@ err:
 	return ret;
 }
 
-/* Serialize our public key in a buffer.
- *
+/*
+ * Serialize our public key in a buffer.
  */
 int ecccdh_serialize_pub_key(const ec_pub_key *our_pub_key, u8 *buf, u8 buf_len)
 {
@@ -151,8 +157,12 @@ err:
 	return ret;
 }
 
-/* Derive the ECCCDH shared secret and store it in a buffer given the peer
+/*
+ * Derive the ECCCDH shared secret and store it in a buffer given the peer
  * public key and our private key.
+ *
+ * The shared_secret_len length MUST be exactly equal to the expected shared secret size:
+ * the function fails otherwise.
  */
 int ecccdh_derive_secret(const ec_priv_key *our_priv_key, const u8 *peer_pub_key_buf, u8 peer_pub_key_buf_len, u8 *shared_secret, u8 shared_secret_len)
 {

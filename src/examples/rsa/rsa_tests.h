@@ -73,7 +73,7 @@ ATTRIBUTE_WARN_UNUSED_RET static inline int perform_rsa_tests(const rsa_test **t
 		/* Perform our operation */
 		switch(t->type){
 			case RSA_PKCS1_v1_5_ENC:{
-				u8 cipher[4096];
+				u8 cipher[NN_USABLE_MAX_BYTE_LEN];
 				u16 clen;
 				if(t->salt != NULL){
 					clen = sizeof(cipher);
@@ -93,7 +93,7 @@ ATTRIBUTE_WARN_UNUSED_RET static inline int perform_rsa_tests(const rsa_test **t
 				break;
 			}
 			case RSA_OAEP_ENC:{
-				u8 cipher[4096];
+				u8 cipher[NN_USABLE_MAX_BYTE_LEN];
 				u16 clen;
 				if(t->salt != NULL){
 					clen = sizeof(cipher);
@@ -115,7 +115,7 @@ ATTRIBUTE_WARN_UNUSED_RET static inline int perform_rsa_tests(const rsa_test **t
 			case RSA_PKCS1_v1_5_SIG:{
 				ret = rsassa_pkcs1_v1_5_verify(&pub, t->m, t->mlen, t->res, t->reslen, modbits, t->hash); EG(ret, err1);
 				/* Try to sign */
-				u8 sig[4096];
+				u8 sig[NN_USABLE_MAX_BYTE_LEN];
 				u16 siglen = sizeof(sig);
 				ret = rsassa_pkcs1_v1_5_sign(&priv, t->m, t->mlen, sig, &siglen, modbits, t->hash); EG(ret, err1);
 				/* Check the result */
@@ -136,7 +136,7 @@ ATTRIBUTE_WARN_UNUSED_RET static inline int perform_rsa_tests(const rsa_test **t
 				}
 				if(t->salt != NULL){
 					/* Try to sign */
-					u8 sig[4096];
+					u8 sig[NN_USABLE_MAX_BYTE_LEN];
 					u16 siglen = sizeof(sig);
 					ret = rsassa_pss_sign(&priv, t->m, t->mlen, sig, &siglen, modbits, t->hash, t->saltlen, t->salt); EG(ret, err1);
 					/* Check the result */

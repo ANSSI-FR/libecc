@@ -22,6 +22,14 @@
 #include "../utils/utils.h"
 
 /*
+ * EDDSA exported encoded public keys are of fixed known sizes depending
+ * on the EDDSA variant
+ */
+#define EDDSA25519_PUB_KEY_ENCODED_LEN 32
+#define EDDSA448_PUB_KEY_ENCODED_LEN   56
+#define EDDSA_MAX_PUB_KEY_ENCODED_LEN LOCAL_MAX(EDDSA25519_PUB_KEY_ENCODED_LEN, EDDSA448_PUB_KEY_ENCODED_LEN)
+
+/*
  * NOTE: for EDDSA, the signature length is twice the encoding of integers,
  * which corresponds to half the hash size.
  */

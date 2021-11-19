@@ -487,7 +487,7 @@ err:
 }
 
 /*
- * Invert NN x modulo m using Fermat's little theorem for our inversion:
+ * Invert NN x modulo p using Fermat's little theorem for our inversion:
  *
  *    p prime means that:
  *    x^(p-1) = 1 mod (p)

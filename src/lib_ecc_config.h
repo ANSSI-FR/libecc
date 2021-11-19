@@ -112,6 +112,7 @@
 #define WITH_SIG_EDDSA448
 #define WITH_SIG_DECDSA
 
+/* Supported ECDH schemes */
 #define WITH_ECCCDH
 #define WITH_X25519
 #define WITH_X448

@@ -794,14 +794,14 @@ ATTRIBUTE_WARN_UNUSED_RET static int ecdh_known_vector_tests_one(const ecdh_test
 #endif
 #if defined(WITH_X25519)
 		case X25519:{
-			u8 pub_key[32];
-			u8 shared_secret[32];
+			u8 pub_key[X25519_SIZE];
+			u8 shared_secret[X25519_SIZE];
 
 			ret = local_memset(pub_key, 0, sizeof(pub_key)); EG(ret, err);
 			ret = local_memset(shared_secret, 0, sizeof(shared_secret)); EG(ret, err);
 
 			/* Compute our public key */
-			MUST_HAVE((c->our_priv_key_len == 32), ret, err);
+			MUST_HAVE((c->our_priv_key_len == X25519_SIZE), ret, err);
 			ret = x25519_init_pub_key(c->our_priv_key, pub_key);
 			if (ret) {
 				failed_test = TEST_KEY_IMPORT_ERROR;
@@ -809,15 +809,15 @@ ATTRIBUTE_WARN_UNUSED_RET static int ecdh_known_vector_tests_one(const ecdh_test
 				goto err;
 			}
 			/* Check it against the expected one */
-			MUST_HAVE((c->exp_our_pub_key_len == 32), ret, err);
-			ret = are_equal(pub_key, c->exp_our_pub_key, 32, &check); EG(ret, err);
+			MUST_HAVE((c->exp_our_pub_key_len == X25519_SIZE), ret, err);
+			ret = are_equal(pub_key, c->exp_our_pub_key, X25519_SIZE, &check); EG(ret, err);
 			if (!check) {
 				failed_test = TEST_ECDH_COMP_ERROR;
 				ret = -1;
 				goto err;
 			}
 			/* Now derive the shared secret */
-			MUST_HAVE((c->peer_pub_key_len == 32), ret, err);
+			MUST_HAVE((c->peer_pub_key_len == X25519_SIZE), ret, err);
 			ret = x25519_derive_secret(c->our_priv_key, c->peer_pub_key, shared_secret);
 			if (ret) {
 				failed_test = TEST_ECDH_ERROR;
@@ -825,8 +825,8 @@ ATTRIBUTE_WARN_UNUSED_RET static int ecdh_known_vector_tests_one(const ecdh_test
 				goto err;
 			}
 			/* Check it against the expected one */
-			MUST_HAVE((c->exp_shared_secret_len == 32), ret, err);
-			ret = are_equal(shared_secret, c->exp_shared_secret, 32, &check); EG(ret, err);
+			MUST_HAVE((c->exp_shared_secret_len == X25519_SIZE), ret, err);
+			ret = are_equal(shared_secret, c->exp_shared_secret, X25519_SIZE, &check); EG(ret, err);
 			if (!check) {
 				failed_test = TEST_ECDH_COMP_ERROR;
 				ret = -1;
@@ -838,14 +838,14 @@ ATTRIBUTE_WARN_UNUSED_RET static int ecdh_known_vector_tests_one(const ecdh_test
 #endif
 #if defined(WITH_X448)
 		case X448:{
-			u8 pub_key[56];
-			u8 shared_secret[56];
+			u8 pub_key[X448_SIZE];
+			u8 shared_secret[X448_SIZE];
 
 			ret = local_memset(pub_key, 0, sizeof(pub_key)); EG(ret, err);
 			ret = local_memset(shared_secret, 0, sizeof(shared_secret)); EG(ret, err);
 
 			/* Compute our public key */
-			MUST_HAVE((c->our_priv_key_len == 56), ret, err);
+			MUST_HAVE((c->our_priv_key_len == X448_SIZE), ret, err);
 			ret = x448_init_pub_key(c->our_priv_key, pub_key);
 			if (ret) {
 				failed_test = TEST_KEY_IMPORT_ERROR;
@@ -853,15 +853,15 @@ ATTRIBUTE_WARN_UNUSED_RET static int ecdh_known_vector_tests_one(const ecdh_test
 				goto err;
 			}
 			/* Check it against the expected one */
-			MUST_HAVE((c->exp_our_pub_key_len == 56), ret, err);
-			ret = are_equal(pub_key, c->exp_our_pub_key, 56, &check); EG(ret, err);
+			MUST_HAVE((c->exp_our_pub_key_len == X448_SIZE), ret, err);
+			ret = are_equal(pub_key, c->exp_our_pub_key, X448_SIZE, &check); EG(ret, err);
 			if (!check) {
 				failed_test = TEST_ECDH_COMP_ERROR;
 				ret = -1;
 				goto err;
 			}
 			/* Now derive the shared secret */
-			MUST_HAVE((c->peer_pub_key_len == 56), ret, err);
+			MUST_HAVE((c->peer_pub_key_len == X448_SIZE), ret, err);
 			ret = x448_derive_secret(c->our_priv_key, c->peer_pub_key, shared_secret);
 			if (ret) {
 				failed_test = TEST_ECDH_ERROR;
@@ -869,8 +869,8 @@ ATTRIBUTE_WARN_UNUSED_RET static int ecdh_known_vector_tests_one(const ecdh_test
 				goto err;
 			}
 			/* Check it against the expected one */
-			MUST_HAVE((c->exp_shared_secret_len == 56), ret, err);
-			ret = are_equal(shared_secret, c->exp_shared_secret, 56, &check); EG(ret, err);
+			MUST_HAVE((c->exp_shared_secret_len == X448_SIZE), ret, err);
+			ret = are_equal(shared_secret, c->exp_shared_secret, X448_SIZE, &check); EG(ret, err);
 			if (!check) {
 				failed_test = TEST_ECDH_COMP_ERROR;
 				ret = -1;

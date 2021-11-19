@@ -605,8 +605,7 @@ int ec_key_pair_gen(ec_key_pair *kp, const ec_params *params,
 
  err:
 	if (ret && (kp != NULL)) {
-		kp->priv_key.magic = WORD(0);
-		kp->pub_key.magic = WORD(0);
+		IGNORE_RET_VAL(local_memset(kp, 0, sizeof(ec_key_pair)));
 	}
 	return ret;
 }

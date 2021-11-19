@@ -1,14 +1,15 @@
-ROOT_DIR=../../
 ROOT_DIR=../..
 BUILD_DIR=$(ROOT_DIR)/build
 include $(ROOT_DIR)/common.mk
 
+RSA_DIR=rsa/
+
 CFLAGS += -I$(ROOT_DIR)/src/ -I$(ROOT_DIR)/src/external_deps
 
-all:	nn_example fp_example curve_basic_examples curve_ecdh rsa sss
+all:	nn_example fp_example curve_basic_examples curve_ecdh _rsa sss
 ifeq ($(WITH_DYNAMIC_LIBS),1)
 # If the user asked for dynamic libraries, compile versions of our binaries against them
-all:	nn_example_dyn fp_example_dyn curve_basic_examples_dyn curve_ecdh_dyn rsa_dyn sss_dyn
+all:	nn_example_dyn fp_example_dyn curve_basic_examples_dyn curve_ecdh_dyn _rsa_dyn sss_dyn
 endif
 
 nn_example:
@@ -22,9 +23,8 @@ curve_basic_examples:
 curve_ecdh:
 	$(CC) $(BIN_CFLAGS) -DCURVE_ECDH curve_ecdh.c $(ROOT_DIR)/src/external_deps/print.c $(ROOT_DIR)/src/external_deps/rand.c $(BIN_LDFLAGS) $(LIBEC) -o curve_ecdh
 
-rsa:
-	$(CC) $(BIN_CFLAGS) -DRSA rsa.c rsa_hash.c $(ROOT_DIR)/src/external_deps/print.c $(ROOT_DIR)/src/external_deps/rand.c $(BIN_LDFLAGS) $(LIBSIGN) -o rsa
-
+_rsa:
+	cd $(RSA_DIR) && make
 sss:
 	$(CC) $(BIN_CFLAGS) -DSSS sss.c $(ROOT_DIR)/src/external_deps/print.c $(ROOT_DIR)/src/external_deps/rand.c $(BIN_LDFLAGS) $(LIBSIGN) -o sss
 
@@ -41,15 +41,16 @@ curve_basic_examples_dyn:
 curve_ecdh_dyn:
 	$(CC) $(BIN_CFLAGS) -DCURVE_ECDH curve_ecdh.c $(ROOT_DIR)/src/external_deps/print.c $(ROOT_DIR)/src/external_deps/rand.c $(BIN_LDFLAGS) -L$(BUILD_DIR) -lec -o curve_ecdh_dyn
 
-rsa_dyn:
-	$(CC) $(BIN_CFLAGS) -DRSA rsa.c rsa_hash.c $(ROOT_DIR)/src/external_deps/print.c $(ROOT_DIR)/src/external_deps/rand.c $(BIN_LDFLAGS) $(LIBEC) -L$(BUILD_DIR) -lsign -o rsa_dyn
+_rsa_dyn:
+	cd $(RSA_DIR) && make
 sss_dyn:
 	$(CC) $(BIN_CFLAGS) -DSSS sss.c $(ROOT_DIR)/src/external_deps/print.c $(ROOT_DIR)/src/external_deps/rand.c $(BIN_LDFLAGS) $(LIBEC) -L$(BUILD_DIR) -lsign -o sss_dyn
 endif
 
 
 clean:
-	@rm -f nn_pollard_rho fp_square_residue curve_basic_examples curve_ecdh rsa sss
-	@rm -f nn_pollard_rho_dyn fp_square_residue_dyn curve_basic_examples_dyn curve_ecdh_dyn rsa_dyn sss_dyn
+	@rm -f nn_pollard_rho fp_square_residue curve_basic_examples curve_ecdh
+	@rm -f nn_pollard_rho_dyn fp_square_residue_dyn curve_basic_examples_dyn curve_ecdh_dyn sss_dyn
+	cd $(RSA_DIR) && make clean
 
 .PHONY: all clean 16 32 64 debug debug16 debug32 debug64 force_arch32 force_arch64

@@ -60,7 +60,8 @@ ATTRIBUTE_WARN_UNUSED_RET int prj_pt_add(prj_pt_t sum, prj_pt_src_t in1, prj_pt_
 ATTRIBUTE_WARN_UNUSED_RET int prj_pt_dbl(prj_pt_t dbl, prj_pt_src_t in);
 ATTRIBUTE_WARN_UNUSED_RET int prj_pt_mul(prj_pt_t out, nn_src_t m, prj_pt_src_t in);
 ATTRIBUTE_WARN_UNUSED_RET int prj_pt_mul_blind(prj_pt_t out, nn_src_t m, prj_pt_src_t in);
-ATTRIBUTE_WARN_UNUSED_RET int _prj_pt_unprotected_mult(prj_pt_t out, nn_src_t cofactor, prj_pt_src_t in);
+/* XXX: WARNING: this function must only be used on public points! */
+ATTRIBUTE_WARN_UNUSED_RET int _prj_pt_unprotected_mult(prj_pt_t out, nn_src_t cofactor, prj_pt_src_t public_in);
 ATTRIBUTE_WARN_UNUSED_RET int check_prj_pt_order(prj_pt_src_t in_shortw, nn_src_t in_isorder, prj_pt_sensitivity s, int *check);
 ATTRIBUTE_WARN_UNUSED_RET int prj_pt_import_from_buf(prj_pt_t pt,
 			   const u8 *pt_buf,
