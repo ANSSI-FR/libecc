@@ -84,24 +84,25 @@ int ec_priv_key_export_to_buf(const ec_priv_key *priv_key, u8 *priv_key_buf,
 err:
 	return ret;
 }
-
+/*
 void pub_key_check_initialized(const ec_pub_key *A)
 {
 	MUST_HAVE((A != NULL) && (A->magic == PUB_KEY_MAGIC));
 }
-
+*/
 int pub_key_is_initialized(const ec_pub_key *A)
 {
 	return !!((A != NULL) && (A->magic == PUB_KEY_MAGIC));
 }
 
+/*
 void pub_key_check_initialized_and_type(const ec_pub_key *A,
 					ec_sig_alg_type sig_type)
 {
-	MUST_HAVE_SELECTION((A != NULL) && (A->magic == PUB_KEY_MAGIC) &&
+	MUST_HAVE((A != NULL) && (A->magic == PUB_KEY_MAGIC) &&
 		  (A->key_type == sig_type));
 }
-
+*/
 int pub_key_is_initialized_and_type(const ec_pub_key *A,
 				    ec_sig_alg_type sig_type)
 {

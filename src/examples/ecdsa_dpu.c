@@ -187,7 +187,7 @@ int main (void){
 
 	//dump_params(params_ptr);
 	//dump_pub_key(pub_key_ptr);
-	ret = generic_ec_verify(ecdsa_secp256r1_test_vectors_expected_sig, sizeof(ecdsa_secp256r1_test_vectors_expected_sig), pub_key_ptr, msg, sizeof(msg),
+	ret = generic_ec_verify(ecdsa_secp256r1_test_vectors_expected_sig, sizeof(ecdsa_secp256r1_test_vectors_expected_sig), pub_key_ptr, msg, 3,
 				 ECDSA, SHA256, NULL, 0);
 #endif
 	return 1;

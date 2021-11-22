@@ -34,7 +34,8 @@ typedef struct {
 typedef prj_pt *prj_pt_t;
 typedef const prj_pt *prj_pt_src_t;
 
-void prj_pt_check_initialized(prj_pt_src_t in);
+#define prj_pt_check_initialized(a)
+//void prj_pt_check_initialized(prj_pt_src_t in);
 
 int prj_pt_is_initialized(prj_pt_src_t in);
 

@@ -24,13 +24,13 @@
 #include "../fp/fp_rand.h"
 
 #define PRJ_PT_MAGIC ((word_t)(0xe1cd70babb1d5afeULL))
-
+/*
 void prj_pt_check_initialized(prj_pt_src_t in)
 {
 	MUST_HAVE((in != NULL) && (in->magic == PRJ_PT_MAGIC)
 		  && (in->crv != NULL));
 }
-
+*/
 int prj_pt_is_initialized(prj_pt_src_t in)
 {
 	return !!((in != NULL) && (in->magic == PRJ_PT_MAGIC) &&

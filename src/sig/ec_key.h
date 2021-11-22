@@ -145,9 +145,13 @@ typedef struct {
 #define EC_STRUCTURED_PUB_KEY_EXPORT_SIZE(pub_key)			\
 	((u8)(EC_PUB_KEY_EXPORT_SIZE(pub_key) + (3 * sizeof(u8))))
 
-void pub_key_check_initialized(const ec_pub_key *A);
-void pub_key_check_initialized_and_type(const ec_pub_key *A,
-					ec_sig_alg_type sig_type);
+#define pub_key_check_initialized(a)
+//void pub_key_check_initialized(const ec_pub_key *A);
+
+
+#define pub_key_check_initialized_and_type(a, b)
+/*void pub_key_check_initialized_and_type(const ec_pub_key *A,
+					ec_sig_alg_type sig_type);*/
 int pub_key_is_initialized(const ec_pub_key *A);
 int pub_key_is_initialized_and_type(const ec_pub_key *A,
 				    ec_sig_alg_type sig_type);

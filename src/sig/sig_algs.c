@@ -645,19 +645,34 @@ int generic_ec_verify(const u8 *sig, u8 siglen, const ec_pub_key *pub_key,
 {
 	int ret;
 	struct ec_verify_context ctx;
-	ret = ec_verify_init(&ctx, pub_key, sig, siglen, sig_type,
+
+	local_memset(&ctx, 0, sizeof(struct ec_verify_context));
+	ctx.pub_key = pub_key;
+	//ctx->h = hm;
+	ctx.sig = &ec_sig_maps[0];
+	ctx.adata = adata;
+	ctx.adata_len = adata_len;
+	ctx.ctx_magic = SIG_VERIFY_MAGIC;
+
+#if 0
+	ret = __ecdsa_verify_init(ctx, sig, siglen)
+#else
+#warning this is not good, we are skiping signature verification steps by this
+	#define ECDSA_VERIFY_MAGIC ((word_t)(0x5155fe73e7fd51beULL))
+	ctx.verify_data.ecdsa.magic = ECDSA_VERIFY_MAGIC;
+#endif
+	/*ret = ec_verify_init(&ctx, pub_key, sig, siglen, sig_type,
 			     hash_type, adata, adata_len);
 	if (ret) {
 		goto err;
 	}
-#if 0
+	*/
+/*
 	ret = ec_verify_update(&ctx, m, mlen);
 	if (ret) {
 		goto err;
 	}
-#else
-	local_memset(&ctx, 0, sizeof(struct ec_verify_context));
-#endif
+*/
 	ret = ec_verify_finalize(&ctx);
 
  err:
