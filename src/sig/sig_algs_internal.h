@@ -273,8 +273,8 @@ static const ec_sig_mapping ec_sig_maps[] = {
 	 .sign = NULL,
 	 .verify_init = NULL,
 	 .verify_update = NULL,
-	 .verify_finalize = _ecdsa_verify_finalize,
-	 .verify = generic_ec_verify,
+	 .verify_finalize = NULL,
+	 .verify = NULL,
 	 },
 #endif
 #if (MAX_SIG_ALG_NAME_LEN < 6)

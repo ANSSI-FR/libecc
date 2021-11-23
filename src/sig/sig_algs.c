@@ -650,12 +650,12 @@ int generic_ec_verify(const u8 *sig, u8 siglen, const ec_pub_key *pub_key,
 	ctx.pub_key = pub_key;
 	//ctx->h = hm;
 	ctx.sig = &ec_sig_maps[0];
-	ctx.adata = adata;
-	ctx.adata_len = adata_len;
+	ctx.adata = NULL;
+	ctx.adata_len = 0;
 	ctx.ctx_magic = SIG_VERIFY_MAGIC;
 
-#if 0
-	ret = __ecdsa_verify_init(ctx, sig, siglen)
+#if 1
+	ret = __ecdsa_verify_init(&ctx, sig, siglen, sig_type);
 #else
 #warning this is not good, we are skiping signature verification steps by this
 	#define ECDSA_VERIFY_MAGIC ((word_t)(0x5155fe73e7fd51beULL))
@@ -673,7 +673,7 @@ int generic_ec_verify(const u8 *sig, u8 siglen, const ec_pub_key *pub_key,
 		goto err;
 	}
 */
-	ret = ec_verify_finalize(&ctx);
+	ret = __ecdsa_verify_finalize(&ctx, ECDSA);
 
  err:
 	return ret;

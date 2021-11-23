@@ -141,12 +141,12 @@ int ec_pub_key_import_from_buf(ec_pub_key *pub_key, const ec_params *params,
 	 * when we do not trust the public key that is provided, which can
 	 * be the case in some protocols.
 	 */
-	if(!nn_isone(&(params->ec_gen_cofactor))){
+	/*if(!nn_isone(&(params->ec_gen_cofactor))){
 		if(check_prj_pt_order(&(pub_key->y), &(params->ec_gen_order))){
 			ret = -1;
 			goto err;
 		}
-	}
+	}*/
 
 	/* Set key type and pointer to EC params */
 	pub_key->key_type = ec_key_alg;

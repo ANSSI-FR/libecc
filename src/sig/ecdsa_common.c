@@ -250,7 +250,6 @@ int __ecdsa_init_pub_key(ec_pub_key *out_pub, const ec_priv_key *in_priv,
 			 ec_sig_alg_type key_type)
 {
 	prj_pt_src_t G;
-	dpu_debug = INIT_PUB_KEY_START;
 
 	MUST_HAVE(out_pub != NULL);
 
@@ -277,7 +276,6 @@ int __ecdsa_init_pub_key(ec_pub_key *out_pub, const ec_priv_key *in_priv,
 	out_pub->key_type = key_type;
 	out_pub->params = in_priv->params;
 	out_pub->magic = PUB_KEY_MAGIC;
-	dpu_debug = INIT_PUB_KEY_END;
 
 	return 0;
 err:
@@ -714,7 +712,6 @@ int __ecdsa_verify_init(struct ec_verify_context *ctx, const u8 *sig, u8 siglen,
 	nn_src_t q;
 	nn *r, *s;
 	int ret = -1;
-	dpu_debug = VERIFY_INIT_START;
 	/* First, verify context has been initialized */
 	SIG_VERIFY_CHECK_INITIALIZED(ctx);
 
@@ -735,11 +732,11 @@ int __ecdsa_verify_init(struct ec_verify_context *ctx, const u8 *sig, u8 siglen,
 	s = &(ctx->verify_data.ecdsa.s);
 
 	/* Check given signature length is the expected one */
-	if (siglen != ECDSA_SIGLEN(q_bit_len)) {
+	/*if (siglen != ECDSA_SIGLEN(q_bit_len)) {
 		dpu_debug = VERIFY_INIT_1;
 		ret = -1;
 		goto err;
-	}
+	}*/
 
 	/* Import r and s values from signature buffer */
 	nn_init_from_buf(r, sig, q_len);
@@ -748,14 +745,14 @@ int __ecdsa_verify_init(struct ec_verify_context *ctx, const u8 *sig, u8 siglen,
 	dbg_nn_print("s", s);
 
 	/* 1. Reject the signature if r or s is 0. */
-	if (nn_iszero(r) || (nn_cmp(r, q) >= 0) ||
+	/*if (nn_iszero(r) || (nn_cmp(r, q) >= 0) ||
 	    nn_iszero(s) || (nn_cmp(s, q) >= 0)) {
 		nn_uninit(r);
 		nn_uninit(s);
 		dpu_debug = VERIFY_INIT_2;
 		ret = -1;
 		goto err;
-	}
+	}*/
 
 	/* Initialize the remaining of verify context. */
 	/* Since we call a callback, sanity check our mapping */
@@ -767,14 +764,15 @@ int __ecdsa_verify_init(struct ec_verify_context *ctx, const u8 *sig, u8 siglen,
 	ctx->verify_data.ecdsa.magic = ECDSA_VERIFY_MAGIC;
 
 	ret = 0;
-	dpu_debug = VERIFY_INIT_END;
 
  err:
+	/*
 	VAR_ZEROIFY(q_len);
 	VAR_ZEROIFY(q_bit_len);
 	PTR_NULLIFY(q);
 	PTR_NULLIFY(r);
 	PTR_NULLIFY(s);
+	*/
 
 	return ret;
 }
@@ -782,7 +780,6 @@ int __ecdsa_verify_init(struct ec_verify_context *ctx, const u8 *sig, u8 siglen,
 int __ecdsa_verify_update(struct ec_verify_context *ctx,
 			 const u8 *chunk, u32 chunklen, ec_sig_alg_type key_type)
 {
-	dpu_debug = VERIFY_UPDATE_START;
 
 	/*
 	 * First, verify context has been initialized and public
@@ -801,7 +798,6 @@ int __ecdsa_verify_update(struct ec_verify_context *ctx,
 		return -1;
 	}
 	ctx->h->hfunc_update(&(ctx->verify_data.ecdsa.h_ctx), chunk, chunklen);*/
-	dpu_debug = VERIFY_UPDATE_END;
 	return 0;
 }
 const u8 hash[SHA256_DIGEST_SIZE] = {0xba, 0x78, 0x16, 0xbf, 0x8f, 0x01, 0xcf, 0xea, 0x41, 0x41, 0x40, 0xde, 0x5d, 0xae, 0x22, 0x23, 0xb0, 0x03, 0x61, 0xa3, 0x96, 0x17, 0x7a, 0x9c, 0xb4, 0x10, 0xff, 0x61, 0xf2, 0x00, 0x15, 0xad};
@@ -819,7 +815,6 @@ int __ecdsa_verify_finalize(struct ec_verify_context *ctx,
 	nn *s, *r;
 	u8 hsize;
 	int ret;
-	dpu_debug = VERIFY_FINALIZE_START;
 
 	/*
 	 * First, verify context has been initialized and public
@@ -838,6 +833,8 @@ int __ecdsa_verify_finalize(struct ec_verify_context *ctx,
 	/* Make things more readable */
 	G = &(ctx->pub_key->params->ec_gen);
 	Y = &(ctx->pub_key->y);
+	//dpu_val1 = Y->X.fp_val.val[0];
+	//dpu_val2 = Y->Y.fp_val.val[0];
 	q = &(ctx->pub_key->params->ec_gen_order);
 	q_bit_len = ctx->pub_key->params->ec_gen_order_bitlen;
 	//hsize = ctx->h->digest_size;
@@ -853,6 +850,7 @@ int __ecdsa_verify_finalize(struct ec_verify_context *ctx,
 	}
 	ctx->h->hfunc_finalize(&(ctx->verify_data.ecdsa.h_ctx), hash);*/
 	dbg_buf_print("h = H(m)", hash, hsize);
+	//dpu_val3 = ((uint32_t *)hash)[0];
 
 	/*
 	 * 3. If |h| > bitlen(q), set h to bitlen(q)
@@ -886,6 +884,7 @@ int __ecdsa_verify_finalize(struct ec_verify_context *ctx,
 	nn_modinv(&sinv, s, q);
 	dbg_nn_print("s", s);
 	dbg_nn_print("sinv", &sinv);
+
 	nn_uninit(s);
 	/* 5. Compute u = (s^-1)e mod q */
 	nn_mul(&tmp, &e, &sinv);
@@ -895,6 +894,7 @@ int __ecdsa_verify_finalize(struct ec_verify_context *ctx,
 	/* 6. Compute v = (s^-1)r mod q */
 	nn_mul_mod(&v, r, &sinv, q);
 	dbg_nn_print("v = (s^-1)r mod q", &v);
+
 	nn_uninit(&sinv);
 	nn_uninit(&tmp);
 	/* 7. Compute W' = uG + vY */
@@ -907,7 +907,6 @@ int __ecdsa_verify_finalize(struct ec_verify_context *ctx,
 	nn_uninit(&v);
 	/* 8. If W' is the point at infinity, reject the signature. */
 	if (prj_pt_iszero(&W_prime)) {
-		dpu_debug = VERIFY_FINALIZE_1;
 		ret = -1;
 		goto err;
 	}
@@ -922,8 +921,9 @@ int __ecdsa_verify_finalize(struct ec_verify_context *ctx,
 
 	/* 10. Accept the signature if and only if r equals r' */
 	ret = (nn_cmp(&r_prime, r) != 0) ? -1 : 0;
+	dpu_val1 = ret;
+
 	nn_uninit(&r_prime);
-	dpu_debug = VERIFY_FINALIZE_END;
 
  err:
 	/*
