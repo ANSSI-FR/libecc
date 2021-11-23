@@ -517,7 +517,13 @@ static const u8 signature_ko[] =
 };
 
 
+
 __host int ret;
+#include <perfcounter.h>
+
+__host perfcounter_t cycles;
+__host uint32_t clock_per_sec;
+
 
 int main (void){
 #ifdef GEN_BY_SW
@@ -526,7 +532,6 @@ int main (void){
 #else
 	//#warning "remember to un-set ecdsa_siglen .init_pub_key  in /home/mbartoli/workspace/libecc/src/sig/sig_algs_internal.h "
 	//memcpy (imported_params, params, sizeof(imported_params));
-
 	ec_pub_key *pub_key_ptr = (ec_pub_key *)&pub_key;
 	ec_params *params_ptr = (ec_params *)&params;
 	params_ptr->ec_curve.a.ctx = &params_ptr->ec_fp;
@@ -552,9 +557,11 @@ int main (void){
 
 	//dump_params(params_ptr);
 	//dump_pub_key(pub_key_ptr);
+	(void) perfcounter_config(COUNT_CYCLES, true);
 	ret = generic_ec_verify(signature_ok, sizeof(signature_ok), pub_key_ptr, msg, 3,
 				 ECDSA, SHA256, NULL, 0);
-
+	cycles = perfcounter_get();
+	clock_per_sec =  CLOCKS_PER_SEC;
 #endif
 	return 1;
 
