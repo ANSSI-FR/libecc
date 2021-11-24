@@ -1410,6 +1410,7 @@ err:
 #include "rsa_pkcs1_tests.h"
 #include "../external_deps/time.h"
 
+#if 0
 int main(int argc, char *argv[])
 {
 	int ret = 0;
@@ -1432,4 +1433,33 @@ int main(int argc, char *argv[])
 err:
 	return ret;
 }
+#endif
+#if 1
+int main(int argc, char *argv[])
+{
+	int ret = 0;
+	FORCE_USED_VAR(argc);
+	FORCE_USED_VAR(argv);
+
+	const u8 msg[] = "Et l’unique cordeau des trompettes marines";
+	const u8 msg2[] = "12345678901234567890123456789012345678901234567890123456789012345678901234567890";
+	const u8 msg3[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+	u8 digest[MAX_DIGEST_SIZE];
+	ret = md2(msg3, sizeof(msg3)-1, digest); EG(ret, err);
+	buf_print("md2", digest, MD2_DIGEST_SIZE);
+	ret = md2(msg2, sizeof(msg2)-1, digest); EG(ret, err);
+	buf_print("md2", digest, MD2_DIGEST_SIZE);
+	ret = md4(msg2, sizeof(msg2)-1, digest); EG(ret, err);
+	buf_print("md4", digest, MD4_DIGEST_SIZE);
+	ret = md5(msg, sizeof(msg)-1, digest); EG(ret, err);
+	buf_print("md5", digest, MD5_DIGEST_SIZE);
+	ret = sha1(msg, sizeof(msg)-1, digest); EG(ret, err);
+	buf_print("sha1", digest, SHA1_DIGEST_SIZE);
+	ret = ripemd160(msg, sizeof(msg)-1, digest); EG(ret, err);
+	buf_print("ripemd160", digest, RIPEMD160_DIGEST_SIZE);
+
+err:
+	return ret;
+}
+#endif
 #endif

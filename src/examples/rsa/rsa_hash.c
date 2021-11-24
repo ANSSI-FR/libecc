@@ -103,6 +103,13 @@ ATTRIBUTE_WARN_UNUSED_RET static int get_libecc_hash(rsa_hash_alg_type rsa_hash_
 #endif
 			break;
 		}
+		case RSA_RIPEMD160:{
+#ifdef WITH_HASH_RIPEMD160
+			htype = RIPEMD160;
+#endif
+			break;
+		}
+
 		default:{
 			ret = -1;
 			htype = UNKNOWN_HASH_ALG;
@@ -132,12 +139,30 @@ err:
 
 int rsa_digestinfo_from_hash(rsa_hash_alg_type rsa_hash_type, u8 *digestinfo, u32 *digestinfo_len)
 {
-        int ret;
+	int ret;
 
-        /* Sanity check */
-        MUST_HAVE((digestinfo_len != NULL), ret, err);
+	/* Sanity check */
+	MUST_HAVE((digestinfo_len != NULL), ret, err);
 
 	switch(rsa_hash_type){
+		case RSA_MD2:{
+			const u8 _digestinfo[] = { 0x30, 0x20, 0x30, 0x0c, 0x06, 0x08, 0x2a,
+						   0x86, 0x48, 0x86, 0xf7, 0x0d, 0x02, 0x02,
+						   0x05, 0x00, 0x04, 0x10 };
+			MUST_HAVE(((*digestinfo_len) >= sizeof(_digestinfo)), ret, err);
+			ret = local_memcpy(digestinfo, _digestinfo, sizeof(_digestinfo)); EG(ret, err);
+			(*digestinfo_len) = sizeof(_digestinfo);
+			break;
+		}
+		case RSA_MD4:{
+			const u8 _digestinfo[] = { 0x30, 0x20, 0x30, 0x0c, 0x06, 0x08, 0x2a,
+						   0x86, 0x48, 0x86, 0xf7, 0x0d, 0x02, 0x04,
+						   0x05, 0x00, 0x04, 0x10 };
+			MUST_HAVE(((*digestinfo_len) >= sizeof(_digestinfo)), ret, err);
+			ret = local_memcpy(digestinfo, _digestinfo, sizeof(_digestinfo)); EG(ret, err);
+			(*digestinfo_len) = sizeof(_digestinfo);
+			break;
+		}
 		case RSA_MD5:{
 			const u8 _digestinfo[] = { 0x30, 0x20, 0x30, 0x0c, 0x06, 0x08, 0x2a,
 						   0x86, 0x48, 0x86, 0xf7, 0x0d, 0x02, 0x05,
@@ -149,7 +174,8 @@ int rsa_digestinfo_from_hash(rsa_hash_alg_type rsa_hash_type, u8 *digestinfo, u3
 		}
 		case RSA_SHA1:{
 			const u8 _digestinfo[] = { 0x30, 0x21, 0x30, 0x09, 0x06, 0x05, 0x2b,
-						   0x0e, 0x03, 0x02, 0x1a, 0x05, 0x00, 0x04, 0x14 };
+						   0x0e, 0x03, 0x02, 0x1a, 0x05, 0x00, 0x04,
+						   0x14 };
 			MUST_HAVE(((*digestinfo_len) >= sizeof(_digestinfo)), ret, err);
 			ret = local_memcpy(digestinfo, _digestinfo, sizeof(_digestinfo)); EG(ret, err);
 			(*digestinfo_len) = sizeof(_digestinfo);
@@ -209,6 +235,69 @@ int rsa_digestinfo_from_hash(rsa_hash_alg_type rsa_hash_type, u8 *digestinfo, u3
 			(*digestinfo_len) = sizeof(_digestinfo);
 			break;
 		}
+		case RSA_RIPEMD160:{
+			const u8 _digestinfo[] = { 0x30, 0x21, 0x30, 0x0d, 0x06, 0x09, 0x2b,
+						   0x24, 0x03, 0x02, 0x01, 0x05, 0x00, 0x04,
+						   0x14 };
+			MUST_HAVE(((*digestinfo_len) >= sizeof(_digestinfo)), ret, err);
+			ret = local_memcpy(digestinfo, _digestinfo, sizeof(_digestinfo)); EG(ret, err);
+			(*digestinfo_len) = sizeof(_digestinfo);
+			break;
+		}
+		/* The following SHA-3 oids have been taken from
+		 *     https://www.ietf.org/archive/id/draft-jivsov-openpgp-sha3-01.txt
+		 *
+		 * The specific case of SHA3-224 is infered from the OID of SHA3-224 although
+		 * not standardized.
+		 */
+		case RSA_SHA3_224:{
+			const u8 _digestinfo[] = { 0x30, 0x2d, 0x30, 0x0d, 0x06, 0x09, 0x60,
+						   0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02,
+						   0x07, 0x05, 0x00, 0x04, 0x1c };
+			MUST_HAVE(((*digestinfo_len) >= sizeof(_digestinfo)), ret, err);
+			ret = local_memcpy(digestinfo, _digestinfo, sizeof(_digestinfo)); EG(ret, err);
+			(*digestinfo_len) = sizeof(_digestinfo);
+			break;
+		}
+		case RSA_SHA3_256:{
+			const u8 _digestinfo[] = { 0x30, 0x31, 0x30, 0x0d, 0x06, 0x09, 0x60,
+						   0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02,
+						   0x08, 0x05, 0x00, 0x04, 0x20 };
+			MUST_HAVE(((*digestinfo_len) >= sizeof(_digestinfo)), ret, err);
+			ret = local_memcpy(digestinfo, _digestinfo, sizeof(_digestinfo)); EG(ret, err);
+			(*digestinfo_len) = sizeof(_digestinfo);
+			break;
+		}
+		case RSA_SHA3_384:{
+			const u8 _digestinfo[] = { 0x30, 0x41, 0x30, 0x0d, 0x06, 0x09, 0x60,
+						   0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02,
+						   0x09, 0x05, 0x00, 0x04, 0x30 };
+			MUST_HAVE(((*digestinfo_len) >= sizeof(_digestinfo)), ret, err);
+			ret = local_memcpy(digestinfo, _digestinfo, sizeof(_digestinfo)); EG(ret, err);
+			(*digestinfo_len) = sizeof(_digestinfo);
+			break;
+		}
+		case RSA_SHA3_512:{
+			const u8 _digestinfo[] = { 0x30, 0x51, 0x30, 0x0d, 0x06, 0x09, 0x60,
+						   0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02,
+						   0x0a ,0x05, 0x00, 0x04, 0x40 };
+			MUST_HAVE(((*digestinfo_len) >= sizeof(_digestinfo)), ret, err);
+			ret = local_memcpy(digestinfo, _digestinfo, sizeof(_digestinfo)); EG(ret, err);
+			(*digestinfo_len) = sizeof(_digestinfo);
+			break;
+		}
+		/* For SM3, the "RSA Signing with SM3" OID is taken from:
+		 *     http://gmssl.org/docs/oid.html
+		 */
+		case RSA_SM3:{
+			const u8 _digestinfo[] = { 0x30, 0x30, 0x30, 0x0d, 0x06, 0x08, 0x2A,
+						   0x81, 0x1c, 0xcf, 0x55, 0x01, 0x83, 0x78,
+						   0x05, 0x00, 0x04, 0x20 };
+			MUST_HAVE(((*digestinfo_len) >= sizeof(_digestinfo)), ret, err);
+			ret = local_memcpy(digestinfo, _digestinfo, sizeof(_digestinfo)); EG(ret, err);
+			(*digestinfo_len) = sizeof(_digestinfo);
+			break;
+		}
 		default:{
 			ret = -1;
 			goto err;
@@ -226,9 +315,21 @@ int rsa_get_hash_sizes(rsa_hash_alg_type rsa_hash_type, u8 *hlen, u8 *block_size
 	MUST_HAVE((hlen != NULL) && (block_size != NULL), ret, err);
 
 	switch(rsa_hash_type){
+		case RSA_MD2:{
+			(*hlen) = MD2_DIGEST_SIZE;
+			(*block_size) = MD2_BLOCK_SIZE;
+			ret = 0;
+			break;
+		}
+		case RSA_MD4:{
+			(*hlen) = MD4_DIGEST_SIZE;
+			(*block_size) = MD4_BLOCK_SIZE;
+			ret = 0;
+			break;
+		}
 		case RSA_MD5:{
-			(*hlen) = 16;
-			(*block_size) = 64;
+			(*hlen) = MD5_DIGEST_SIZE;
+			(*block_size) = MD5_BLOCK_SIZE;
 			ret = 0;
 			break;
 		}
@@ -238,6 +339,7 @@ int rsa_get_hash_sizes(rsa_hash_alg_type rsa_hash_type, u8 *hlen, u8 *block_size
 			ret = 0;
 			break;
 		}
+		/* The default case falls back to a genuine libecc hash function */
 		default:{
 			const hash_mapping *hm;
 			hash_alg_type hash_type;
@@ -255,8 +357,16 @@ int rsa_hfunc_scattered(const u8 **input, const u32 *ilen, u8 *digest, rsa_hash_
 	int ret;
 
 	switch(rsa_hash_type){
+		case RSA_MD2:{
+			ret = md2_scattered(input, ilen, digest); EG(ret, err);
+			break;
+		}
+		case RSA_MD4:{
+			ret = md4_scattered(input, ilen, digest); EG(ret, err);
+			break;
+		}
 		case RSA_MD5:{
-			ret = -1;
+			ret = md5_scattered(input, ilen, digest); EG(ret, err);
 			break;
 		}
 		case RSA_SHA1:{

@@ -19,6 +19,12 @@
  */
 #include "libec.h"
 
+/* MD-2 source code */
+#include "md2.h"
+/* MD-4 source code */
+#include "md4.h"
+/* MD-5 source code */
+#include "md5.h"
 /* SHA-1 source code */
 #include "sha1.h"
 
@@ -41,12 +47,18 @@ typedef enum {
 	RSA_STREEBOG256 = 11,
 	RSA_STREEBOG512 = 12,
 	RSA_SHAKE256 = 13,
-	/* Deprecated hashes nor supported by libecc
+	RSA_RIPEMD160 = 14,
+	/* Deprecated hash algorithms not supported by libecc
 	 * (for security reasons).
+	 * XXX: NOTE: These algorithms are here as a playground e.g.
+	 * to test some backward compatibility of cryptographic cipher suites,
+	 * please DO NOT use them in production code!
 	 */
-	RSA_MD5 = 14,
-	RSA_SHA1 = 15,
-	RSA_NO_HASH = 16,
+	RSA_MD2 = 15,
+	RSA_MD4 = 16,
+	RSA_MD5 = 17,
+	RSA_SHA1 = 18,
+	RSA_NO_HASH = 19,
 } rsa_hash_alg_type;
 
 ATTRIBUTE_WARN_UNUSED_RET int rsa_get_hash_sizes(rsa_hash_alg_type rsa_hash_type, u8 *hlen, u8 *block_size);
