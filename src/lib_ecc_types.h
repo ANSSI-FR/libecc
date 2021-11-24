@@ -114,6 +114,9 @@ typedef enum {
 #ifdef WITH_HASH_STREEBOG512
 	STREEBOG512 = 14,
 #endif
+#ifdef WITH_HASH_RIPEMD160
+	RIPEMD160 = 15,
+#endif
 } hash_alg_type;
 
 /* All curves we support */

@@ -33,6 +33,7 @@
 #include "shake256.h"
 #include "streebog256.h"
 #include "streebog512.h"
+#include "ripemd160.h"
 #include "../utils/utils.h"
 
 #if (MAX_DIGEST_SIZE == 0)
@@ -85,6 +86,9 @@ typedef union {
 #endif
 #ifdef STREEBOG512_BLOCK_SIZE
 	streebog512_context streebog512;
+#endif
+#ifdef RIPEMD160_BLOCK_SIZE
+	ripemd160_context ripemd160;
 #endif
 } hash_context;
 
@@ -168,6 +172,11 @@ ATTRIBUTE_WARN_UNUSED_RET int _streebog256_final(hash_context * hctx, unsigned c
 ATTRIBUTE_WARN_UNUSED_RET int _streebog512_init(hash_context * hctx);
 ATTRIBUTE_WARN_UNUSED_RET int _streebog512_update(hash_context * hctx, const unsigned char *chunk, u32 chunklen);
 ATTRIBUTE_WARN_UNUSED_RET int _streebog512_final(hash_context * hctx, unsigned char *output);
+#endif
+#ifdef WITH_HASH_RIPEMD160
+ATTRIBUTE_WARN_UNUSED_RET int _ripemd160_init(hash_context * hctx);
+ATTRIBUTE_WARN_UNUSED_RET int _ripemd160_update(hash_context * hctx, const unsigned char *chunk, u32 chunklen);
+ATTRIBUTE_WARN_UNUSED_RET int _ripemd160_final(hash_context * hctx, unsigned char *output);
 #endif
 
 /*
@@ -398,6 +407,20 @@ static const hash_mapping hash_maps[] = {
 #define MAX_HASH_ALG_NAME_LEN 12
 #endif /* MAX_HASH_ALG_NAME_LEN */
 #endif /* WITH_HASH_STREEBOG512 */
+#ifdef WITH_HASH_RIPEMD160
+	{.type = RIPEMD160,	/* RIPEMD160 */
+	 .name = "RIPEMD160",
+	 .digest_size = RIPEMD160_DIGEST_SIZE,
+	 .block_size = RIPEMD160_BLOCK_SIZE,
+	 .hfunc_init = _ripemd160_init,
+	 .hfunc_update = _ripemd160_update,
+	 .hfunc_finalize = _ripemd160_final,
+	 .hfunc_scattered = ripemd160_scattered},
+#if (MAX_HASH_ALG_NAME_LEN < 9)
+#undef MAX_HASH_ALG_NAME_LEN
+#define MAX_HASH_ALG_NAME_LEN 9
+#endif /* MAX_HASH_ALG_NAME_LEN */
+#endif /* WITH_HASH_RIPEMD160 */
 	{.type = UNKNOWN_HASH_ALG,	/* Needs to be kept last */
 	 .name = "UNKNOWN",
 	 .digest_size = 0,

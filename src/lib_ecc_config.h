@@ -97,6 +97,7 @@
 #define WITH_HASH_SHAKE256
 #define WITH_HASH_STREEBOG256
 #define WITH_HASH_STREEBOG512
+#define WITH_HASH_RIPEMD160
 #define WITH_HMAC
 
 /* Supported sig/verif schemes */

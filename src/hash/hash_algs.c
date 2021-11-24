@@ -343,3 +343,17 @@ ATTRIBUTE_WARN_UNUSED_RET int _streebog512_final(hash_context * hctx, unsigned c
 	return streebog512_final((streebog512_context*)hctx, output);
 }
 #endif
+#ifdef WITH_HASH_RIPEMD160
+ATTRIBUTE_WARN_UNUSED_RET int _ripemd160_init(hash_context * hctx)
+{
+	return ripemd160_init((ripemd160_context*)hctx);
+}
+ATTRIBUTE_WARN_UNUSED_RET int _ripemd160_update(hash_context * hctx, const unsigned char *chunk, u32 chunklen)
+{
+	return ripemd160_update((ripemd160_context*)hctx, chunk, chunklen);
+}
+ATTRIBUTE_WARN_UNUSED_RET int _ripemd160_final(hash_context * hctx, unsigned char *output)
+{
+	return ripemd160_final((ripemd160_context*)hctx, output);
+}
+#endif
