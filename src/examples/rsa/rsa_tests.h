@@ -97,7 +97,7 @@ ATTRIBUTE_WARN_UNUSED_RET static inline int perform_rsa_tests(const rsa_test **t
 				u16 clen;
 				if(t->salt != NULL){
 					clen = sizeof(cipher);
-					ret = rsaes_oaep_encrypt(&pub, t->m, t->mlen, cipher, &clen, modbits, NULL, 0, t->hash,  t->salt, t->saltlen); EG(ret, err1);
+					ret = rsaes_oaep_encrypt(&pub, t->m, t->mlen, cipher, &clen, modbits, NULL, 0, t->hash, t->hash, t->salt, t->saltlen); EG(ret, err1);
 					/* Check the result */
 					MUST_HAVE((clen == t->reslen), ret, err1);
 					ret = are_equal(t->res, cipher, t->reslen, &cmp); EG(ret, err1);
@@ -105,7 +105,7 @@ ATTRIBUTE_WARN_UNUSED_RET static inline int perform_rsa_tests(const rsa_test **t
 				}
 				/* Try to decrypt */
 				clen = sizeof(cipher);
-				ret = rsaes_oaep_decrypt(&priv, t->res, t->reslen, cipher, &clen, modbits, NULL, 0, t->hash); EG(ret, err1);
+				ret = rsaes_oaep_decrypt(&priv, t->res, t->reslen, cipher, &clen, modbits, NULL, 0, t->hash, t->hash); EG(ret, err1);
 				/* Check the result */
 				MUST_HAVE((clen == t->mlen), ret, err1);
 				ret = are_equal(t->m, cipher, t->mlen, &cmp); EG(ret, err1);
@@ -129,16 +129,16 @@ ATTRIBUTE_WARN_UNUSED_RET static inline int perform_rsa_tests(const rsa_test **t
 					/* In case of NULL salt, default saltlen value is the digest size */
 					u8 digestsize, blocksize;
 					ret = rsa_get_hash_sizes(t->hash, &digestsize, &blocksize); EG(ret, err1);
-					ret = rsassa_pss_verify(&pub, t->m, t->mlen, t->res, t->reslen, modbits, t->hash, digestsize); EG(ret, err1);
+					ret = rsassa_pss_verify(&pub, t->m, t->mlen, t->res, t->reslen, modbits, t->hash, t->hash, digestsize); EG(ret, err1);
 				}
 				else{
-					ret = rsassa_pss_verify(&pub, t->m, t->mlen, t->res, t->reslen, modbits, t->hash, t->saltlen); EG(ret, err1);
+					ret = rsassa_pss_verify(&pub, t->m, t->mlen, t->res, t->reslen, modbits, t->hash, t->hash, t->saltlen); EG(ret, err1);
 				}
 				if(t->salt != NULL){
 					/* Try to sign */
 					u8 sig[NN_USABLE_MAX_BYTE_LEN];
 					u16 siglen = sizeof(sig);
-					ret = rsassa_pss_sign(&priv, t->m, t->mlen, sig, &siglen, modbits, t->hash, t->saltlen, t->salt); EG(ret, err1);
+					ret = rsassa_pss_sign(&priv, t->m, t->mlen, sig, &siglen, modbits, t->hash, t->hash, t->saltlen, t->salt); EG(ret, err1);
 					/* Check the result */
 					MUST_HAVE((siglen == t->reslen), ret, err1);
 					ret = are_equal(t->res, sig, t->reslen, &cmp); EG(ret, err1);

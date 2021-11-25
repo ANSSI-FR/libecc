@@ -472,7 +472,7 @@ int rsavp1(const rsa_pub_key *pub, nn_src_t s, nn_t m)
  */
 ATTRIBUTE_WARN_UNUSED_RET static int _mgf1(const u8 *z, u16 zlen,
 					   u8 *mask, u64 masklen,
-					   rsa_hash_alg_type rsa_hash_type)
+					   rsa_hash_alg_type mgf_hash_type)
 {
 	int ret;
 	u8 hlen, block_size;
@@ -489,7 +489,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int _mgf1(const u8 *z, u16 zlen,
 	/* Sanity checks */
 	MUST_HAVE((z != NULL) && (mask != NULL), ret, err);
 
-	ret = rsa_get_hash_sizes(rsa_hash_type, &hlen, &block_size); EG(ret, err);
+	ret = rsa_get_hash_sizes(mgf_hash_type, &hlen, &block_size); EG(ret, err);
 	MUST_HAVE((hlen <= MAX_DIGEST_SIZE), ret, err);
 
 	/* masklen must be < 2**32 * hlen */
@@ -505,10 +505,10 @@ ATTRIBUTE_WARN_UNUSED_RET static int _mgf1(const u8 *z, u16 zlen,
 
 		/* 3.B + 4. */
 		if ((masklen % hlen) && (c == (ceil - 1))) { /* need last chunk smaller than hlen */
-			ret = rsa_hfunc_scattered(input, ilens, digest, rsa_hash_type); EG(ret, err);
+			ret = rsa_hfunc_scattered(input, ilens, digest, mgf_hash_type); EG(ret, err);
 			ret = local_memcpy(&mask[c * hlen], digest, masklen % hlen); EG(ret, err);
 		} else {                                     /* common case, i.e. complete chunk */
-			ret = rsa_hfunc_scattered(input, ilens, &mask[c * hlen], rsa_hash_type); EG(ret, err);
+			ret = rsa_hfunc_scattered(input, ilens, &mask[c * hlen], mgf_hash_type); EG(ret, err);
 		}
 	}
 err:
@@ -519,7 +519,7 @@ err:
  * NOTE: we enforce MGF1 as a mask generation function
  */
 int emsa_pss_encode(const u8 *m, u16 mlen, u8 *em, u32 embits,
-                    u16 *eminlen, rsa_hash_alg_type rsa_hash_type,
+                    u16 *eminlen, rsa_hash_alg_type rsa_hash_type, rsa_hash_alg_type mgf_hash_type,
                     u16 slen, const u8 *forced_salt)
 {
 	int ret;
@@ -597,7 +597,7 @@ int emsa_pss_encode(const u8 *m, u16 mlen, u8 *em, u32 embits,
 	 */
 	dblen = (emlen - hlen - 1);
 	pslen = (dblen - slen - 1); /* padding string PS len */
-	ret = _mgf1(h, hlen, dbmask, dblen, rsa_hash_type); EG(ret, err);
+	ret = _mgf1(h, hlen, dbmask, dblen, mgf_hash_type); EG(ret, err);
 
         /*
          * maskedb = (PS || 0x01 || salt) xor dbmask. We compute maskeddb directly
@@ -638,7 +638,8 @@ err:
  * NOTE: we enforce MGF1 as a mask generation function
  */
 int emsa_pss_verify(const u8 *m, u16 mlen, const u8 *em,
-                    u32 embits, u16 emlen, rsa_hash_alg_type rsa_hash_type,
+                    u32 embits, u16 emlen,
+		    rsa_hash_alg_type rsa_hash_type, rsa_hash_alg_type mgf_hash_type,
                     u16 slen)
 {
 	int ret, cmp;
@@ -707,7 +708,7 @@ int emsa_pss_verify(const u8 *m, u16 mlen, const u8 *em,
 	dblen = (emlen - hlen - 1);
 	h = &em[dblen];
 	MUST_HAVE(((u16)dblen <= sizeof(dbmask)), ret, err); /* sanity check for overflow */
-	ret = _mgf1(h, hlen, dbmask, dblen, rsa_hash_type); EG(ret, err);
+	ret = _mgf1(h, hlen, dbmask, dblen, mgf_hash_type); EG(ret, err);
 	/* DB = maskedDB \xor dbMask */
 	db = &dbmask[0];
 	for(i = 0; i < (u16)dblen; i++){
@@ -960,7 +961,8 @@ err:
  */
 int rsaes_oaep_encrypt(const rsa_pub_key *pub, const u8 *m, u16 mlen,
                        u8 *c, u16 *clen, u32 modbits, const u8 *label, u16 label_len,
-                       rsa_hash_alg_type rsa_hash_type, const u8 *forced_seed, u16 seedlen)
+                       rsa_hash_alg_type rsa_hash_type, rsa_hash_alg_type mgf_hash_type,
+		       const u8 *forced_seed, u16 seedlen)
 {
 	int ret;
 	u32 k, pslen, khlen;
@@ -1037,14 +1039,14 @@ int rsaes_oaep_encrypt(const rsa_pub_key *pub, const u8 *m, u16 mlen,
 	/* Let dbMask = MGF(seed, k - hLen - 1)*/
 	khlen = (k - hlen - 1);
 	MUST_HAVE((khlen <= sizeof(dbmask)), ret, err);
-	ret = _mgf1(seed, hlen, dbmask, khlen, rsa_hash_type); EG(ret, err);
+	ret = _mgf1(seed, hlen, dbmask, khlen, mgf_hash_type); EG(ret, err);
 	/* Let maskedDB = DB \xor dbMask */
 	for(i = 0; i < khlen; i++){
 		maskeddb[i] = (db[i] ^ dbmask[i]);
 	}
 	/* Let seedMask = MGF(maskedDB, hLen) */
 	MUST_HAVE((khlen < (u32)(0x1 << 16)), ret, err);
-	ret = _mgf1(maskeddb, (u16)khlen, seedmask, hlen, rsa_hash_type); EG(ret, err);
+	ret = _mgf1(maskeddb, (u16)khlen, seedmask, hlen, mgf_hash_type); EG(ret, err);
 	/* Let maskedSeed = seed \xor seedMask */
 	for(i = 0; i < hlen; i++){
 		maskedseed[i] = (seed[i] ^ seedmask[i]);
@@ -1078,7 +1080,8 @@ err:
  */
 int rsaes_oaep_decrypt(const rsa_priv_key *priv, const u8 *c, u16 clen,
                        u8 *m, u16 *mlen, u32 modbits,
-                       const u8 *label, u16 label_len, rsa_hash_alg_type rsa_hash_type)
+                       const u8 *label, u16 label_len, rsa_hash_alg_type rsa_hash_type,
+		       rsa_hash_alg_type mgf_hash_type)
 {
 	int ret, cmp;
 	u32 k, khlen;
@@ -1140,14 +1143,14 @@ int rsaes_oaep_decrypt(const rsa_priv_key *priv, const u8 *c, u16 clen,
 	/* seedMask = MGF(maskedDB, hLen) */
 	khlen = (k - hlen - 1);
 	MUST_HAVE((khlen < (u32)(0x1 << 16)), ret, err);
-	ret = _mgf1(maskeddb, (u16)khlen, seedmask, hlen, rsa_hash_type); EG(ret, err);
+	ret = _mgf1(maskeddb, (u16)khlen, seedmask, hlen, mgf_hash_type); EG(ret, err);
 	/* Let maskedSeed = seed \xor seedMask */
 	for(i = 0; i < hlen; i++){
 		seed[i] = (maskedseed[i] ^ seedmask[i]);
 	}
 	/* dbMask = MGF(seed, k - hLen - 1) */
 	MUST_HAVE((khlen <= sizeof(dbmask)), ret, err);
-	ret = _mgf1(seed, hlen, dbmask, khlen, rsa_hash_type); EG(ret, err);
+	ret = _mgf1(seed, hlen, dbmask, khlen, mgf_hash_type); EG(ret, err);
 	/* Let DB = maskedDB \xor dbMask */
 	db = dbmask;
 	for(i = 0; i < khlen; i++){
@@ -1307,7 +1310,8 @@ err:
  *
  */
 int rsassa_pss_sign(const rsa_priv_key *priv, const u8 *m, u16 mlen,
-                    u8 *s, u16 *slen, u32 modbits, rsa_hash_alg_type rsa_hash_type,
+                    u8 *s, u16 *slen, u32 modbits,
+		    rsa_hash_alg_type rsa_hash_type, rsa_hash_alg_type mgf_hash_type,
                     u16 saltlen, const u8 *forced_salt)
 {
 	int ret;
@@ -1329,7 +1333,7 @@ int rsassa_pss_sign(const rsa_priv_key *priv, const u8 *m, u16 mlen,
 
 	/* EM = EMSA-PSS-ENCODE (M, modBits - 1) */
 	emsize = (*slen);
-	ret = emsa_pss_encode(m, mlen, em, (modbits - 1), &emsize, rsa_hash_type, saltlen, forced_salt); EG(ret, err);
+	ret = emsa_pss_encode(m, mlen, em, (modbits - 1), &emsize, rsa_hash_type, mgf_hash_type, saltlen, forced_salt); EG(ret, err);
 
 	/* Note that the octet length of EM will be one less than k if modBits - 1 is divisible by 8 and equal to k otherwise */
 	MUST_HAVE(emsize == BYTECEIL(modbits - 1), ret, err);
@@ -1359,7 +1363,8 @@ err:
  */
 int rsassa_pss_verify(const rsa_pub_key *pub, const u8 *m, u16 mlen,
                       const u8 *s, u16 slen, u32 modbits,
-                      rsa_hash_alg_type rsa_hash_type, u16 saltlen)
+                      rsa_hash_alg_type rsa_hash_type, rsa_hash_alg_type mgf_hash_type,
+		      u16 saltlen)
 {
 	int ret;
 	/* Get a large enough buffer to hold the result */
@@ -1394,7 +1399,7 @@ int rsassa_pss_verify(const rsa_pub_key *pub, const u8 *m, u16 mlen,
 	MUST_HAVE((emlen <= sizeof(em)), ret, err);
 	ret = i2osp(&m_, em, (u16)emlen); EG(ret, err);
 	/*  Result = EMSA-PSS-VERIFY (M, EM, modBits - 1) */
-	ret = emsa_pss_verify(m, mlen, em, (modbits - 1), emlen, rsa_hash_type, saltlen);
+	ret = emsa_pss_verify(m, mlen, em, (modbits - 1), emlen, rsa_hash_type, mgf_hash_type, saltlen);
 
 err:
 	nn_uninit(&m_);
@@ -1410,7 +1415,6 @@ err:
 #include "rsa_pkcs1_tests.h"
 #include "../external_deps/time.h"
 
-#if 0
 int main(int argc, char *argv[])
 {
 	int ret = 0;
@@ -1433,33 +1437,4 @@ int main(int argc, char *argv[])
 err:
 	return ret;
 }
-#endif
-#if 1
-int main(int argc, char *argv[])
-{
-	int ret = 0;
-	FORCE_USED_VAR(argc);
-	FORCE_USED_VAR(argv);
-
-	const u8 msg[] = "Et l’unique cordeau des trompettes marines";
-	const u8 msg2[] = "12345678901234567890123456789012345678901234567890123456789012345678901234567890";
-	const u8 msg3[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-	u8 digest[MAX_DIGEST_SIZE];
-	ret = md2(msg3, sizeof(msg3)-1, digest); EG(ret, err);
-	buf_print("md2", digest, MD2_DIGEST_SIZE);
-	ret = md2(msg2, sizeof(msg2)-1, digest); EG(ret, err);
-	buf_print("md2", digest, MD2_DIGEST_SIZE);
-	ret = md4(msg2, sizeof(msg2)-1, digest); EG(ret, err);
-	buf_print("md4", digest, MD4_DIGEST_SIZE);
-	ret = md5(msg, sizeof(msg)-1, digest); EG(ret, err);
-	buf_print("md5", digest, MD5_DIGEST_SIZE);
-	ret = sha1(msg, sizeof(msg)-1, digest); EG(ret, err);
-	buf_print("sha1", digest, SHA1_DIGEST_SIZE);
-	ret = ripemd160(msg, sizeof(msg)-1, digest); EG(ret, err);
-	buf_print("ripemd160", digest, RIPEMD160_DIGEST_SIZE);
-
-err:
-	return ret;
-}
-#endif
 #endif
