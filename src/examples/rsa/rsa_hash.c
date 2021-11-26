@@ -333,6 +333,12 @@ int rsa_get_hash_sizes(rsa_hash_alg_type rsa_hash_type, u8 *hlen, u8 *block_size
 			ret = 0;
 			break;
 		}
+		case RSA_SHA0:{
+			(*hlen) = SHA0_DIGEST_SIZE;
+			(*block_size) = SHA0_BLOCK_SIZE;
+			ret = 0;
+			break;
+		}
 		case RSA_SHA1:{
 			(*hlen) = SHA1_DIGEST_SIZE;
 			(*block_size) = SHA1_BLOCK_SIZE;
@@ -367,6 +373,10 @@ int rsa_hfunc_scattered(const u8 **input, const u32 *ilen, u8 *digest, rsa_hash_
 		}
 		case RSA_MD5:{
 			ret = md5_scattered(input, ilen, digest); EG(ret, err);
+			break;
+		}
+		case RSA_SHA0:{
+			ret = sha0_scattered(input, ilen, digest); EG(ret, err);
 			break;
 		}
 		case RSA_SHA1:{

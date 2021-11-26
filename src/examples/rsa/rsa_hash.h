@@ -25,6 +25,8 @@
 #include "md4.h"
 /* MD-5 source code */
 #include "md5.h"
+/* SHA-0 source code */
+#include "sha0.h"
 /* SHA-1 source code */
 #include "sha1.h"
 
@@ -57,8 +59,9 @@ typedef enum {
 	RSA_MD2 = 15,
 	RSA_MD4 = 16,
 	RSA_MD5 = 17,
-	RSA_SHA1 = 18,
-	RSA_NO_HASH = 19,
+	RSA_SHA0 = 18,
+	RSA_SHA1 = 19,
+	RSA_NO_HASH = 20,
 } rsa_hash_alg_type;
 
 ATTRIBUTE_WARN_UNUSED_RET int rsa_get_hash_sizes(rsa_hash_alg_type rsa_hash_type, u8 *hlen, u8 *block_size);
