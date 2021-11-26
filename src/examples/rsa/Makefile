@@ -11,12 +11,12 @@ all:	rsa_dyn
 endif
 
 rsa:
-	$(CC) $(BIN_CFLAGS) -DRSA rsa.c rsa_hash.c $(ROOT_DIR)/src/external_deps/print.c $(ROOT_DIR)/src/external_deps/rand.c $(BIN_LDFLAGS) $(LIBSIGN) -o rsa
+	$(CC) $(BIN_CFLAGS) -DRSA rsa.c ../hash/hash.c $(ROOT_DIR)/src/external_deps/print.c $(ROOT_DIR)/src/external_deps/rand.c $(BIN_LDFLAGS) $(LIBSIGN) -o rsa
 
 # If the user asked for dynamic libraries, compile versions of our binaries against them
 ifeq ($(WITH_DYNAMIC_LIBS),1)
 rsa_dyn:
-	$(CC) $(BIN_CFLAGS) -DRSA rsa.c rsa_hash.c $(ROOT_DIR)/src/external_deps/print.c $(ROOT_DIR)/src/external_deps/rand.c $(BIN_LDFLAGS) $(LIBEC) -L$(BUILD_DIR) -lsign -o $(RSA_DIR)/rsa_dyn
+	$(CC) $(BIN_CFLAGS) -DRSA rsa.c ../hash/hash.c $(ROOT_DIR)/src/external_deps/print.c $(ROOT_DIR)/src/external_deps/rand.c $(BIN_LDFLAGS) $(LIBEC) -L$(BUILD_DIR) -lsign -o $(RSA_DIR)/rsa_dyn
 endif
 
 

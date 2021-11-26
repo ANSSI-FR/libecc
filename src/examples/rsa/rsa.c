@@ -466,13 +466,183 @@ int rsavp1(const rsa_pub_key *pub, nn_src_t s, nn_t m)
 	return rsaep(pub, s, m);
 }
 
+ATTRIBUTE_WARN_UNUSED_RET static int rsa_digestinfo_from_hash(gen_hash_alg_type gen_hash_type, u8 *digestinfo, u32 *digestinfo_len)
+{
+	int ret;
+
+	/* Sanity check */
+	MUST_HAVE((digestinfo_len != NULL), ret, err);
+
+	switch(gen_hash_type){
+		case HASH_MD2:{
+			const u8 _digestinfo[] = { 0x30, 0x20, 0x30, 0x0c, 0x06, 0x08, 0x2a,
+						   0x86, 0x48, 0x86, 0xf7, 0x0d, 0x02, 0x02,
+						   0x05, 0x00, 0x04, 0x10 };
+			MUST_HAVE(((*digestinfo_len) >= sizeof(_digestinfo)), ret, err);
+			ret = local_memcpy(digestinfo, _digestinfo, sizeof(_digestinfo)); EG(ret, err);
+			(*digestinfo_len) = sizeof(_digestinfo);
+			break;
+		}
+		case HASH_MD4:{
+			const u8 _digestinfo[] = { 0x30, 0x20, 0x30, 0x0c, 0x06, 0x08, 0x2a,
+						   0x86, 0x48, 0x86, 0xf7, 0x0d, 0x02, 0x04,
+						   0x05, 0x00, 0x04, 0x10 };
+			MUST_HAVE(((*digestinfo_len) >= sizeof(_digestinfo)), ret, err);
+			ret = local_memcpy(digestinfo, _digestinfo, sizeof(_digestinfo)); EG(ret, err);
+			(*digestinfo_len) = sizeof(_digestinfo);
+			break;
+		}
+		case HASH_MD5:{
+			const u8 _digestinfo[] = { 0x30, 0x20, 0x30, 0x0c, 0x06, 0x08, 0x2a,
+						   0x86, 0x48, 0x86, 0xf7, 0x0d, 0x02, 0x05,
+						   0x05, 0x00, 0x04, 0x10 };
+			MUST_HAVE(((*digestinfo_len) >= sizeof(_digestinfo)), ret, err);
+			ret = local_memcpy(digestinfo, _digestinfo, sizeof(_digestinfo)); EG(ret, err);
+			(*digestinfo_len) = sizeof(_digestinfo);
+			break;
+		}
+		case HASH_SHA1:{
+			const u8 _digestinfo[] = { 0x30, 0x21, 0x30, 0x09, 0x06, 0x05, 0x2b,
+						   0x0e, 0x03, 0x02, 0x1a, 0x05, 0x00, 0x04,
+						   0x14 };
+			MUST_HAVE(((*digestinfo_len) >= sizeof(_digestinfo)), ret, err);
+			ret = local_memcpy(digestinfo, _digestinfo, sizeof(_digestinfo)); EG(ret, err);
+			(*digestinfo_len) = sizeof(_digestinfo);
+			break;
+		}
+		case HASH_SHA224:{
+			const u8 _digestinfo[] = { 0x30, 0x2d, 0x30, 0x0d, 0x06, 0x09, 0x60,
+						   0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02,
+						   0x04, 0x05, 0x00, 0x04, 0x1c };
+			MUST_HAVE(((*digestinfo_len) >= sizeof(_digestinfo)), ret, err);
+			ret = local_memcpy(digestinfo, _digestinfo, sizeof(_digestinfo)); EG(ret, err);
+			(*digestinfo_len) = sizeof(_digestinfo);
+			break;
+		}
+		case HASH_SHA256:{
+			const u8 _digestinfo[] = { 0x30, 0x31, 0x30, 0x0d, 0x06, 0x09, 0x60,
+						   0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02,
+						   0x01, 0x05, 0x00, 0x04, 0x20 };
+			MUST_HAVE(((*digestinfo_len) >= sizeof(_digestinfo)), ret, err);
+			ret = local_memcpy(digestinfo, _digestinfo, sizeof(_digestinfo)); EG(ret, err);
+			(*digestinfo_len) = sizeof(_digestinfo);
+			break;
+		}
+		case HASH_SHA384:{
+			const u8 _digestinfo[] = { 0x30, 0x41, 0x30, 0x0d, 0x06, 0x09, 0x60,
+						   0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02,
+						   0x02, 0x05, 0x00, 0x04, 0x30 };
+			MUST_HAVE(((*digestinfo_len) >= sizeof(_digestinfo)), ret, err);
+			ret = local_memcpy(digestinfo, _digestinfo, sizeof(_digestinfo)); EG(ret, err);
+			(*digestinfo_len) = sizeof(_digestinfo);
+			break;
+		}
+		case HASH_SHA512:{
+			const u8 _digestinfo[] = { 0x30, 0x51, 0x30, 0x0d, 0x06, 0x09, 0x60,
+						   0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02,
+						   0x03, 0x05, 0x00, 0x04, 0x40 };
+			MUST_HAVE(((*digestinfo_len) >= sizeof(_digestinfo)), ret, err);
+			ret = local_memcpy(digestinfo, _digestinfo, sizeof(_digestinfo)); EG(ret, err);
+			(*digestinfo_len) = sizeof(_digestinfo);
+			break;
+		}
+		case HASH_SHA512_224:{
+			const u8 _digestinfo[] = { 0x30, 0x2d, 0x30, 0x0d, 0x06, 0x09, 0x60,
+						   0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02,
+						   0x05, 0x05, 0x00, 0x04, 0x1c };
+			MUST_HAVE(((*digestinfo_len) >= sizeof(_digestinfo)), ret, err);
+			ret = local_memcpy(digestinfo, _digestinfo, sizeof(_digestinfo)); EG(ret, err);
+			(*digestinfo_len) = sizeof(_digestinfo);
+			break;
+		}
+		case HASH_SHA512_256:{
+			const u8 _digestinfo[] = { 0x30, 0x31, 0x30, 0x0d, 0x06, 0x09, 0x60,
+						   0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02,
+						   0x06, 0x05, 0x00, 0x04, 0x20 };
+			MUST_HAVE(((*digestinfo_len) >= sizeof(_digestinfo)), ret, err);
+			ret = local_memcpy(digestinfo, _digestinfo, sizeof(_digestinfo)); EG(ret, err);
+			(*digestinfo_len) = sizeof(_digestinfo);
+			break;
+		}
+		case HASH_RIPEMD160:{
+			const u8 _digestinfo[] = { 0x30, 0x21, 0x30, 0x0d, 0x06, 0x09, 0x2b,
+						   0x24, 0x03, 0x02, 0x01, 0x05, 0x00, 0x04,
+						   0x14 };
+			MUST_HAVE(((*digestinfo_len) >= sizeof(_digestinfo)), ret, err);
+			ret = local_memcpy(digestinfo, _digestinfo, sizeof(_digestinfo)); EG(ret, err);
+			(*digestinfo_len) = sizeof(_digestinfo);
+			break;
+		}
+		/* The following SHA-3 oids have been taken from
+		 *     https://www.ietf.org/archive/id/draft-jivsov-openpgp-sha3-01.txt
+		 *
+		 * The specific case of SHA3-224 is infered from the OID of SHA3-224 although
+		 * not standardized.
+		 */
+		case HASH_SHA3_224:{
+			const u8 _digestinfo[] = { 0x30, 0x2d, 0x30, 0x0d, 0x06, 0x09, 0x60,
+						   0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02,
+						   0x07, 0x05, 0x00, 0x04, 0x1c };
+			MUST_HAVE(((*digestinfo_len) >= sizeof(_digestinfo)), ret, err);
+			ret = local_memcpy(digestinfo, _digestinfo, sizeof(_digestinfo)); EG(ret, err);
+			(*digestinfo_len) = sizeof(_digestinfo);
+			break;
+		}
+		case HASH_SHA3_256:{
+			const u8 _digestinfo[] = { 0x30, 0x31, 0x30, 0x0d, 0x06, 0x09, 0x60,
+						   0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02,
+						   0x08, 0x05, 0x00, 0x04, 0x20 };
+			MUST_HAVE(((*digestinfo_len) >= sizeof(_digestinfo)), ret, err);
+			ret = local_memcpy(digestinfo, _digestinfo, sizeof(_digestinfo)); EG(ret, err);
+			(*digestinfo_len) = sizeof(_digestinfo);
+			break;
+		}
+		case HASH_SHA3_384:{
+			const u8 _digestinfo[] = { 0x30, 0x41, 0x30, 0x0d, 0x06, 0x09, 0x60,
+						   0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02,
+						   0x09, 0x05, 0x00, 0x04, 0x30 };
+			MUST_HAVE(((*digestinfo_len) >= sizeof(_digestinfo)), ret, err);
+			ret = local_memcpy(digestinfo, _digestinfo, sizeof(_digestinfo)); EG(ret, err);
+			(*digestinfo_len) = sizeof(_digestinfo);
+			break;
+		}
+		case HASH_SHA3_512:{
+			const u8 _digestinfo[] = { 0x30, 0x51, 0x30, 0x0d, 0x06, 0x09, 0x60,
+						   0x86, 0x48, 0x01, 0x65, 0x03, 0x04, 0x02,
+						   0x0a ,0x05, 0x00, 0x04, 0x40 };
+			MUST_HAVE(((*digestinfo_len) >= sizeof(_digestinfo)), ret, err);
+			ret = local_memcpy(digestinfo, _digestinfo, sizeof(_digestinfo)); EG(ret, err);
+			(*digestinfo_len) = sizeof(_digestinfo);
+			break;
+		}
+		/* For SM3, the "RSA Signing with SM3" OID is taken from:
+		 *     http://gmssl.org/docs/oid.html
+		 */
+		case HASH_SM3:{
+			const u8 _digestinfo[] = { 0x30, 0x30, 0x30, 0x0d, 0x06, 0x08, 0x2A,
+						   0x81, 0x1c, 0xcf, 0x55, 0x01, 0x83, 0x78,
+						   0x05, 0x00, 0x04, 0x20 };
+			MUST_HAVE(((*digestinfo_len) >= sizeof(_digestinfo)), ret, err);
+			ret = local_memcpy(digestinfo, _digestinfo, sizeof(_digestinfo)); EG(ret, err);
+			(*digestinfo_len) = sizeof(_digestinfo);
+			break;
+		}
+		default:{
+			ret = -1;
+			goto err;
+		}
+	}
+
+err:
+	return ret;
+}
 
 /* GF1 as a mask generation function as described in RFC 8017 Appendix B.2.1
  *     z is the 'seed', and zlen its length
  */
 ATTRIBUTE_WARN_UNUSED_RET static int _mgf1(const u8 *z, u16 zlen,
 					   u8 *mask, u64 masklen,
-					   rsa_hash_alg_type mgf_hash_type)
+					   gen_hash_alg_type mgf_hash_type)
 {
 	int ret;
 	u8 hlen, block_size;
@@ -489,7 +659,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int _mgf1(const u8 *z, u16 zlen,
 	/* Sanity checks */
 	MUST_HAVE((z != NULL) && (mask != NULL), ret, err);
 
-	ret = rsa_get_hash_sizes(mgf_hash_type, &hlen, &block_size); EG(ret, err);
+	ret = gen_hash_get_hash_sizes(mgf_hash_type, &hlen, &block_size); EG(ret, err);
 	MUST_HAVE((hlen <= MAX_DIGEST_SIZE), ret, err);
 
 	/* masklen must be < 2**32 * hlen */
@@ -505,10 +675,10 @@ ATTRIBUTE_WARN_UNUSED_RET static int _mgf1(const u8 *z, u16 zlen,
 
 		/* 3.B + 4. */
 		if ((masklen % hlen) && (c == (ceil - 1))) { /* need last chunk smaller than hlen */
-			ret = rsa_hfunc_scattered(input, ilens, digest, mgf_hash_type); EG(ret, err);
+			ret = gen_hash_hfunc_scattered(input, ilens, digest, mgf_hash_type); EG(ret, err);
 			ret = local_memcpy(&mask[c * hlen], digest, masklen % hlen); EG(ret, err);
 		} else {                                     /* common case, i.e. complete chunk */
-			ret = rsa_hfunc_scattered(input, ilens, &mask[c * hlen], mgf_hash_type); EG(ret, err);
+			ret = gen_hash_hfunc_scattered(input, ilens, &mask[c * hlen], mgf_hash_type); EG(ret, err);
 		}
 	}
 err:
@@ -519,7 +689,7 @@ err:
  * NOTE: we enforce MGF1 as a mask generation function
  */
 int emsa_pss_encode(const u8 *m, u16 mlen, u8 *em, u32 embits,
-                    u16 *eminlen, rsa_hash_alg_type rsa_hash_type, rsa_hash_alg_type mgf_hash_type,
+                    u16 *eminlen, gen_hash_alg_type gen_hash_type, gen_hash_alg_type mgf_hash_type,
                     u16 slen, const u8 *forced_salt)
 {
 	int ret;
@@ -561,7 +731,7 @@ int emsa_pss_encode(const u8 *m, u16 mlen, u8 *em, u32 embits,
 	MUST_HAVE(((*eminlen) >= emlen), ret, err);
 
 	/* Get the used hash information */
-	ret = rsa_get_hash_sizes(rsa_hash_type, &hlen, &block_size); EG(ret, err);
+	ret = gen_hash_get_hash_sizes(gen_hash_type, &hlen, &block_size); EG(ret, err);
 	MUST_HAVE((hlen <= MAX_DIGEST_SIZE), ret, err);
 
 	/* emBits at least 8hLen + 8sLen + 9 */
@@ -571,7 +741,7 @@ int emsa_pss_encode(const u8 *m, u16 mlen, u8 *em, u32 embits,
 	MUST_HAVE((emlen >= ((u32)hlen + (u32)slen + 2)), ret, err);
 
 	/* mHash = Hash(M) */
-	ret = rsa_hfunc_scattered(input, ilens, mhash, rsa_hash_type); EG(ret, err);
+	ret = gen_hash_hfunc_scattered(input, ilens, mhash, gen_hash_type); EG(ret, err);
 
 	/*  Generate a random octet string salt of length sLen; if sLen = 0
 	 *  then salt is the empty string.
@@ -590,7 +760,7 @@ int emsa_pss_encode(const u8 *m, u16 mlen, u8 *em, u32 embits,
 	ilens_[1] = hlen;
 	ilens_[2] = slen;
 	ilens_[3] = 0;
-	ret = rsa_hfunc_scattered(input_, ilens_, h, rsa_hash_type); EG(ret, err);
+	ret = gen_hash_hfunc_scattered(input_, ilens_, h, gen_hash_type); EG(ret, err);
 
 	/* dbMask = MGF(H, emLen - hLen - 1)
 	 * NOTE: dbmask points to &em[0]
@@ -639,7 +809,7 @@ err:
  */
 int emsa_pss_verify(const u8 *m, u16 mlen, const u8 *em,
                     u32 embits, u16 emlen,
-		    rsa_hash_alg_type rsa_hash_type, rsa_hash_alg_type mgf_hash_type,
+		    gen_hash_alg_type gen_hash_type, gen_hash_alg_type mgf_hash_type,
                     u16 slen)
 {
 	int ret, cmp;
@@ -674,11 +844,11 @@ int emsa_pss_verify(const u8 *m, u16 mlen, const u8 *em,
 	MUST_HAVE((m != NULL) && (em != NULL), ret, err);
 
 	/* Get the used hash information */
-	ret = rsa_get_hash_sizes(rsa_hash_type, &hlen, &block_size); EG(ret, err);
+	ret = gen_hash_get_hash_sizes(gen_hash_type, &hlen, &block_size); EG(ret, err);
 	MUST_HAVE((hlen <= MAX_DIGEST_SIZE), ret, err);
 
 	/* Let mHash = Hash(M), an octet string of length hLen */
-	ret = rsa_hfunc_scattered(input, ilens, mhash, rsa_hash_type); EG(ret, err);
+	ret = gen_hash_hfunc_scattered(input, ilens, mhash, gen_hash_type); EG(ret, err);
 
 	/* emBits at least 8hLen + 8sLen + 9 */
 	MUST_HAVE((embits >= ((8*(u32)hlen) + (8*(u32)slen) + 9)), ret, err);
@@ -745,7 +915,7 @@ int emsa_pss_verify(const u8 *m, u16 mlen, const u8 *em,
 	ilens_[2] = slen;
 	ilens_[3] = 0;
 	/* Hash */
-	ret = rsa_hfunc_scattered(input_, ilens_, h_, rsa_hash_type); EG(ret, err);
+	ret = gen_hash_hfunc_scattered(input_, ilens_, h_, gen_hash_type); EG(ret, err);
 
 	/* If H = H', output "consistent".  Otherwise, output "inconsistent" */
 	ret = are_equal(h, h_, hlen, &cmp); EG(ret, err);
@@ -760,7 +930,7 @@ err:
 /* EMSA-PKCS1-v1_5 encoding as described in RFC 8017 section 9.2
  */
 int emsa_pkcs1_v1_5_encode(const u8 *m, u16 mlen, u8 *em, u16 emlen,
-                           rsa_hash_alg_type rsa_hash_type)
+                           gen_hash_alg_type gen_hash_type)
 {
 	int ret;
 	const u8 *input[2] = { m, NULL };
@@ -775,9 +945,9 @@ int emsa_pkcs1_v1_5_encode(const u8 *m, u16 mlen, u8 *em, u16 emlen,
 
 	/* Compute H = Hash(M) */
 	ret = local_memset(digest, 0, sizeof(digest)); EG(ret, err);
-	ret = rsa_get_hash_sizes(rsa_hash_type, &digest_size, &block_size); EG(ret, err);
+	ret = gen_hash_get_hash_sizes(gen_hash_type, &digest_size, &block_size); EG(ret, err);
 	MUST_HAVE((digest_size <= MAX_DIGEST_SIZE), ret, err);
-	ret = rsa_hfunc_scattered(input, ilens, digest, rsa_hash_type); EG(ret, err);
+	ret = gen_hash_hfunc_scattered(input, ilens, digest, gen_hash_type); EG(ret, err);
 
 	/* Now encode:
 	 *
@@ -790,7 +960,7 @@ int emsa_pkcs1_v1_5_encode(const u8 *m, u16 mlen, u8 *em, u16 emlen,
 	/* NOTE: the rsa_digestinfo_from_hash returns the size of DigestInfo *WITHOUT* the
 	 * appended raw hash, tlen is the real size of the complete encoded DigestInfo.
 	 */
-	ret = rsa_digestinfo_from_hash(rsa_hash_type, em, &digestinfo_len); EG(ret, err);
+	ret = rsa_digestinfo_from_hash(gen_hash_type, em, &digestinfo_len); EG(ret, err);
 	tlen = (digestinfo_len + digest_size);
 
 	/* If emLen < tLen + 11, output "intended encoded message length too short" and stop */
@@ -798,7 +968,7 @@ int emsa_pkcs1_v1_5_encode(const u8 *m, u16 mlen, u8 *em, u16 emlen,
 
 	/* Copy T at the end of em */
 	digestinfo_len = emlen;
-	ret = rsa_digestinfo_from_hash(rsa_hash_type, &em[emlen - tlen], &digestinfo_len); EG(ret, err);
+	ret = rsa_digestinfo_from_hash(gen_hash_type, &em[emlen - tlen], &digestinfo_len); EG(ret, err);
 	ret = local_memcpy(&em[emlen - tlen + digestinfo_len], digest, digest_size);
 
 	/*
@@ -885,7 +1055,6 @@ err:
 /* The RSAES-PKCS1-V1_5-DECRYPT algorithm as described in RFC 8017 section 7.2.2
  *
  */
-#include "../external_deps/time.h"
 int rsaes_pkcs1_v1_5_decrypt(const rsa_priv_key *priv, const u8 *c, u16 clen,
                              u8 *m, u16 *mlen, u32 modbits)
 {
@@ -961,7 +1130,7 @@ err:
  */
 int rsaes_oaep_encrypt(const rsa_pub_key *pub, const u8 *m, u16 mlen,
                        u8 *c, u16 *clen, u32 modbits, const u8 *label, u16 label_len,
-                       rsa_hash_alg_type rsa_hash_type, rsa_hash_alg_type mgf_hash_type,
+                       gen_hash_alg_type gen_hash_type, gen_hash_alg_type mgf_hash_type,
 		       const u8 *forced_seed, u16 seedlen)
 {
 	int ret;
@@ -991,7 +1160,7 @@ int rsaes_oaep_encrypt(const rsa_pub_key *pub, const u8 *m, u16 mlen,
 
 	k = BYTECEIL(modbits);
 
-	ret = rsa_get_hash_sizes(rsa_hash_type, &hlen, &block_size); EG(ret, err);
+	ret = gen_hash_get_hash_sizes(gen_hash_type, &hlen, &block_size); EG(ret, err);
 	MUST_HAVE((hlen <= MAX_DIGEST_SIZE), ret, err);
 
 	/* Check on lengths */
@@ -1011,7 +1180,7 @@ int rsaes_oaep_encrypt(const rsa_pub_key *pub, const u8 *m, u16 mlen,
 		input[0] = label;
 		ilens[0] = label_len;
 	}
-	ret = rsa_hfunc_scattered(input, ilens, &db[0], rsa_hash_type); EG(ret, err);
+	ret = gen_hash_hfunc_scattered(input, ilens, &db[0], gen_hash_type); EG(ret, err);
 	/*
 	 * 2.b. Generate a padding string PS consisting of k - mLen - 2hLen -
 	 * 2 zero octets. The length of PS may be zero.
@@ -1080,8 +1249,8 @@ err:
  */
 int rsaes_oaep_decrypt(const rsa_priv_key *priv, const u8 *c, u16 clen,
                        u8 *m, u16 *mlen, u32 modbits,
-                       const u8 *label, u16 label_len, rsa_hash_alg_type rsa_hash_type,
-		       rsa_hash_alg_type mgf_hash_type)
+                       const u8 *label, u16 label_len, gen_hash_alg_type gen_hash_type,
+		       gen_hash_alg_type mgf_hash_type)
 {
 	int ret, cmp;
 	u32 k, khlen;
@@ -1111,7 +1280,7 @@ int rsaes_oaep_decrypt(const rsa_priv_key *priv, const u8 *c, u16 clen,
 
 	k = BYTECEIL(modbits);
 
-	ret = rsa_get_hash_sizes(rsa_hash_type, &hlen, &block_size); EG(ret, err);
+	ret = gen_hash_get_hash_sizes(gen_hash_type, &hlen, &block_size); EG(ret, err);
 	MUST_HAVE((hlen <= MAX_DIGEST_SIZE), ret, err);
 
 	/* Check on lengths */
@@ -1136,7 +1305,7 @@ int rsaes_oaep_decrypt(const rsa_priv_key *priv, const u8 *c, u16 clen,
 		input[0] = label;
 		ilens[0] = label_len;
 	}
-	ret = rsa_hfunc_scattered(input, ilens, lhash, rsa_hash_type); EG(ret, err);
+	ret = gen_hash_hfunc_scattered(input, ilens, lhash, gen_hash_type); EG(ret, err);
 	/*  EM = Y || maskedSeed || maskedDB */
 	maskedseed = &em[1];
 	maskeddb   = &em[hlen + 1];
@@ -1213,7 +1382,7 @@ err:
  *
  */
 int rsassa_pkcs1_v1_5_sign(const rsa_priv_key *priv, const u8 *m, u16 mlen,
-                           u8 *s, u16 *slen, u32 modbits, rsa_hash_alg_type rsa_hash_type)
+                           u8 *s, u16 *slen, u32 modbits, gen_hash_alg_type gen_hash_type)
 {
 	int ret;
 	u8 *em = s;
@@ -1232,7 +1401,7 @@ int rsassa_pkcs1_v1_5_sign(const rsa_priv_key *priv, const u8 *m, u16 mlen,
 	MUST_HAVE(((*slen) >= k), ret, err);
 
 	/* EM = EMSA-PKCS1-V1_5-ENCODE (M, k) */
-	ret = emsa_pkcs1_v1_5_encode(m, mlen, em, (u16)k, rsa_hash_type); EG(ret, err);
+	ret = emsa_pkcs1_v1_5_encode(m, mlen, em, (u16)k, gen_hash_type); EG(ret, err);
 
 	/* m = OS2IP (EM) */
 	ret = os2ip(&m_, em, (u16)k); EG(ret, err);
@@ -1257,7 +1426,7 @@ err:
  *
  */
 int rsassa_pkcs1_v1_5_verify(const rsa_pub_key *pub, const u8 *m, u16 mlen,
-                             const u8 *s, u16 slen, u32 modbits, rsa_hash_alg_type rsa_hash_type)
+                             const u8 *s, u16 slen, u32 modbits, gen_hash_alg_type gen_hash_type)
 {
 	int ret, cmp;
 	/* Get a large enough buffer to hold the result */
@@ -1292,7 +1461,7 @@ int rsassa_pkcs1_v1_5_verify(const rsa_pub_key *pub, const u8 *m, u16 mlen,
 	ret = i2osp(&m_, em, slen); EG(ret, err);
 	/* EM' = EMSA-PKCS1-V1_5-ENCODE (M, k) */
 	MUST_HAVE((k <= sizeof(em_)), ret, err);
-	ret = emsa_pkcs1_v1_5_encode(m, mlen, em_, (u16)k, rsa_hash_type); EG(ret, err);
+	ret = emsa_pkcs1_v1_5_encode(m, mlen, em_, (u16)k, gen_hash_type); EG(ret, err);
 
 	/* Compare */
 	ret = are_equal(em, em_, (u16)k, &cmp); EG(ret, err);
@@ -1311,7 +1480,7 @@ err:
  */
 int rsassa_pss_sign(const rsa_priv_key *priv, const u8 *m, u16 mlen,
                     u8 *s, u16 *slen, u32 modbits,
-		    rsa_hash_alg_type rsa_hash_type, rsa_hash_alg_type mgf_hash_type,
+		    gen_hash_alg_type gen_hash_type, gen_hash_alg_type mgf_hash_type,
                     u16 saltlen, const u8 *forced_salt)
 {
 	int ret;
@@ -1333,7 +1502,7 @@ int rsassa_pss_sign(const rsa_priv_key *priv, const u8 *m, u16 mlen,
 
 	/* EM = EMSA-PSS-ENCODE (M, modBits - 1) */
 	emsize = (*slen);
-	ret = emsa_pss_encode(m, mlen, em, (modbits - 1), &emsize, rsa_hash_type, mgf_hash_type, saltlen, forced_salt); EG(ret, err);
+	ret = emsa_pss_encode(m, mlen, em, (modbits - 1), &emsize, gen_hash_type, mgf_hash_type, saltlen, forced_salt); EG(ret, err);
 
 	/* Note that the octet length of EM will be one less than k if modBits - 1 is divisible by 8 and equal to k otherwise */
 	MUST_HAVE(emsize == BYTECEIL(modbits - 1), ret, err);
@@ -1363,7 +1532,7 @@ err:
  */
 int rsassa_pss_verify(const rsa_pub_key *pub, const u8 *m, u16 mlen,
                       const u8 *s, u16 slen, u32 modbits,
-                      rsa_hash_alg_type rsa_hash_type, rsa_hash_alg_type mgf_hash_type,
+                      gen_hash_alg_type gen_hash_type, gen_hash_alg_type mgf_hash_type,
 		      u16 saltlen)
 {
 	int ret;
@@ -1399,7 +1568,7 @@ int rsassa_pss_verify(const rsa_pub_key *pub, const u8 *m, u16 mlen,
 	MUST_HAVE((emlen <= sizeof(em)), ret, err);
 	ret = i2osp(&m_, em, (u16)emlen); EG(ret, err);
 	/*  Result = EMSA-PSS-VERIFY (M, EM, modBits - 1) */
-	ret = emsa_pss_verify(m, mlen, em, (modbits - 1), emlen, rsa_hash_type, mgf_hash_type, saltlen);
+	ret = emsa_pss_verify(m, mlen, em, (modbits - 1), emlen, gen_hash_type, mgf_hash_type, saltlen);
 
 err:
 	nn_uninit(&m_);
@@ -1413,7 +1582,6 @@ err:
  *     https://github.com/bdauvergne/python-pkcs1/tree/master/tests/data
  */
 #include "rsa_pkcs1_tests.h"
-#include "../external_deps/time.h"
 
 int main(int argc, char *argv[])
 {

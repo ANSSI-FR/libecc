@@ -19,7 +19,7 @@
 #include "../lib_ecc_config.h"
 
 /* The hash algorithms wrapper */
-#include "rsa_hash.h"
+#include "../hash/hash.h"
 
 /* We define hereafter the types and functions for RSA.
  * The notations are taken from RFC 8017 and should be compliant
@@ -110,14 +110,14 @@ ATTRIBUTE_WARN_UNUSED_RET int rsasp1(const rsa_priv_key *priv, nn_src_t m, nn_t 
 ATTRIBUTE_WARN_UNUSED_RET int rsavp1(const rsa_pub_key *pub, nn_src_t s, nn_t m);
 
 ATTRIBUTE_WARN_UNUSED_RET int emsa_pkcs1_v1_5_encode(const u8 *m, u16 mlen, u8 *em, u16 emlen,
-						     rsa_hash_alg_type rsa_hash_type);
+						     gen_hash_alg_type rsa_hash_type);
 ATTRIBUTE_WARN_UNUSED_RET int emsa_pss_encode(const u8 *m, u16 mlen, u8 *em, u32 embits,
 					      u16 *eminlen,
-					      rsa_hash_alg_type rsa_hash_type, rsa_hash_alg_type mgf_hash_type,
+					      gen_hash_alg_type rsa_hash_type, gen_hash_alg_type mgf_hash_type,
 					      u16 slen, const u8 *forced_salt);
 ATTRIBUTE_WARN_UNUSED_RET int emsa_pss_verify(const u8 *m, u16 mlen, const u8 *em,
 					      u32 embits, u16 emlen,
-					      rsa_hash_alg_type rsa_hash_type, rsa_hash_alg_type mgf_hash_type,
+					      gen_hash_alg_type rsa_hash_type, gen_hash_alg_type mgf_hash_type,
 					      u16 slen);
 
 ATTRIBUTE_WARN_UNUSED_RET int rsaes_pkcs1_v1_5_encrypt(const rsa_pub_key *pub, const u8 *m, u16 mlen,
@@ -128,24 +128,24 @@ ATTRIBUTE_WARN_UNUSED_RET int rsaes_pkcs1_v1_5_decrypt(const rsa_priv_key *priv,
 
 ATTRIBUTE_WARN_UNUSED_RET int rsaes_oaep_encrypt(const rsa_pub_key *pub, const u8 *m, u16 mlen,
 						 u8 *c, u16 *clen, u32 modbits, const u8 *label, u16 label_len,
-						 rsa_hash_alg_type rsa_hash_type, rsa_hash_alg_type mgf_hash_type,
+						 gen_hash_alg_type rsa_hash_type, gen_hash_alg_type mgf_hash_type,
 						 const u8 *forced_seed, u16 seedlen);
 ATTRIBUTE_WARN_UNUSED_RET int rsaes_oaep_decrypt(const rsa_priv_key *priv, const u8 *c, u16 clen,
 						 u8 *m, u16 *mlen, u32 modbits, const u8 *label, u16 label_len,
-						 rsa_hash_alg_type rsa_hash_type, rsa_hash_alg_type mgf_hash_type);
+						 gen_hash_alg_type rsa_hash_type, gen_hash_alg_type mgf_hash_type);
 
 ATTRIBUTE_WARN_UNUSED_RET int rsassa_pkcs1_v1_5_sign(const rsa_priv_key *priv, const u8 *m, u16 mlen,
-						     u8 *s, u16 *slen, u32 modbits, rsa_hash_alg_type rsa_hash_type);
+						     u8 *s, u16 *slen, u32 modbits, gen_hash_alg_type rsa_hash_type);
 ATTRIBUTE_WARN_UNUSED_RET int rsassa_pkcs1_v1_5_verify(const rsa_pub_key *pub, const u8 *m, u16 mlen,
-						       const u8 *s, u16 slen, u32 modbits, rsa_hash_alg_type rsa_hash_type);
+						       const u8 *s, u16 slen, u32 modbits, gen_hash_alg_type rsa_hash_type);
 
 ATTRIBUTE_WARN_UNUSED_RET int rsassa_pss_sign(const rsa_priv_key *priv, const u8 *m, u16 mlen,
 					      u8 *s, u16 *slen, u32 modbits,
-					      rsa_hash_alg_type rsa_hash_type, rsa_hash_alg_type mgf_hash_type,
+					      gen_hash_alg_type rsa_hash_type, gen_hash_alg_type mgf_hash_type,
 					      u16 saltlen, const u8 *forced_salt);
 ATTRIBUTE_WARN_UNUSED_RET int rsassa_pss_verify(const rsa_pub_key *pub, const u8 *m, u16 mlen,
 						const u8 *s, u16 slen, u32 modbits,
-						rsa_hash_alg_type rsa_hash_type, rsa_hash_alg_type mgf_hash_type,
+						gen_hash_alg_type rsa_hash_type, gen_hash_alg_type mgf_hash_type,
 						u16 saltlen);
 
 #endif /* __RSA_H__ */

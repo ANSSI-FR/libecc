@@ -25,7 +25,7 @@ typedef struct {
 	const char *name;
 	rsa_alg_type type;
 	u32 modbits;
-        rsa_hash_alg_type hash;
+        gen_hash_alg_type hash;
 	const u8 *n;
 	u16 nlen;
 	const u8 *d;
@@ -128,7 +128,7 @@ ATTRIBUTE_WARN_UNUSED_RET static inline int perform_rsa_tests(const rsa_test **t
 				if(t->salt == NULL){
 					/* In case of NULL salt, default saltlen value is the digest size */
 					u8 digestsize, blocksize;
-					ret = rsa_get_hash_sizes(t->hash, &digestsize, &blocksize); EG(ret, err1);
+					ret = gen_hash_get_hash_sizes(t->hash, &digestsize, &blocksize); EG(ret, err1);
 					ret = rsassa_pss_verify(&pub, t->m, t->mlen, t->res, t->reslen, modbits, t->hash, t->hash, digestsize); EG(ret, err1);
 				}
 				else{
