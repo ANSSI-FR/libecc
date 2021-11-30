@@ -118,6 +118,7 @@ int nn_get_random_mod(nn_t out, nn_src_t q)
 
 	/* 4) compute out += 1 */
 	nn_inc(out, out);
+
 	ret = 0;
 
  err:

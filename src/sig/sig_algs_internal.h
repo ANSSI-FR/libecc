@@ -43,7 +43,7 @@
 /* Sanity check to ensure our sig mapping does not contain
  * NULL pointers
  */
-/*#define SIG_MAPPING_SANITY_CHECK(A)			\
+#define SIG_MAPPING_SANITY_CHECK(A)			\
 	MUST_HAVE(((A) != NULL) &&			\
 		  ((A)->name != NULL) &&		\
 		  ((A)->siglen != NULL) &&		\
@@ -57,8 +57,7 @@
 		  ((A)->verify_update != NULL) &&	\
 		  ((A)->verify_finalize != NULL) &&	\
 		  ((A)->verify != NULL))		\
-*/
-#define SIG_MAPPING_SANITY_CHECK(A)
+
 /*
  * All the signature algorithms we support are abstracted using the following
  * structure (and following map) which provides for each hash alg its
@@ -205,9 +204,9 @@ struct ec_verify_context {
 };
 
 #define SIG_VERIFY_MAGIC ((word_t)(0x7e0d42d13e3159baULL))
-//#define SIG_VERIFY_CHECK_INITIALIZED(A) \
-//	MUST_HAVE(((A) != NULL) &&	((A)->ctx_magic == SIG_VERIFY_MAGIC))
-#define SIG_VERIFY_CHECK_INITIALIZED(A)
+#define SIG_VERIFY_CHECK_INITIALIZED(A) \
+	MUST_HAVE(((A) != NULL) &&	((A)->ctx_magic == SIG_VERIFY_MAGIC))
+
 /* Generic signature and verification APIs that will in fact call init / update / finalize in
  * backend. Used for signature and verification functions that support these streaming APIs.
  *
@@ -246,7 +245,6 @@ int is_sign_deterministic(ec_sig_alg_type sig_type);
 #define MAX_SIG_ALG_NAME_LEN	0
 static const ec_sig_mapping ec_sig_maps[] = {
 #ifdef WITH_SIG_ECDSA
-#ifdef GEN_BY_SW
 	{.type = ECDSA,
 	 .name = "ECDSA",
 	 .siglen = ecdsa_siglen,
@@ -261,22 +259,6 @@ static const ec_sig_mapping ec_sig_maps[] = {
 	 .verify_finalize = _ecdsa_verify_finalize,
 	 .verify = generic_ec_verify,
 	 },
-#else
-	{.type = ECDSA,
-	 .name = "ECDSA",
-	 .siglen = NULL,
-	 .gen_priv_key = NULL,
-	 .init_pub_key = NULL,
-	 .sign_init = NULL,
-	 .sign_update = NULL,
-	 .sign_finalize = NULL,
-	 .sign = NULL,
-	 .verify_init = NULL,
-	 .verify_update = NULL,
-	 .verify_finalize = NULL,
-	 .verify = NULL,
-	 },
-#endif
 #if (MAX_SIG_ALG_NAME_LEN < 6)
 #undef MAX_SIG_ALG_NAME_LEN
 #define MAX_SIG_ALG_NAME_LEN 6

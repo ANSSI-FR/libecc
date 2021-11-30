@@ -235,7 +235,6 @@ err:
 /* Sanity check of a verification context to see if everything seems
  * OK.
  */
-/*
 int ec_verify_ctx_callbacks_sanity_check(const struct ec_verify_context *verify_ctx)
 {
 	int ret = -1;
@@ -261,7 +260,7 @@ int ec_verify_ctx_callbacks_sanity_check(const struct ec_verify_context *verify_
 err:
 	return ret;
 }
-*/
+
 
 /*
  * Compute generic effective signature length depending on the curve parameters,
@@ -571,7 +570,7 @@ int ec_verify_init(struct ec_verify_context *ctx, const ec_pub_key *pub_key,
 	/* Initialize context for specific signature function */
 	local_memset(ctx, 0, sizeof(struct ec_verify_context));
 	ctx->pub_key = pub_key;
-	//ctx->h = hm;
+	ctx->h = hm;
 	ctx->sig = sm;
 	ctx->adata = adata;
 	ctx->adata_len = adata_len;
@@ -626,10 +625,10 @@ int ec_verify_finalize(struct ec_verify_context *ctx)
 	HASH_MAPPING_SANITY_CHECK(ctx->h);
 
 	/* Since we call a callback, sanity check our contexts */
-	/*if(ec_verify_ctx_callbacks_sanity_check(ctx)){
+	if(ec_verify_ctx_callbacks_sanity_check(ctx)){
 		ret = -1;
 		goto err;
-	}*/
+	}
 	ret = ctx->sig->verify_finalize(ctx);
 
 	/* Clear the whole context to prevent future reuse */
@@ -638,6 +637,7 @@ int ec_verify_finalize(struct ec_verify_context *ctx)
 err:
 	return ret;
 }
+
 int generic_ec_verify(const u8 *sig, u8 siglen, const ec_pub_key *pub_key,
 		      const u8 *m, u32 mlen,
 		      ec_sig_alg_type sig_type, hash_alg_type hash_type,
@@ -646,34 +646,18 @@ int generic_ec_verify(const u8 *sig, u8 siglen, const ec_pub_key *pub_key,
 	int ret;
 	struct ec_verify_context ctx;
 
-	local_memset(&ctx, 0, sizeof(struct ec_verify_context));
-	ctx.pub_key = pub_key;
-	//ctx->h = hm;
-	ctx.sig = &ec_sig_maps[0];
-	ctx.adata = NULL;
-	ctx.adata_len = 0;
-	ctx.ctx_magic = SIG_VERIFY_MAGIC;
-
-#if 1
-	ret = __ecdsa_verify_init(&ctx, sig, siglen, sig_type);
-#else
-#warning this is not good, we are skiping signature verification steps by this
-	#define ECDSA_VERIFY_MAGIC ((word_t)(0x5155fe73e7fd51beULL))
-	ctx.verify_data.ecdsa.magic = ECDSA_VERIFY_MAGIC;
-#endif
-	/*ret = ec_verify_init(&ctx, pub_key, sig, siglen, sig_type,
+	ret = ec_verify_init(&ctx, pub_key, sig, siglen, sig_type,
 			     hash_type, adata, adata_len);
 	if (ret) {
 		goto err;
 	}
-	*/
-/*
+
 	ret = ec_verify_update(&ctx, m, mlen);
 	if (ret) {
 		goto err;
 	}
-*/
-	ret = __ecdsa_verify_finalize(&ctx, ECDSA);
+
+	ret = ec_verify_finalize(&ctx);
 
  err:
 	return ret;

@@ -648,7 +648,6 @@ static void _prj_pt_mul_ltr_monty_ladder(prj_pt_t out, nn_src_t m, prj_pt_src_t 
 	curve_order = &(in->crv->order);
 	/* First compute q**2 */
 	nn_sqr(&curve_order_square, curve_order);
-
 	/* Then compute m' depending on m size */
 	if(nn_cmp(m, curve_order) < 0){
 		/* Case where m < q */
@@ -670,7 +669,6 @@ static void _prj_pt_mul_ltr_monty_ladder(prj_pt_t out, nn_src_t m, prj_pt_src_t 
 		nn_copy(&m_msb_fixed, m);
 	}
 	mlen = nn_bitlen(&m_msb_fixed);
-
 	if(mlen == 0){
 		/* Should not happen thanks to our MSB fixing trick, but in case ...
 		 * Return the infinite point.
@@ -748,7 +746,6 @@ static void _prj_pt_mul_ltr_monty_ladder(prj_pt_t out, nn_src_t m, prj_pt_src_t 
 	}
 	/* Output: T[r[0]] */
 	prj_pt_copy(out, &T[rbit]);
-
 	/* Check that the output is on the curve */
 	MUST_HAVE(prj_pt_is_on_curve(out) == 1);
 

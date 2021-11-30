@@ -221,31 +221,6 @@ err:
 }
 #endif
 
-#define	VERIFY_INIT_START 		((uint32_t)(0x1))
-#define	VERIFY_INIT_END 		((uint32_t)(0x2))
-#define	VERIFY_UPDATE_START 	((uint32_t)(0x3))
-#define	VERIFY_UPDATE_END 		((uint32_t)(0x4))
-#define	VERIFY_FINALIZE_START 	((uint32_t)(0x5))
-#define	VERIFY_FINALIZE_END 	((uint32_t)(0x6))
-#define	VERIFY_INIT_1 		((uint32_t)(0x11))
-#define	VERIFY_INIT_2 		((uint32_t)(0x12))
-#define	VERIFY_INIT_3 		((uint32_t)(0x13))
-#define	VERIFY_INIT_4 		((uint32_t)(0x14))
-#define	VERIFY_FINALIZE_1 		((uint32_t)(0x51))
-#define	VERIFY_FINALIZE_2 		((uint32_t)(0x52))
-#define	VERIFY_FINALIZE_3 		((uint32_t)(0x53))
-#define	VERIFY_FINALIZE_4 		((uint32_t)(0x54))
-#define INIT_PUB_KEY_START		((uint32_t)(0x7))
-#define INIT_PUB_KEY_END		((uint32_t)(0x8))
-
-#include <mram.h>
-__host uint32_t dpu_debug;
-__host uint32_t dpu_val1;
-__host uint32_t dpu_val2;
-__host uint32_t dpu_val3;
-__host uint32_t dpu_val4;
-
-
 int __ecdsa_init_pub_key(ec_pub_key *out_pub, const ec_priv_key *in_priv,
 			 ec_sig_alg_type key_type)
 {
@@ -699,10 +674,8 @@ int __ecdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen,
  */
 
 #define ECDSA_VERIFY_MAGIC ((word_t)(0x5155fe73e7fd51beULL))
-/*#define ECDSA_VERIFY_CHECK_INITIALIZED(A) \
-	MUST_HAVE((((void *)(A)) != NULL) && ((A)->magic == ECDSA_VERIFY_MAGIC))*/
-#define ECDSA_VERIFY_CHECK_INITIALIZED(A)
-
+#define ECDSA_VERIFY_CHECK_INITIALIZED(A) \
+	MUST_HAVE((((void *)(A)) != NULL) && ((A)->magic == ECDSA_VERIFY_MAGIC))
 
 int __ecdsa_verify_init(struct ec_verify_context *ctx, const u8 *sig, u8 siglen,
 			ec_sig_alg_type key_type)
@@ -712,18 +685,18 @@ int __ecdsa_verify_init(struct ec_verify_context *ctx, const u8 *sig, u8 siglen,
 	nn_src_t q;
 	nn *r, *s;
 	int ret = -1;
+
 	/* First, verify context has been initialized */
 	SIG_VERIFY_CHECK_INITIALIZED(ctx);
 
 	/* Do some sanity checks on input params */
-
 	pub_key_check_initialized_and_type(ctx->pub_key, key_type);
-/*	if ((!(ctx->h)) || (ctx->h->digest_size > MAX_DIGEST_SIZE) ||
+	if ((!(ctx->h)) || (ctx->h->digest_size > MAX_DIGEST_SIZE) ||
 	    (ctx->h->block_size > MAX_BLOCK_SIZE)) {
 		ret = -1;
 		goto err;
 	}
-*/
+
 	/* Make things more readable */
 	q = &(ctx->pub_key->params->ec_gen_order);
 	q_bit_len = ctx->pub_key->params->ec_gen_order_bitlen;
@@ -732,11 +705,10 @@ int __ecdsa_verify_init(struct ec_verify_context *ctx, const u8 *sig, u8 siglen,
 	s = &(ctx->verify_data.ecdsa.s);
 
 	/* Check given signature length is the expected one */
-	/*if (siglen != ECDSA_SIGLEN(q_bit_len)) {
-		dpu_debug = VERIFY_INIT_1;
+	if (siglen != ECDSA_SIGLEN(q_bit_len)) {
 		ret = -1;
 		goto err;
-	}*/
+	}
 
 	/* Import r and s values from signature buffer */
 	nn_init_from_buf(r, sig, q_len);
@@ -745,34 +717,31 @@ int __ecdsa_verify_init(struct ec_verify_context *ctx, const u8 *sig, u8 siglen,
 	dbg_nn_print("s", s);
 
 	/* 1. Reject the signature if r or s is 0. */
-	/*if (nn_iszero(r) || (nn_cmp(r, q) >= 0) ||
+	if (nn_iszero(r) || (nn_cmp(r, q) >= 0) ||
 	    nn_iszero(s) || (nn_cmp(s, q) >= 0)) {
 		nn_uninit(r);
 		nn_uninit(s);
-		dpu_debug = VERIFY_INIT_2;
-		ret = -1;
-		goto err;
-	}*/
-
-	/* Initialize the remaining of verify context. */
-	/* Since we call a callback, sanity check our mapping */
-	/*if(hash_mapping_callbacks_sanity_check(ctx->h)){
 		ret = -1;
 		goto err;
 	}
-	ctx->h->hfunc_init(&(ctx->verify_data.ecdsa.h_ctx));*/
+
+	/* Initialize the remaining of verify context. */
+	/* Since we call a callback, sanity check our mapping */
+	if(hash_mapping_callbacks_sanity_check(ctx->h)){
+		ret = -1;
+		goto err;
+	}
+	ctx->h->hfunc_init(&(ctx->verify_data.ecdsa.h_ctx));
 	ctx->verify_data.ecdsa.magic = ECDSA_VERIFY_MAGIC;
 
 	ret = 0;
 
  err:
-	/*
 	VAR_ZEROIFY(q_len);
 	VAR_ZEROIFY(q_bit_len);
 	PTR_NULLIFY(q);
 	PTR_NULLIFY(r);
 	PTR_NULLIFY(s);
-	*/
 
 	return ret;
 }
@@ -780,7 +749,6 @@ int __ecdsa_verify_init(struct ec_verify_context *ctx, const u8 *sig, u8 siglen,
 int __ecdsa_verify_update(struct ec_verify_context *ctx,
 			 const u8 *chunk, u32 chunklen, ec_sig_alg_type key_type)
 {
-
 	/*
 	 * First, verify context has been initialized and public
 	 * part too. This guarantees the context is an ECDSA
@@ -794,13 +762,12 @@ int __ecdsa_verify_update(struct ec_verify_context *ctx,
 
 	/* 2. Compute h = H(m) */
 	/* Since we call a callback, sanity check our mapping */
-	/*if(hash_mapping_callbacks_sanity_check(ctx->h)){
+	if(hash_mapping_callbacks_sanity_check(ctx->h)){
 		return -1;
 	}
-	ctx->h->hfunc_update(&(ctx->verify_data.ecdsa.h_ctx), chunk, chunklen);*/
+	ctx->h->hfunc_update(&(ctx->verify_data.ecdsa.h_ctx), chunk, chunklen);
 	return 0;
 }
-const u8 hash[SHA256_DIGEST_SIZE] = {0xba, 0x78, 0x16, 0xbf, 0x8f, 0x01, 0xcf, 0xea, 0x41, 0x41, 0x40, 0xde, 0x5d, 0xae, 0x22, 0x23, 0xb0, 0x03, 0x61, 0xa3, 0x96, 0x17, 0x7a, 0x9c, 0xb4, 0x10, 0xff, 0x61, 0xf2, 0x00, 0x15, 0xad};
 
 int __ecdsa_verify_finalize(struct ec_verify_context *ctx,
 			    ec_sig_alg_type key_type)
@@ -809,7 +776,7 @@ int __ecdsa_verify_finalize(struct ec_verify_context *ctx,
 	nn e, tmp, sinv, u, v, r_prime;
 	aff_pt W_prime_aff;
 	prj_pt_src_t G, Y;
-	//u8 hash[MAX_DIGEST_SIZE];
+	u8 hash[MAX_DIGEST_SIZE];
 	bitcnt_t rshift, q_bit_len;
 	nn_src_t q;
 	nn *s, *r;
@@ -833,24 +800,20 @@ int __ecdsa_verify_finalize(struct ec_verify_context *ctx,
 	/* Make things more readable */
 	G = &(ctx->pub_key->params->ec_gen);
 	Y = &(ctx->pub_key->y);
-	//dpu_val1 = Y->X.fp_val.val[0];
-	//dpu_val2 = Y->Y.fp_val.val[0];
 	q = &(ctx->pub_key->params->ec_gen_order);
 	q_bit_len = ctx->pub_key->params->ec_gen_order_bitlen;
-	//hsize = ctx->h->digest_size;
-	hsize = SHA256_DIGEST_SIZE;
+	hsize = ctx->h->digest_size;
 	r = &(ctx->verify_data.ecdsa.r);
 	s = &(ctx->verify_data.ecdsa.s);
 
 	/* 2. Compute h = H(m) */
 	/* Since we call a callback, sanity check our mapping */
-	/*if(hash_mapping_callbacks_sanity_check(ctx->h)){
+	if(hash_mapping_callbacks_sanity_check(ctx->h)){
 		ret = -1;
 		goto err;
 	}
-	ctx->h->hfunc_finalize(&(ctx->verify_data.ecdsa.h_ctx), hash);*/
+	ctx->h->hfunc_finalize(&(ctx->verify_data.ecdsa.h_ctx), hash);
 	dbg_buf_print("h = H(m)", hash, hsize);
-	//dpu_val3 = ((uint32_t *)hash)[0];
 
 	/*
 	 * 3. If |h| > bitlen(q), set h to bitlen(q)
@@ -871,32 +834,35 @@ int __ecdsa_verify_finalize(struct ec_verify_context *ctx,
 	 * and reducing it mod q
 	 */
 	nn_init_from_buf(&tmp, hash, hsize);
-	//local_memset(hash, 0, hsize);
+	local_memset(hash, 0, hsize);
 	dbg_nn_print("h initial import as nn", &tmp);
 	if (rshift) {
 		nn_rshift_fixedlen(&tmp, &tmp, rshift);
 	}
 	dbg_nn_print("h	  final import as nn", &tmp);
+
 	nn_mod(&e, &tmp, q);
 	nn_uninit(&tmp);
 	dbg_nn_print("e", &e);
+
 	/* Compute s^-1 mod q */
 	nn_modinv(&sinv, s, q);
 	dbg_nn_print("s", s);
 	dbg_nn_print("sinv", &sinv);
-
 	nn_uninit(s);
+
 	/* 5. Compute u = (s^-1)e mod q */
 	nn_mul(&tmp, &e, &sinv);
 	nn_uninit(&e);
 	nn_mod(&u, &tmp, q);
 	dbg_nn_print("u = (s^-1)e mod q", &u);
+
 	/* 6. Compute v = (s^-1)r mod q */
 	nn_mul_mod(&v, r, &sinv, q);
 	dbg_nn_print("v = (s^-1)r mod q", &v);
-
 	nn_uninit(&sinv);
 	nn_uninit(&tmp);
+
 	/* 7. Compute W' = uG + vY */
 	prj_pt_mul_monty(&uG, &u, G);
 	prj_pt_mul_monty(&vY, &v, Y);
@@ -905,6 +871,7 @@ int __ecdsa_verify_finalize(struct ec_verify_context *ctx,
 	prj_pt_uninit(&vY);
 	nn_uninit(&u);
 	nn_uninit(&v);
+
 	/* 8. If W' is the point at infinity, reject the signature. */
 	if (prj_pt_iszero(&W_prime)) {
 		ret = -1;
@@ -921,8 +888,6 @@ int __ecdsa_verify_finalize(struct ec_verify_context *ctx,
 
 	/* 10. Accept the signature if and only if r equals r' */
 	ret = (nn_cmp(&r_prime, r) != 0) ? -1 : 0;
-	dpu_val1 = ret;
-
 	nn_uninit(&r_prime);
 
  err:
@@ -933,7 +898,7 @@ int __ecdsa_verify_finalize(struct ec_verify_context *ctx,
 	local_memset(&(ctx->verify_data.ecdsa), 0, sizeof(ecdsa_verify_data));
 
 	/* Clean what remains on the stack */
-	/*PTR_NULLIFY(G);
+	PTR_NULLIFY(G);
 	PTR_NULLIFY(Y);
 	VAR_ZEROIFY(rshift);
 	VAR_ZEROIFY(q_bit_len);
@@ -941,7 +906,6 @@ int __ecdsa_verify_finalize(struct ec_verify_context *ctx,
 	PTR_NULLIFY(s);
 	PTR_NULLIFY(r);
 	VAR_ZEROIFY(hsize);
-*/
 
 	return ret;
 }

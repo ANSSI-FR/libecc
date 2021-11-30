@@ -56,7 +56,7 @@ int get_ms_time(u64 *time)
 int get_ms_time(u64 *time)
 {
 	/*stub*/
-	*time = 1;
+	*time = 0;
 	return 0;
 }
 #endif

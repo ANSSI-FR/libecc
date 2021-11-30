@@ -4,20 +4,20 @@ ECDSA signature verification
     make 32  CC=dpu-upmem-dpurte-clang
 
     Check the dump file
-    llvm-objdump -x  src/examples/ecdsa_dpu > ecdsa_dpu.objdump
+    llvm-objdump -x  src/DPU/ecdsa_dpu > ecdsa_dpu.objdump
 
     Compile the DPU binary
-    make 32  CC=dpu-upmem-dpurte-clang -C src/examples/
+    make 32  CC=dpu-upmem-dpurte-clang -C src/DPU/
 
 Build params and pub key patterns
     Compile the ecc lib
     make 32  CC=dpu-upmem-dpurte-clang SW=1
 
     Check the dump file
-    llvm-objdump -x  src/examples/ecdsa_dpu > ecdsa_dpu.objdump
+    llvm-objdump -x  src/DPU/ecdsa_dpu > ecdsa_dpu.objdump
 
     Compile the DPU binary
-    make 32  CC=dpu-upmem-dpurte-clang SW=1 -C src/examples/
+    make 32  CC=dpu-upmem-dpurte-clang SW=1 -C src/DPU/
 
 Execute the DPU binary
-cd src/examples/ && ./ecdsa_host  && cd -
+cd src/DPU/ && ./ecdsa_host  && cd -

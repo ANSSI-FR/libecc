@@ -40,6 +40,7 @@ static int fimport(unsigned char *buf, u16 buflen, const char *path)
 
 	fd = open(path, O_RDONLY);
 	if (fd == -1) {
+		printf("Unable to open input file %s\n", path);
 		return -1;
 	}
 

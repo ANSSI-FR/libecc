@@ -117,7 +117,7 @@ extern unsigned char cryptofuzz_longjmp_triggered;
 #else
 //#define MUST_HAVE(x) do { if (!(x)) { while (1); } } while (0)
 #define MUST_HAVE_SELECTION(x) do { if (!(x)) { while (1); } } while (0)
-#define MUST_HAVE(x) 
+#define MUST_HAVE(x)
 #endif
 #define SHOULD_HAVE(x)
 #define KNOWN_FACT(x)

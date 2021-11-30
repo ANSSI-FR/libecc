@@ -9,7 +9,6 @@ FPIC_CFLAG=-fPIC
 ifneq ($(APPLE),)
 #FPIE_LDFLAGS=-pie -Wl,-z,relro,-z,now
 FPIE_LDFLAGS= -Wl,-z,relro,-z,now
-
 endif
 endif
 
@@ -19,6 +18,7 @@ endif
 #STACK_PROT_FLAG=-fstack-protector-strong
 STACK_PROT_FLAG=
 FORTIFY_FLAGS=-D_FORTIFY_SOURCE=2
+
 # The first goal here is to define a meaningful set of CFLAGS based on compiler,
 # debug mode, expected word size (16, 32, 64), etc. Those are then used to
 # define two differents kinds of CFLAGS we will use for building our library
