@@ -23,6 +23,9 @@
 #include "ec_shortw.h"
 #include "aff_pt.h"
 
+
+#define PRJ_PT_MAGIC ((word_t)(0xe1cd70babb1d5afeULL))
+
 typedef struct {
 	fp X;
 	fp Y;
