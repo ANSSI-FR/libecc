@@ -226,3 +226,152 @@ int gen_hash_hfunc_scattered(const u8 **input, const u32 *ilen, u8 *digest, gen_
 err:
 	return ret;
 }
+
+int gen_hash_hfunc(const u8 *input, u32 ilen, u8 *digest, gen_hash_alg_type gen_hash_type)
+{
+	const u8 *inputs[2] = { input, NULL };
+	u32 ilens[2] = { ilen, 0 };
+
+	return gen_hash_hfunc_scattered(inputs, ilens, digest, gen_hash_type);
+}
+
+int gen_hash_init(gen_hash_context *ctx, gen_hash_alg_type gen_hash_type)
+{
+	int ret;
+
+	MUST_HAVE((ctx != NULL), ret, err);
+
+	switch(gen_hash_type){
+		case HASH_MD2:{
+			ret = md2_init(&(ctx->md2ctx)); EG(ret, err);
+			break;
+		}
+		case HASH_MD4:{
+			ret = md4_init(&(ctx->md4ctx)); EG(ret, err);
+			break;
+		}
+		case HASH_MD5:{
+			ret = md5_init(&(ctx->md5ctx)); EG(ret, err);
+			break;
+		}
+		case HASH_SHA0:{
+			ret = sha0_init(&(ctx->sha0ctx)); EG(ret, err);
+			break;
+		}
+		case HASH_SHA1:{
+			ret = sha1_init(&(ctx->sha1ctx)); EG(ret, err);
+			break;
+		}
+		/* The fallback should be libecc type */
+		default:{
+			const hash_mapping *hm;
+			hash_alg_type hash_type;
+			u8 hlen, block_size;
+			ret = get_libecc_hash(gen_hash_type, &hash_type, &hm, &hlen, &block_size); EG(ret, err);
+			MUST_HAVE((hm != NULL), ret, err);
+			ret = hm->hfunc_init(&(ctx->hctx)); EG(ret, err);
+			break;
+		}
+	}
+
+err:
+	return ret;
+}
+
+int gen_hash_update(gen_hash_context *ctx, const u8 *chunk, u32 chunklen, gen_hash_alg_type gen_hash_type)
+{
+	int ret;
+
+	MUST_HAVE((ctx != NULL), ret, err);
+
+	switch(gen_hash_type){
+		case HASH_MD2:{
+			ret = md2_update(&(ctx->md2ctx), chunk, chunklen); EG(ret, err);
+			break;
+		}
+		case HASH_MD4:{
+			ret = md4_update(&(ctx->md4ctx), chunk, chunklen); EG(ret, err);
+			break;
+		}
+		case HASH_MD5:{
+			ret = md5_update(&(ctx->md5ctx), chunk, chunklen); EG(ret, err);
+			break;
+		}
+		case HASH_SHA0:{
+			ret = sha0_update(&(ctx->sha0ctx), chunk, chunklen); EG(ret, err);
+			break;
+		}
+		case HASH_SHA1:{
+			ret = sha1_update(&(ctx->sha1ctx), chunk, chunklen); EG(ret, err);
+			break;
+		}
+		/* The fallback should be libecc type */
+		default:{
+			const hash_mapping *hm;
+			hash_alg_type hash_type;
+			u8 hlen, block_size;
+			ret = get_libecc_hash(gen_hash_type, &hash_type, &hm, &hlen, &block_size); EG(ret, err);
+			MUST_HAVE((hm != NULL), ret, err);
+			ret = hm->hfunc_update(&(ctx->hctx), chunk, chunklen); EG(ret, err);
+			break;
+		}
+	}
+
+err:
+	return ret;
+}
+
+int gen_hash_final(gen_hash_context *ctx, u8 *output, gen_hash_alg_type gen_hash_type)
+{
+	int ret;
+
+	MUST_HAVE((ctx != NULL), ret, err);
+
+	switch(gen_hash_type){
+		case HASH_MD2:{
+			ret = md2_final(&(ctx->md2ctx), output); EG(ret, err);
+			break;
+		}
+		case HASH_MD4:{
+			ret = md4_final(&(ctx->md4ctx), output); EG(ret, err);
+			break;
+		}
+		case HASH_MD5:{
+			ret = md5_final(&(ctx->md5ctx), output); EG(ret, err);
+			break;
+		}
+		case HASH_SHA0:{
+			ret = sha0_final(&(ctx->sha0ctx), output); EG(ret, err);
+			break;
+		}
+		case HASH_SHA1:{
+			ret = sha1_final(&(ctx->sha1ctx), output); EG(ret, err);
+			break;
+		}
+		/* The fallback should be libecc type */
+		default:{
+			const hash_mapping *hm;
+			hash_alg_type hash_type;
+			u8 hlen, block_size;
+			ret = get_libecc_hash(gen_hash_type, &hash_type, &hm, &hlen, &block_size); EG(ret, err);
+			MUST_HAVE((hm != NULL), ret, err);
+			ret = hm->hfunc_finalize(&(ctx->hctx), output); EG(ret, err);
+			break;
+		}
+	}
+
+err:
+	return ret;
+}
+
+#ifdef HASH
+int main(int argc, char *argv[])
+{
+        int ret = 0;
+        FORCE_USED_VAR(argc);
+        FORCE_USED_VAR(argv);
+
+err:
+        return ret;
+}
+#endif

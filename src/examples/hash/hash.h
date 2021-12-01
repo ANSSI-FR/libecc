@@ -63,7 +63,27 @@ typedef enum {
 	HASH_NO_HASH = 20,
 } gen_hash_alg_type;
 
+/* Our generic hash context */
+typedef union {
+	/* libecc native hashes */
+	hash_context hctx;
+	/* MD2 */
+	md2_context md2ctx;
+	/* MD4 */
+	md4_context md4ctx;
+	/* MD5 */
+	md5_context md5ctx;
+	/* SHA-0 */
+	sha0_context sha0ctx;
+	/* SHA-1 */
+	sha1_context sha1ctx;
+} gen_hash_context;
+
 ATTRIBUTE_WARN_UNUSED_RET int gen_hash_get_hash_sizes(gen_hash_alg_type gen_hash_type, u8 *hlen, u8 *block_size);
+ATTRIBUTE_WARN_UNUSED_RET int gen_hash_init(gen_hash_context *ctx, gen_hash_alg_type gen_hash_type);
+ATTRIBUTE_WARN_UNUSED_RET int gen_hash_update(gen_hash_context *ctx, const u8 *chunk, u32 chunklen, gen_hash_alg_type gen_hash_type);
+ATTRIBUTE_WARN_UNUSED_RET int gen_hash_final(gen_hash_context *ctx, u8 *output, gen_hash_alg_type gen_hash_type);
+ATTRIBUTE_WARN_UNUSED_RET int gen_hash_hfunc(const u8 *input, u32 ilen, u8 *digest, gen_hash_alg_type gen_hash_type);
 ATTRIBUTE_WARN_UNUSED_RET int gen_hash_hfunc_scattered(const u8 **input, const u32 *ilen, u8 *digest, gen_hash_alg_type gen_hash_type);
 
 #endif /* __HASH_HASH_H__ */
