@@ -89,8 +89,8 @@ typedef struct {
 	} key;
 } rsa_priv_key;
 
-ATTRIBUTE_WARN_UNUSED_RET int i2osp(nn_src_t x, u8 *buf, u16 buflen);
-ATTRIBUTE_WARN_UNUSED_RET int os2ip(nn_t x, const u8 *buf, u16 buflen);
+ATTRIBUTE_WARN_UNUSED_RET int rsa_i2osp(nn_src_t x, u8 *buf, u16 buflen);
+ATTRIBUTE_WARN_UNUSED_RET int rsa_os2ip(nn_t x, const u8 *buf, u16 buflen);
 
 ATTRIBUTE_WARN_UNUSED_RET int rsa_import_pub_key(rsa_pub_key *pub, const u8 *n,
 						 u16 nlen, const u8 *e, u16 elen);

@@ -18,6 +18,9 @@
 #include "rand.h"
 /* We include the printf external dependency for printf output */
 #include "print.h"
+/* We include our common helpers */
+#include "../common/common.h"
+
 
 /*
  * The purpose of this example is to implement the RSA
@@ -143,132 +146,21 @@ err:
 	return ret;
 }
 
-
-
 /* I2OSP - Integer-to-Octet-String primitive
  * (as decribed in section 4.1 of RFC 8017)
  */
-int i2osp(nn_src_t x, u8 *buf, u16 buflen)
+int rsa_i2osp(nn_src_t x, u8 *buf, u16 buflen)
 {
-	int ret;
-	bitcnt_t blen;
-
-	/* Sanity checks */
-	MUST_HAVE((buf != NULL), ret, err);
-	ret = nn_check_initialized(x); EG(ret, err);
-
-	/* If x >= 256^xLen (the integer does not fit in the buffer),
-	 * return an error.
-	 */
-	ret = nn_bitlen(x, &blen); EG(ret, err);
-	MUST_HAVE(((8 * buflen) >= blen), ret, err);
-
-	/* Export to the buffer */
-	ret = nn_export_to_buf(buf, buflen, x);
-
-err:
-	return ret;
+	return _i2osp(x, buf, buflen);
 }
 
 /* OS2IP - Octet-String-to-Integer primitive
  * (as decribed in section 4.2 of RFC 8017)
  */
-int os2ip(nn_t x, const u8 *buf, u16 buflen)
+int rsa_os2ip(nn_t x, const u8 *buf, u16 buflen)
 {
-	int ret;
-
-	/* We do not want to exceed our computation compatible
-	 * size.
-	 */
-	MUST_HAVE((buflen <= NN_USABLE_MAX_BYTE_LEN), ret, err);
-
-	/* Import the NN */
-	ret = nn_init_from_buf(x, buf, buflen);
-
-err:
-	return ret;
+	return _os2ip(x, buf, buflen);
 }
-
-/*
- * NOT constant time at all and not secure against side-channels. This is
- * an internal function only used for RSA decryption on public data.
- *
- * Compute (base ** exp) mod (mod) using a square and multiply algorithm.
- * Internally, this computes Montgomery coefficients and uses the redc
- * function.
- *
- * Returns 0 on success, -1 on error.
- */
-ATTRIBUTE_WARN_UNUSED_RET static int _nn_mod_pow_insecure(nn_t out, nn_src_t base,
-							  nn_src_t exp, nn_src_t mod)
-{
-	int ret, isodd, cmp;
-	bitcnt_t explen;
-	u8 expbit;
-	nn r, r_square, _base, one;
-	word_t mpinv;
-	r.magic = r_square.magic = _base.magic = one.magic = WORD(0);
-
-	/* Aliasing is not supported for this internal helper */
-	MUST_HAVE((out != base) && (out != exp) && (out != mod), ret, err);
-
-	/* Check initializations */
-	ret = nn_check_initialized(base); EG(ret, err);
-	ret = nn_check_initialized(exp); EG(ret, err);
-	ret = nn_check_initialized(mod); EG(ret, err);
-
-	ret = nn_bitlen(exp, &explen); EG(ret, err);
-	/* Sanity check */
-	MUST_HAVE((explen > 0), ret, err);
-
-	/* Check that the modulo is indeed odd */
-	ret = nn_isodd(mod, &isodd); EG(ret, err);
-	MUST_HAVE(isodd, ret, err);
-
-	/* Compute the Montgomery coefficients */
-	ret = nn_compute_redc1_coefs(&r, &r_square, mod, &mpinv); EG(ret, err);
-
-	/* Reduce the base if necessary */
-	ret = nn_cmp(base, mod, &cmp); EG(ret, err);
-	if(cmp >= 0){
-		ret = nn_mod(&_base, base, mod); EG(ret, err);
-	}
-	else{
-		ret = nn_copy(&_base, base); EG(ret, err);
-	}
-
-	ret = nn_mul_redc1(&_base, &_base, &r_square, mod, mpinv); EG(ret, err);
-	ret = nn_copy(out, &r); EG(ret, err);
-
-	ret = nn_init(&one, 0); EG(ret, err);
-	ret = nn_one(&one); EG(ret, err);
-
-	while (explen > 0) {
-		explen -= (bitcnt_t)1;
-
-		/* Get the bit */
-		ret = nn_getbit(exp, explen, &expbit); EG(ret, err);
-
-		/* Square */
-		ret = nn_mul_redc1(out, out, out, mod, mpinv); EG(ret, err);
-
-		if(expbit){
-			/* Multiply */
-			ret = nn_mul_redc1(out, out, &_base, mod, mpinv); EG(ret, err);
-		}
-	}
-	/* Unredcify the output */
-	ret = nn_mul_redc1(out, out, &one, mod, mpinv);
-
-err:
-	nn_uninit(&r);
-	nn_uninit(&r_square);
-	nn_uninit(&_base);
-	nn_uninit(&one);
-
-	return ret;
-}
-
 
 /* The raw RSAEP function as defined in RFC 8017 section 5.1.1
  *     Input: an RSA public key and a big int message
@@ -286,6 +178,10 @@ int rsaep(const rsa_pub_key *pub, nn_src_t m, nn_t c)
 	/* Make things more readable */
 	n = &(pub->n);
 	e = &(pub->e);
+
+	/* Sanity checks */
+	ret = nn_check_initialized(n); EG(ret, err);
+	ret = nn_check_initialized(e); EG(ret, err);
 
 	/* Check that m is indeed in [0, n-1], trigger an error if not */
 	MUST_HAVE((!nn_cmp(m, n, &cmp)) && (cmp < 0), ret, err);
@@ -335,6 +231,12 @@ ATTRIBUTE_WARN_UNUSED_RET static int rsadp_crt_coeffs(const rsa_priv_key *priv, 
 		d_i = &(priv->key.crt.coeffs[i].d);
 		t_i = &(priv->key.crt.coeffs[i].t);
 
+		/* Sanity checks */
+		ret = nn_check_initialized(r_i_1); EG(ret, err);
+		ret = nn_check_initialized(r_i); EG(ret, err);
+		ret = nn_check_initialized(d_i); EG(ret, err);
+		ret = nn_check_initialized(t_i); EG(ret, err);
+
 		/* m_i = c^(d_i) mod r_i */
 		ret = nn_mod_pow(&m_i, c, d_i, r_i); EG(ret, err);
 		/* R = R * r_(i-1) */
@@ -381,6 +283,13 @@ ATTRIBUTE_WARN_UNUSED_RET static int rsadp_crt(const rsa_priv_key *priv, nn_src_
 	qInv = &(priv->key.crt.qInv);
 	u    = priv->key.crt.u;
 
+	/* Sanity checks */
+	ret = nn_check_initialized(p); EG(ret, err);
+	ret = nn_check_initialized(q); EG(ret, err);
+	ret = nn_check_initialized(dP); EG(ret, err);
+	ret = nn_check_initialized(dQ); EG(ret, err);
+	ret = nn_check_initialized(qInv); EG(ret, err);
+
 	/* m_1 = c^dP mod p */
 	ret = nn_mod_pow(&m_1, c, dP, p); EG(ret, err);
 	/* m_2 = c^dQ mod q */
@@ -424,6 +333,9 @@ int rsadp(const rsa_priv_key *priv, nn_src_t c, nn_t m)
 		/* Make things more readable */
 		n = &(priv->key.s.n);
 		d = &(priv->key.s.d);
+		/* Sanity checks */
+		ret = nn_check_initialized(n); EG(ret, err);
+		ret = nn_check_initialized(d); EG(ret, err);
 		/* Check that c is indeed in [0, n-1], trigger an error if not */
 		MUST_HAVE((!nn_cmp(c, n, &cmp)) && (cmp < 0), ret, err1);
 		/* Compute m = c^d mod n */
@@ -1034,11 +946,11 @@ int rsaes_pkcs1_v1_5_encrypt(const rsa_pub_key *pub, const u8 *m, u16 mlen,
 	/* RSA encryption */
 	/*   m = OS2IP (EM) */
 	MUST_HAVE((k < (u32)(0x1 << 16)), ret, err);
-	ret = os2ip(&m_, em, (u16)k); EG(ret, err);
+	ret = rsa_os2ip(&m_, em, (u16)k); EG(ret, err);
 	/*   c = RSAEP ((n, e), m) */
 	ret = rsaep(pub, &m_, &c_); EG(ret, err);
 	/*   C = I2OSP (c, k) */
-	ret = i2osp(&c_, c, (u16)k); EG(ret, err);
+	ret = rsa_i2osp(&c_, c, (u16)k); EG(ret, err);
 	(*clen) = (u16)k;
 
 err:
@@ -1076,12 +988,12 @@ int rsaes_pkcs1_v1_5_decrypt(const rsa_priv_key *priv, const u8 *c, u16 clen,
 
 	/* RSA decryption */
 	/*   c = OS2IP (C) */
-	ret = os2ip(&c_, c, clen); EG(ret, err);
+	ret = rsa_os2ip(&c_, c, clen); EG(ret, err);
 	/*   m = RSADP ((n, d), c) */
 	ret = rsadp(priv, &c_, &m_); EG(ret, err);
 	/*   EM = I2OSP (m, k) */
 	MUST_HAVE((k < (u32)(0x1 << 16)), ret, err);
-	ret = i2osp(&m_, em, (u16)k); EG(ret, err);
+	ret = rsa_i2osp(&m_, em, (u16)k); EG(ret, err);
 
 	/* EME-PKCS1-v1_5 decoding: EM = 0x00 || 0x02 || PS || 0x00 || M */
 	/* NOTE: we try our best to do the following in constant time to
@@ -1226,11 +1138,11 @@ int rsaes_oaep_encrypt(const rsa_pub_key *pub, const u8 *m, u16 mlen,
 	/* RSA encryption */
 	/*   m = OS2IP (EM) */
 	MUST_HAVE((k < (u32)(0x1 << 16)), ret, err);
-	ret = os2ip(&m_, em, (u16)k); EG(ret, err);
+	ret = rsa_os2ip(&m_, em, (u16)k); EG(ret, err);
 	/*   c = RSAEP ((n, e), m) */
 	ret = rsaep(pub, &m_, &c_); EG(ret, err);
 	/*   C = I2OSP (c, k) */
-	ret = i2osp(&c_, c, (u16)k); EG(ret, err);
+	ret = rsa_i2osp(&c_, c, (u16)k); EG(ret, err);
 	(*clen) = (u16)k;
 
 err:
@@ -1289,12 +1201,12 @@ int rsaes_oaep_decrypt(const rsa_priv_key *priv, const u8 *c, u16 clen,
 
 	/* RSA decryption */
 	/*   c = OS2IP (C) */
-	ret = os2ip(&c_, c, clen); EG(ret, err);
+	ret = rsa_os2ip(&c_, c, clen); EG(ret, err);
 	/*   m = RSADP ((n, d), c) */
 	ret = rsadp(priv, &c_, &m_); EG(ret, err);
 	/*   EM = I2OSP (m, k) */
 	MUST_HAVE((k < (u32)(0x1 << 16)), ret, err);
-	ret = i2osp(&m_, em, (u16)k); EG(ret, err);
+	ret = rsa_i2osp(&m_, em, (u16)k); EG(ret, err);
 
 	/* EME-OAEP decoding */
 	/* lHash = Hash(L) */
@@ -1404,11 +1316,11 @@ int rsassa_pkcs1_v1_5_sign(const rsa_priv_key *priv, const u8 *m, u16 mlen,
 	ret = emsa_pkcs1_v1_5_encode(m, mlen, em, (u16)k, gen_hash_type); EG(ret, err);
 
 	/* m = OS2IP (EM) */
-	ret = os2ip(&m_, em, (u16)k); EG(ret, err);
+	ret = rsa_os2ip(&m_, em, (u16)k); EG(ret, err);
 	/* s = RSASP1 (K, m) */
 	ret = rsasp1(priv, &m_, &s_); EG(ret, err);
 	/* S = I2OSP (s, k) */
-	ret = i2osp(&s_, s, (u16)k);
+	ret = rsa_i2osp(&s_, s, (u16)k);
 	(*slen) = (u16)k;
 
 err:
@@ -1453,12 +1365,12 @@ int rsassa_pkcs1_v1_5_verify(const rsa_pub_key *pub, const u8 *m, u16 mlen,
 	MUST_HAVE(((u16)k == slen), ret, err);
 
 	/* s = OS2IP (S) */
-	ret = os2ip(&s_, s, slen); EG(ret, err);
+	ret = rsa_os2ip(&s_, s, slen); EG(ret, err);
 	/* m = RSAVP1 ((n, e), s) */
 	ret = rsavp1(pub, &s_, &m_); EG(ret, err);
 	/* EM = I2OSP (m, k) */
 	MUST_HAVE((slen <= sizeof(em)), ret, err);
-	ret = i2osp(&m_, em, slen); EG(ret, err);
+	ret = rsa_i2osp(&m_, em, slen); EG(ret, err);
 	/* EM' = EMSA-PKCS1-V1_5-ENCODE (M, k) */
 	MUST_HAVE((k <= sizeof(em_)), ret, err);
 	ret = emsa_pkcs1_v1_5_encode(m, mlen, em_, (u16)k, gen_hash_type); EG(ret, err);
@@ -1508,12 +1420,12 @@ int rsassa_pss_sign(const rsa_priv_key *priv, const u8 *m, u16 mlen,
 	MUST_HAVE(emsize == BYTECEIL(modbits - 1), ret, err);
 
 	/* m = OS2IP (EM) */
-	ret = os2ip(&m_, em, (u16)emsize); EG(ret, err);
+	ret = rsa_os2ip(&m_, em, (u16)emsize); EG(ret, err);
 	/* s = RSASP1 (K, m) */
 	ret = rsasp1(priv, &m_, &s_); EG(ret, err);
 	/* S = I2OSP (s, k) */
 	MUST_HAVE((k < (0x1 << 16)), ret, err);
-	ret = i2osp(&s_, s, (u16)k);
+	ret = rsa_i2osp(&s_, s, (u16)k);
 	(*slen) = (u16)k;
 
 err:
@@ -1554,7 +1466,7 @@ int rsassa_pss_verify(const rsa_pub_key *pub, const u8 *m, u16 mlen,
 	MUST_HAVE((k < (u32)(0x1 << 16)), ret, err);
 
 	/* s = OS2IP (S) */
-	ret = os2ip(&s_, s, slen); EG(ret, err);
+	ret = rsa_os2ip(&s_, s, slen); EG(ret, err);
 	/* m = RSAVP1 ((n, e), s) */
 	ret = rsavp1(pub, &s_, &m_); EG(ret, err);
 	/* emLen = \ceil ((modBits - 1)/8) */
@@ -1566,7 +1478,7 @@ int rsassa_pss_verify(const rsa_pub_key *pub, const u8 *m, u16 mlen,
 
 	/* EM = I2OSP (m, emLen) */
 	MUST_HAVE((emlen <= sizeof(em)), ret, err);
-	ret = i2osp(&m_, em, (u16)emlen); EG(ret, err);
+	ret = rsa_i2osp(&m_, em, (u16)emlen); EG(ret, err);
 	/*  Result = EMSA-PSS-VERIFY (M, EM, modBits - 1) */
 	ret = emsa_pss_verify(m, mlen, em, (modbits - 1), emlen, gen_hash_type, mgf_hash_type, saltlen);
 
