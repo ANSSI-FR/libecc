@@ -29,7 +29,7 @@
  *
  * XXX: Please be aware that libecc has been designed for Elliptic
  * Curve cryptography, and as so the arithmetic primitives are
- * not optimized for bug numbers >= 1024 bits usually used for RSA.
+ * not optimized for big numbers >= 1024 bits usually used for RSA.
  * Additionnaly, a hard limit of our NN values makes it impossible
  * to exceed ~5300 bits in the best case (words of size 64 bits).
  *
