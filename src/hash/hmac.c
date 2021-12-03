@@ -123,7 +123,7 @@ int hmac_finalize(hmac_context *ctx, u8 *output, u8 *outlen)
 err:
 	if(ctx != NULL){
 		/* Clear the hash contexts that could contain sensitive data */
-		ret = local_memset(ctx, 0, sizeof(hmac_context)); EG(ret, err);
+		IGNORE_RET_VAL(local_memset(ctx, 0, sizeof(hmac_context)));
 		/* Uninitialize the context  */
 		ctx->magic = WORD(0);
 	}
