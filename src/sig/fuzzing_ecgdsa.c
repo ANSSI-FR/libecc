@@ -45,7 +45,7 @@ int ecgdsa_sign_raw(struct ec_sign_context *ctx, const u8 *input, u8 inputlen, u
 	u8 e_buf[BIT_LEN_WORDS(NN_MAX_BIT_LEN) * (WORDSIZE / 8)];
         const ec_priv_key *priv_key;
         prj_pt_src_t G;
-        u8 hsize, r_len, s_len, p_len;
+        u8 hsize, r_len, s_len;
         bitcnt_t q_bit_len, p_bit_len, rshift;
         prj_pt kG;
         int ret, iszero;
@@ -78,14 +78,12 @@ int ecgdsa_sign_raw(struct ec_sign_context *ctx, const u8 *input, u8 inputlen, u
 	x = &(priv_key->x);
 	q_bit_len = priv_key->params->ec_gen_order_bitlen;
 	p_bit_len = priv_key->params->ec_fp.p_bitlen;
-	p_len = (u8)BYTECEIL(p_bit_len);
+	MUST_HAVE(((u32)BYTECEIL(p_bit_len) <= NN_MAX_BYTE_LEN), ret, err);
 	r_len = (u8)ECGDSA_R_LEN(q_bit_len);
 	s_len = (u8)ECGDSA_S_LEN(q_bit_len);
 	hsize = inputlen;
 
 	MUST_HAVE((siglen == ECGDSA_SIGLEN(q_bit_len)), ret, err);
-
-	MUST_HAVE(((u32)p_len <= NN_MAX_BYTE_LEN), ret, err);
 
 	dbg_nn_print("p", &(priv_key->params->ec_fp.p));
 	dbg_nn_print("q", q);
@@ -234,7 +232,6 @@ int ecgdsa_sign_raw(struct ec_sign_context *ctx, const u8 *input, u8 inputlen, u
 	VAR_ZEROIFY(p_bit_len);
 	VAR_ZEROIFY(r_len);
 	VAR_ZEROIFY(s_len);
-	VAR_ZEROIFY(p_len);
 	VAR_ZEROIFY(hsize);
 	PTR_NULLIFY(q);
 	PTR_NULLIFY(x);

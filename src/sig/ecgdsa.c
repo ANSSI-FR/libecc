@@ -218,7 +218,7 @@ int _ecgdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	x = &(priv_key->x);
 	q_bit_len = priv_key->params->ec_gen_order_bitlen;
 	p_bit_len = priv_key->params->ec_fp.p_bitlen;
-	MUST_HAVE(((u8)BYTECEIL(p_bit_len) <= NN_MAX_BYTE_LEN), ret, err);
+	MUST_HAVE(((u32)BYTECEIL(p_bit_len) <= NN_MAX_BYTE_LEN), ret, err);
 	r_len = (u8)ECGDSA_R_LEN(q_bit_len);
 	s_len = (u8)ECGDSA_S_LEN(q_bit_len);
 	hsize = ctx->h->digest_size;
