@@ -147,10 +147,9 @@ int _ecfsdsa_sign_init(struct ec_sign_context *ctx)
 	r = ctx->sign_data.ecfsdsa.r;
 	k = &(ctx->sign_data.ecfsdsa.k);
 	p_bit_len = priv_key->params->ec_fp.p_bitlen;
+	MUST_HAVE(((u8)BYTECEIL(p_bit_len) <= NN_MAX_BYTE_LEN), ret, err);
 	p_len = (u8)BYTECEIL(p_bit_len);
 	r_len = (u8)ECFSDSA_R_LEN(p_bit_len);
-
-	MUST_HAVE(((u32)p_len <= NN_MAX_BYTE_LEN), ret, err);
 
 	dbg_nn_print("p", &(priv_key->params->ec_fp.p));
 	dbg_nn_print("q", q);

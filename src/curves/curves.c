@@ -23,7 +23,7 @@
  * 'ec_params' is not meaningful on error.
  */
 int ec_get_curve_params_by_name(const u8 *ec_name, u8 ec_name_len,
-				const ec_str_params **ec_params)
+				const ec_str_params **ec_s_params)
 {
 	const ec_str_params *params;
 	u8 comp_len, name_len;
@@ -34,7 +34,7 @@ int ec_get_curve_params_by_name(const u8 *ec_name, u8 ec_name_len,
 	int ret, check;
 
 	MUST_HAVE((ec_name != NULL), ret, err);
-	MUST_HAVE((ec_params != NULL), ret, err);
+	MUST_HAVE((ec_s_params != NULL), ret, err);
 	MUST_HAVE(((ec_name_len > 2) && (ec_name_len <= MAX_CURVE_NAME_LEN)), ret, err);
 
 	/*
@@ -63,7 +63,7 @@ int ec_get_curve_params_by_name(const u8 *ec_name, u8 ec_name_len,
 		}
 
 		if ((!are_str_equal((const char *)ec_name, (const char *)name, &check)) && check) {
-			(*ec_params) = params;
+			(*ec_s_params) = params;
 			ret = 0;
 			break;
 		}
@@ -80,7 +80,7 @@ int ec_get_curve_params_by_name(const u8 *ec_name, u8 ec_name_len,
  * case 'ec_params' is not meaningful. The function returns 0 on success.
  */
 int ec_get_curve_params_by_type(ec_curve_type ec_type,
-				const ec_str_params **ec_params)
+				const ec_str_params **ec_s_params)
 {
 	const ec_str_params *params;
 	const ec_mapping *map;
@@ -90,7 +90,7 @@ int ec_get_curve_params_by_type(ec_curve_type ec_type,
 	unsigned int i;
 	int ret;
 
-	MUST_HAVE((ec_params != NULL), ret, err);
+	MUST_HAVE((ec_s_params != NULL), ret, err);
 
 	ret = -1;
 	for (i = 0; i < EC_CURVES_NUM; i++) {
@@ -111,7 +111,7 @@ int ec_get_curve_params_by_type(ec_curve_type ec_type,
 
 			MUST_HAVE((params->name->buflen == (name_len + 1)), ret, err);
 
-			(*ec_params) = params;
+			(*ec_s_params) = params;
 			ret = 0;
 			break;
 		}

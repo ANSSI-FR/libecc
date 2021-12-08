@@ -369,10 +369,12 @@ err:
 }
 
 #ifdef CURVE_BASIC_EXAMPLES
-int main()
+int main(int argc, char *argv[])
 {
 	unsigned int i;
 	u8 curve_name[MAX_CURVE_NAME_LEN] = { 0 };
+	FORCE_USED_VAR(argc);
+	FORCE_USED_VAR(argv);
 
 	/* Traverse all the possible curves we have at our disposal (known curves and
 	 * user defined curves).

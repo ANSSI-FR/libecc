@@ -21,7 +21,7 @@
 ATTRIBUTE_WARN_UNUSED_RET int miller_rabin(nn_src_t n, const unsigned int t, int *check);
 
 #ifdef FP_EXAMPLE
-int main()
+int main(int argc, char *argv[])
 {
 	nn p;
 	fp x, x_sqrt1, x_sqrt2;
@@ -29,6 +29,8 @@ int main()
 	int ret, ret_sqr, isone, check, cmp;
 	x.magic = x_sqrt1.magic = x_sqrt2.magic = WORD(0);
 	ctx.magic = WORD(0);
+	FORCE_USED_VAR(argc);
+ 	FORCE_USED_VAR(argv);
 
 	while (1) {
 		/* Get a random prime p of maximum 521 bits */

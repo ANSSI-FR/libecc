@@ -18,9 +18,6 @@
 
 #include "sig_algs_internal.h"
 
-/* Generic private key generation function */
-ATTRIBUTE_WARN_UNUSED_RET int generic_gen_priv_key(ec_priv_key *priv_key);
-
 /* Private key generation function specific to each scheme */
 ATTRIBUTE_WARN_UNUSED_RET int gen_priv_key(ec_priv_key *priv_key);
 

@@ -223,11 +223,13 @@ err:
 }
 
 #ifdef NN_EXAMPLE
-int main()
+int main(int argc, char *argv[])
 {
 	nn n;
 	int ret;
 	n.magic = WORD(0);
+	FORCE_USED_VAR(argc);
+	FORCE_USED_VAR(argv);
 
 	/* Fermat F5 = 2^32 + 1 = 641 x 6700417 */
 	const unsigned char fermat_F5[] = { 0x01, 0x00, 0x00, 0x00, 0x01 };

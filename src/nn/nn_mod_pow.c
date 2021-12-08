@@ -198,7 +198,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int _nn_mod_pow(nn_t out, nn_src_t base, nn_src
 {
 	int ret;
 
-	if ((out == base) || (out == base) || (out == exp) || (out == mod)) {
+	if ((out == base) || (out == exp) || (out == mod)) {
 		nn _out;
 		_out.magic = WORD(0);
 
@@ -266,7 +266,7 @@ int nn_mod_pow_redc(nn_t out, nn_src_t base, nn_src_t exp, nn_src_t mod, nn_src_
 		ret = nn_copy(&_mod, mod); EG(ret, err1);
 		ret = nn_set_wlen(&_mod, 2); EG(ret, err1);
 		/* Handle output aliasing */
-		if ((out == base) || (out == base) || (out == exp) || (out == mod) || (out == r) || (out == r_square)) {
+		if ((out == base) || (out == exp) || (out == mod) || (out == r) || (out == r_square)) {
 			ret = _nn_mod_pow_redc_aliased(out, base, exp, &_mod, r, r_square, mpinv); EG(ret, err1);
 		} else {
 			ret = _nn_mod_pow_redc(out, base, exp, &_mod, r, r_square, mpinv); EG(ret, err1);
@@ -277,7 +277,7 @@ err1:
 	}
 	else{
 		/* Handle output aliasing */
-		if ((out == base) || (out == base) || (out == exp) || (out == mod) || (out == r) || (out == r_square)) {
+		if ((out == base) || (out == exp) || (out == mod) || (out == r) || (out == r_square)) {
 			ret = _nn_mod_pow_redc_aliased(out, base, exp, mod, r, r_square, mpinv);
 		} else {
 			ret = _nn_mod_pow_redc(out, base, exp, mod, r, r_square, mpinv);

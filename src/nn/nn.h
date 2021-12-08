@@ -90,7 +90,6 @@ ATTRIBUTE_WARN_UNUSED_RET int nn_cmp_word(nn_src_t in, word_t w, int *cmp);
 ATTRIBUTE_WARN_UNUSED_RET int nn_cmp(nn_src_t A, nn_src_t B, int *cmp);
 ATTRIBUTE_WARN_UNUSED_RET int nn_copy(nn_t dst_nn, nn_src_t src_nn);
 ATTRIBUTE_WARN_UNUSED_RET int nn_normalize(nn_t in1);
-ATTRIBUTE_WARN_UNUSED_RET int nn_init_from_buf(nn_t out_nn, const u8 *buf, u16 buflen);
 ATTRIBUTE_WARN_UNUSED_RET int nn_export_to_buf(u8 *buf, u16 buflen, nn_src_t in_nn);
 ATTRIBUTE_WARN_UNUSED_RET int nn_tabselect(nn_t out, u8 idx, nn_src_t *tab, u8 tabsize);
 

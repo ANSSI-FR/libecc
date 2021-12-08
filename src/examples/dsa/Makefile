@@ -2,6 +2,9 @@ ROOT_DIR=../../..
 BUILD_DIR=$(ROOT_DIR)/build
 include $(ROOT_DIR)/common.mk
 
+# Remove old includes with bad relative folders
+CFLAGS := $(patsubst -I%,,$(CFLAGS))
+# Add proper includes
 CFLAGS += -I$(ROOT_DIR)/src/ -I$(ROOT_DIR)/src/external_deps
 
 all:	dsa

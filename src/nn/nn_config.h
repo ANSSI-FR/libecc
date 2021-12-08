@@ -160,37 +160,37 @@
  * or not.
  */
 #ifdef NO_USE_COMPLETE_FORMULAS
-#define _CONCATENATE(a, b, c, d) a##b##c##d
-#define CONCATENATE(a, b, c, d) _CONCATENATE(a, b, c, d)
-void CONCATENATE(nn_consistency_check_maxbitlen, NN_MAX_BASE, wordsize,
+#define _LIBECC_CONCATENATE(a, b, c, d) a##b##c##d
+#define LIBECC_CONCATENATE(a, b, c, d) _LIBECC_CONCATENATE(a, b, c, d)
+void LIBECC_CONCATENATE(nn_consistency_check_maxbitlen, NN_MAX_BASE, wordsize,
 		 WORDSIZE) (void);
 #ifdef NN_CONSISTENCY_CHECK
-ATTRIBUTE_USED void CONCATENATE(nn_consistency_check_maxbitlen, NN_MAX_BASE,
+ATTRIBUTE_USED void LIBECC_CONCATENATE(nn_consistency_check_maxbitlen, NN_MAX_BASE,
 				wordsize, WORDSIZE) (void) {
 	return;
 }
 #else
 ATTRIBUTE_USED static inline void nn_check_libconsistency(void)
 {
-	CONCATENATE(nn_consistency_check_maxbitlen, NN_MAX_BASE, wordsize,
+	LIBECC_CONCATENATE(nn_consistency_check_maxbitlen, NN_MAX_BASE, wordsize,
 		    WORDSIZE) ();
 	return;
 }
 #endif
 #else /* NO_USE_COMPLETE_FORMULAS */
-#define _CONCATENATE(a, b, c, d, e) a##b##c##d##e
-#define CONCATENATE(a, b, c, d, e) _CONCATENATE(a, b, c, d, e)
-void CONCATENATE(nn_consistency_check_maxbitlen, NN_MAX_BASE, wordsize,
+#define _LIBECC_CONCATENATE(a, b, c, d, e) a##b##c##d##e
+#define LIBECC_CONCATENATE(a, b, c, d, e) _LIBECC_CONCATENATE(a, b, c, d, e)
+void LIBECC_CONCATENATE(nn_consistency_check_maxbitlen, NN_MAX_BASE, wordsize,
 		 WORDSIZE, complete_formulas) (void);
 #ifdef NN_CONSISTENCY_CHECK
-ATTRIBUTE_USED void CONCATENATE(nn_consistency_check_maxbitlen, NN_MAX_BASE,
+ATTRIBUTE_USED void LIBECC_CONCATENATE(nn_consistency_check_maxbitlen, NN_MAX_BASE,
 				wordsize, WORDSIZE, complete_formulas) (void) {
 	return;
 }
 #else
 ATTRIBUTE_USED static inline void nn_check_libconsistency(void)
 {
-	CONCATENATE(nn_consistency_check_maxbitlen, NN_MAX_BASE, wordsize,
+	LIBECC_CONCATENATE(nn_consistency_check_maxbitlen, NN_MAX_BASE, wordsize,
 		    WORDSIZE, complete_formulas) ();
 	return;
 }

@@ -16,16 +16,19 @@
 #ifndef __NN_ADD_H__
 #define __NN_ADD_H__
 #include "nn.h"
+#include "nn_add_public.h"
 
 ATTRIBUTE_WARN_UNUSED_RET int nn_cnd_add(int cnd, nn_t out, nn_src_t in1, nn_src_t in2);
+ATTRIBUTE_WARN_UNUSED_RET int nn_cnd_sub(int cnd, nn_t out, nn_src_t in1, nn_src_t in2);
+/* (declared in public header)
 ATTRIBUTE_WARN_UNUSED_RET int nn_add(nn_t out, nn_src_t in1, nn_src_t in2);
 ATTRIBUTE_WARN_UNUSED_RET int nn_inc(nn_t out, nn_src_t in1);
-ATTRIBUTE_WARN_UNUSED_RET int nn_cnd_sub(int cnd, nn_t out, nn_src_t in1, nn_src_t in2);
 ATTRIBUTE_WARN_UNUSED_RET int nn_sub(nn_t out, nn_src_t in1, nn_src_t in2);
 ATTRIBUTE_WARN_UNUSED_RET int nn_dec(nn_t out, nn_src_t in1);
 ATTRIBUTE_WARN_UNUSED_RET int nn_mod_add(nn_t out, nn_src_t in1, nn_src_t in2, nn_src_t p);
 ATTRIBUTE_WARN_UNUSED_RET int nn_mod_inc(nn_t out, nn_src_t in1, nn_src_t p);
 ATTRIBUTE_WARN_UNUSED_RET int nn_mod_sub(nn_t out, nn_src_t in1, nn_src_t in2, nn_src_t p);
 ATTRIBUTE_WARN_UNUSED_RET int nn_mod_dec(nn_t out, nn_src_t in1, nn_src_t p);
+*/
 
 #endif /* __NN_ADD_H__ */

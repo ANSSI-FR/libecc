@@ -19,20 +19,20 @@
  * Locally convert given projective point to affine representation and
  * print x and y coordinates.
  */
-void ec_point_print(const char *msg, prj_pt_src_t prj_pt)
+void ec_point_print(const char *msg, prj_pt_src_t pt)
 {
 	aff_pt y_aff;
 	int ret, iszero;
 	y_aff.magic = WORD(0);
 
 	MUST_HAVE(msg != NULL, ret, err);
-	ret = prj_pt_iszero(prj_pt, &iszero); EG(ret, err);
+	ret = prj_pt_iszero(pt, &iszero); EG(ret, err);
 	if (iszero) {
 		ext_printf("%s: infinity\n", msg);
 		goto err;
 	}
 
-	ret = prj_pt_to_aff(&y_aff, prj_pt); EG(ret, err);
+	ret = prj_pt_to_aff(&y_aff, pt); EG(ret, err);
 	ext_printf("%s", msg);
 	nn_print("x", &(y_aff.x.fp_val));
 	ext_printf("%s", msg);
