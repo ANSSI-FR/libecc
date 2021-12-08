@@ -84,7 +84,7 @@ int ecrdsa_sign_raw(struct ec_sign_context *ctx, const u8 *input, u8 inputlen, u
 	bitcnt_t q_bit_len, p_bit_len;
 	const ec_priv_key *priv_key;
         /* NOTE: hash here is not really a hash ... */
-        u8 h_buf[BIT_LEN_WORDS(NN_MAX_BIT_LEN) * (WORDSIZE / 8)];
+        u8 h_buf[LOCAL_MIN(255, BIT_LEN_WORDS(NN_MAX_BIT_LEN) * (WORDSIZE / 8))];
 	prj_pt_src_t G;
 	prj_pt kG;
 	nn_src_t q, x;
@@ -184,8 +184,14 @@ int ecrdsa_sign_raw(struct ec_sign_context *ctx, const u8 *input, u8 inputlen, u
 
 	/* 6. Compute e = OS2I(h) mod q. If e is 0, set e to 1. */
         /* NOTE: here we have raw ECRDSA, this is the raw input */
-	MUST_HAVE((input != NULL) && ((u32)inputlen <= sizeof(h_buf)), ret, err);
-
+	MUST_HAVE((input != NULL), ret, err);
+	/* NOTE: the MUST_HAVE is protected by a preprocessing check
+	 * to avoid -Werror=type-limits errors:
+	 * "error: comparison is always true due to limited range of data type"
+	 */
+#if LOCAL_MIN(255, BIT_LEN_WORDS(NN_MAX_BIT_LEN) * (WORDSIZE / 8)) < 255
+	MUST_HAVE(((u32)inputlen <= sizeof(h_buf)), ret, err);
+#endif
         ret = local_memset(h_buf, 0, sizeof(h_buf)); EG(ret, err);
         ret = local_memcpy(h_buf, input, hsize); EG(ret, err);
 	dbg_buf_print("H(m)", h_buf, hsize);
@@ -288,7 +294,7 @@ int ecrdsa_verify_raw(struct ec_verify_context *ctx, const u8 *input, u8 inputle
 	prj_pt vY, uG;
 	prj_pt_t Wprime;
         /* NOTE: hash here is not really a hash ... */
-        u8 h_buf[BIT_LEN_WORDS(NN_MAX_BIT_LEN) * (WORDSIZE / 8)];
+        u8 h_buf[LOCAL_MIN(255, BIT_LEN_WORDS(NN_MAX_BIT_LEN) * (WORDSIZE / 8))];
 	nn *r, *s;
 	u8 hsize;
 	int ret, iszero, cmp;
@@ -322,7 +328,14 @@ int ecrdsa_verify_raw(struct ec_verify_context *ctx, const u8 *input, u8 inputle
 
 	/* 2. Compute h = H(m) */
         /* NOTE: here we have raw ECRDSA, this is the raw input */
-	MUST_HAVE((input != NULL) && ((u32)inputlen <= sizeof(h_buf)), ret, err);
+	MUST_HAVE((input != NULL), ret, err);
+	/* NOTE: the MUST_HAVE is protected by a preprocessing check
+	 * to avoid -Werror=type-limits errors:
+	 * "error: comparison is always true due to limited range of data type"
+	 */
+#if LOCAL_MIN(255, BIT_LEN_WORDS(NN_MAX_BIT_LEN) * (WORDSIZE / 8)) < 255
+	MUST_HAVE(((u32)inputlen <= sizeof(h_buf)), ret, err);
+#endif
 
         ret = local_memset(h_buf, 0, sizeof(h_buf)); EG(ret, err);
         ret = local_memcpy(h_buf, input, hsize); EG(ret, err);

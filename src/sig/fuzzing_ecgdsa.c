@@ -42,7 +42,7 @@ int ecgdsa_sign_raw(struct ec_sign_context *ctx, const u8 *input, u8 inputlen, u
 {
         nn_src_t q, x;
 	/* NOTE: hash here is not really a hash ... */
-	u8 e_buf[BIT_LEN_WORDS(NN_MAX_BIT_LEN) * (WORDSIZE / 8)];
+	u8 e_buf[LOCAL_MIN(255, BIT_LEN_WORDS(NN_MAX_BIT_LEN) * (WORDSIZE / 8))];
         const ec_priv_key *priv_key;
         prj_pt_src_t G;
         u8 hsize, r_len, s_len;
@@ -93,7 +93,13 @@ int ecgdsa_sign_raw(struct ec_sign_context *ctx, const u8 *input, u8 inputlen, u
 
 	/* 1. Compute h = H(m) */
         /* NOTE: here we have raw ECGDSA, this is the raw input */
+	/* NOTE: the MUST_HAVE is protected by a preprocessing check
+	 * to avoid -Werror=type-limits errors:
+	 * "error: comparison is always true due to limited range of data type"
+	 */
+#if LOCAL_MIN(255, BIT_LEN_WORDS(NN_MAX_BIT_LEN) * (WORDSIZE / 8)) < 255
 	MUST_HAVE(((u32)inputlen <= sizeof(e_buf)), ret, err);
+#endif
         ret = local_memset(e_buf, 0, sizeof(e_buf)); EG(ret, err);
         ret = local_memcpy(e_buf, input, hsize); EG(ret, err);
 	dbg_buf_print("H(m)", e_buf, hsize);
@@ -259,7 +265,7 @@ int ecgdsa_verify_raw(struct ec_verify_context *ctx, const u8 *input, u8 inputle
 	prj_pt_t Wprime;
 	prj_pt_src_t G, Y;
         /* NOTE: hash here is not really a hash ... */
-        u8 e_buf[BIT_LEN_WORDS(NN_MAX_BIT_LEN) * (WORDSIZE / 8)];
+        u8 e_buf[LOCAL_MIN(255, BIT_LEN_WORDS(NN_MAX_BIT_LEN) * (WORDSIZE / 8))];
 	nn_src_t q;
 	u8 hsize;
         bitcnt_t q_bit_len, rshift;
@@ -295,7 +301,14 @@ int ecgdsa_verify_raw(struct ec_verify_context *ctx, const u8 *input, u8 inputle
 
 	/* 2. Compute h = H(m) */
         /* NOTE: here we have raw ECGDSA, this is the raw input */
-	MUST_HAVE((input != NULL) && ((u32)inputlen <= sizeof(e_buf)), ret, err);
+	MUST_HAVE((input != NULL), ret, err);
+	/* NOTE: the MUST_HAVE is protected by a preprocessing check
+	 * to avoid -Werror=type-limits errors:
+	 * "error: comparison is always true due to limited range of data type"
+	 */
+#if LOCAL_MIN(255, BIT_LEN_WORDS(NN_MAX_BIT_LEN) * (WORDSIZE / 8)) < 255
+	MUST_HAVE(((u32)inputlen <= sizeof(e_buf)), ret, err);
+#endif
 
         ret = local_memset(e_buf, 0, sizeof(e_buf)); EG(ret, err);
         ret = local_memcpy(e_buf, input, hsize); EG(ret, err);

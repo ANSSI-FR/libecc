@@ -607,7 +607,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int ec_sig_known_vector_tests_one(const ec_test
 		digestlen = sig_ctx.h->digest_size;
 		MUST_HAVE(digestlen <= sizeof(digest), ret, err);
 		/* Import the fixed nonce */
-		u8 nonce[BIT_LEN_WORDS(NN_MAX_BIT_LEN) * (WORDSIZE / 8)] = { 0 };
+		u8 nonce[LOCAL_MIN(255, BIT_LEN_WORDS(NN_MAX_BIT_LEN) * (WORDSIZE / 8))] = { 0 };
 		nn n_nonce;
 		bitcnt_t q_bit_len = kp.priv_key.params->ec_gen_order_bitlen;
 		if(c->nn_random(&n_nonce, &(kp.priv_key.params->ec_gen_order))){
@@ -622,7 +622,13 @@ ATTRIBUTE_WARN_UNUSED_RET static int ec_sig_known_vector_tests_one(const ec_test
 			goto err;
 		}
 		u8 noncelen = (u8)(BYTECEIL(q_bit_len));
+		/* NOTE: the MUST_HAVE is protected by a preprocessing check
+		 * to avoid -Werror=type-limits errors:
+		 * "error: comparison is always true due to limited range of data type"
+		 */
+#if LOCAL_MIN(255, BIT_LEN_WORDS(NN_MAX_BIT_LEN) * (WORDSIZE / 8)) < 255
 		MUST_HAVE((u32)noncelen <= sizeof(nonce), ret, err);
+#endif
 		/* Raw signing of data */
 #if defined(WITH_SIG_ECDSA)
 		if(c->sig_type == ECDSA){

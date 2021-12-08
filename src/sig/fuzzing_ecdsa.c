@@ -43,7 +43,7 @@ int ecdsa_sign_raw(struct ec_sign_context *ctx, const u8 *input, u8 inputlen, u8
 	const ec_priv_key *priv_key;
 	prj_pt_src_t G;
 	/* NOTE: hash here is not really a hash ... */
-	u8 hash[BIT_LEN_WORDS(NN_MAX_BIT_LEN) * (WORDSIZE / 8)];
+	u8 hash[LOCAL_MIN(255, BIT_LEN_WORDS(NN_MAX_BIT_LEN) * (WORDSIZE / 8))];
 	bitcnt_t rshift, q_bit_len;
 	prj_pt kG;
 	nn_src_t q, x;
@@ -91,8 +91,13 @@ int ecdsa_sign_raw(struct ec_sign_context *ctx, const u8 *input, u8 inputlen, u8
 
 	/* 1. Compute h = H(m) */
 	/* NOTE: here we have raw ECDSA, this is the raw input */
+	/* NOTE: the MUST_HAVE is protected by a preprocessing check
+	 * to avoid -Werror=type-limits errors:
+	 * "error: comparison is always true due to limited range of data type"
+	 */
+#if LOCAL_MIN(255, BIT_LEN_WORDS(NN_MAX_BIT_LEN) * (WORDSIZE / 8)) < 255
 	MUST_HAVE(((u32)inputlen <= sizeof(hash)), ret, err);
-
+#endif
 	ret = local_memset(hash, 0, sizeof(hash)); EG(ret, err);
 	ret = local_memcpy(hash, input, hsize); EG(ret, err);
 
@@ -276,7 +281,7 @@ int ecdsa_verify_raw(struct ec_verify_context *ctx, const u8 *input, u8 inputlen
 	nn e, sinv, uv, r_prime;
 	prj_pt_src_t G, Y;
 	/* NOTE: hash here is not really a hash ... */
-	u8 hash[BIT_LEN_WORDS(NN_MAX_BIT_LEN) * (WORDSIZE / 8)];
+	u8 hash[LOCAL_MIN(255, BIT_LEN_WORDS(NN_MAX_BIT_LEN) * (WORDSIZE / 8))];
 	bitcnt_t rshift, q_bit_len;
 	nn_src_t q;
 	nn *s, *r;
@@ -313,7 +318,14 @@ int ecdsa_verify_raw(struct ec_verify_context *ctx, const u8 *input, u8 inputlen
 
 	/* 2. Compute h = H(m) */
 	/* NOTE: here we have raw ECDSA, this is the raw input */
-	MUST_HAVE((input != NULL) && ((u32)inputlen <= sizeof(hash)), ret, err);
+	MUST_HAVE((input != NULL), ret, err);
+	/* NOTE: the MUST_HAVE is protected by a preprocessing check
+	 * to avoid -Werror=type-limits errors:
+	 * "error: comparison is always true due to limited range of data type"
+	 */
+#if LOCAL_MIN(255, BIT_LEN_WORDS(NN_MAX_BIT_LEN) * (WORDSIZE / 8)) < 255
+	MUST_HAVE(((u32)inputlen <= sizeof(hash)), ret, err);
+#endif
 
 	ret = local_memset(hash, 0, sizeof(hash)); EG(ret, err);
 	ret = local_memcpy(hash, input, hsize); EG(ret, err);
