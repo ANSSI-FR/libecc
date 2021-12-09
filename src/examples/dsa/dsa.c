@@ -461,19 +461,6 @@ int main(int argc, char *argv[])
 	FORCE_USED_VAR(argc);
 	FORCE_USED_VAR(argv);
 
-	/* Sanity check on size for DSA.
-	 * NOTE: the double parentheses are here to handle -Wunreachable-code
-	 */
-	if((NN_USABLE_MAX_BIT_LEN) < (4096)){
-		ext_printf("Error: you seem to have compiled libecc with usable NN size < 4096, not suitable for DSA.\n");
-		ext_printf("  => Please recompile libecc with EXTRA_CFLAGS=\"-DUSER_NN_BIT_LEN=4096\"\n");
-		ext_printf("     This will increase usable NN for proper DSA up to 4096 bits.\n");
-		ext_printf("     Then recompile the current examples with the same EXTRA_CFLAGS=\"-DUSER_NN_BIT_LEN=4096\" flag and execute again!\n");
-		/* NOTE: ret = 0 here to pass self tests even if the library is not compatible */
-		ret = 0;
-		goto err;
-	}
-
 	const u8 p[] = {
 0x90, 0x06, 0x64, 0x55, 0xB5, 0xCF, 0xC3, 0x8F, 0x9C, 0xAA, 0x4A, 0x48, 0xB4, 0x28, 0x1F, 0x29, 0x2C, 0x26, 0x0F, 0xEE, 0xF0, 0x1F, 0xD6, 0x10, 0x37, 0xE5, 0x62, 0x58, 
 0xA7, 0x79, 0x5A, 0x1C, 0x7A, 0xD4, 0x60, 0x76, 0x98, 0x2C, 0xE6, 0xBB, 0x95, 0x69, 0x36, 0xC6, 0xAB, 0x4D, 0xCF, 0xE0, 0x5E, 0x67, 0x84, 0x58, 0x69, 0x40, 0xCA, 0x54, 
@@ -533,6 +520,20 @@ int main(int argc, char *argv[])
 	dsa_pub_key pub;
 	dsa_pub_key pub2;
 	u8 sig[32*2] = { 0 };
+
+	/* Sanity check on size for DSA.
+	 * NOTE: the double parentheses are here to handle -Wunreachable-code
+	 */
+	if((NN_USABLE_MAX_BIT_LEN) < (4096)){
+		ext_printf("Error: you seem to have compiled libecc with usable NN size < 4096, not suitable for DSA.\n");
+		ext_printf("  => Please recompile libecc with EXTRA_CFLAGS=\"-DUSER_NN_BIT_LEN=4096\"\n");
+		ext_printf("     This will increase usable NN for proper DSA up to 4096 bits.\n");
+		ext_printf("     Then recompile the current examples with the same EXTRA_CFLAGS=\"-DUSER_NN_BIT_LEN=4096\" flag and execute again!\n");
+		/* NOTE: ret = 0 here to pass self tests even if the library is not compatible */
+		ret = 0;
+		goto err;
+	}
+
 
 	ret = dsa_import_priv_key(&priv, p, sizeof(p), q, sizeof(q), g, sizeof(g), x, sizeof(x)); EG(ret, err);
 	ret = dsa_import_pub_key(&pub, p, sizeof(p), q, sizeof(q), g, sizeof(g), y, sizeof(y)); EG(ret, err);

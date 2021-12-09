@@ -11,17 +11,6 @@
 #ifndef __SSS_H__
 #define __SSS_H__
 
-/* NOTE: we need the arithmetic library for SSS as all
- * operations will take place in Fp with p a public known
- * prime number.
- */
-#include "../lib_ecc_config.h"
-#include "libarith.h"
-/* We use HMAC */
-#include "../hash/hmac.h"
-/* We generate random */
-#include "../external_deps/rand.h"
-
 typedef enum { false, true } boolean;
 
 /* The final secret size in bytes, corresponding to the
@@ -31,13 +20,13 @@ typedef enum { false, true } boolean;
 
 /* Secrets and shares typedefs for "raw" SSS */
 typedef struct ATTRIBUTE_PACKED {
-	u8 secret[SSS_SECRET_SIZE];
+	unsigned char secret[SSS_SECRET_SIZE];
 } sss_secret;
 typedef struct ATTRIBUTE_PACKED {
 	/* Index x of the share */
-	u16 index;
+	unsigned short index;
 	/* Value of the share */
-	u8 share[SSS_SECRET_SIZE];
+	unsigned char share[SSS_SECRET_SIZE];
 } _sss_raw_share;
 
 #define SSS_SESSION_ID_SIZE 16
@@ -47,8 +36,8 @@ typedef struct ATTRIBUTE_PACKED {
 typedef struct ATTRIBUTE_PACKED {
 	_sss_raw_share raw_share;
 	/* 128 bits session id */
-	u8 session_id[SSS_SESSION_ID_SIZE];
-	u8 raw_share_hmac[SSS_HMAC_SIZE];
+	unsigned char session_id[SSS_SESSION_ID_SIZE];
+	unsigned char raw_share_hmac[SSS_HMAC_SIZE];
 } sss_share;
 
 /* SSS shares and secret generation:
@@ -61,7 +50,7 @@ typedef struct ATTRIBUTE_PACKED {
  *         - secret: the secret value when input_secret is set to 'false', this
  *           value being randomly generated
  */
-ATTRIBUTE_WARN_UNUSED_RET int sss_generate(sss_share *shares, u16 k, u16 n, sss_secret *secret, boolean input_secret);
+ATTRIBUTE_WARN_UNUSED_RET int sss_generate(sss_share *shares, unsigned short k, unsigned short n, sss_secret *secret, boolean input_secret);
 
 /* SSS shares and secret combination
  *     Inputs:
@@ -70,7 +59,7 @@ ATTRIBUTE_WARN_UNUSED_RET int sss_generate(sss_share *shares, u16 k, u16 n, sss_
  *     Output:
  *         - secret: the secret value computed from the k shares
  */
-ATTRIBUTE_WARN_UNUSED_RET int sss_combine(const sss_share *shares, u16 k, sss_secret *secret);
+ATTRIBUTE_WARN_UNUSED_RET int sss_combine(const sss_share *shares, unsigned short k, sss_secret *secret);
 
 /* SSS shares regeneration from existing shares
  *     Inputs:
@@ -82,6 +71,6 @@ ATTRIBUTE_WARN_UNUSED_RET int sss_combine(const sss_share *shares, u16 k, sss_se
  *           the ones provided as inputs)
  *         - secret: the recomputed secret value
  */
-ATTRIBUTE_WARN_UNUSED_RET int sss_regenerate(sss_share *shares, u16 k, u16 n, sss_secret *secret);
+ATTRIBUTE_WARN_UNUSED_RET int sss_regenerate(sss_share *shares, unsigned short k, unsigned short n, sss_secret *secret);
 
 #endif /* __SSS_H__ */

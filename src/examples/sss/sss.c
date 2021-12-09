@@ -8,6 +8,7 @@
  *  This software is licensed under a dual BSD and GPL v2 license.
  *  See LICENSE file at the root folder of the project.
  */
+#include "sss_private.h"
 #include "sss.h"
 
 
@@ -388,7 +389,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int _sss_raw_combine(const sss_share *shares, u
  *         - secret: the secret value when input_secret is set to 'false', this
  *           value being randomly generated
  */
-int sss_generate(sss_share *shares, u16 k, u16 n, sss_secret *secret, boolean input_secret)
+int sss_generate(sss_share *shares, unsigned short k, unsigned short n, sss_secret *secret, boolean input_secret)
 {
 	int ret;
 	unsigned int i;
@@ -433,7 +434,7 @@ err:
  *     Output:
  *         - secret: the secret value computed from the k shares
  */
-int sss_combine(const sss_share *shares, u16 k, sss_secret *secret)
+int sss_combine(const sss_share *shares, unsigned short k, sss_secret *secret)
 {
 	int ret, cmp;
 	unsigned int i;
@@ -497,7 +498,7 @@ err:
  *           the ones provided as inputs)
  *         - secret: the recomputed secret value
  */
-int sss_regenerate(sss_share *shares, u16 k, u16 n, sss_secret *secret)
+int sss_regenerate(sss_share *shares, unsigned short k, unsigned short n, sss_secret *secret)
 {
 	int ret, cmp;
 	unsigned int i;
