@@ -4,6 +4,7 @@ include $(ROOT_DIR)/common.mk
 
 RSA_DIR=rsa/
 DSA_DIR=dsa/
+SSS_DIR=sss/
 
 CFLAGS += -I$(ROOT_DIR)/src/ -I$(ROOT_DIR)/src/external_deps
 
@@ -28,8 +29,8 @@ _rsa:
 	cd $(RSA_DIR) && EXTRA_CFLAGS="$(CFLAGS)" make
 _dsa:
 	cd $(DSA_DIR) && EXTRA_CFLAGS="$(CFLAGS)" make
-sss:
-	$(CC) $(BIN_CFLAGS) -DSSS sss.c $(ROOT_DIR)/src/external_deps/print.c $(ROOT_DIR)/src/external_deps/rand.c $(BIN_LDFLAGS) $(LIBSIGN) -o sss
+_sss:
+	cd $(SSS_DIR) && EXTRA_CFLAGS="$(CFLAGS)" make
 
 # If the user asked for dynamic libraries, compile versions of our binaries against them
 ifeq ($(WITH_DYNAMIC_LIBS),1)
@@ -54,9 +55,10 @@ endif
 
 
 clean:
-	@rm -f nn_pollard_rho fp_square_residue curve_basic_examples curve_ecdh sss
-	@rm -f nn_pollard_rho_dyn fp_square_residue_dyn curve_basic_examples_dyn curve_ecdh_dyn sss_dyn
+	@rm -f nn_pollard_rho fp_square_residue curve_basic_examples curve_ecdh
+	@rm -f nn_pollard_rho_dyn fp_square_residue_dyn curve_basic_examples_dyn curve_ecdh_dyn
 	cd $(RSA_DIR) && make clean
 	cd $(DSA_DIR) && make clean
+	cd $(SSS_DIR) && make clean
 
 .PHONY: all clean 16 32 64 debug debug16 debug32 debug64 force_arch32 force_arch64
