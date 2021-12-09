@@ -275,7 +275,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int generate_and_export_key_pair(const char *ec
 	prefix_len = (u16)len;
 	ret = local_memset(fname, 0, fname_len); EG(ret, err);
 	ret = local_memcpy(fname, fname_prefix, prefix_len); EG(ret, err);
-	ret = local_strncat(fname, "_private_key.bin", fname_len - prefix_len); EG(ret, err);
+	ret = local_strncat(fname, "_private_key.bin", (u32)(fname_len - prefix_len)); EG(ret, err);
 	file = fopen(fname, "w");
 	if (file == NULL) {
 		ret = -1;
@@ -295,7 +295,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int generate_and_export_key_pair(const char *ec
 	/* Export the private key to the .h file */
 	ret = local_memset(fname, 0, fname_len); EG(ret, err);
 	ret = local_memcpy(fname, fname_prefix, prefix_len); EG(ret, err);
-	ret = local_strncat(fname, "_private_key.h", fname_len - prefix_len); EG(ret, err);
+	ret = local_strncat(fname, "_private_key.h", (u32)(fname_len - prefix_len)); EG(ret, err);
 	file = fopen(fname, "w");
 	if (file == NULL) {
 		ret = -1;
@@ -318,7 +318,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int generate_and_export_key_pair(const char *ec
 	/* Export the public key to the raw binary file */
 	ret = local_memset(fname, 0, fname_len); EG(ret, err);
 	ret = local_memcpy(fname, fname_prefix, prefix_len); EG(ret, err);
-	ret = local_strncat(fname, "_public_key.bin", fname_len - prefix_len); EG(ret, err);
+	ret = local_strncat(fname, "_public_key.bin", (u32)(fname_len - prefix_len)); EG(ret, err);
 	file = fopen(fname, "w");
 	if (file == NULL) {
 		ret = -1;
@@ -337,7 +337,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int generate_and_export_key_pair(const char *ec
 	/* Export the public key to the .h file */
 	ret = local_memset(fname, 0, fname_len); EG(ret, err);
 	ret = local_memcpy(fname, fname_prefix, prefix_len); EG(ret, err);
-	ret = local_strncat(fname, "_public_key.h", fname_len - prefix_len); EG(ret, err);
+	ret = local_strncat(fname, "_public_key.h", (u32)(fname_len - prefix_len)); EG(ret, err);
 	file = fopen(fname, "w");
 	if (file == NULL) {
 		ret = -1;
@@ -1487,7 +1487,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int ec_scalar_mult(const char *ec_name,
 	ret = prj_pt_unique(&Q, &Q); EG(ret, err);
 
 	/* Export the projective point in the local buffer */
-	coord_len = 3 * BYTECEIL((Q.crv)->a.ctx->p_bitlen);
+	coord_len = (u16)(3 * BYTECEIL((Q.crv)->a.ctx->p_bitlen));
 	if(coord_len > sizeof(buf)){
 		ret = -1;
 		printf("Error: error when exporting the point\n");

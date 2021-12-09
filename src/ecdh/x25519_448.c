@@ -53,7 +53,7 @@
 ATTRIBUTE_WARN_UNUSED_RET static int decode_scalar(u8 *scalar_decoded, const u8 *scalar, u8 len)
 {
         int ret;
-        unsigned int i;
+        u8 i;
 
         /* Aliasing is not supported */
         MUST_HAVE((scalar != scalar_decoded), ret, err);
@@ -91,7 +91,7 @@ err:
 ATTRIBUTE_WARN_UNUSED_RET static int decode_u_coordinate(u8 *u_decoded, const u8 *u, u8 len)
 {
 	int ret;
-	unsigned int i;
+	u8 i;
 
 	/* Aliasing is not supported */
 	MUST_HAVE((u != u_decoded), ret, err);

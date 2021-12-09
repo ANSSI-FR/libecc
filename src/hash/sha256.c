@@ -112,7 +112,7 @@ int sha256_update(sha256_context *ctx, const u8 *input, u32 ilen)
 
 	/* Get what's left in our local buffer */
 	left = (ctx->sha256_total & 0x3F);
-	fill = (SHA256_BLOCK_SIZE - left);
+	fill = (u16)(SHA256_BLOCK_SIZE - left);
 
 	ctx->sha256_total += ilen;
 

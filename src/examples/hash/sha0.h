@@ -231,7 +231,7 @@ ATTRIBUTE_WARN_UNUSED_RET static inline int sha0_update(sha0_context *ctx, const
 
 	/* Get what's left in our local buffer */
 	left = (ctx->sha0_total & 0x3F);
-	fill = (SHA0_BLOCK_SIZE - left);
+	fill = (u16)(SHA0_BLOCK_SIZE - left);
 
 	ctx->sha0_total += ilen;
 

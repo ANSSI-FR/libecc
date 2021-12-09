@@ -231,7 +231,7 @@ int sm3_update(sm3_context *ctx, const u8 *input, u32 ilen)
 
 	/* Get what's left in our local buffer */
 	left = (ctx->sm3_total & 0x3F);
-	fill = (SM3_BLOCK_SIZE - left);
+	fill = (u16)(SM3_BLOCK_SIZE - left);
 
 	ctx->sm3_total += ilen;
 

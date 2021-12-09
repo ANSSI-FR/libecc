@@ -200,7 +200,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int _nn_divrem_normalized(nn_t q, nn_t r,
 	MUST_HAVE(!(b->wlen <= 0), ret, err);
 	MUST_HAVE(!(a->wlen <= b->wlen), ret, err);
 	MUST_HAVE(!(!((b->val[b->wlen - 1] >> (WORD_BITS - 1)) == WORD(1))), ret, err);
-	MUST_HAVE(!_nn_cmp_shift(a, b, a->wlen - b->wlen, &cmp) && (cmp < 0), ret, err);
+	MUST_HAVE(!_nn_cmp_shift(a, b, (u8)(a->wlen - b->wlen), &cmp) && (cmp < 0), ret, err);
 
 	/* Handle trivial aliasing for a and r */
 	if (r != a) {
@@ -208,7 +208,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int _nn_divrem_normalized(nn_t q, nn_t r,
 		ret = nn_copy(r, a); EG(ret, err);
 	}
 
-	ret = nn_set_wlen(q, r->wlen - b->wlen); EG(ret, err);
+	ret = nn_set_wlen(q, (u8)(r->wlen - b->wlen)); EG(ret, err);
 
 	/*
 	 * Compute subsequent words of the quotient one by one.
@@ -216,7 +216,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int _nn_divrem_normalized(nn_t q, nn_t r,
 	 * reciprocal and correct afterward.
 	 */
 	for (i = r->wlen; i > b->wlen; i--) {
-		u8 shift = (i - b->wlen - 1);
+		u8 shift = (u8)(i - b->wlen - 1);
 
 		/*
 		 * Perform 3-by-2 approximate division:
@@ -271,7 +271,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int _nn_divrem_normalized(nn_t q, nn_t r,
 		ret = _nn_cmp_shift(r, b, shift, &cmp); EG(ret, err);
 		MUST_HAVE(!(cmp >= 0), ret, err);
 
-		ret = nn_set_wlen(r, r->wlen - 1); EG(ret, err);
+		ret = nn_set_wlen(r, (u8)(r->wlen - 1)); EG(ret, err);
 	}
 
 err:
@@ -415,7 +415,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int _nn_divrem_unshifted(nn_t q, nn_t r, nn_src
 	MUST_HAVE(((a->wlen + BIT_LEN_WORDS(cnt)) < NN_MAX_WORD_LEN), ret, err);
 
 	/* We now know that new_wlen will fit in an u8 */
-	new_wlen = (a->wlen + (u8)BIT_LEN_WORDS(cnt));
+	new_wlen = (u8)(a->wlen + (u8)BIT_LEN_WORDS(cnt));
 
 	b_wlen = b_norm->wlen;
 	if (new_wlen < b_wlen) { /* trivial case */
@@ -425,7 +425,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int _nn_divrem_unshifted(nn_t q, nn_t r, nn_src
 	}
 
 	/* Shift a. */
-	ret = nn_init(&a_shift, new_wlen * WORD_BYTES); EG(ret, err);
+	ret = nn_init(&a_shift, (u16)(new_wlen * WORD_BYTES)); EG(ret, err);
 	ret = nn_set_wlen(&a_shift, new_wlen); EG(ret, err);
 	ret = nn_lshift_fixedlen(&a_shift, a, cnt); EG(ret, err);
 	ret = nn_set_wlen(r, new_wlen); EG(ret, err);
@@ -438,15 +438,15 @@ ATTRIBUTE_WARN_UNUSED_RET static int _nn_divrem_unshifted(nn_t q, nn_t r, nn_src
 		MUST_HAVE(((!nn_cmp(r, b_norm, &cmp)) && (cmp < 0)), ret, err);
 
 		/* Set MSW of quotient. */
-		ret = nn_set_wlen(q, new_wlen - b_wlen + 1); EG(ret, err);
+		ret = nn_set_wlen(q, (u8)(new_wlen - b_wlen + 1)); EG(ret, err);
 		q->val[new_wlen - b_wlen] = (word_t) larger;
 		/* And we are done as the quotient is 0 or 1. */
 	} else if (new_wlen > b_wlen) {
 		/* Ensure that most significant part of a is smaller than b. */
-		ret = _nn_cmp_shift(&a_shift, b_norm, new_wlen - b_wlen, &cmp); EG(ret, err);
+		ret = _nn_cmp_shift(&a_shift, b_norm, (u8)(new_wlen - b_wlen), &cmp); EG(ret, err);
 		larger = (cmp >= 0);
-		ret = _nn_cnd_sub_shift(larger, &a_shift, b_norm, new_wlen - b_wlen, &borrow); EG(ret, err);
-		MUST_HAVE(((!_nn_cmp_shift(&a_shift, b_norm, new_wlen - b_wlen, &cmp)) && (cmp < 0)), ret, err);
+		ret = _nn_cnd_sub_shift(larger, &a_shift, b_norm, (u8)(new_wlen - b_wlen), &borrow); EG(ret, err);
+		MUST_HAVE(((!_nn_cmp_shift(&a_shift, b_norm, (u8)(new_wlen - b_wlen), &cmp)) && (cmp < 0)), ret, err);
 
 		/*
 		 * Perform division with MSP of a smaller than b. This ensures
@@ -455,7 +455,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int _nn_divrem_unshifted(nn_t q, nn_t r, nn_src
 		ret = nn_divrem_normalized(q, r, &a_shift, b_norm, v); EG(ret, err);
 
 		/* Set MSW of quotient. */
-		ret = nn_set_wlen(q, new_wlen - b_wlen + 1); EG(ret, err);
+		ret = nn_set_wlen(q, (u8)(new_wlen - b_wlen + 1)); EG(ret, err);
 		q->val[new_wlen - b_wlen] = (word_t) larger;
 	} /* else a is smaller than b... treated above. */
 
@@ -810,11 +810,11 @@ int nn_compute_div_coefs(nn_t p_normalized, word_t *p_shift,
 	ret = nn_init(&tmp_nn, 0); EG(ret, err);
 
 	/* p_rounded_bitlen = bitlen of p rounded to word size */
-	p_rounded_bitlen = WORD_BITS * p.wlen;
+	p_rounded_bitlen = (bitcnt_t)(WORD_BITS * p.wlen);
 
 	/* p_shift */
 	ret = nn_bitlen(&p, &p_bitlen); EG(ret, err);
-	(*p_shift) = (p_rounded_bitlen - p_bitlen);
+	(*p_shift) = (word_t)(p_rounded_bitlen - p_bitlen);
 
 	/* p_normalized = p << pshift */
 	ret = nn_lshift(p_normalized, &p, (bitcnt_t)(*p_shift)); EG(ret, err);
@@ -827,7 +827,7 @@ int nn_compute_div_coefs(nn_t p_normalized, word_t *p_shift,
 	 * where B = 2^wlen where wlen = word size in bits. We use our NN
 	 * helper to compute it.
 	 */
-	ret = nn_rshift(&tmp_nn, p_normalized, (p_rounded_bitlen - (2 * WORDSIZE))); EG(ret, err);
+	ret = nn_rshift(&tmp_nn, p_normalized, (bitcnt_t)(p_rounded_bitlen - (2 * WORDSIZE))); EG(ret, err);
 	ret = wreciprocal(tmp_nn.val[1], tmp_nn.val[0], p_reciprocal);
 
 err:
@@ -889,7 +889,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int _nn_divrem(nn_t q, nn_t r, nn_src_t a, nn_s
 	/* After this, we only handle >= 2 words big numbers */
 	MUST_HAVE(!(ptr->wlen < 2), ret, err);
 
-	ret = nn_init(&b_normalized, (ptr->wlen) * WORD_BYTES); EG(ret, err);
+	ret = nn_init(&b_normalized, (u16)((ptr->wlen) * WORD_BYTES)); EG(ret, err);
 	ret = nn_clz(ptr, &cnt); EG(ret, err);
 	ret = nn_lshift_fixedlen(&b_normalized, ptr, cnt); EG(ret, err);
 	ret = wreciprocal(b_normalized.val[ptr->wlen - 1],

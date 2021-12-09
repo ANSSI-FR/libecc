@@ -34,7 +34,7 @@ int _sha3_init(sha3_context *ctx, u8 digest_size)
 
 	ctx->sha3_idx = 0;
 	ctx->sha3_digest_size = digest_size;
-	ctx->sha3_block_size = (KECCAK_SLICES * KECCAK_SLICES * sizeof(u64)) - (2 * digest_size);
+	ctx->sha3_block_size = (u8)((KECCAK_SLICES * KECCAK_SLICES * sizeof(u64)) - (u8)(2 * digest_size));
 
 	/* Detect endianness */
 	ctx->sha3_endian = arch_is_big_endian() ? SHA3_BIG : SHA3_LITTLE;

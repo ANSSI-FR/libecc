@@ -472,7 +472,7 @@ int prj_pt_import_from_buf(prj_pt_t pt,
 	MUST_HAVE((pt_buf != NULL) && (pt != NULL), ret, err);
 
 	ctx = crv->a.ctx;
-	coord_len = BYTECEIL(ctx->p_bitlen);
+	coord_len = (u16)BYTECEIL(ctx->p_bitlen);
 	MUST_HAVE((pt_buf_len == (3 * coord_len)), ret, err);
 
 	ret = fp_init_from_buf(&(pt->X), ctx, pt_buf, coord_len); EG(ret, err);
@@ -521,7 +521,7 @@ int prj_pt_import_from_aff_buf(prj_pt_t pt,
 	MUST_HAVE((pt_buf != NULL) && (pt != NULL), ret, err);
 
 	ctx = crv->a.ctx;
-	coord_len = BYTECEIL(ctx->p_bitlen);
+	coord_len = (u16)BYTECEIL(ctx->p_bitlen);
 	MUST_HAVE((pt_buf_len == (2 * coord_len)), ret, err);
 
 	ret = fp_init_from_buf(&(pt->X), ctx, pt_buf, coord_len); EG(ret, err);
@@ -575,7 +575,7 @@ int prj_pt_export_to_buf(prj_pt_src_t pt, u8 *pt_buf, u32 pt_buf_len)
 	MUST_HAVE((on_curve), ret, err);
 
 	ctx = pt->crv->a.ctx;
-	coord_len = BYTECEIL(ctx->p_bitlen);
+	coord_len = (u16)BYTECEIL(ctx->p_bitlen);
 	MUST_HAVE((pt_buf_len == (3 * coord_len)), ret, err);
 
 	/* Export the three coordinates */
@@ -1582,7 +1582,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int _prj_pt_mul_ltr_monty_ladder(prj_pt_t out, 
 	mlen--;
 
 	/* Get a random r with the same size of m_msb_fixed */
-	ret = nn_get_random_len(&r, m_msb_fixed.wlen * WORD_BYTES); EG(ret, err);
+	ret = nn_get_random_len(&r, (u16)(m_msb_fixed.wlen * WORD_BYTES)); EG(ret, err);
 
 	ret = nn_getbit(&r, mlen, &rbit); EG(ret, err);
 
@@ -1796,10 +1796,10 @@ int _prj_pt_unprotected_mult(prj_pt_t out, nn_src_t scalar, prj_pt_src_t public_
         ret = nn_bitlen(scalar, &explen); EG(ret, err);
         /* Sanity check */
         MUST_HAVE((explen > 0), ret, err);
-        explen -= (bitcnt_t)1;
+        explen = (bitcnt_t)(explen - 1);
         ret = prj_pt_copy(out, public_in); EG(ret, err);
         while (explen > 0) {
-                explen -= (bitcnt_t)1;
+                explen = (bitcnt_t)(explen - 1);
                 ret = nn_getbit(scalar, explen, &expbit); EG(ret, err);
                 ret = prj_pt_dbl(out, out); EG(ret, err);
                 if(expbit){

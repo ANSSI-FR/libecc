@@ -222,7 +222,7 @@ int ripemd160_update(ripemd160_context *ctx, const u8 *input, u32 ilen)
 
 	/* Get what's left in our local buffer */
 	left = (ctx->ripemd160_total & 0x3F);
-	fill = (RIPEMD160_BLOCK_SIZE - left);
+	fill = (u16)(RIPEMD160_BLOCK_SIZE - left);
 
 	ctx->ripemd160_total += ilen;
 

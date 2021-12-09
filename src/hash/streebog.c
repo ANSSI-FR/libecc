@@ -71,7 +71,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int streebog_update(streebog_context *ctx, cons
 
 	/* Get what's left in our local buffer */
 	left = (ctx->streebog_total & 0x3F);
-	fill = (STREEBOG_BLOCK_SIZE - left);
+	fill = (u16)(STREEBOG_BLOCK_SIZE - left);
 
 	ctx->streebog_total += ilen;
 
@@ -146,15 +146,15 @@ ATTRIBUTE_WARN_UNUSED_RET static int streebog_final(streebog_context *ctx, u8 *o
 
 	if(digest_size == 64){
 		/* 512-bit hash case */
-		STREEBOG_PUT_UINT64(ctx->h[0], output, idx, ctx->streebog_endian); idx += 8;
-		STREEBOG_PUT_UINT64(ctx->h[1], output, idx, ctx->streebog_endian); idx += 8;
-		STREEBOG_PUT_UINT64(ctx->h[2], output, idx, ctx->streebog_endian); idx += 8;
-		STREEBOG_PUT_UINT64(ctx->h[3], output, idx, ctx->streebog_endian); idx += 8;
+		STREEBOG_PUT_UINT64(ctx->h[0], output, idx, ctx->streebog_endian); idx = (u8)(idx + 8);
+		STREEBOG_PUT_UINT64(ctx->h[1], output, idx, ctx->streebog_endian); idx = (u8)(idx + 8);
+		STREEBOG_PUT_UINT64(ctx->h[2], output, idx, ctx->streebog_endian); idx = (u8)(idx + 8);
+		STREEBOG_PUT_UINT64(ctx->h[3], output, idx, ctx->streebog_endian); idx = (u8)(idx + 8);
 	}
 	/* 256 and 512-bit hash case */
-	STREEBOG_PUT_UINT64(ctx->h[4], output, idx, ctx->streebog_endian); idx += 8;
-	STREEBOG_PUT_UINT64(ctx->h[5], output, idx, ctx->streebog_endian); idx += 8;
-	STREEBOG_PUT_UINT64(ctx->h[6], output, idx, ctx->streebog_endian); idx += 8;
+	STREEBOG_PUT_UINT64(ctx->h[4], output, idx, ctx->streebog_endian); idx = (u8)(idx + 8);
+	STREEBOG_PUT_UINT64(ctx->h[5], output, idx, ctx->streebog_endian); idx = (u8)(idx + 8);
+	STREEBOG_PUT_UINT64(ctx->h[6], output, idx, ctx->streebog_endian); idx = (u8)(idx + 8);
 	STREEBOG_PUT_UINT64(ctx->h[7], output, idx, ctx->streebog_endian);
 
 	ret = 0;

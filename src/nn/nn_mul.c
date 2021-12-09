@@ -57,7 +57,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int _nn_mul_low(nn_t out, nn_src_t in1, nn_src_
 		pos = 0;
 
 		for (j = 0; j < in2->wlen; j++) {
-			pos = i + j;
+			pos = (u8)(i + j);
 
 			/*
 			 * size of the result provided by the caller may not
@@ -148,7 +148,7 @@ int nn_mul(nn_t out, nn_src_t in1, nn_src_t in2)
 
 	ret = nn_check_initialized(in1); EG(ret, err);
 	ret = nn_check_initialized(in2); EG(ret, err);
-	ret = nn_mul_low(out, in1, in2, in1->wlen + in2->wlen);
+	ret = nn_mul_low(out, in1, in2, (u8)(in1->wlen + in2->wlen));
 
 err:
 	return ret;

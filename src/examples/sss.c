@@ -85,8 +85,8 @@ ATTRIBUTE_WARN_UNUSED_RET static int _sss_derive_seed(fp_t out, const u8 seed[SS
 	ret = local_memset(C, 0, sizeof(C)); EG(ret, err);
 
 	/* Export our idx in big endian representation on two bytes */
-	C[0] = ((idx >> 8) & 0xff);
-	C[1] = (idx & 0xff);
+	C[0] = (u8)((idx >> 8) & 0xff);
+	C[1] = (u8)(idx & 0xff);
 
 	len = sizeof(hmac_val);
 	ret = hmac(seed, SSS_SECRET_SIZE, SHA512, C, sizeof(C), hmac_val, &len); EG(ret, err);
@@ -574,8 +574,8 @@ int sss_regenerate(sss_share *shares, u16 k, u16 n, sss_secret *secret)
 		/* Copy our session ID */
 		ret = local_memcpy(cur_id, cur_id0, SSS_SESSION_ID_SIZE); EG(ret, err);
 
-		ret = _sss_raw_lagrange(shares, k, (sss_secret*)(cur_share->share), (max_idx + (u16)(i - k + 1))); EG(ret, err);
-		cur_share->index = (max_idx + (u16)(i - k + 1));
+		ret = _sss_raw_lagrange(shares, k, (sss_secret*)(cur_share->share), (u16)(max_idx + (u16)(i - k + 1))); EG(ret, err);
+		cur_share->index = (u16)(max_idx + (u16)(i - k + 1));
 
 		/* Compute the HMAC */
 		len = SSS_HMAC_SIZE;

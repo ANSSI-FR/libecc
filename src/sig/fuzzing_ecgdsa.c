@@ -111,7 +111,7 @@ int ecgdsa_sign_raw(struct ec_sign_context *ctx, const u8 *input, u8 inputlen, u
          */
         rshift = 0;
         if ((hsize * 8) > q_bit_len) {
-                rshift = (hsize * 8) - q_bit_len;
+                rshift = (bitcnt_t)((hsize * 8) - q_bit_len);
         }
         ret = nn_init_from_buf(&tmp, e_buf, hsize); EG(ret, err);
         ret = local_memset(e_buf, 0, hsize); EG(ret, err);
@@ -321,7 +321,7 @@ int ecgdsa_verify_raw(struct ec_verify_context *ctx, const u8 *input, u8 inputle
          */
         rshift = 0;
         if ((hsize * 8) > q_bit_len) {
-                rshift = (hsize * 8) - q_bit_len;
+                rshift = (bitcnt_t)((hsize * 8) - q_bit_len);
         }
         ret = nn_init_from_buf(&tmp, e_buf, hsize); EG(ret, err);
         ret = local_memset(e_buf, 0, hsize); EG(ret, err);

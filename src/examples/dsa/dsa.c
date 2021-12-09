@@ -279,7 +279,7 @@ restart:
 	/* z = the leftmost min(N, outlen) bits of Hash(M) */
         rshift = 0;
         if ((hlen * 8) > N) {
-                rshift = (hlen * 8) - N;
+                rshift = (bitcnt_t)((hlen * 8) - N);
         }
 	ret = nn_init_from_buf(&z, hash, hlen); EG(ret, err);
 	if (rshift) {
@@ -409,7 +409,7 @@ int dsa_verify(const dsa_pub_key *pub, const u8 *msg, u32 msglen,
 	/* z = the leftmost min(N, outlen) bits of Hash(M) */
         rshift = 0;
         if ((hlen * 8) > N) {
-                rshift = (hlen * 8) - N;
+                rshift = (bitcnt_t)((hlen * 8) - N);
         }
 	ret = nn_init_from_buf(&z, hash, hlen); EG(ret, err);
 	if (rshift) {

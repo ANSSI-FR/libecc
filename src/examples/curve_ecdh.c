@@ -177,7 +177,7 @@ int ECDH_helper(const u8 *curve_name, const u8 *role)
 	 * so this should be 2 times the size of an element in Fp.
 	 */
 	ret = prj_pt_export_to_aff_buf(&Q, our_public_buffer,
-			     2 * BYTECEIL(curve_params.ec_fp.p_bitlen)); EG(ret, err);
+			     (u32)(2 * BYTECEIL(curve_params.ec_fp.p_bitlen))); EG(ret, err);
 
  generate_shared_secret:
 	/* Now (non blocking) wait for the other party to send us its public value */
@@ -197,7 +197,7 @@ int ECDH_helper(const u8 *curve_name, const u8 *role)
 	/* Import the shared value as a projective point from an affine point buffer
 	 */
 	ret = prj_pt_import_from_aff_buf(&Q, other_public_buffer,
-			       2 * BYTECEIL(curve_params.ec_fp.p_bitlen),
+			       (u16)(2 * BYTECEIL(curve_params.ec_fp.p_bitlen)),
 			       &(curve_params.ec_curve)); EG(ret, err);
 	/* Compute the shared value = first coordinate of dQ */
 	ret = prj_pt_mul(&Q, d, &Q); EG(ret, err);

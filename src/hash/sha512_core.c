@@ -83,7 +83,7 @@ int sha512_core_update(sha512_core_context *ctx, const u8 *input, u32 ilen)
 
 	/* Get what's left in our local buffer */
 	left = ctx->sha512_total[0] & 0x7F;
-	fill = SHA512_CORE_BLOCK_SIZE - left;
+	fill = (u16)(SHA512_CORE_BLOCK_SIZE - left);
 
 	ADD_UINT128_UINT64(ctx->sha512_total[0], ctx->sha512_total[1], ilen);
 

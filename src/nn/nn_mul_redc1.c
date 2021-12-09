@@ -66,7 +66,7 @@ int nn_compute_redc1_coefs(nn_t r, nn_t r_square, nn_src_t p_in, word_t *mpinv)
 	ret = nn_init(&tmp_nn2, 0); EG(ret, err);
 
 	/* p_rounded_bitlen = bitlen of p rounded to word size */
-	p_rounded_bitlen = WORD_BITS * p.wlen;
+	p_rounded_bitlen = (bitcnt_t)(WORD_BITS * p.wlen);
 
 	/* _mpinv = 2^wlen - (modinv(prime, 2^wlen)) */
 	ret = nn_set_wlen(&tmp_nn1, 2); EG(ret, err);
@@ -163,7 +163,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int _nn_mul_redc1(nn_t out, nn_src_t in1, nn_sr
 	 */
 	MUST_HAVE(((WORD_BITS * (out->wlen + 1)) <= NN_MAX_BIT_LEN), ret, err);
 	old_wlen = out->wlen;
-	out->wlen += (u8)1;
+	out->wlen = (u8)(out->wlen + 1);
 
 	/*
 	 * This can be skipped if the first iteration of the for loop

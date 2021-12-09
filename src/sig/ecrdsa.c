@@ -48,7 +48,7 @@
 /* Reverses the endiannes of a buffer in place */
 ATTRIBUTE_WARN_UNUSED_RET static inline int _reverse_endianness(u8 *buf, u16 buf_size)
 {
-	u32 i;
+	u16 i;
 	u8 tmp;
 	int ret;
 

@@ -56,8 +56,8 @@ ATTRIBUTE_WARN_UNUSED_RET static int fimport(unsigned char *buf, u16 buflen,
 		if (ret <= 0) {
 			break;
 		} else {
-			rem -= (u16)ret;
-			copied += (u16)ret;
+			rem = (u16)(rem - ret);
+			copied = (u16)(copied + ret);
 		}
 	}
 

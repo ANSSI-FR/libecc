@@ -233,7 +233,7 @@ ATTRIBUTE_WARN_UNUSED_RET static inline int md4_update(md4_context *ctx, const u
 
 	/* Get what's left in our local buffer */
 	left = (ctx->md4_total & 0x3F);
-	fill = (MD4_BLOCK_SIZE - left);
+	fill = (u16)(MD4_BLOCK_SIZE - left);
 
 	ctx->md4_total += ilen;
 

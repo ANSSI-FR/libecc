@@ -252,7 +252,7 @@ int _ecgdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	 */
 	rshift = 0;
 	if ((hsize * 8) > q_bit_len) {
-		rshift = (hsize * 8) - q_bit_len;
+		rshift = (bitcnt_t)((hsize * 8) - q_bit_len);
 	}
 	ret = nn_init_from_buf(&tmp, e_buf, hsize); EG(ret, err);
 	ret = local_memset(e_buf, 0, hsize); EG(ret, err);
@@ -556,7 +556,7 @@ int _ecgdsa_verify_finalize(struct ec_verify_context *ctx)
 	 */
 	rshift = 0;
 	if ((hsize * 8) > q_bit_len) {
-		rshift = (hsize * 8) - q_bit_len;
+		rshift = (bitcnt_t)((hsize * 8) - q_bit_len);
 	}
 	ret = nn_init_from_buf(&e, e_buf, hsize); EG(ret, err);
 	ret = local_memset(e_buf, 0, hsize); EG(ret, err);

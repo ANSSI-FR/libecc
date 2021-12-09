@@ -143,7 +143,7 @@ ATTRIBUTE_WARN_UNUSED_RET static inline int md2_update(md2_context *ctx, const u
 
 	/* Get what's left in our local buffer */
 	left = (ctx->md2_total & 0xF);
-	fill = (MD2_BLOCK_SIZE - left);
+	fill = (u16)(MD2_BLOCK_SIZE - left);
 
 	ctx->md2_total += ilen;
 
@@ -183,7 +183,7 @@ ATTRIBUTE_WARN_UNUSED_RET static inline int md2_final(md2_context *ctx, u8 outpu
 	MD2_HASH_CHECK_INITIALIZED(ctx, ret, err);
 
 	/* This is our final step, so we proceed with the padding */
-	pad_byte = (MD2_BLOCK_SIZE - (ctx->md2_total % MD2_BLOCK_SIZE));
+	pad_byte = (u8)(MD2_BLOCK_SIZE - (ctx->md2_total % MD2_BLOCK_SIZE));
 	for(i = (ctx->md2_total % MD2_BLOCK_SIZE); i < MD2_BLOCK_SIZE; i++){
 		ctx->md2_buffer[i] = pad_byte;
 	}

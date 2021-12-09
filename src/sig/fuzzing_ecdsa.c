@@ -114,7 +114,7 @@ int ecdsa_sign_raw(struct ec_sign_context *ctx, const u8 *input, u8 inputlen, u8
 	 */
 	rshift = 0;
 	if ((hsize * 8) > q_bit_len) {
-		rshift = (hsize * 8) - q_bit_len;
+		rshift = (bitcnt_t)((hsize * 8) - q_bit_len);
 	}
 
 	/*
@@ -343,7 +343,7 @@ int ecdsa_verify_raw(struct ec_verify_context *ctx, const u8 *input, u8 inputlen
 	 */
 	rshift = 0;
 	if ((hsize * 8) > q_bit_len) {
-		rshift = (hsize * 8) - q_bit_len;
+		rshift = (bitcnt_t)((hsize * 8) - q_bit_len);
 	}
 
 	/*

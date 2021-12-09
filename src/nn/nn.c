@@ -320,7 +320,7 @@ int nn_cmp_word(nn_src_t in, word_t w, int *cmp)
 	 * Let's loop on all words above first one to see if one
 	 * of those is non-zero.
 	 */
-	for (i = in->wlen - 1; i > 0; i--) {
+	for (i = (u8)(in->wlen - 1); i > 0; i--) {
 		tmp |= (in->val[i] != 0);
 	}
 
@@ -358,12 +358,12 @@ int nn_cmp(nn_src_t A, nn_src_t B, int *cmp)
 	cmp_len = (A->wlen >= B->wlen) ? A->wlen : B->wlen;
 
 	tmp = 0;
-	for (i = cmp_len - 1; i >= 0; i--) {	/* ok even if cmp_len is 0 */
+	for (i = (cmp_len - 1); i >= 0; i--) {	/* ok even if cmp_len is 0 */
 		mask = !(tmp & 0x1);
-		tmp += (A->val[i] > B->val[i]) & mask;
-		tmp -= (A->val[i] < B->val[i]) & mask;
+		tmp += ((A->val[i] > B->val[i]) & mask);
+		tmp -= ((A->val[i] < B->val[i]) & mask);
 	}
-	*cmp = tmp;
+	(*cmp) = tmp;
 
 err:
 	return ret;
@@ -474,13 +474,13 @@ int nn_init_from_buf(nn_t out_nn, const u8 *buf, u16 buflen)
 	MUST_HAVE(((out_nn != NULL) && (buf != NULL) &&
 		  (buflen <= NN_MAX_BYTE_LEN)), ret, err);
 
-	ret = local_memset(tmp, 0, NN_MAX_BYTE_LEN - buflen); EG(ret, err);
+	ret = local_memset(tmp, 0, (u32)(NN_MAX_BYTE_LEN - buflen)); EG(ret, err);
 	ret = local_memcpy(tmp + NN_MAX_BYTE_LEN - buflen, buf, buflen); EG(ret, err);
 
 	ret = nn_init(out_nn, buflen); EG(ret, err);
 
 	for (wpos = 0; wpos < NN_MAX_WORD_LEN; wpos++) {
-		u16 buf_pos = (NN_MAX_WORD_LEN - wpos - 1) * WORD_BYTES;
+		u16 buf_pos = (u16)((NN_MAX_WORD_LEN - wpos - 1) * WORD_BYTES);
 		ret = _ntohw(tmp + buf_pos, &(out_nn->val[wpos])); EG(ret, err);
 	}
 
@@ -520,18 +520,18 @@ int nn_export_to_buf(u8 *buf, u16 buflen, nn_src_t in_nn)
 	 * given buffer length is not a multiple of word length.
 	 */
 	for (i = 0; remain && (i < in_nn->wlen); i++) {
-		u32 copylen = (remain > wb) ? wb : remain;
+		u16 copylen = (remain > wb) ? wb : remain;
 		word_t val;
 
 		ret = _htonw((const u8 *)&in_nn->val[i], &val); EG(ret, err);
 
-		dst_word_ptr = buf + buflen - (i * wb) - copylen;
+		dst_word_ptr = (buf + buflen - (i * wb) - copylen);
 		src_word_ptr = (u8 *)(&val) + wb - copylen;
 
 		ret = local_memcpy(dst_word_ptr, src_word_ptr, copylen); EG(ret, err);
 		src_word_ptr = NULL;
 
-		remain -= copylen;
+		remain = (u16)(remain - copylen);
 	}
 
 err:
@@ -572,7 +572,7 @@ int nn_tabselect(nn_t out, u8 idx, nn_src_t *tab, u8 tabsize)
 
 		mask = WORD_MASK_IFNOTZERO(idx == k);
 
-		out->wlen |= ((tab[k]->wlen) & mask);
+		out->wlen = (u8)(out->wlen | ((tab[k]->wlen) & mask));
 
 		for (i = 0; i < NN_MAX_WORD_LEN; i++) {
 			out->val[i] |= (tab[k]->val[i] & mask);

@@ -536,6 +536,6 @@ static const ec_sig_mapping ec_sig_maps[] = {
  * For a given raw signature, the structured version is produced by prepending
  * three bytes providing specific sig alg, hash alg and curve.
  */
-#define EC_STRUCTURED_SIG_EXPORT_SIZE(siglen)  ((siglen) + (3 * sizeof(u8)))
+#define EC_STRUCTURED_SIG_EXPORT_SIZE(siglen)  (u8)((siglen) + (u8)(3 * sizeof(u8)))
 
 #endif /* __SIG_ALGS_INTERNAL_H__ */

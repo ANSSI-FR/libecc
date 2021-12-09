@@ -588,7 +588,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int _mgf1(const u8 *z, u16 zlen,
 		/* 3.B + 4. */
 		if ((masklen % hlen) && (c == (ceil - 1))) { /* need last chunk smaller than hlen */
 			ret = gen_hash_hfunc_scattered(input, ilens, digest, mgf_hash_type); EG(ret, err);
-			ret = local_memcpy(&mask[c * hlen], digest, masklen % hlen); EG(ret, err);
+			ret = local_memcpy(&mask[c * hlen], digest, (u32)(masklen % hlen)); EG(ret, err);
 		} else {                                     /* common case, i.e. complete chunk */
 			ret = gen_hash_hfunc_scattered(input, ilens, &mask[c * hlen], mgf_hash_type); EG(ret, err);
 		}
@@ -704,7 +704,7 @@ int emsa_pss_encode(const u8 *m, u16 mlen, u8 *em, u32 embits,
 	 */
 	mask = 0;
 	for(i = 0; i < (8 - ((8*emlen) - embits)); i++){
-		mask |= (0x1 << i);
+		mask = (u8)(mask | (0x1 << i));
 	}
 	dbmask[0] &= mask;
 	/* EM = maskedDB || H || 0xbc */
@@ -781,13 +781,13 @@ int emsa_pss_verify(const u8 *m, u16 mlen, const u8 *em,
 	 * NOTE: maskeddb points to &em[0]
 	 */
 	mask = 0;
-	for(i = 0; i < (8 - ((8*emlen) - embits)); i++){
-		mask |= (0x1 << i);
+	for(i = 0; i < (8 - ((unsigned int)(8*emlen) - embits)); i++){
+		mask = (u8)(mask | (0x1 << i));
 	}
 	MUST_HAVE(((maskeddb[0] & (~mask)) == 0), ret, err);
 
 	/* dbMask = MGF(H, emLen - hLen - 1) */
-	dblen = (emlen - hlen - 1);
+	dblen = (u32)(emlen - hlen - 1);
 	h = &em[dblen];
 	MUST_HAVE(((u16)dblen <= sizeof(dbmask)), ret, err); /* sanity check for overflow */
 	ret = _mgf1(h, hlen, dbmask, dblen, mgf_hash_type); EG(ret, err);
@@ -1023,7 +1023,7 @@ int rsaes_pkcs1_v1_5_decrypt(const rsa_priv_key *priv, const u8 *c, u16 clen,
 		/* Replace m by a random value in case of error */
 		idx = ((i < pos) ? 0x00 : (i - pos));
 		r ^= (u8)i;
-		r_ = ((u8)(!!ret) * r);
+		r_ = (u8)((u8)(!!ret) * r);
 		m[idx] = (em[i] ^ r_);
 	}
 	(*mlen) = (u16)(k - pos);
@@ -1099,7 +1099,7 @@ int rsaes_oaep_encrypt(const rsa_pub_key *pub, const u8 *m, u16 mlen,
 	 *
 	 * DB = lHash || PS || 0x01 || M. Hence, PS starts at octet hlen in DB
 	 */
-	pslen = (k - mlen - (2 * hlen) - 2);
+	pslen = (k - mlen - (u32)(2 * hlen) - 2);
 	for(i = 0; i < pslen; i++){
 		db[hlen + i] = 0x00;
 	}
@@ -1272,7 +1272,7 @@ int rsaes_oaep_decrypt(const rsa_priv_key *priv, const u8 *c, u16 clen,
 		/* Replace m by a random value in case of error */
 		idx = (i < pos) ? 0x00 : (i - pos);
 		r ^= (u8)i;
-		r_ = ((u8)(!!ret) * r);
+		r_ = (u8)((u8)(!!ret) * r);
 		m[idx] = (db[i] ^ r_);
 	}
 	(*mlen) = (u16)(k - hlen - 1 - pos);

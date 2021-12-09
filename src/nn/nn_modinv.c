@@ -54,14 +54,14 @@ ATTRIBUTE_WARN_UNUSED_RET static int _nn_modinv_odd(nn_t out, nn_src_t x, nn_src
 	a.magic = b.magic = u.magic = tmp.magic = mp1d2.magic = WORD(0);
 
 	ret = nn_init(out, 0); EG(ret, err);
-	ret = nn_init(&a, m->wlen * WORD_BYTES); EG(ret, err);
-	ret = nn_init(&b, m->wlen * WORD_BYTES); EG(ret, err);
-	ret = nn_init(&u, m->wlen * WORD_BYTES); EG(ret, err);
-	ret = nn_init(&mp1d2, m->wlen * WORD_BYTES); EG(ret, err);
+	ret = nn_init(&a, (u16)(m->wlen * WORD_BYTES)); EG(ret, err);
+	ret = nn_init(&b, (u16)(m->wlen * WORD_BYTES)); EG(ret, err);
+	ret = nn_init(&u, (u16)(m->wlen * WORD_BYTES)); EG(ret, err);
+	ret = nn_init(&mp1d2, (u16)(m->wlen * WORD_BYTES)); EG(ret, err);
 	/*
 	 * Temporary space needed to only deal with positive stuff.
 	 */
-	ret = nn_init(&tmp, m->wlen * WORD_BYTES); EG(ret, err);
+	ret = nn_init(&tmp, (u16)(m->wlen * WORD_BYTES)); EG(ret, err);
 
 	MUST_HAVE((!nn_isodd(m, &isodd)) && isodd, ret, err);
 	MUST_HAVE((!nn_cmp(x, m, &cmp)) && (cmp < 0), ret, err);
@@ -102,9 +102,9 @@ ATTRIBUTE_WARN_UNUSED_RET static int _nn_modinv_odd(nn_t out, nn_src_t x, nn_src
 	ret = nn_inc(&mp1d2, &mp1d2); EG(ret, err); /* no carry can occur here
 						       because of prev. shift */
 
-	cnt = (a.wlen + b.wlen) * WORD_BITS;
+	cnt = (bitcnt_t)((a.wlen + b.wlen) * WORD_BITS);
 	while (cnt > 0) {
-		cnt -= (bitcnt_t)1;
+		cnt = (bitcnt_t)(cnt - 1);
 		/*
 		 * Always maintain b odd. The logic of the iteration is as
 		 * follows.
@@ -286,7 +286,7 @@ ATTRIBUTE_WARN_UNUSED_RET static inline int _nn_sub_mod_2exp(nn_t A, nn_src_t B)
 	u8 Awlen = A->wlen;
 	int ret;
 
-	ret = nn_set_wlen(A, Awlen + 1); EG(ret, err);
+	ret = nn_set_wlen(A, (u8)(Awlen + 1)); EG(ret, err);
 
 	/* Make sure A > B */
 	/* NOTE: A->wlen - 1 is not an issue here thant to the nn_set_wlen above */
@@ -341,7 +341,7 @@ int nn_modinv_2exp(nn_t _out, nn_src_t x, bitcnt_t exp, int *x_isodd)
 	 * Inverse modulo 2^(2^i) <= 2^WORD_BITS.
 	 * Assumes WORD_BITS is a power of two.
 	 */
-	for (; cnt < WORD_MIN(WORD_BITS, exp); cnt <<= 1) {
+	for (; cnt < WORD_MIN(WORD_BITS, exp); cnt = (bitcnt_t)(cnt << 1)) {
 		ret = nn_sqr_low(&tmp_sqr, &out, out.wlen); EG(ret, err);
 		ret = nn_mul_low(&tmp_mul, &tmp_sqr, x, out.wlen); EG(ret, err);
 		ret = nn_lshift_fixedlen(&out, &out, 1); EG(ret, err);
@@ -367,8 +367,8 @@ int nn_modinv_2exp(nn_t _out, nn_src_t x, bitcnt_t exp, int *x_isodd)
 	/*
 	 * Inverse modulo 2^WORD_BITS < 2^(2^i) < 2^exp.
 	 */
-	for (; cnt < ((exp + 1) >> 1); cnt <<= 1) {
-		ret = nn_set_wlen(&out, (2 * out.wlen)); EG(ret, err);
+	for (; cnt < ((exp + 1) >> 1); cnt = (bitcnt_t)(cnt << 1)) {
+		ret = nn_set_wlen(&out, (u8)(2 * out.wlen)); EG(ret, err);
 		ret = nn_sqr_low(&tmp_sqr, &out, out.wlen); EG(ret, err);
 		ret = nn_mul_low(&tmp_mul, &tmp_sqr, x, out.wlen); EG(ret, err);
 		ret = nn_lshift_fixedlen(&out, &out, 1); EG(ret, err);

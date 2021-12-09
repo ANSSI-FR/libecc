@@ -364,7 +364,7 @@ int _eckcdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	 *    bitstring h (w/ beta' = 8 * ceil(bitlen(q) / 8)), i.e.
 	 *    set h to I2BS(beta', BS2I(|H|, h) mod 2^beta')
 	 */
-	shift = (hsize > r_len) ? (hsize - r_len) : 0;
+	shift = (u8)((hsize > r_len) ? (hsize - r_len) : 0);
 	MUST_HAVE((hsize <= sizeof(hzm)), ret, err);
 
 	ret = buf_lshift(hzm, hsize, shift); EG(ret, err);
@@ -753,7 +753,7 @@ int _eckcdsa_verify_finalize(struct ec_verify_context *ctx)
 	 *    bitstring h (w/ beta' = 8 * ceil(bitlen(q) / 8)), i.e.
 	 *    set h to I2BS(beta', BS2I(|H|, h) mod 2^beta')
 	 */
-	shift = (hsize > r_len) ? (hsize - r_len) : 0;
+	shift = (u8)((hsize > r_len) ? (hsize - r_len) : 0);
 	MUST_HAVE(hsize <= sizeof(hzm), ret, err);
 	ret = buf_lshift(hzm, hsize, shift); EG(ret, err);
 	dbg_buf_print("h = H(z||m) post-mask", hzm, r_len);

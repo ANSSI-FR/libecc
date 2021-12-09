@@ -60,7 +60,7 @@ int nn_get_random_maxlen(nn_t out, u16 max_len)
 
 	ret = get_random((u8 *)&len, 2); EG(ret, err);
 
-	len %= (max_len + 1);
+	len = (u16)(len % (max_len + 1));
 
 	ret = nn_get_random_len(out, len);
 
@@ -99,7 +99,7 @@ int nn_get_random_mod(nn_t out, nn_src_t q)
 	/* Check q is initialized and get its bit length */
 	ret = nn_check_initialized(q); EG(ret, err);
 	ret = nn_bitlen(q, &q_bit_len); EG(ret, err);
-	q_len = BYTECEIL(q_bit_len);
+	q_len = (bitcnt_t)BYTECEIL(q_bit_len);
 
 	/* Check q is neither 0, nor 1 and its size is ok */
 	MUST_HAVE((q_len) && (q_len <= (NN_MAX_BYTE_LEN / 2)), ret, err);

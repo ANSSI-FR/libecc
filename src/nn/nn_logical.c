@@ -47,7 +47,7 @@ int nn_lshift_fixedlen(nn_t out, nn_src_t in, bitcnt_t cnt)
 
 	dec = cnt / WORD_BITS;
 	hshift = cnt % WORD_BITS;
-	lshift = WORD_BITS - hshift;
+	lshift = (bitcnt_t)(WORD_BITS - hshift);
 
 	for (opos = owlen - 1; opos >= 0; opos--) {
 		word_t hipart = 0, lopart = 0;
@@ -109,7 +109,7 @@ int nn_lshift(nn_t out, nn_src_t in, bitcnt_t cnt)
 
 	dec = cnt / WORD_BITS;
 	hshift = cnt % WORD_BITS;
-	lshift = WORD_BITS - hshift;
+	lshift = (bitcnt_t)(WORD_BITS - hshift);
 
 	for (opos = owlen - 1; opos >= 0; opos--) {
 		word_t hipart = 0, lopart = 0;
@@ -161,7 +161,7 @@ int nn_rshift_fixedlen(nn_t out, nn_src_t in, bitcnt_t cnt)
 
 	dec = cnt / WORD_BITS;
 	lshift = cnt % WORD_BITS;
-	hshift = WORD_BITS - lshift;
+	hshift = (bitcnt_t)(WORD_BITS - lshift);
 
 	for (opos = 0; opos < owlen; opos++) {
 		word_t hipart = 0, lopart = 0;
@@ -216,7 +216,7 @@ int nn_rshift(nn_t out, nn_src_t in, bitcnt_t cnt)
 
 	dec = cnt / WORD_BITS;
 	lshift = cnt % WORD_BITS;
-	hshift = WORD_BITS - lshift;
+	hshift = (bitcnt_t)(WORD_BITS - lshift);
 
 	/* Adapt output length accordingly */
 	ret = nn_bitlen(in, &blen); EG(ret, err);
@@ -276,7 +276,7 @@ int nn_rrot(nn_t out, nn_src_t in, bitcnt_t cnt, bitcnt_t bitlen)
 
 	ret = nn_check_initialized(in); EG(ret, err);
 	ret = nn_init(&tmp, 0); EG(ret, err);
-	ret = nn_lshift(&tmp, in, bitlen - cnt); EG(ret, err);
+	ret = nn_lshift(&tmp, in, (bitcnt_t)(bitlen - cnt)); EG(ret, err);
 	ret = nn_set_wlen(&tmp, owlen); EG(ret, err);
 	ret = nn_rshift(out, in, cnt); EG(ret, err);
 	ret = nn_set_wlen(out, owlen); EG(ret, err);
@@ -316,7 +316,7 @@ int nn_lrot(nn_t out, nn_src_t in, bitcnt_t cnt, bitcnt_t bitlen)
 	ret = nn_init(&tmp, 0); EG(ret, err);
 	ret = nn_lshift(&tmp, in, cnt); EG(ret, err);
 	ret = nn_set_wlen(&tmp, owlen); EG(ret, err);
-	ret = nn_rshift(out, in, bitlen - cnt); EG(ret, err);
+	ret = nn_rshift(out, in, (bitcnt_t)(bitlen - cnt)); EG(ret, err);
 	ret = nn_set_wlen(out, owlen); EG(ret, err);
 	ret = nn_xor(out, out, &tmp); EG(ret, err);
 
@@ -469,8 +469,9 @@ ATTRIBUTE_WARN_UNUSED_RET static u8 wclz(word_t A)
 
 	for (i = (WORD_BITS - 1); i >= 0; i--) {
 		/* i is less than WORD_BITS so shift operations below are ok */
-		over |= (int)(((A & (WORD(1) << i)) >> i) & 0x1);
-		cnt -= over;
+		u8 mask = (u8)(((A & (WORD(1) << i)) >> i) & 0x1);
+		over |= mask;
+		cnt = (u8)(cnt - over);
 	}
 
 	return cnt;
@@ -493,9 +494,9 @@ int nn_clz(nn_src_t in, bitcnt_t *lz)
 
 	for (i = in->wlen; i > 0; i--) {
 		if (in->val[i - 1] == 0) {
-			cnt += WORD_BITS;
+			cnt = (bitcnt_t)(cnt +  WORD_BITS);
 		} else {
-			cnt += wclz(in->val[i - 1]);
+			cnt = (bitcnt_t)(cnt + wclz(in->val[i - 1]));
 			break;
 		}
 	}
@@ -522,7 +523,7 @@ int nn_bitlen(nn_src_t in, bitcnt_t *blen)
 
 	for (i = in->wlen; i > 0; i--) {
 		if (in->val[i - 1] != 0) {
-			_blen = ((i * WORD_BITS) - wclz(in->val[i - 1]));
+			_blen = (bitcnt_t)((i * WORD_BITS) - wclz(in->val[i - 1]));
 			break;
 		}
 	}

@@ -88,7 +88,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int __ecdsa_rfc6979_nonce(nn_t k, nn_src_t q, b
 	/* We compute bits2octets(hash) here */
 	ret = nn_init_from_buf(k, hash, hsize); EG(ret, err);
 	if((8 * hsize) > q_bit_len){
-		ret = nn_rshift(k, k, (8 * hsize) - q_bit_len); EG(ret, err);
+		ret = nn_rshift(k, k, (bitcnt_t)((8 * hsize) - q_bit_len)); EG(ret, err);
 	}
 	ret = nn_mod(k, k, q); EG(ret, err);
 	ret = nn_export_to_buf(T, q_len, k); EG(ret, err);
@@ -140,11 +140,11 @@ restart:
 		hmac_size = sizeof(V);
 		ret = hmac(K, hsize, hash_type, V, hsize, V, &hmac_size); EG(ret, err);
 		ret = local_memcpy(&T[BYTECEIL(t_bit_len)], V, hmac_size); EG(ret, err);
-		t_bit_len += (8 * hmac_size);
+		t_bit_len = (bitcnt_t)(t_bit_len + (8 * hmac_size));
 	}
 	ret = nn_init_from_buf(k, T, q_len); EG(ret, err);
 	if((8 * q_len) > q_bit_len){
-		ret = nn_rshift(k, k, (8 * q_len) - q_bit_len); EG(ret, err);
+		ret = nn_rshift(k, k, (bitcnt_t)((8 * q_len) - q_bit_len)); EG(ret, err);
 	}
 	ret = nn_cmp(k, q, &cmp); EG(ret, err);
 	if(cmp >= 0){
@@ -397,7 +397,7 @@ int __ecdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen,
 	 */
 	rshift = 0;
 	if ((hsize * 8) > q_bit_len) {
-		rshift = (hsize * 8) - q_bit_len;
+		rshift = (bitcnt_t)((hsize * 8) - q_bit_len);
 	}
 
 	/*
@@ -759,7 +759,7 @@ int __ecdsa_verify_finalize(struct ec_verify_context *ctx,
 	 */
 	rshift = 0;
 	if ((hsize * 8) > q_bit_len) {
-		rshift = (hsize * 8) - q_bit_len;
+		rshift = (bitcnt_t)((hsize * 8) - q_bit_len);
 	}
 
 	/*

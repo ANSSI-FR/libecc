@@ -112,7 +112,7 @@ int sha224_update(sha224_context *ctx, const u8 *input, u32 ilen)
 
 	/* Get what's left in our local buffer */
 	left = (ctx->sha224_total & 0x3F);
-	fill = (SHA224_BLOCK_SIZE - left);
+	fill = (u16)(SHA224_BLOCK_SIZE - left);
 
 	ctx->sha224_total += ilen;
 

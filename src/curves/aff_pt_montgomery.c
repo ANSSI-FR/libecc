@@ -220,7 +220,7 @@ int aff_pt_montgomery_import_from_buf(aff_pt_montgomery_t pt,
 	MUST_HAVE((pt_buf != NULL) && (pt != NULL), ret, err);
 
 	ctx = crv->A.ctx;
-	coord_len = BYTECEIL(ctx->p_bitlen);
+	coord_len = (u16)BYTECEIL(ctx->p_bitlen);
 
 	MUST_HAVE((pt_buf_len == (2 * coord_len)), ret, err);
 
@@ -269,7 +269,7 @@ int aff_pt_montgomery_export_to_buf(aff_pt_montgomery_src_t pt, u8 *pt_buf, u32 
 	MUST_HAVE(on_curve, ret, err);
 
 	ctx = pt->crv->A.ctx;
-	coord_len = BYTECEIL(ctx->p_bitlen);
+	coord_len = (u16)BYTECEIL(ctx->p_bitlen);
 
 	MUST_HAVE((pt_buf_len == (2 * coord_len)), ret, err);
 

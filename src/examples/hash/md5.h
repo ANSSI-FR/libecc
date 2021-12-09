@@ -235,7 +235,7 @@ ATTRIBUTE_WARN_UNUSED_RET static inline int md5_update(md5_context *ctx, const u
 
 	/* Get what's left in our local buffer */
 	left = (ctx->md5_total & 0x3F);
-	fill = (MD5_BLOCK_SIZE - left);
+	fill = (u16)(MD5_BLOCK_SIZE - left);
 
 	ctx->md5_total += ilen;
 

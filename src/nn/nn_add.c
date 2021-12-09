@@ -72,7 +72,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int _nn_cnd_add(int cnd, nn_t out, nn_src_t in1
 	/* Handle aliasing */
 	loop_wlen = LOCAL_MAX(in1->wlen, in2->wlen);
 	if ((out != in1) && (out != in2)) {
-		ret = nn_init(out, loop_wlen * WORD_BYTES); EG(ret, err);
+		ret = nn_init(out, (u16)(loop_wlen * WORD_BYTES)); EG(ret, err);
 	} else {
 		ret = nn_set_wlen(out, loop_wlen); EG(ret, err);
 	}
@@ -135,7 +135,7 @@ int nn_cnd_add(int cnd, nn_t out, nn_src_t in1, nn_src_t in2)
 		 * the time taken by further operations on it also vary.
 		 */
 		out->val[out->wlen] = carry;
-		out->wlen += (u8)carry;
+		out->wlen = (u8)(out->wlen + carry);
 	}
 
 err:
@@ -187,7 +187,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int nn_add_word(nn_t out, nn_src_t in1, word_t 
 	/* Handle aliasing */
 	n_wlen = in1->wlen;
 	if (out != in1) {
-		ret = nn_init(out, n_wlen * WORD_BYTES); EG(ret, err);
+		ret = nn_init(out, (u16)(n_wlen * WORD_BYTES)); EG(ret, err);
 	} else {
 		ret = nn_set_wlen(out, n_wlen); EG(ret, err);
 	}
@@ -210,7 +210,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int nn_add_word(nn_t out, nn_src_t in1, word_t 
 		 * the time taken by further operations on it will vary.
 		 */
 		out->val[out->wlen] = carry;
-		out->wlen += (u8)carry;
+		out->wlen = (u8)(out->wlen + carry);
 	}
 
 err:
@@ -260,7 +260,7 @@ int nn_cnd_sub(int cnd, nn_t out, nn_src_t in1, nn_src_t in2)
 	/* Handle aliasing */
 	loop_wlen = LOCAL_MAX(in1->wlen, in2->wlen);
 	if ((out != in1) && (out != in2)) {
-		ret = nn_init(out, loop_wlen * WORD_BYTES); EG(ret, err);
+		ret = nn_init(out, (u16)(loop_wlen * WORD_BYTES)); EG(ret, err);
 	} else {
 		ret = nn_set_wlen(out, in1->wlen); EG(ret, err);
 	}
@@ -358,7 +358,7 @@ int nn_mod_add(nn_t out, nn_src_t in1, nn_src_t in2, nn_src_t p)
 	 * of in1 and in2 so getting a carry out does not necessarily mean
 	 * that the sum is larger than p...
 	 */
-	ret = nn_set_wlen(out, p->wlen + 1); EG(ret, err);
+	ret = nn_set_wlen(out, (u8)(p->wlen + 1)); EG(ret, err);
 	ret = nn_cmp(out, p, &cmp); EG(ret, err);
 	larger = (cmp >= 0);
 	ret = nn_cnd_sub(larger, out, out, p); EG(ret, err);
@@ -381,7 +381,7 @@ int nn_mod_inc(nn_t out, nn_src_t in1, nn_src_t p)
 	SHOULD_HAVE((!nn_cmp(in1, p, &cmp)) && (cmp < 0), ret, err); /* a SHOULD_HAVE as documented above */
 
 	ret = nn_inc(out, in1); EG(ret, err);
-	ret = nn_set_wlen(out, p->wlen + 1); EG(ret, err); /* see comment in nn_mod_add() */
+	ret = nn_set_wlen(out, (u8)(p->wlen + 1)); EG(ret, err); /* see comment in nn_mod_add() */
 	ret = nn_cmp(out, p, &cmp); EG(ret, err);
 	larger = (cmp >= 0);
 	ret = nn_cnd_sub(larger, out, out, p); EG(ret, err);
@@ -422,7 +422,7 @@ int nn_mod_sub(nn_t out, nn_src_t in1, nn_src_t in2, nn_src_t p)
 	ret = nn_cmp(in1, in2_, &cmp); EG(ret, err);
 	smaller = (cmp < 0);
 	ret = nn_cnd_add(smaller, out, in1, p); EG(ret, err);
-	ret = nn_set_wlen(out, p->wlen + 1); EG(ret, err);/* See Comment in nn_mod_add() */
+	ret = nn_set_wlen(out, (u8)(p->wlen + 1)); EG(ret, err);/* See Comment in nn_mod_add() */
 	ret = nn_sub(out, out, in2_); EG(ret, err);
 	ret = nn_set_wlen(out, p->wlen);
 
@@ -448,7 +448,7 @@ int nn_mod_dec(nn_t out, nn_src_t in1, nn_src_t p)
 	/* The below trick is used to avoid handling of "negative" numbers. */
 	ret = nn_iszero(in1, &iszero); EG(ret, err);
 	ret = nn_cnd_add(iszero, out, in1, p); EG(ret, err);
-	ret = nn_set_wlen(out, p->wlen + 1); EG(ret, err); /* See Comment in nn_mod_add() */
+	ret = nn_set_wlen(out, (u8)(p->wlen + 1)); EG(ret, err); /* See Comment in nn_mod_add() */
 	ret = nn_dec(out, out); EG(ret, err);
 	ret = nn_set_wlen(out, p->wlen);
 

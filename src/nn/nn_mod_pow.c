@@ -65,7 +65,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int _nn_exp_monty_ladder_ltr(nn_t out, nn_src_t
 	oldexplen = explen;
 	explen = (explen < 2) ? 2 : explen;
 
-	ret = nn_getbit(&mask, (explen - 1), &rbit); EG(ret, err);
+	ret = nn_getbit(&mask, (bitcnt_t)(explen - 1), &rbit); EG(ret, err);
 
 	/* Reduce the base if necessary */
 	ret = nn_cmp(base, mod, &cmp); EG(ret, err);
@@ -99,10 +99,10 @@ ATTRIBUTE_WARN_UNUSED_RET static int _nn_exp_monty_ladder_ltr(nn_t out, nn_src_t
 
 	/* Now proceed with the Montgomery Ladder algorithm.
 	 */
-	explen -= (bitcnt_t)1;
+	explen = (bitcnt_t)(explen - 1);
 	while (explen > 0) {
 		u8 rbit_next;
-		explen -= (bitcnt_t)1;
+		explen = (bitcnt_t)(explen - 1);
 
 		/* rbit is r[i+1], and rbit_next is r[i] */
 		ret = nn_getbit(&mask, explen, &rbit_next); EG(ret, err);

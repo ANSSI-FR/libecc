@@ -243,7 +243,7 @@ int aff_pt_import_from_buf(aff_pt_t pt,
 	ret = ec_shortw_crv_check_initialized(crv); EG(ret, err);
 
 	ctx = crv->a.ctx;
-	coord_len = BYTECEIL(ctx->p_bitlen);
+	coord_len = (u16)BYTECEIL(ctx->p_bitlen);
 
 	MUST_HAVE((pt_buf_len == (2 * coord_len)), ret, err);
 
@@ -295,7 +295,7 @@ int aff_pt_export_to_buf(aff_pt_src_t pt, u8 *pt_buf, u32 pt_buf_len)
 	MUST_HAVE((on_curve), ret, err);
 
 	/* buffer size must match 2 * p_len */
-	coord_len = BYTECEIL(pt->crv->a.ctx->p_bitlen);
+	coord_len = (u16)BYTECEIL(pt->crv->a.ctx->p_bitlen);
 	MUST_HAVE((pt_buf_len == (2 * coord_len)), ret, err);
 
 	/* Export the two coordinates */

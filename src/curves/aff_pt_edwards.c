@@ -234,7 +234,7 @@ int aff_pt_edwards_import_from_buf(aff_pt_edwards_t pt,
 	MUST_HAVE(((pt_buf != NULL) && (pt != NULL)), ret, err);
 
 	ctx = crv->a.ctx;
-	coord_len = BYTECEIL(ctx->p_bitlen);
+	coord_len = (u16)BYTECEIL(ctx->p_bitlen);
 
 	MUST_HAVE((pt_buf_len == (2 * coord_len)), ret, err);
 
@@ -284,7 +284,7 @@ int aff_pt_edwards_export_to_buf(aff_pt_edwards_src_t pt,
 	MUST_HAVE(on_curve, ret, err);
 
 	ctx = pt->crv->a.ctx;
-	coord_len = BYTECEIL(ctx->p_bitlen);
+	coord_len = (u16)BYTECEIL(ctx->p_bitlen);
 
 	MUST_HAVE((pt_buf_len == (2 * coord_len)), ret, err);
 

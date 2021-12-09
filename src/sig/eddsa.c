@@ -227,7 +227,7 @@ err:
  */
 ATTRIBUTE_WARN_UNUSED_RET static int eddsa_decode_integer(nn_t nn_out, const u8 *buf, u16 buf_size)
 {
-	u32 i;
+	u16 i;
 	u8 buf_little_endian[MAX_DIGEST_SIZE];
 	int ret;
 
@@ -256,7 +256,7 @@ err:
  */
 ATTRIBUTE_WARN_UNUSED_RET static int eddsa_encode_integer(nn_src_t nn_in, u8 *buf, u16 buf_size)
 {
-	u32 i;
+	u16 i;
 	u8 tmp;
 	int ret;
 	bitcnt_t blen;
@@ -428,7 +428,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int eddsa_decode_point(aff_pt_edwards_t out, ec
 	fp sqrt1, sqrt2;
 	u8 x_0, lsb;
 	u8 buf_little_endian[MAX_DIGEST_SIZE];
-	u32 i;
+	u16 i;
 	int ret, iszero;
 
 #if defined(WITH_SIG_EDDSA448)
@@ -652,7 +652,7 @@ int eddsa_derive_priv_key(ec_priv_key *priv_key)
 	MUST_HAVE((cofactor == (0x1 << 2)) || (cofactor == (0x1 << 3)), ret, err);
 
 	/* Now clear the low bits related to cofactor */
-	digest[0] &= ~(cofactor - 1);
+	digest[0] &= (u8)(~(cofactor - 1));
 #if defined(WITH_SIG_EDDSA25519)
 	if ((priv_key->key_type == EDDSA25519) ||
 	    (priv_key->key_type == EDDSA25519CTX) ||

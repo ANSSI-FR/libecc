@@ -163,7 +163,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int sm2_compute_Z(u8 *Z, u16 *Zlen, const u8 *i
 	Y = &(pub_key->y);
 	p_bit_len = pub_key->params->ec_fp.p_bitlen;
 	p_len = (u8)BYTECEIL(p_bit_len);
-	entlen = id_len * 8;
+	entlen = (u16)(id_len * 8);
 	a = &(pub_key->params->ec_curve.a);
 	b = &(pub_key->params->ec_curve.b);
 
@@ -172,8 +172,8 @@ ATTRIBUTE_WARN_UNUSED_RET static int sm2_compute_Z(u8 *Z, u16 *Zlen, const u8 *i
 	ret = hm->hfunc_init(&hctx); EG(ret, err);
 
 	/* ENTL */
-	buf[0] = (entlen >> 8) & 0xff;
-	buf[1] = entlen & 0xff;
+	buf[0] = (u8)((entlen >> 8) & 0xff);
+	buf[1] = (u8)(entlen & 0xff);
 	ret = hm->hfunc_update(&hctx, buf, 2); EG(ret, err);
 
 	/* ID */
@@ -188,12 +188,12 @@ ATTRIBUTE_WARN_UNUSED_RET static int sm2_compute_Z(u8 *Z, u16 *Zlen, const u8 *i
 	ret = hm->hfunc_update(&hctx, buf, p_len); EG(ret, err);
 
 	/* FE2BS(p, Gx) || FE2BS(p, Gy) */
-	ret = prj_pt_export_to_aff_buf(G, buf, 2 * p_len); EG(ret, err);
-	ret = hm->hfunc_update(&hctx, buf, 2 * p_len); EG(ret, err);
+	ret = prj_pt_export_to_aff_buf(G, buf, (u32)(2 * p_len)); EG(ret, err);
+	ret = hm->hfunc_update(&hctx, buf, (u32)(2 * p_len)); EG(ret, err);
 
 	/* FE2BS(p, Yx) || FE2BS(p, Yy) */
-	ret = prj_pt_export_to_aff_buf(Y, buf, 2 * p_len); EG(ret, err);
-	ret = hm->hfunc_update(&hctx, buf, 2 * p_len); EG(ret, err);
+	ret = prj_pt_export_to_aff_buf(Y, buf, (u32)(2 * p_len)); EG(ret, err);
+	ret = hm->hfunc_update(&hctx, buf, (u32)(2 * p_len)); EG(ret, err);
 
 	/* Let's now finalize hash computation */
 	ret = hm->hfunc_finalize(&hctx, Z); EG(ret, err);

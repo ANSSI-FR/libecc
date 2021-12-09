@@ -344,7 +344,7 @@ int ec_structured_priv_key_import_from_buf(ec_priv_key *priv_key,
 					params->curve_name, crv_name_len); EG(ret, err);
 	ret = ec_priv_key_import_from_buf(priv_key, params,
 					  priv_key_buf + metadata_len,
-					  priv_key_buf_len - metadata_len,
+					  (u8)(priv_key_buf_len - metadata_len),
 					  ec_key_alg);
 
  err:
@@ -396,7 +396,7 @@ int ec_structured_priv_key_export_to_buf(const ec_priv_key *priv_key,
 
 	/* Push the raw private key buffer */
 	ret = ec_priv_key_export_to_buf(priv_key, priv_key_buf + metadata_len,
-					priv_key_buf_len - metadata_len);
+					(u8)(priv_key_buf_len - metadata_len));
 
 err:
 	return ret;
@@ -443,7 +443,7 @@ int ec_structured_pub_key_import_from_buf(ec_pub_key *pub_key,
 					   params->curve_name, crv_name_len); EG(ret, err);
 	ret = ec_pub_key_import_from_buf(pub_key, params,
 					 pub_key_buf + metadata_len,
-					 pub_key_buf_len - metadata_len,
+					 (u8)(pub_key_buf_len - metadata_len),
 					 ec_key_alg);
 
 err:
@@ -495,7 +495,7 @@ int ec_structured_pub_key_export_to_buf(const ec_pub_key *pub_key,
 
 	/* Push the raw pub key buffer */
 	ret = ec_pub_key_export_to_buf(pub_key, pub_key_buf + metadata_len,
-				       pub_key_buf_len - metadata_len);
+				       (u8)(pub_key_buf_len - metadata_len));
 
 err:
 	return ret;
@@ -541,8 +541,8 @@ int ec_structured_key_pair_import_from_priv_key_buf(ec_key_pair *kp,
 					params->curve_name, crv_name_len); EG(ret, err);
 	ret = ec_key_pair_import_from_priv_key_buf(kp, params,
 						   priv_key_buf + metadata_len,
-						   priv_key_buf_len -
-						   metadata_len, ec_key_alg);
+						   (u8)(priv_key_buf_len - metadata_len),
+						   ec_key_alg);
 
  err:
 	return ret;

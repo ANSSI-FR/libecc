@@ -615,7 +615,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int ec_sig_known_vector_tests_one(const ec_test
 			failed_test = TEST_SIG_ERROR;
 			goto err;
 		}
-		ret = nn_export_to_buf(nonce, BYTECEIL(q_bit_len), &n_nonce); EG(ret, err);
+		ret = nn_export_to_buf(nonce, (u16)BYTECEIL(q_bit_len), &n_nonce); EG(ret, err);
 		if((unsigned int)BYTECEIL(q_bit_len) > sizeof(nonce)){
 			ret = -1;
 			failed_test = TEST_SIG_ERROR;
@@ -1259,7 +1259,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int ec_performance_test(const ec_test_case *c,
 				ext_printf("Error when getting random\n");
 				goto err;
 			}
-			msglen = msglen % hash_block_size;
+			msglen = (u16)(msglen % hash_block_size);
 			ret = get_random(msg, msglen);
 			if (ret) {
 				ext_printf("Error when getting random\n");
@@ -1313,10 +1313,10 @@ ATTRIBUTE_WARN_UNUSED_RET static int ec_performance_test(const ec_test_case *c,
 			cumulated_time_verify += (time2 - time1);
 		}
 		if (n_perf_sign != NULL) {
-			*n_perf_sign = ((PERF_NUM_OP * 1000ULL) / cumulated_time_sign);
+			(*n_perf_sign) = (unsigned int)((PERF_NUM_OP * 1000ULL) / cumulated_time_sign);
 		}
 		if (n_perf_verif != NULL) {
-			*n_perf_verif = ((PERF_NUM_OP * 1000ULL) / cumulated_time_verify);
+			(*n_perf_verif) = (unsigned int)((PERF_NUM_OP * 1000ULL) / cumulated_time_verify);
 		}
 	}
 	ret = 0;

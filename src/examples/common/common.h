@@ -198,7 +198,7 @@ ATTRIBUTE_WARN_UNUSED_RET static inline int _nn_mod_pow_insecure(nn_t out, nn_sr
 	ret = nn_one(&one); EG(ret, err);
 
 	while (explen > 0) {
-		explen -= (bitcnt_t)1;
+		explen = (bitcnt_t)(explen - 1);
 
 		/* Get the bit */
 		ret = nn_getbit(exp, explen, &expbit); EG(ret, err);
