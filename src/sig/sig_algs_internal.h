@@ -537,5 +537,10 @@ static const ec_sig_mapping ec_sig_maps[] = {
  * three bytes providing specific sig alg, hash alg and curve.
  */
 #define EC_STRUCTURED_SIG_EXPORT_SIZE(siglen)  (u8)((siglen) + (u8)(3 * sizeof(u8)))
+#define EC_STRUCTURED_SIG_MAX_EXPORT_SIZE (EC_MAX_SIGLEN + 3)
 
+/* Sanity check */
+#if EC_STRUCTURED_SIG_MAX_EXPORT_SIZE > 255
+#error "All structured signatures sizes are expected to fit on an u8."
+#endif
 #endif /* __SIG_ALGS_INTERNAL_H__ */

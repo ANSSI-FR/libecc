@@ -383,8 +383,12 @@ ATTRIBUTE_WARN_UNUSED_RET static int store_sig(const char *in_fname, const char 
 	MUST_HAVE((sig != NULL), ret, err);
 	MUST_HAVE((curve_name != NULL), ret, err);
 	MUST_HAVE((hdr != NULL), ret, err);
+#if (MAX_BUF_LEN <= 255)
+	/* No need to check this is sizeof(buf) exceeds 256.
+	 * (avoids -Werror,-Wtautological-constant-out-of-range-compare)
+	 */
 	MUST_HAVE(EC_STRUCTURED_SIG_EXPORT_SIZE(siglen) <= sizeof(buf), ret, err);
-
+#endif
 	/* Import the data from the input file */
 	in_file = fopen(in_fname, "r");
 	if (in_file == NULL) {
