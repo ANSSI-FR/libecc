@@ -22,7 +22,7 @@
 /* We generate random */
 #include "../external_deps/rand.h"
 
-typedef enum { false, true } bool;
+typedef enum { false, true } boolean;
 
 /* The final secret size in bytes, corresponding to the
  * size of an element in Fp with ~256 bit prime.
@@ -61,7 +61,7 @@ typedef struct ATTRIBUTE_PACKED {
  *         - secret: the secret value when input_secret is set to 'false', this
  *           value being randomly generated
  */
-ATTRIBUTE_WARN_UNUSED_RET int sss_generate(sss_share *shares, u16 k, u16 n, sss_secret *secret, bool input_secret);
+ATTRIBUTE_WARN_UNUSED_RET int sss_generate(sss_share *shares, u16 k, u16 n, sss_secret *secret, boolean input_secret);
 
 /* SSS shares and secret combination
  *     Inputs:

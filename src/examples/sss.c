@@ -108,7 +108,7 @@ err:
 
 /***** Raw versions ***********************/
 /* SSS shares and secret generation */
-ATTRIBUTE_WARN_UNUSED_RET static int _sss_raw_generate(sss_share *shares, u16 k, u16 n, sss_secret *secret, bool input_secret)
+ATTRIBUTE_WARN_UNUSED_RET static int _sss_raw_generate(sss_share *shares, u16 k, u16 n, sss_secret *secret, boolean input_secret)
 {
 	fp_ctx ctx;
 	nn p;
@@ -388,7 +388,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int _sss_raw_combine(const sss_share *shares, u
  *         - secret: the secret value when input_secret is set to 'false', this
  *           value being randomly generated
  */
-int sss_generate(sss_share *shares, u16 k, u16 n, sss_secret *secret, bool input_secret)
+int sss_generate(sss_share *shares, u16 k, u16 n, sss_secret *secret, boolean input_secret)
 {
 	int ret;
 	unsigned int i;
