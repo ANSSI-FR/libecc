@@ -51,7 +51,8 @@ typedef struct ATTRIBUTE_PACKED {
 } _sss_raw_share;
 
 #define SSS_SESSION_ID_SIZE 16
-#define SSS_HMAC_SIZE SHA256_DIGEST_SIZE
+/* We use SHA-256 for HMAC, so the size is 32 bytes */
+#define SSS_HMAC_SIZE 32
 
 /* Security wrapper for the secret for "secured" SSS */
 typedef struct ATTRIBUTE_PACKED {
