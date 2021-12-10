@@ -159,7 +159,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int _sss_raw_generate(sss_share *shares, u16 k,
 	 * provided.
 	 */
 	ret = fp_init(&a0, &ctx); EG(ret, err);
-	if(input_secret == true){
+	if(input_secret == SSS_TRUE){
 		/* Import the secret the user provides
 		 * XXX: NOTE: the user shared secret MUST be in Fp! Since our prime is < (2**256 - 1),
 		 * some 256 bit strings can be rejected here (namely those >= p and < (2**256 - 1)).
@@ -613,7 +613,7 @@ int main(int argc, char *argv[])
 	ext_printf("[+] Generating the secrets %d / %d, call should be OK\n", K, N);
 	ret = local_memset(&secret, 0x00, sizeof(secret)); EG(ret, err);
 	/* NOTE: 'false' here means that we let the library generate the secret randomly */
-	ret = sss_generate(shares, K, N, &secret, false);
+	ret = sss_generate(shares, K, N, &secret, SSS_FALSE);
 	if(ret){
 		ext_printf("  [X] Error: sss_generate error\n");
 	}

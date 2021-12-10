@@ -11,7 +11,28 @@
 #ifndef __SSS_H__
 #define __SSS_H__
 
-typedef enum { false, true } boolean;
+/* NOTE: we redefine some attributes if they are not already defined */
+#ifndef ATTRIBUTE_PACKED
+  #ifdef __GNUC__
+    #define ATTRIBUTE_PACKED __attribute__((packed))
+  #else
+    #define ATTRIBUTE_PACKED
+  #endif
+#endif
+#ifndef ATTRIBUTE_WARN_UNUSED_RET
+  #ifdef __GNUC__
+    #ifdef USE_WARN_UNUSED_RET
+      #define ATTRIBUTE_WARN_UNUSED_RET __attribute__((warn_unused_result))
+    #else
+      #define ATTRIBUTE_WARN_UNUSED_RET
+    #endif
+  #else
+    #define ATTRIBUTE_WARN_UNUSED_RET
+  #endif
+#endif
+
+
+typedef enum { SSS_FALSE = 0, SSS_TRUE = 1 } boolean;
 
 /* The final secret size in bytes, corresponding to the
  * size of an element in Fp with ~256 bit prime.
