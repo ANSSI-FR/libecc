@@ -173,6 +173,13 @@ int gen_hash_get_hash_sizes(gen_hash_alg_type gen_hash_type, u8 *hlen, u8 *block
                         ret = 0;
                         break;
                 }
+		case HASH_MDC2_PADDING1:
+		case HASH_MDC2_PADDING2:{
+                        (*hlen) = MDC2_DIGEST_SIZE;
+                        (*block_size) = MDC2_BLOCK_SIZE;
+                        ret = 0;
+                        break;
+                }
                 /* The default case falls back to a genuine libecc hash function */
                 default:{
                         const hash_mapping *hm;
@@ -209,6 +216,14 @@ int gen_hash_hfunc_scattered(const u8 **input, const u32 *ilen, u8 *digest, gen_
 		}
 		case HASH_SHA1:{
 			ret = sha1_scattered(input, ilen, digest); EG(ret, err);
+			break;
+		}
+		case HASH_MDC2_PADDING1:{
+			ret = mdc2_scattered_padding1(input, ilen, digest); EG(ret, err);
+			break;
+		}
+		case HASH_MDC2_PADDING2:{
+			ret = mdc2_scattered_padding2(input, ilen, digest); EG(ret, err);
 			break;
 		}
 		/* The fallback should be libecc type */
@@ -262,6 +277,16 @@ int gen_hash_init(gen_hash_context *ctx, gen_hash_alg_type gen_hash_type)
 			ret = sha1_init(&(ctx->sha1ctx)); EG(ret, err);
 			break;
 		}
+		case HASH_MDC2_PADDING1:{
+			ret = mdc2_init(&(ctx->mdc2ctx)); EG(ret, err);
+			ret = mdc2_set_padding_type(&(ctx->mdc2ctx), ISOIEC10118_TYPE1); EG(ret, err);
+			break;
+		}
+		case HASH_MDC2_PADDING2:{
+			ret = mdc2_init(&(ctx->mdc2ctx)); EG(ret, err);
+			ret = mdc2_set_padding_type(&(ctx->mdc2ctx), ISOIEC10118_TYPE2); EG(ret, err);
+			break;
+		}
 		/* The fallback should be libecc type */
 		default:{
 			const hash_mapping *hm;
@@ -303,6 +328,11 @@ int gen_hash_update(gen_hash_context *ctx, const u8 *chunk, u32 chunklen, gen_ha
 		}
 		case HASH_SHA1:{
 			ret = sha1_update(&(ctx->sha1ctx), chunk, chunklen); EG(ret, err);
+			break;
+		}
+		case HASH_MDC2_PADDING1:
+		case HASH_MDC2_PADDING2:{
+			ret = mdc2_update(&(ctx->mdc2ctx), chunk, chunklen); EG(ret, err);
 			break;
 		}
 		/* The fallback should be libecc type */
@@ -348,6 +378,11 @@ int gen_hash_final(gen_hash_context *ctx, u8 *output, gen_hash_alg_type gen_hash
 			ret = sha1_final(&(ctx->sha1ctx), output); EG(ret, err);
 			break;
 		}
+		case HASH_MDC2_PADDING1:
+		case HASH_MDC2_PADDING2:{
+			ret = mdc2_final(&(ctx->mdc2ctx), output); EG(ret, err);
+			break;
+		}
 		/* The fallback should be libecc type */
 		default:{
 			const hash_mapping *hm;
@@ -370,6 +405,15 @@ int main(int argc, char *argv[])
         int ret = 0;
         FORCE_USED_VAR(argc);
         FORCE_USED_VAR(argv);
+
+	const u8 input[] = "Now is the time for all ";
+	u8 output[16];
+
+	ret = gen_hash_hfunc(input, sizeof(input)-1, output, HASH_MDC2_PADDING1); EG(ret, err);
+	buf_print("mdc2 padding1", output, 16);
+
+	ret = gen_hash_hfunc(input, sizeof(input)-1, output, HASH_MDC2_PADDING2); EG(ret, err);
+	buf_print("mdc2 padding2", output, 16);
 
 err:
         return ret;

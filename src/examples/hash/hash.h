@@ -28,6 +28,8 @@
 #include "sha0.h"
 /* SHA-1 source code */
 #include "sha1.h"
+/* MDC-2 source code */
+#include "mdc2.h"
 
 /****************************************************/
 /****************************************************/
@@ -60,7 +62,9 @@ typedef enum {
 	HASH_MD5 = 17,
 	HASH_SHA0 = 18,
 	HASH_SHA1 = 19,
-	HASH_NO_HASH = 20,
+	HASH_MDC2_PADDING1 = 20,
+	HASH_MDC2_PADDING2 = 21,
+	HASH_NO_HASH = 22,
 } gen_hash_alg_type;
 
 /* Our generic hash context */
@@ -77,6 +81,8 @@ typedef union {
 	sha0_context sha0ctx;
 	/* SHA-1 */
 	sha1_context sha1ctx;
+	/* MDC2-1 */
+	mdc2_context mdc2ctx;
 } gen_hash_context;
 
 ATTRIBUTE_WARN_UNUSED_RET int gen_hash_get_hash_sizes(gen_hash_alg_type gen_hash_type, u8 *hlen, u8 *block_size);
