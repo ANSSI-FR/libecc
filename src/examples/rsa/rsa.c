@@ -580,10 +580,10 @@ ATTRIBUTE_WARN_UNUSED_RET static int _mgf1(const u8 *z, u16 zlen,
 
 	for(c = 0; c < ceil; c++){
 		/* 3.A: C = I2OSP (counter, 4) */
-		C[0] = ((c >> 24) & 0xff);
-		C[1] = ((c >> 16) & 0xff);
-		C[2] = ((c >>  8) & 0xff);
-		C[3] = ((c >>  0) & 0xff);
+		C[0] = (u8)((c >> 24) & 0xff);
+		C[1] = (u8)((c >> 16) & 0xff);
+		C[2] = (u8)((c >>  8) & 0xff);
+		C[3] = (u8)((c >>  0) & 0xff);
 
 		/* 3.B + 4. */
 		if ((masklen % hlen) && (c == (ceil - 1))) { /* need last chunk smaller than hlen */
@@ -856,7 +856,6 @@ int emsa_pkcs1_v1_5_encode(const u8 *m, u16 mlen, u8 *em, u16 emlen,
 	ret = local_memset(digest, 0, sizeof(digest)); EG(ret, err);
 
 	/* Compute H = Hash(M) */
-	ret = local_memset(digest, 0, sizeof(digest)); EG(ret, err);
 	ret = gen_hash_get_hash_sizes(gen_hash_type, &digest_size, &block_size); EG(ret, err);
 	MUST_HAVE((digest_size <= MAX_DIGEST_SIZE), ret, err);
 	ret = gen_hash_hfunc_scattered(input, ilens, digest, gen_hash_type); EG(ret, err);

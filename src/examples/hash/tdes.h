@@ -33,23 +33,23 @@ typedef struct {
 
 /* platform-independant 32-bit integer manipulation macros */
 #ifndef GET_UINT32
-#define GET_UINT32(n,b,i)                       \
-{                                               \
+#define GET_UINT32(n,b,i)                             \
+do {                                                  \
     (n) = ( (unsigned int) (b)[(i)    ] << 24 )       \
         | ( (unsigned int) (b)[(i) + 1] << 16 )       \
         | ( (unsigned int) (b)[(i) + 2] <<  8 )       \
         | ( (unsigned int) (b)[(i) + 3]       );      \
-}
+} while( 0 )
 #endif
 
 #ifndef PUT_UINT32
-#define PUT_UINT32(n,b,i)                       \
-{                                               \
+#define PUT_UINT32(n,b,i)                               \
+do {                                                    \
     (b)[(i)    ] = (unsigned char) ( (n) >> 24 );       \
     (b)[(i) + 1] = (unsigned char) ( (n) >> 16 );       \
     (b)[(i) + 2] = (unsigned char) ( (n) >>  8 );       \
     (b)[(i) + 3] = (unsigned char) ( (n)       );       \
-}
+} while( 0 )
 #endif
 
 /* Odd parity table */
