@@ -117,7 +117,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int _sss_raw_generate(sss_share *shares, u16 k,
 	fp exp, base, tmp;
 	fp blind, blind_inv;
 	u8 secret_seed[SSS_SECRET_SIZE];
-	u16 idx_shift;
+	u16 idx_shift, num_shares;
 	int ret;
 	unsigned int i, j;
 	p.magic = WORD(0);
@@ -128,6 +128,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int _sss_raw_generate(sss_share *shares, u16 k,
 
 	MUST_HAVE((shares != NULL) && (secret != NULL), ret, err);
 	/* Sanity checks */
+	MUST_HAVE((n <= (u16)(0xffff - 1)), ret, err);
 	MUST_HAVE((k <= n), ret, err);
 	MUST_HAVE((k >= 1), ret, err);
 	MUST_HAVE((SSS_SECRET_SIZE == sizeof(prime)), ret, err);
@@ -184,7 +185,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int _sss_raw_generate(sss_share *shares, u16 k,
 	ret = fp_init(&blind_inv, &ctx); EG(ret, err);
 	ret = fp_inv(&blind_inv, &blind); EG(ret, err);
 	/* Generate a non-zero random index base for x to avoid leaking
-	 * the number of shares. We could use a static sequence from x = 0 to n
+	 * the number of shares. We could use a static sequence from x = 1 to n
 	 * but this would leak some information to the participants about the number
 	 * of shares (e.g. if a participant gets the share with x = 4, she surely knows
 	 * that n >= 4). To avoid the leak we randomize the base value of the index where
@@ -194,13 +195,20 @@ ATTRIBUTE_WARN_UNUSED_RET static int _sss_raw_generate(sss_share *shares, u16 k,
 	while(idx_shift == 0){
 		ret = get_random((u8*)&idx_shift, sizeof(idx_shift)); EG(ret, err);
 	}
-	for(i = 0; i < n; i++){
-		_sss_raw_share *cur_share_i = &(shares[i].raw_share);
+	num_shares = 0;
+	i = 0;
+	while(num_shares < n){
+		_sss_raw_share *cur_share_i = &(shares[num_shares].raw_share);
 		u16 curr_idx = (u16)(idx_shift + i);
+		if(curr_idx == 0){
+			/* Skip the index 0 specific case */
+			i++;
+			continue;
+		}
 		/* Set s[i] to the a[0] as blinded initial value */
 		ret = fp_mul(&s, &blind, &a0); EG(ret, err);
 		/* Get a random base x as u16 for share index */
-		ret = fp_set_word_value(&base, (word_t)(curr_idx)); EG(ret, err);
+		ret = fp_set_word_value(&base, (word_t)curr_idx); EG(ret, err);
 		/* Set the exp to 1 */
 		ret = fp_one(&exp);
 		for(j = 1; j < k; j++){
@@ -224,6 +232,8 @@ ATTRIBUTE_WARN_UNUSED_RET static int _sss_raw_generate(sss_share *shares, u16 k,
 		/* Unblind */
 		ret = fp_mul(&s, &s, &blind_inv); EG(ret, err);
 		ret = fp_export_to_buf(cur_share_i->share, SSS_SECRET_SIZE, &s); EG(ret, err);
+		num_shares++;
+		i++;
 	}
 	/* The secret is a[0] */
 	ret = fp_export_to_buf(secret->secret, SSS_SECRET_SIZE, &a0);
@@ -502,11 +512,12 @@ int sss_regenerate(sss_share *shares, unsigned short k, unsigned short n, sss_se
 {
 	int ret, cmp;
 	unsigned int i;
-	u16 max_idx;
+	u16 max_idx, num_shares;
 	u8 hmac_val[SSS_HMAC_SIZE];
 	u8 len;
 
 	/* Sanity check */
+	MUST_HAVE((n <= (u16)(0xffff - 1)), ret, err);
 	MUST_HAVE((n >= k), ret, err);
 
 	ret = local_memset(hmac_val, 0, sizeof(hmac_val)); EG(ret, err);
@@ -560,11 +571,14 @@ int sss_regenerate(sss_share *shares, unsigned short k, unsigned short n, sss_se
 		}
 	}
 	/* Now regenerate as many shares as we need */
-	for(i = k; i < n; i++){
-		_sss_raw_share *cur_share = &(shares[i].raw_share);
-		u8 *cur_id = (u8*)&(shares[i].session_id);
+	num_shares = 0;
+	i = k;
+	while(num_shares < (n - k)){
+		_sss_raw_share *cur_share = &(shares[k + num_shares].raw_share);
+		u8 *cur_id = (u8*)&(shares[k + num_shares].session_id);
 		u8 *cur_id0 = (u8*)&(shares[0].session_id);
-		u8 *cur_share_hmac = (u8*)&(shares[i].raw_share_hmac);
+		u8 *cur_share_hmac = (u8*)&(shares[k + num_shares].raw_share_hmac);
+		u16 curr_idx;
 		/* NOTE: we 'abuse' casts here for shares[i].raw_share.share to sss_secret*, but this should be OK since
 		 * our shares[i].raw_share.share is a SSS_SECRET_SIZE as the sss_secret.secret type encapsulates and our
 		 * structures are packed.
@@ -572,15 +586,24 @@ int sss_regenerate(sss_share *shares, unsigned short k, unsigned short n, sss_se
 		const u8 *inputs[3] = { (const u8*)cur_share, cur_id, NULL };
 		const u32 ilens[3] = { sizeof(*cur_share), SSS_SESSION_ID_SIZE, 0 };
 
+		/* Skip the index = 0 case */
+		curr_idx = (u16)(max_idx + (u16)(i - k + 1));
+		if(curr_idx == 0){
+			i++;
+			continue;
+		}
+
 		/* Copy our session ID */
 		ret = local_memcpy(cur_id, cur_id0, SSS_SESSION_ID_SIZE); EG(ret, err);
 
-		ret = _sss_raw_lagrange(shares, k, (sss_secret*)(cur_share->share), (u16)(max_idx + (u16)(i - k + 1))); EG(ret, err);
-		cur_share->index = (u16)(max_idx + (u16)(i - k + 1));
+		ret = _sss_raw_lagrange(shares, k, (sss_secret*)(cur_share->share), curr_idx); EG(ret, err);
+		cur_share->index = curr_idx;
 
 		/* Compute the HMAC */
 		len = SSS_HMAC_SIZE;
 		ret = hmac_scattered((const u8*)secret, SSS_SECRET_SIZE, SHA256, inputs, ilens, cur_share_hmac, &len); EG(ret, err);
+		num_shares++;
+		i++;
 	}
 
 err:
