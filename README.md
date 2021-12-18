@@ -29,7 +29,7 @@ standard, with the following specific curves and hash functions:
   * **Curves**: SECP{192,224,256,384,521}R1, BRAINPOOLP{192,224,256,384,512}R1,
   FRP256V1, GOST{256,512}, SM2P256V1. The library can be easily expanded with
   user defined curves using a standalone helper script.
-  * **Hash functions**: SHA-2 and SHA-3 hash functions (224, 256, 384, 512), SM3,
+  * **Hash functions**: SHA-2 and SHA-3 hash functions (224, 256, 384, 512), SM3, RIPEMD-160,
 GOST 34.11-2012 as described in [RFC 6986](https://datatracker.ietf.org/doc/html/rfc6986)
 (also known as [Streebog](https://tc26.ru/en/events/research-projects-competition/streebog-competition.html)),
 SHAKE256 in its restricted version with 114 bytes output (mainly for Ed448).
@@ -78,10 +78,33 @@ a compilation toggle that will force this mode `USE_ISO14888_3_ECRDSA=1`:
 	$ USE_ISO14888_3_ECRDSA=1 make
 </pre>
 
+ECDH (Elliptic Curve Diffie--Hellman) variants are also implemented in the
+library. Classical ECDH over Weierstrass curves is implemented in the form
+of ECC-CDH (Elliptic Curve Cryptography Cofactor Diffie--Hellman) as described
+in [section 5.7.1.2 of the NIST SP 800-56A Rev. 3](https://csrc.nist.gov/publications/detail/sp/800-56a/rev-3/final) standard. Montgomery curves
+based algorithms (Curve25519 and Curve448) are included as specified in [RFC7748](https://datatracker.ietf.org/doc/html/rfc7748),
+although the implementation somehow diverges from the canonical ones as u coordinates on the curve
+quadratic twist are rejected (this is due to the underlying usage of isogenies to
+handle Montgomery curves). This divergence does not impact the ECDH use case though.
+
+
 Advanced usages of this library also include the possible implementation
-of elliptic curve based Diffie--Hellman protocols as well as any algorithm
+of elliptic curve based protocols as well as any algorithm
 on top of prime fields based elliptic curves (or prime fields, or rings
-of integers). Compared to other cryptographic libraries providing such
+of integers). Many examples are present in the [src/examples](src/examples)
+folder, notable ones being:
+  * Pollard--Rho, Miller--Rabin and square residues over finite fields.
+  * The RSA cryptosystem as defined in the PKCS#1 [RFC8017](https://datatracker.ietf.org/doc/html/rfc8017)
+standard. This implementation also comes with the integration of deprecated hash
+functions such as MD2, MD4, MD5, SHA-1 and so on in order to be compliant with existing
+signatures (e.g. in X.509). These primitives are **not** included in the core
+library on purpose: they are **dangerous and broken** and must only be used for
+tests purposes.
+  * The DSA cryptosystem as defined in [FIPS 186-4](https://csrc.nist.gov/publications/detail/fips/186/4/final).
+  * The SSS (Shamir Secret Sharing) algorithm over a prime field of 256 bits.
+
+
+Compared to other cryptographic libraries providing such
 features, the differentiating points are:
 
   * A focus on code readability and auditability. The code is pure C99,
