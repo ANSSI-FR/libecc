@@ -285,7 +285,7 @@ int nn_rrot(nn_t out, nn_src_t in, bitcnt_t cnt, bitcnt_t bitlen)
 	/* Mask the last word if necessary */
 	if (((bitlen % WORD_BITS) != 0) && (out->wlen > 0)) {
 		/* shift operation below is ok (less than WORD_BITS) */
-		word_t mask = ((word_t)(WORD(1) << (bitlen % WORD_BITS))) - 1;
+		word_t mask = (word_t)(((word_t)(WORD(1) << (bitlen % WORD_BITS))) - 1);
 		out->val[out->wlen - 1] &= mask;
 	}
 
@@ -322,7 +322,7 @@ int nn_lrot(nn_t out, nn_src_t in, bitcnt_t cnt, bitcnt_t bitlen)
 
 	/* Mask the last word if necessary */
 	if (((bitlen % WORD_BITS) != 0) && (out->wlen > 0)) {
-		word_t mask = ((word_t)(WORD(1) << (bitlen % WORD_BITS))) - 1;
+		word_t mask = (word_t)(((word_t)(WORD(1) << (bitlen % WORD_BITS))) - 1);
 		out->val[out->wlen - 1] &= mask;
 	}
 
@@ -454,7 +454,7 @@ int nn_not(nn_t A, nn_src_t B)
 	A->wlen = B->wlen;
 
 	for (i = 0; i < A->wlen; i++) {
-		A->val[i] = ~(B->val[i]);
+		A->val[i] = (word_t)(~(B->val[i]));
 	}
 
 err:

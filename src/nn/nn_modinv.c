@@ -310,7 +310,7 @@ int nn_modinv_2exp(nn_t _out, nn_src_t x, bitcnt_t exp, int *x_isodd)
 	bitcnt_t cnt;
 	u8 exp_wlen = (u8)BIT_LEN_WORDS(exp);
 	bitcnt_t exp_cnt = exp % WORD_BITS;
-	word_t mask = (exp_cnt == 0) ? WORD_MASK : (word_t)((WORD(1) << exp_cnt) - WORD(1));
+	word_t mask = (word_t)((exp_cnt == 0) ? WORD_MASK : (word_t)((WORD(1) << exp_cnt) - WORD(1)));
 	nn tmp_sqr, tmp_mul;
 	/* for aliasing */
 	int isodd, ret;

@@ -76,8 +76,8 @@ typedef u16 bitcnt_t;
  * the behavior one would expect, i.e. return 0 when
  * shift count is equal or more than word size.
  */
-#define WLSHIFT(w, c) (((c) >= WORD_BITS) ? WORD(0) : (word_t)((w) << (c)))
-#define WRSHIFT(w, c) (((c) >= WORD_BITS) ? WORD(0) : (word_t)((w) >> (c)))
+#define WLSHIFT(w, c) ((word_t)(((c) >= WORD_BITS) ? WORD(0) : (word_t)((w) << (c))))
+#define WRSHIFT(w, c) ((word_t)(((c) >= WORD_BITS) ? WORD(0) : (word_t)((w) >> (c))))
 
 /* To be fixed: not really constant-time. */
 #define WORD_MIN(a, b) ((a) > (b) ? (b) : (a))
@@ -86,8 +86,8 @@ typedef u16 bitcnt_t;
 #define WORD_MASK WORD_MAX
 
 /* These two macros assume two-complement representation. */
-#define WORD_MASK_IFZERO(w) (((word_t)((w) != 0)) - WORD(1))
-#define WORD_MASK_IFNOTZERO(w) (((word_t)((w) == 0)) - WORD(1))
+#define WORD_MASK_IFZERO(w) ((word_t)(((word_t)((w) != 0)) - WORD(1)))
+#define WORD_MASK_IFNOTZERO(w) ((word_t)(((word_t)((w) == 0)) - WORD(1)))
 
 #define HWORD_MASK HWORD_MAX
 
@@ -106,24 +106,24 @@ typedef u16 bitcnt_t;
 	in2h = (in2) >> HWORD_BITS;					\
 	in2l = (in2) & HWORD_MASK;					\
 	/* Compute low product. */					\
-	tmpl = in2l * in1l;						\
+	tmpl = (word_t)(in2l * in1l);					\
 	/* Compute middle product. */					\
-	tmpm1 = in2h * in1l;						\
-	tmpm2 = in2l * in1h;						\
-	tmpm = tmpm1 + tmpm2;						\
+	tmpm1 = (word_t)(in2h * in1l);					\
+	tmpm2 = (word_t)(in2l * in1h);					\
+	tmpm = (word_t)(tmpm1 + tmpm2);					\
 	/* Store middle product carry. */				\
-	carrym = tmpm < tmpm1;						\
+	carrym = (word_t)(tmpm < tmpm1);				\
 	/* Compute full low product. */					\
 	(outl) = tmpl;							\
-	(outl) += (tmpm & HWORD_MASK) << HWORD_BITS;			\
+	(outl) = (word_t)((outl) + ((tmpm & HWORD_MASK) << HWORD_BITS));\
 	/* Store full low product carry. */				\
-	carryl = (outl) < tmpl;						\
+	carryl = (word_t)((outl) < tmpl);				\
 	/* Compute full high product. */				\
-	carryl += tmpm >> HWORD_BITS;					\
-	carryl += carrym << HWORD_BITS;					\
-	tmph = in2h * in1h;						\
+	carryl = (word_t)(carryl + (tmpm >> HWORD_BITS));		\
+	carryl = (word_t)(carryl + (carrym << HWORD_BITS));		\
+	tmph = (word_t)(in2h * in1h);					\
 	/* No carry can occur below. */					\
-	(outh) = tmph + carryl;						\
+	(outh) = (word_t)(tmph + carryl);				\
 	} while (0)
 
 #endif /* __WORDS_H__ */

@@ -79,12 +79,12 @@ ATTRIBUTE_WARN_UNUSED_RET static int _nn_cnd_add(int cnd, nn_t out, nn_src_t in1
 
 	/* Perform addition one word at a time, propagating the carry. */
 	for (i = 0; i < loop_wlen; i++) {
-		tmp = (in1->val[i] + (in2->val[i] & mask));
-		carry1 = (tmp < in1->val[i]);
-		out->val[i] = (tmp + _carry);
-		carry2 = (out->val[i] < tmp);
+		tmp = (word_t)(in1->val[i] + (in2->val[i] & mask));
+		carry1 = (word_t)(tmp < in1->val[i]);
+		out->val[i] = (word_t)(tmp + _carry);
+		carry2 = (word_t)(out->val[i] < tmp);
 		/* There is at most one carry going out. */
-		_carry = (carry1 | carry2);
+		_carry = (word_t)(carry1 | carry2);
 	}
 
 	(*carry) = _carry;
@@ -195,8 +195,8 @@ ATTRIBUTE_WARN_UNUSED_RET static int nn_add_word(nn_t out, nn_src_t in1, word_t 
 	/* No matter its value, propagate the carry. */
 	carry = w;
 	for (i = 0; i < n_wlen; i++) {
-		tmp = (in1->val[i] + carry);
-		carry = (tmp < in1->val[i]);
+		tmp = (word_t)(in1->val[i] + carry);
+		carry = (word_t)(tmp < in1->val[i]);
 		out->val[i] = tmp;
 	}
 
@@ -267,12 +267,12 @@ int nn_cnd_sub(int cnd, nn_t out, nn_src_t in1, nn_src_t in2)
 
 	/* Perform subtraction one word at a time, propagating the borrow. */
 	for (i = 0; i < loop_wlen; i++) {
-		tmp = (in1->val[i] - (in2->val[i] & mask));
-		borrow1 = (tmp > in1->val[i]);
-		out->val[i] = (tmp - borrow);
-		borrow2 = (out->val[i] > tmp);
+		tmp = (word_t)(in1->val[i] - (in2->val[i] & mask));
+		borrow1 = (word_t)(tmp > in1->val[i]);
+		out->val[i] = (word_t)(tmp - borrow);
+		borrow2 = (word_t)(out->val[i] > tmp);
 		/* There is at most one borrow going out. */
-		borrow = (borrow1 | borrow2);
+		borrow = (word_t)(borrow1 | borrow2);
 	}
 
 	/* We only support the in1 >= in2 case */
@@ -307,8 +307,8 @@ int nn_dec(nn_t out, nn_src_t in1)
 	/* Perform subtraction w/ provided word and propagate the borrow */
 	borrow = w;
 	for (i = 0; i < n_wlen; i++) {
-		tmp = (in1->val[i] - borrow);
-		borrow = (tmp > in1->val[i]);
+		tmp = (word_t)(in1->val[i] - borrow);
+		borrow = (word_t)(tmp > in1->val[i]);
 		out->val[i] = tmp;
 	}
 

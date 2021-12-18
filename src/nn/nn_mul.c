@@ -77,15 +77,15 @@ ATTRIBUTE_WARN_UNUSED_RET static int _nn_mul_low(nn_t out, nn_src_t in1, nn_src_
 			/*
 			 * And add previous carry.
 			 */
-			prod_low += carry;
-			prod_high += prod_low < carry;
+			prod_low  = (word_t)(prod_low + carry);
+			prod_high = (word_t)(prod_high + (prod_low < carry));
 
 			/*
 			 * Add computed word to what we can currently
 			 * find at current position in result.
 			 */
-			out->val[pos] += prod_low;
-			carry = prod_high + (out->val[pos] < prod_low);
+			out->val[pos] = (word_t)(out->val[pos] + prod_low);
+			carry = (word_t)(prod_high + (out->val[pos] < prod_low));
 		}
 
 		/*
@@ -93,7 +93,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int _nn_mul_low(nn_t out, nn_src_t in1, nn_src_
 		 * be added to next word after pos in result.
 		 */
 		if ((pos + 1) < wlimit) {
-			out->val[pos + 1] += carry;
+			out->val[pos + 1] = (word_t)(out->val[pos + 1] + carry);
 		}
 	}
 

@@ -184,7 +184,7 @@ int nn_cnd_swap(int cnd, nn_t in1, nn_t in2)
 		in2->val[i] ^= (t & local_mask);
 	}
 
-	t = (in1->wlen ^ in2->wlen) & mask;
+	t = (word_t)((in1->wlen ^ in2->wlen) & mask);
 	in1->wlen ^= (u8)t;
 	in2->wlen ^= (u8)t;
 
@@ -211,7 +211,7 @@ int nn_set_wlen(nn_t A, u8 new_wlen)
 
 	/* Trimming performed in constant time */
 	for (i = 0; i < NN_MAX_WORD_LEN; i++) {
-		A->val[i] &= WORD_MASK_IFZERO((i >= new_wlen));
+		A->val[i] = (word_t)(A->val[i] & WORD_MASK_IFZERO((i >= new_wlen)));
 	}
 
 	A->wlen = new_wlen;

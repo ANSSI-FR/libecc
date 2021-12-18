@@ -87,12 +87,12 @@ ATTRIBUTE_WARN_UNUSED_RET static int _nn_cnd_sub_shift(int cnd, nn_t out, nn_src
 	 *  propagating the borrow.
 	 */
 	for (i = 0; i < in->wlen; i++) {
-		tmp = out->val[shift + i] - (in->val[i] & mask);
-		borrow1 = (tmp > out->val[shift + i]);
-		out->val[shift + i] = (tmp - _borrow);
-		borrow2 = (out->val[shift + i] > tmp);
+		tmp = (word_t)(out->val[shift + i] - (in->val[i] & mask));
+		borrow1 = (word_t)(tmp > out->val[shift + i]);
+		out->val[shift + i] = (word_t)(tmp - _borrow);
+		borrow2 = (word_t)(out->val[shift + i] > tmp);
 		/* There is at most one borrow going out. */
-		_borrow = (borrow1 | borrow2);
+		_borrow = (word_t)(borrow1 | borrow2);
 	}
 
 	(*borrow) = _borrow;
@@ -130,14 +130,14 @@ ATTRIBUTE_WARN_UNUSED_RET static int _nn_submul_word_shift(nn_t out, nn_src_t in
 		/*
 		 * And add previous borrow.
 		 */
-		prod_low += _borrow;
-		prod_high += (prod_low < _borrow);
+		prod_low = (word_t)(prod_low + _borrow);
+		prod_high = (word_t)(prod_high + (prod_low < _borrow));
 
 		/*
 		 * Subtract computed word at current position in result.
 		 */
-		tmp = (out->val[shift + i] - prod_low);
-		_borrow = (prod_high + (tmp > out->val[shift + i]));
+		tmp = (word_t)(out->val[shift + i] - prod_low);
+		_borrow = (word_t)(prod_high + (tmp > out->val[shift + i]));
 		out->val[shift + i] = tmp;
 	}
 
@@ -229,11 +229,11 @@ ATTRIBUTE_WARN_UNUSED_RET static int _nn_divrem_normalized(nn_t q, nn_t r,
 		WORD_MUL(qh, ql, rl, v);
 		WORD_MUL(qstar, ql, rh, v);
 		/* And propagate carries. */
-		qh += ql;
-		qstar += (qh < ql);
-		qh += rl;
-		rh += (qh < rl);
-		qstar += rh;
+		qh = (word_t)(qh + ql);
+		qstar = (word_t)(qstar + (qh < ql));
+		qh = (word_t)(qh + rl);
+		rh = (word_t)(rh + (qh < rl));
+		qstar = (word_t)(qstar + rh);
 
 		/*
 		 * Compute approximate quotient times divisor
@@ -244,7 +244,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int _nn_divrem_normalized(nn_t q, nn_t r,
 
 		/* Check the approximate quotient was indeed not too large. */
 		MUST_HAVE(!(r->val[i - 1] < borrow), ret, err);
-		r->val[i - 1] -= borrow;
+		r->val[i - 1] = (word_t)(r->val[i - 1] - borrow);
 
 		/*
 		 * Check whether the approximate quotient was too small or not.
@@ -255,12 +255,12 @@ ATTRIBUTE_WARN_UNUSED_RET static int _nn_divrem_normalized(nn_t q, nn_t r,
 		/* Perform conditional multiprecision correction. */
 		ret = _nn_cnd_sub_shift(small, r, b, shift, &borrow); EG(ret, err);
 		MUST_HAVE(!(r->val[i - 1] != borrow), ret, err);
-		r->val[i - 1] -= borrow;
+		r->val[i - 1] = (word_t)(r->val[i - 1] - borrow);
 		/*
 		 * Adjust the quotient if it was too small and set it in the
 		 * multiprecision array.
 		 */
-		qstar += (word_t) small;
+		qstar = (word_t)(qstar + small);
 		q->val[shift] = qstar;
 		/*
 		 * Check that the MSW of remainder was cancelled out and that
@@ -581,12 +581,12 @@ ATTRIBUTE_WARN_UNUSED_RET static int _wcmp_22(word_t a[2], word_t b[2])
 ATTRIBUTE_WARN_UNUSED_RET static word_t _wadd_22(word_t a[2], word_t b[2])
 {
 	word_t carry;
-	a[0] += b[0];
-	carry = (a[0] < b[0]);
-	a[1] += carry;
-	carry = (a[1] < carry);
-	a[1] += b[1];
-	carry |= (a[1] < b[1]);
+	a[0]  = (word_t)(a[0] + b[0]);
+	carry = (word_t)(a[0] < b[0]);
+	a[1]  = (word_t)(a[1] + carry);
+	carry = (word_t)(a[1] < carry);
+	a[1]  = (word_t)(a[1] + b[1]);
+	carry = (word_t)(carry | (a[1] < b[1]));
 	return carry;
 }
 
@@ -597,13 +597,13 @@ ATTRIBUTE_WARN_UNUSED_RET static word_t _wadd_22(word_t a[2], word_t b[2])
 ATTRIBUTE_WARN_UNUSED_RET static word_t _wsub_22(word_t a[2], word_t b[2])
 {
 	word_t borrow, tmp;
-	tmp = (a[0] - b[0]);
-	borrow = (tmp > a[0]);
-	a[0] = tmp;
-	tmp = (a[1] - borrow);
-	borrow = (tmp > a[1]);
-	a[1] = (tmp - b[1]);
-	borrow |= (a[1] > tmp);
+	tmp    = (word_t)(a[0] - b[0]);
+	borrow = (word_t)(tmp > a[0]);
+	a[0]   = tmp;
+	tmp    = (word_t)(a[1] - borrow);
+	borrow = (word_t)(tmp > a[1]);
+	a[1]   = (word_t)(tmp - b[1]);
+	borrow = (word_t)(borrow | (a[1] > tmp));
 	return borrow;
 }
 
@@ -618,18 +618,18 @@ ATTRIBUTE_WARN_UNUSED_RET static word_t _wsub_22(word_t a[2], word_t b[2])
 #define WORD_CND_SUB_21(cnd, ah, al, b) do {				\
 		word_t tmp, mask;					\
 		mask = WORD_MASK_IFNOTZERO((cnd));			\
-		tmp = ((al) - ((b) & mask));				\
-		(ah) -= (tmp > (al));					\
+		tmp  = (word_t)((al) - ((b) & mask));			\
+		(ah) = (word_t)((ah) - (tmp > (al)));			\
 		(al) = tmp;						\
 	} while (0)
 /* Conditional subtraction of a two limbs number from a two limbs number. */
 #define WORD_CND_SUB_22(cnd, ah, al, bh, bl) do {			\
 		word_t tmp, mask;					\
 		mask = WORD_MASK_IFNOTZERO((cnd));			\
-		tmp = ((al) - ((bl) & mask));				\
-		(ah) -= (tmp > (al));					\
+		tmp  = (word_t)((al) - ((bl) & mask));			\
+		(ah) = (word_t)((ah) - (tmp > (al)));			\
 		(al) = tmp;						\
-		(ah) -= ((bh) & mask);					\
+		(ah) = (word_t)((ah) - ((bh) & mask));			\
 	} while (0)
 
 /*
@@ -666,7 +666,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int _word_divrem(word_t *q, word_t *r, word_t a
 
 	for (j = 0; j < 2; j++) {
 		larger = (_wcmp_22(phl, rhl) > 0);
-		qh -= (word_t) larger;
+		qh = (word_t)(qh - larger);
 		WORD_CND_SUB_22(larger, phl[1], phl[0], bh, bl);
 	}
 
@@ -684,7 +684,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int _word_divrem(word_t *q, word_t *r, word_t a
 
 	for (j = 0; j < 2; j++) {
 		larger = (_wcmp_22(phl, rhl) > 0);
-		ql -= (word_t) larger;
+		ql = (word_t) (ql - larger);
 		WORD_CND_SUB_21(larger, phl[1], phl[0], (b));
 	}
 
@@ -728,11 +728,11 @@ int wreciprocal(word_t dh, word_t dl, word_t *reciprocal)
 	}
 
 	if ((word_t)(dh + WORD(1)) == WORD(0)) {
-		q = ~dh;
-		r[1] = ~dl;
+		q = (word_t)(~dh);
+		r[1] = (word_t)(~dl);
 	} else {
-		t[1] = ~dh;
-		t[0] = ~dl;
+		t[1] = (word_t)(~dh);
+		t[0] = (word_t)(~dl);
 		ret = _word_divrem(&q, r+1, t[1], t[0],
 				   (word_t)(dh + WORD(1))); EG(ret, err);
 	}
@@ -748,11 +748,11 @@ int wreciprocal(word_t dh, word_t dl, word_t *reciprocal)
 	WORD_MUL(t[1], t[0], q, (word_t)~dl);
 	carry = _wadd_22(r, t);
 
-	t[0] = dl + WORD(1);
+	t[0] = (word_t)(dl + WORD(1));
 	t[1] = dh;
 	while (carry || (_wcmp_22(r, t) >= 0)) {
 		q++;
-		carry -= _wsub_22(r, t);
+		carry = (word_t)(carry - _wsub_22(r, t));
 	}
 
 	(*reciprocal) = q;

@@ -176,32 +176,32 @@ ATTRIBUTE_WARN_UNUSED_RET static int _nn_mul_redc1(nn_t out, nn_src_t in1, nn_sr
 		carry = WORD(0);
 		for (j = 0; j < len_mul; j++) {
 			WORD_MUL(prod_high, prod_low, a->val[i], b->val[j]);
-			prod_low += carry;
-			prod_high += (prod_low < carry);
-			out->val[j] += prod_low;
-			carry = prod_high + (out->val[j] < prod_low);
+			prod_low  = (word_t)(prod_low + carry);
+			prod_high = (word_t)(prod_high + (prod_low < carry));
+			out->val[j] = (word_t)(out->val[j] + prod_low);
+			carry = (word_t)(prod_high + (out->val[j] < prod_low));
 		}
 		for (; j < len; j++) {
-			out->val[j] += carry;
-			carry = out->val[j] < carry;
+			out->val[j] = (word_t)(out->val[j] + carry);
+			carry = (word_t)(out->val[j] < carry);
 		}
-		out->val[j] += carry;
-		acc = out->val[j] < carry;
+		out->val[j] = (word_t)(out->val[j] + carry);
+		acc = (word_t)(out->val[j] < carry);
 
-		m = out->val[0] * mpinv;
+		m = (word_t)(out->val[0] * mpinv);
 		WORD_MUL(prod_high, prod_low, m, p->val[0]);
-		prod_low += out->val[0];
-		carry = prod_high + (prod_low < out->val[0]);
+		prod_low = (word_t)(prod_low + out->val[0]);
+		carry = (word_t)(prod_high + (prod_low < out->val[0]));
 		for (j = 1; j < len; j++) {
 			WORD_MUL(prod_high, prod_low, m, p->val[j]);
-			prod_low += carry;
-			prod_high += (prod_low < carry);
-			out->val[j - 1] = prod_low + out->val[j];
-			carry = prod_high + (out->val[j - 1] < prod_low);
+			prod_low  = (word_t)(prod_low + carry);
+			prod_high = (word_t)(prod_high + (prod_low < carry));
+			out->val[j - 1] = (word_t)(prod_low + out->val[j]);
+			carry = (word_t)(prod_high + (out->val[j - 1] < prod_low));
 		}
-		out->val[j - 1] = carry + out->val[j];
-		carry = out->val[j - 1] < out->val[j];
-		out->val[j] = acc + carry;
+		out->val[j - 1] = (word_t)(carry + out->val[j]);
+		carry = (word_t)(out->val[j - 1] < out->val[j]);
+		out->val[j] = (word_t)(acc + carry);
 	}
 	/*
 	 * Note that at this stage the msw of out is either 0 or 1.
