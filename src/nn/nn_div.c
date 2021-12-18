@@ -260,7 +260,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int _nn_divrem_normalized(nn_t q, nn_t r,
 		 * Adjust the quotient if it was too small and set it in the
 		 * multiprecision array.
 		 */
-		qstar = (word_t)(qstar + small);
+		qstar = (word_t)(qstar + (word_t)small);
 		q->val[shift] = qstar;
 		/*
 		 * Check that the MSW of remainder was cancelled out and that
@@ -666,7 +666,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int _word_divrem(word_t *q, word_t *r, word_t a
 
 	for (j = 0; j < 2; j++) {
 		larger = (_wcmp_22(phl, rhl) > 0);
-		qh = (word_t)(qh - larger);
+		qh = (word_t)(qh - (word_t)larger);
 		WORD_CND_SUB_22(larger, phl[1], phl[0], bh, bl);
 	}
 
@@ -684,7 +684,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int _word_divrem(word_t *q, word_t *r, word_t a
 
 	for (j = 0; j < 2; j++) {
 		larger = (_wcmp_22(phl, rhl) > 0);
-		ql = (word_t) (ql - larger);
+		ql = (word_t) (ql - (word_t)larger);
 		WORD_CND_SUB_21(larger, phl[1], phl[0], (b));
 	}
 
