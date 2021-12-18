@@ -8,10 +8,10 @@ SSS_DIR=sss/
 
 CFLAGS += -I$(ROOT_DIR)/src/ -I$(ROOT_DIR)/src/external_deps
 
-all:	nn_example fp_example curve_basic_examples curve_ecdh _rsa _dsa sss
+all:	nn_example fp_example curve_basic_examples curve_ecdh _rsa _dsa _sss
 ifeq ($(WITH_DYNAMIC_LIBS),1)
 # If the user asked for dynamic libraries, compile versions of our binaries against them
-all:	nn_example_dyn fp_example_dyn curve_basic_examples_dyn curve_ecdh_dyn _rsa_dyn _dsa_dyn sss_dyn
+all:	nn_example_dyn fp_example_dyn curve_basic_examples_dyn curve_ecdh_dyn _rsa_dyn _dsa_dyn _sss_dyn
 endif
 
 nn_example:
@@ -49,8 +49,8 @@ _rsa_dyn:
 	cd $(RSA_DIR) && EXTRA_CFLAGS="$(CFLAGS)" make
 _dsa_dyn:
 	cd $(DSA_DIR) && EXTRA_CFLAGS="$(CFLAGS)" make
-sss_dyn:
-	$(CC) $(BIN_CFLAGS) -DSSS sss.c $(ROOT_DIR)/src/external_deps/print.c $(ROOT_DIR)/src/external_deps/rand.c $(BIN_LDFLAGS) $(LIBEC) -L$(BUILD_DIR) -lsign -o sss_dyn
+_sss_dyn:
+	cd $(SSS_DIR) && EXTRA_CFLAGS="$(CFLAGS)" make
 endif
 
 

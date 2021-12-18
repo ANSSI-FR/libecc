@@ -172,7 +172,8 @@ ATTRIBUTE_WARN_UNUSED_RET static int _sss_raw_generate(sss_share *shares, u16 k,
 		ret = _sss_derive_seed(&a0, secret_seed, 0);
 	}
 
-	/* Compute the shares P(x) for x in [idx_shift + 0, ..., idx_shift + n]
+	/* Compute the shares P(x) for x in [idx_shift + 0, ..., idx_shift + n] (or
+	 * [idx_shift + 0, ..., idx_shift + n + 1] to avoid the 0 index),
 	 * with idx_shift a non-zero random index shift to avoid leaking the number of shares.
 	 */
 	ret = fp_init(&base, &ctx); EG(ret, err);
@@ -218,10 +219,17 @@ ATTRIBUTE_WARN_UNUSED_RET static int _sss_raw_generate(sss_share *shares, u16 k,
 			ret = _sss_derive_seed(&a, secret_seed, (u16)j); EG(ret, err);
 			/* Blind a[j] */
 			ret = fp_mul_redc1(&a, &a, &blind); EG(ret, err);
-			/* NOTE: actually, the real a[j] coefficients are _sss_derive_seed(secret_seed, j)
+			/* NOTE1: actually, the real a[j] coefficients are _sss_derive_seed(secret_seed, j)
 			 * multiplied by some power of r^-1 (the Montgomery constant), but this is OK as
 			 * we need any random values (computable from the secret seed) here. We use this "trick"
 			 * to be able to use our more performant redcified versions of Fp multiplication.
+			 *
+			 * NOTE2: this trick makes also this generation not deterministic with the same seed
+			 * on binaries with different WORD sizes (16, 32, 64 bits) as the r Montgomery constant will
+			 * differ depending on this size. However, this is not really an issue per se for our SSS
+			 * as we are in our generation primitive and the a[j] coefficients are expected to be
+			 * random (the only drawback is that deterministic test vectors will not be consistent
+			 * across WORD sizes).
 			 */
 			/* Accumulate */
 			ret = fp_mul_redc1(&tmp, &exp, &a); EG(ret, err);
