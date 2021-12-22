@@ -1227,7 +1227,7 @@ int _eddsa_sign_finalize_pre_hash(struct ec_sign_context *ctx, u8 *sig, u8 sigle
 	/* b is the blinding mask */
 	nn b, binv;
 	b.magic = binv.magic = WORD(0);
-#endif
+#endif /* !USE_SIG_BLINDING */
 	r.magic = s.magic = S.magic = WORD(0);
 	R.magic = crv_edwards.magic = Tmp_edwards.magic = WORD(0);
 
@@ -1342,8 +1342,25 @@ int _eddsa_sign_finalize_pre_hash(struct ec_sign_context *ctx, u8 *sig, u8 sigle
 	/* Import r as the hash scalar */
 	ret = eddsa_decode_integer(&r, hash, hsize); EG(ret, err);
 
-	/* Reduce r modulo q for the next computation */
-	ret = nn_mod(&r, &r, q); EG(ret, err);
+#ifdef USE_SIG_BLINDING
+	/* Get a random b for blinding the r modular operations before the
+	 * scalar multiplication as we do not want it to leak.
+	 */
+	ret = nn_get_random_mod(&b, q); EG(ret, err);
+	dbg_nn_print("b", &b);
+	/* NOTE: we use Fermat's little theorem inversion for
+	 * constant time here. This is possible since q is prime.
+	 */
+	ret = nn_modinv_fermat(&binv, &b, q); EG(ret, err);
+
+	/* Blind r */
+	ret = nn_mul(&r, &r, &b); EG(ret, err);
+#endif /* USE_SIG_BLINDING */
+
+	/* Reduce r modulo q for the next computation.
+	 * (this is a blind reduction if USE_SIG_BLINDING).
+	 */
+	ret = nn_mod_notrim(&r, &r, q); EG(ret, err);
 
 	/* Now perform our scalar multiplication.
 	 */
@@ -1359,11 +1376,14 @@ int _eddsa_sign_finalize_pre_hash(struct ec_sign_context *ctx, u8 *sig, u8 sigle
 		ret = nn_init(&r_tmp, 0); EG(ret, err1);
 		ret = nn_modinv_word(&r_tmp, WORD(4), q); EG(ret, err1);
 		ret = nn_mod_mul(&r_tmp, &r_tmp, &r, q); EG(ret, err1);
+
 #ifdef USE_SIG_BLINDING
+		/* Unblind r_tmp */
+		ret = nn_mod_mul(&r_tmp, &r_tmp, &binv, q); EG(ret, err1);
 		ret = prj_pt_mul_blind(&R, &r_tmp, G);
 #else
 		ret = prj_pt_mul(&R, &r_tmp, G);
-#endif
+#endif /* !USE_SIG_BLINDING */
 err1:
 		nn_uninit(&r_tmp);
 		EG(ret, err);
@@ -1372,10 +1392,21 @@ err1:
 #endif /* !defined(WITH_SIG_EDDSA448) */
 	{
 #ifdef USE_SIG_BLINDING
-		ret = prj_pt_mul_blind(&R, &r, G); EG(ret, err);
+		nn r_tmp;
+		r_tmp.magic = WORD(0);
+
+		ret = nn_init(&r_tmp, 0); EG(ret, err1);
+		ret = nn_copy(&r_tmp, &r); EG(ret, err2);
+
+		/* Unblind r_tmp */
+		ret = nn_mod_mul(&r_tmp, &r_tmp, &binv, q); EG(ret, err1);
+		ret = prj_pt_mul_blind(&R, &r_tmp, G); EG(ret, err2);
+err2:
+		nn_uninit(&r_tmp);
+		EG(ret, err);
 #else
-		ret = prj_pt_mul(&R, &r, G); EG(ret, err);
-#endif
+		ret = prj_pt_mul(&R, &r, G); EG(ret, err2);
+#endif /* !USE_SIG_BLINDING */
 	}
 
 	/* Now compute S = (r + H(R || PubKey || PH(m)) * secret) mod q */
@@ -1436,27 +1467,19 @@ err1:
 	ret = nn_mod(&s, &s, q); EG(ret, err);
 
 #ifdef USE_SIG_BLINDING
-	/* Note: if we use blinding, r and H(R || PubKey || m) are multiplied by
-	 * a random value b in ]0,q[ */
-	ret = nn_get_random_mod(&b, q); EG(ret, err);
-
-	dbg_nn_print("b", &b);
-        /* NOTE: we use Fermat's little theorem inversion for
-         * constant time here. This is possible since q is prime.
-         */
-	ret = nn_modinv_fermat(&binv, &b, q); EG(ret, err);
 	/* If we use blinding, multiply by b */
 	ret = nn_mod_mul(&S, &S, &b, q); EG(ret, err);
-	ret = nn_mod_mul(&r, &r, &b, q); EG(ret, err);
-#endif
+#endif /* !USE_SIG_BLINDING */
 	/* Multiply by the secret */
 	ret = nn_mod_mul(&S, &S, &s, q); EG(ret, err);
+	/* The secret is not needed anymore */
+	nn_uninit(&s);
 	/* Add to r */
 	ret = nn_mod_add(&S, &S, &r, q); EG(ret, err);
 #ifdef USE_SIG_BLINDING
 	/* Unblind the result */
 	ret = nn_mod_mul(&S, &S, &binv, q); EG(ret, err);
-#endif
+#endif /* !USE_SIG_BLINDING */
 	/* Store our S in the context as an encoded buffer */
 	MUST_HAVE((s_len <= (siglen - r_len)), ret, err);
 	ret = eddsa_encode_integer(&S, &sig[r_len], s_len);
@@ -1490,7 +1513,8 @@ err1:
 #ifdef USE_SIG_BLINDING
 	nn_uninit(&b);
 	nn_uninit(&binv);
-#endif /* USE_SIG_BLINDING */
+#endif /* !USE_SIG_BLINDING */
+
 	/*
 	 * We can now clear data part of the context. This will clear
 	 * magic and avoid further reuse of the whole context.
@@ -1665,8 +1689,27 @@ int _eddsa_sign(u8 *sig, u8 siglen, const ec_key_pair *key_pair,
 
 	/* Import r as the hash scalar */
 	ret = eddsa_decode_integer(&r, hash, hsize); EG(ret, err);
-	/* Reduce r modulo q for the next computation */
-	ret = nn_mod(&r, &r, q); EG(ret, err);
+
+#ifdef USE_SIG_BLINDING
+	/* Get a random b for blinding the r modular operations before the
+	 * scalar multiplication as we do not want it to leak.
+	 */
+	ret = nn_get_random_mod(&b, q); EG(ret, err);
+	dbg_nn_print("b", &b);
+	/* NOTE: we use Fermat's little theorem inversion for
+	 * constant time here. This is possible since q is prime.
+	 */
+	ret = nn_modinv_fermat(&binv, &b, q); EG(ret, err);
+
+	/* Blind r */
+	ret = nn_mul(&r, &r, &b); EG(ret, err);
+#endif /* !USE_SIG_BLINDING */
+
+	/* Reduce r modulo q for the next computation.
+	 * (this is a blind reduction if USE_SIG_BLINDING).
+	 */
+	ret = nn_mod_notrim(&r, &r, q); EG(ret, err);
+
 	/* Now perform our scalar multiplication.
 	 */
 #if defined(WITH_SIG_EDDSA448)
@@ -1681,11 +1724,14 @@ int _eddsa_sign(u8 *sig, u8 siglen, const ec_key_pair *key_pair,
 		ret = nn_init(&r_tmp, 0); EG(ret, err1);
 		ret = nn_modinv_word(&r_tmp, WORD(4), q); EG(ret, err1);
 		ret = nn_mod_mul(&r_tmp, &r_tmp, &r, q); EG(ret, err1);
+
 #ifdef USE_SIG_BLINDING
+		/* Unblind r_tmp */
+		ret = nn_mod_mul(&r_tmp, &r_tmp, &binv, q); EG(ret, err1);
 		ret = prj_pt_mul_blind(&R, &r_tmp, G);
 #else
 		ret = prj_pt_mul(&R, &r_tmp, G);
-#endif
+#endif /* !USE_SIG_BLINDING */
 err1:
 		nn_uninit(&r_tmp);
 		EG(ret, err);
@@ -1694,11 +1740,23 @@ err1:
 #endif /* !defined(WITH_SIG_EDDSA448) */
 	{
 #ifdef USE_SIG_BLINDING
-		ret = prj_pt_mul_blind(&R, &r, G); EG(ret, err);
+		nn r_tmp;
+		r_tmp.magic = WORD(0);
+
+		ret = nn_init(&r_tmp, 0); EG(ret, err1);
+		ret = nn_copy(&r_tmp, &r); EG(ret, err2);
+
+		/* Unblind r_tmp */
+		ret = nn_mod_mul(&r_tmp, &r_tmp, &binv, q); EG(ret, err1);
+		ret = prj_pt_mul_blind(&R, &r_tmp, G); EG(ret, err2);
+err2:
+		nn_uninit(&r_tmp);
+		EG(ret, err);
 #else
-		ret = prj_pt_mul(&R, &r, G); EG(ret, err);
-#endif
+		ret = prj_pt_mul(&R, &r, G); EG(ret, err2);
+#endif /* !USE_SIG_BLINDING */
 	}
+
 	/* Now compute S = (r + H(R || PubKey || PH(m)) * secret) mod q */
 	ret = hash_mapping_callbacks_sanity_check(h); EG(ret, err);
 	ret = h->hfunc_init(&h_ctx); EG(ret, err);
@@ -1765,18 +1823,9 @@ err1:
 	ret = eddsa_compute_s(&s, hash, hsize); EG(ret, err);
 	ret = nn_mod(&s, &s, q); EG(ret, err);
 #ifdef USE_SIG_BLINDING
-	/* Note: if we use blinding, r and H(R || PubKey || m) are multiplied by
-	 * a random value b in ]0,q[ */
-	ret = nn_get_random_mod(&b, q); EG(ret, err);
-	dbg_nn_print("b", &b);
-        /* NOTE: we use Fermat's little theorem inversion for
-         * constant time here. This is possible since q is prime.
-         */
-	ret = nn_modinv_fermat(&binv, &b, q); EG(ret, err);
 	/* If we use blinding, multiply by b */
 	ret = nn_mod_mul(&S, &S, &b, q); EG(ret, err);
-	ret = nn_mod_mul(&r, &r, &b, q); EG(ret, err);
-#endif
+#endif /* !USE_SIG_BLINDING */
 	/* Multiply by the secret */
 	ret = nn_mod_mul(&S, &S, &s, q); EG(ret, err);
 	/* The secret is not needed anymore */
@@ -1786,7 +1835,7 @@ err1:
 #ifdef USE_SIG_BLINDING
 	/* Unblind the result */
 	ret = nn_mod_mul(&S, &S, &binv, q); EG(ret, err);
-#endif
+#endif /* !USE_SIG_BLINDING */
 	/* Store our S in the context as an encoded buffer */
 	MUST_HAVE((s_len <= (siglen - r_len)), ret, err);
 	/* Encode the scalar s from the digest */
