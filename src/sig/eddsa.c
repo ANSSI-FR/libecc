@@ -1395,17 +1395,17 @@ err1:
 		nn r_tmp;
 		r_tmp.magic = WORD(0);
 
-		ret = nn_init(&r_tmp, 0); EG(ret, err1);
+		ret = nn_init(&r_tmp, 0); EG(ret, err2);
 		ret = nn_copy(&r_tmp, &r); EG(ret, err2);
 
 		/* Unblind r_tmp */
-		ret = nn_mod_mul(&r_tmp, &r_tmp, &binv, q); EG(ret, err1);
+		ret = nn_mod_mul(&r_tmp, &r_tmp, &binv, q); EG(ret, err2);
 		ret = prj_pt_mul_blind(&R, &r_tmp, G); EG(ret, err2);
 err2:
 		nn_uninit(&r_tmp);
 		EG(ret, err);
 #else
-		ret = prj_pt_mul(&R, &r, G); EG(ret, err2);
+		ret = prj_pt_mul(&R, &r, G); EG(ret, err);
 #endif /* !USE_SIG_BLINDING */
 	}
 
@@ -1743,17 +1743,17 @@ err1:
 		nn r_tmp;
 		r_tmp.magic = WORD(0);
 
-		ret = nn_init(&r_tmp, 0); EG(ret, err1);
+		ret = nn_init(&r_tmp, 0); EG(ret, err2);
 		ret = nn_copy(&r_tmp, &r); EG(ret, err2);
 
 		/* Unblind r_tmp */
-		ret = nn_mod_mul(&r_tmp, &r_tmp, &binv, q); EG(ret, err1);
+		ret = nn_mod_mul(&r_tmp, &r_tmp, &binv, q); EG(ret, err2);
 		ret = prj_pt_mul_blind(&R, &r_tmp, G); EG(ret, err2);
 err2:
 		nn_uninit(&r_tmp);
 		EG(ret, err);
 #else
-		ret = prj_pt_mul(&R, &r, G); EG(ret, err2);
+		ret = prj_pt_mul(&R, &r, G); EG(ret, err);
 #endif /* !USE_SIG_BLINDING */
 	}
 
