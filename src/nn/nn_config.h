@@ -117,13 +117,13 @@
 /* Now adjust the maximum length with our maximum digest size as we
  * have to import full digests as big numbers in some signature algorithms.
  *
- * The division by 2 here is related to the fact that we usually import hash values
- * without performing much NN operations on them (immediately reducing them modulo q), so
- * it is safe to remove some additional space left for multiplications.
+ * Since we potentially manipulate big numbers up to the digest size with
+ * multiplications, divisions and shifts we want to ensure we have enough room
+ * in all the cases.
  */
-#if NN_MAX_BIT_LEN < (8 * MAX_DIGEST_SIZE)
+#if NN_MAX_BIT_LEN < (MAX_BIT_LEN_ROUNDING((8 * MAX_DIGEST_SIZE), WORD_BITS))
 #undef NN_MAX_BIT_LEN
-#define NN_MAX_BIT_LEN MAX_BIT_LEN_ROUNDING(((8 * MAX_DIGEST_SIZE) / 2), WORD_BITS)
+#define NN_MAX_BIT_LEN MAX_BIT_LEN_ROUNDING((8 * MAX_DIGEST_SIZE), WORD_BITS)
 #undef NN_MAX_BASE
 #define NN_MAX_BASE MAX_DIGEST_SIZE_BITS
 #endif
