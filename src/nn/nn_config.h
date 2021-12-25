@@ -117,16 +117,32 @@
 /* Now adjust the maximum length with our maximum digest size as we
  * have to import full digests as big numbers in some signature algorithms.
  *
- * Since we potentially manipulate big numbers up to the digest size with
- * multiplications, divisions and shifts we want to ensure we have enough room
- * in all the cases.
+ * The division by 2 here is related to the fact that we usually import hash values
+ * without performing much NN operations on them (immediately reducing them modulo q), so
+ * it is safe to remove some additional space left for multiplications.
  */
-#if NN_MAX_BIT_LEN < (MAX_BIT_LEN_ROUNDING((8 * MAX_DIGEST_SIZE), WORD_BITS))
+#if NN_MAX_BIT_LEN < MAX_BIT_LEN_ROUNDING(((8 * MAX_DIGEST_SIZE) / 2), WORD_BITS)
 #undef NN_MAX_BIT_LEN
-#define NN_MAX_BIT_LEN MAX_BIT_LEN_ROUNDING((8 * MAX_DIGEST_SIZE), WORD_BITS)
+#define NN_MAX_BIT_LEN MAX_BIT_LEN_ROUNDING(((8 * MAX_DIGEST_SIZE) / 2), WORD_BITS)
 #undef NN_MAX_BASE
 #define NN_MAX_BASE MAX_DIGEST_SIZE_BITS
 #endif
+/*
+ * NOTE: the only exception to the rule above (i.e. immediately reducing hash sized
+ * values modulo q) is when we use blinding and EdDSA25519 and there might be not enough
+ * room for our computations. This is kind of ugly to have this specific case here, but
+ * being too conservative always using the maximum size adapated to MAX_DIGEST_SIZE
+ * sacrifices *ALL* the sognature performance only for the specific case of EdDSA 25519!
+ *
+ */
+#if defined(WITH_SIG_EDDSA25519) && defined(USE_SIG_BLINDING)
+#if NN_MAX_BIT_LEN < MAX_BIT_LEN_ROUNDING((8 * SHA512_DIGEST_SIZE), WORD_BITS)
+#undef NN_MAX_BIT_LEN
+#define NN_MAX_BIT_LEN MAX_BIT_LEN_ROUNDING((8 * SHA512_DIGEST_SIZE), WORD_BITS)
+#undef NN_MAX_BASE
+#define NN_MAX_BASE MAX_DIGEST_SIZE_BITS
+#endif
+#endif /* defined(WITH_SIG_EDDSA25519) && defined(USE_SIG_BLINDING) */
 
 /************/
 /* NN maximum internal lengths to be "safe" in our computations */
