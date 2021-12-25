@@ -1256,7 +1256,7 @@ nn_div_tests = ["NN_MOD", "NN_DIVREM", "NN_MODINV", "NN_MODINV_2EXP", "NN_XGCD",
 nn_tests = nn_logical_tests + nn_addition_tests + nn_mul_tests + nn_div_tests
 
 fp_add_tests  = ["FP_ADD", "FP_SUB"]
-fp_mul_tests  = ["FP_MUL", "FP_SQR", "FP_DIV", "FP_MUL_REDC1", "FP_POW"]
+fp_mul_tests  = ["FP_MUL", "FP_SQR", "FP_DIV", "FP_MUL_MONTY", "FP_SQR_MONTY", "FP_POW"]
 fp_sqrt_tests = ["FP_SQRT"]
 
 fp_tests = fp_add_tests + fp_mul_tests + fp_sqrt_tests
@@ -1838,8 +1838,8 @@ test_funcs["FP_MUL"] = test_FP_MUL_SQR
 test_funcs["FP_SQR"] = test_FP_MUL_SQR
 
 
-def test_FP_MUL_REDC1(op):
-    """ Generate tests for FP_MUL_REDC1 """
+def test_FP_MUL_SQR_MONTY(op):
+    """ Generate tests for FP_MUL_SQR_MONTY """
     # Use random odd number for faster generation
     nn_p = get_random_bigint(wlen, MAX_INPUT_PARAM_WLEN) | 1
     if getwlenbitlen(nn_p, wlen) == wlen:
@@ -1854,14 +1854,24 @@ def test_FP_MUL_REDC1(op):
     fp_val1_mont = (fp_val1 * nn_r ) % nn_p
     fp_val2_mont = (fp_val2 * nn_r ) % nn_p
 
-    fp_exp_res = (fp_val1_mont * fp_val2_mont * modinv(nn_r%nn_p, nn_p)) % nn_p
 
-    fmt = "%s cfff %s %s %s %s\n"
-    s = fmt % (op, format_fp_context(nn_p, wlen), format_int_string(fp_exp_res, wlen), format_int_string(fp_val1_mont, wlen), format_int_string(fp_val2_mont, wlen))
+    if (op == "FP_MUL_MONTY") or (op == "FP_SQR_MONTY"):
+        if (op == "FP_MUL_MONTY"):
+            fp_exp_res = (fp_val1_mont * fp_val2_mont * modinv(nn_r%nn_p, nn_p)) % nn_p
+        else:
+            fp_exp_res = (fp_val1_mont * fp_val1_mont * modinv(nn_r%nn_p, nn_p)) % nn_p
+
+    if (op == "FP_SQR"):
+        fmt = "%s cff %s %s %s\n"
+        s = fmt % (op, format_fp_context(nn_p, wlen), format_int_string(fp_exp_res, wlen), format_int_string(fp_val1_mont, wlen))
+    else:
+        fmt = "%s cfff %s %s %s %s\n"
+        s = fmt % (op, format_fp_context(nn_p, wlen), format_int_string(fp_exp_res, wlen), format_int_string(fp_val1_mont, wlen), format_int_string(fp_val2_mont, wlen))
 
     return [ s ]
 
-test_funcs["FP_MUL_REDC1"] = test_FP_MUL_REDC1
+test_funcs["FP_MUL_MONTY"] = test_FP_MUL_SQR_MONTY
+test_funcs["FP_SQR_MONTY"] = test_FP_MUL_SQR_MONTY
 
 
 def test_FP_POW(op):

@@ -794,11 +794,11 @@ static char global_parameters[MAX_PARAMS];
 	     FP_T_GENERIC_OUT(1), FP_T_GENERIC_IN(2), FP_T_GENERIC_IN(3))
 
 /* Testing Montgomery multiplication in F_p */
-	GENERIC_TEST_FP(fp_mul_redc1, FP_MUL_REDC1, "*", fp_mul_redc1, "cfff", "ioii",
+	GENERIC_TEST_FP(fp_mul_monty, FP_MUL_MONTY, "*_monty", fp_mul_monty, "cfff", "ioii",
 	     SET_PARAMETER_PRETTY_NAME(4, "p", "prod", "input1", "input2"),
 	     NO_RET, 0, 2,
 	     FP_T_GENERIC_OUT(1), FP_T_GENERIC_IN(2), FP_T_GENERIC_IN(3))
-	GENERIC_TEST_FP(fp_sqr_redc1, FP_SQR_REDC1, "(^2)", fp_sqr_redc1, "cff", "ioi",
+	GENERIC_TEST_FP(fp_sqr_monty, FP_SQR_MONTY, "(^2)_monty", fp_sqr_monty, "cff", "ioi",
 	     SET_PARAMETER_PRETTY_NAME(3, "p", "prod", "input1"),
 	     NO_RET, 0, 2,
 	     FP_T_GENERIC_OUT(1), FP_T_GENERIC_IN(2))

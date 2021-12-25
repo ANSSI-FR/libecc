@@ -323,15 +323,15 @@ int prj_pt_cmp(prj_pt_src_t in1, prj_pt_src_t in2, int *cmp)
 	 * usual multiplication and the spurious multiplicative
 	 * factor does not matter.
 	 */
-	ret = fp_mul_redc1(&X1, &(in1->X), &(in2->Z)); EG(ret, err);
-	ret = fp_mul_redc1(&X2, &(in2->X), &(in1->Z)); EG(ret, err);
-	ret = fp_mul_redc1(&Y1, &(in1->Y), &(in2->Z)); EG(ret, err);
-	ret = fp_mul_redc1(&Y2, &(in2->Y), &(in1->Z)); EG(ret, err);
+	ret = fp_mul_monty(&X1, &(in1->X), &(in2->Z)); EG(ret, err);
+	ret = fp_mul_monty(&X2, &(in2->X), &(in1->Z)); EG(ret, err);
+	ret = fp_mul_monty(&Y1, &(in1->Y), &(in2->Z)); EG(ret, err);
+	ret = fp_mul_monty(&Y2, &(in2->Y), &(in1->Z)); EG(ret, err);
 
-	ret = fp_mul_redc1(&X1, &(in1->X), &(in2->Z)); EG(ret, err);
-	ret = fp_mul_redc1(&X2, &(in2->X), &(in1->Z)); EG(ret, err);
-	ret = fp_mul_redc1(&Y1, &(in1->Y), &(in2->Z)); EG(ret, err);
-	ret = fp_mul_redc1(&Y2, &(in2->Y), &(in1->Z)); EG(ret, err);
+	ret = fp_mul_monty(&X1, &(in1->X), &(in2->Z)); EG(ret, err);
+	ret = fp_mul_monty(&X2, &(in2->X), &(in1->Z)); EG(ret, err);
+	ret = fp_mul_monty(&Y1, &(in1->Y), &(in2->Z)); EG(ret, err);
+	ret = fp_mul_monty(&Y2, &(in2->Y), &(in1->Z)); EG(ret, err);
 	ret = fp_cmp(&X1, &X2, &x_cmp); EG(ret, err);
 	ret = fp_cmp(&Y1, &Y2, &y_cmp);
 
@@ -365,8 +365,8 @@ ATTRIBUTE_WARN_UNUSED_RET static inline int _prj_pt_eq_or_opp_X(prj_pt_src_t in1
 	 */
 	ret = fp_init(&X1, (in1->X).ctx); EG(ret, err);
 	ret = fp_init(&X2, (in2->X).ctx); EG(ret, err);
-	ret = fp_mul_redc1(&X1, &(in1->X), &(in2->Z)); EG(ret, err);
-	ret = fp_mul_redc1(&X2, &(in2->X), &(in1->Z)); EG(ret, err);
+	ret = fp_mul_monty(&X1, &(in1->X), &(in2->Z)); EG(ret, err);
+	ret = fp_mul_monty(&X2, &(in2->X), &(in1->Z)); EG(ret, err);
 	ret = fp_cmp(&X1, &X2, cmp);
 
 err:
@@ -393,8 +393,8 @@ ATTRIBUTE_WARN_UNUSED_RET static inline int _prj_pt_eq_or_opp_Y(prj_pt_src_t in1
 	 */
 	ret = fp_init(&Y1, (in1->Y).ctx); EG(ret, err);
 	ret = fp_init(&Y2, (in2->Y).ctx); EG(ret, err);
-	ret = fp_mul_redc1(&Y1, &(in1->Y), &(in2->Z)); EG(ret, err);
-	ret = fp_mul_redc1(&Y2, &(in2->Y), &(in1->Z)); EG(ret, err);
+	ret = fp_mul_monty(&Y1, &(in1->Y), &(in2->Z)); EG(ret, err);
+	ret = fp_mul_monty(&Y2, &(in2->Y), &(in1->Z)); EG(ret, err);
 	ret = fp_eq_or_opp(&Y1, &Y2, eq_or_opp);
 
 err:

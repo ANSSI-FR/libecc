@@ -214,11 +214,11 @@ ATTRIBUTE_WARN_UNUSED_RET static int _sss_raw_generate(sss_share *shares, u16 k,
 		ret = fp_one(&exp);
 		for(j = 1; j < k; j++){
 			/* Compute x**j by iterative multiplications */
-			ret = fp_mul_redc1(&exp, &exp, &base); EG(ret, err);
+			ret = fp_mul_monty(&exp, &exp, &base); EG(ret, err);
 			/* Compute our a[j] coefficient */
 			ret = _sss_derive_seed(&a, secret_seed, (u16)j); EG(ret, err);
 			/* Blind a[j] */
-			ret = fp_mul_redc1(&a, &a, &blind); EG(ret, err);
+			ret = fp_mul_monty(&a, &a, &blind); EG(ret, err);
 			/* NOTE1: actually, the real a[j] coefficients are _sss_derive_seed(secret_seed, j)
 			 * multiplied by some power of r^-1 (the Montgomery constant), but this is OK as
 			 * we need any random values (computable from the secret seed) here. We use this "trick"
@@ -232,7 +232,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int _sss_raw_generate(sss_share *shares, u16 k,
 			 * across WORD sizes).
 			 */
 			/* Accumulate */
-			ret = fp_mul_redc1(&tmp, &exp, &a); EG(ret, err);
+			ret = fp_mul_monty(&tmp, &exp, &a); EG(ret, err);
 			ret = fp_add(&s, &s, &tmp); EG(ret, err);
 		}
 		/* Export the computed share */
@@ -328,7 +328,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int _sss_raw_lagrange(const sss_share *shares, 
 		/* Import s[i] */
 		ret = fp_import_from_buf(&s, cur_share_i->share, SSS_SECRET_SIZE); EG(ret, err);
 		/* Blind s[i] */
-		ret = fp_mul_redc1(&s, &s, &blind); EG(ret, err);
+		ret = fp_mul_monty(&s, &s, &blind); EG(ret, err);
 		/* Get the index */
 		ret = fp_set_word_value(&x_i, (word_t)(cur_share_i->index)); EG(ret, err);
 		/* Initialize multiplication with "one" (actually Montgomery r^-1 for multiplication optimization) */
@@ -343,7 +343,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int _sss_raw_lagrange(const sss_share *shares, 
 			if(j != i){
 				if(val != 0){
 					ret = fp_sub(&tmp, &x_j, &x); EG(ret, err);
-					ret = fp_mul_redc1(&s, &s, &tmp); EG(ret, err);
+					ret = fp_mul_monty(&s, &s, &tmp); EG(ret, err);
 				}
 				else{
 					/* NOTE: we treat the case 'val = 0' in a specific case for
@@ -352,15 +352,15 @@ ATTRIBUTE_WARN_UNUSED_RET static int _sss_raw_lagrange(const sss_share *shares, 
 					 * SSS secret (which happens to be the constant of degree 0 of the
 					 * polynomial).
 					 */
-					ret = fp_mul_redc1(&s, &s, &x_j); EG(ret, err);
+					ret = fp_mul_monty(&s, &s, &x_j); EG(ret, err);
 				}
 				ret = fp_sub(&tmp, &x_j, &x_i); EG(ret, err);
-				ret = fp_mul_redc1(&tmp2, &tmp2, &tmp); EG(ret, err);
+				ret = fp_mul_monty(&tmp2, &tmp2, &tmp); EG(ret, err);
 			}
 		}
 		/* Inverse all the (x_j - x_i) poducts */
 		ret = fp_inv(&tmp, &tmp2); EG(ret, err);
-		ret = fp_mul_redc1(&s, &s, &tmp); EG(ret, err);
+		ret = fp_mul_monty(&s, &s, &tmp); EG(ret, err);
 		/* Accumulate in secret */
 		ret = fp_add(&y, &y, &s); EG(ret, err);
 	}

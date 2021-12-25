@@ -15,7 +15,6 @@
  */
 #include "../nn/nn_logical.h"
 #include "../nn/nn_mod_pow.h"
-#include "fp_mul_redc1.h"
 #include "fp_pow.h"
 #include "fp.h"
 
