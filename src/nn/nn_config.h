@@ -129,8 +129,12 @@
 #endif
 /*
  * NOTE: the only exception to the rule above (i.e. immediately reducing hash sized
- * values modulo q) is when we use blinding and EdDSA25519 and there might be not enough
- * room for our computations. This is kind of ugly to have this specific case here, but
+ * values modulo q) is when we use blinding and EdDSA and there might be not enough
+ * room for our computations. This is actually *specific to EdDSA 25519* as EdDSA 448
+ * always uses SHAKE256 digest with 114 bytes hash output that has enough room for
+ * computation when compared to the 448-bit size order of the curve.
+ *
+ * This is kind of ugly to have this specific case here, but
  * being too conservative always using the maximum size adapated to MAX_DIGEST_SIZE
  * sacrifices *ALL* the sognature performance only for the specific case of EdDSA 25519!
  *
