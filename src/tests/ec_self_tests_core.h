@@ -5258,6 +5258,7 @@ static const ecdh_test_case ecdh_dummy_test_case = {
 #include "x448_test_vectors.h"
 #endif /* WITH_X448 */
 
+#if defined(WITH_ECCCDH) || defined(WITH_X25519) || defined(WITH_X448)
 static const ecdh_test_case *ecdh_fixed_vector_tests[] = {
 #ifdef ECCCDH_SECP192R1_SELF_TEST_0
 	&ecccdh_SECP192R1_0_test_case,
@@ -5649,6 +5650,7 @@ static const ecdh_test_case *ecdh_fixed_vector_tests[] = {
 	 * when no test case is defined */
 	&ecdh_dummy_test_case,
 };
+#endif /* !(defined(WITH_ECCCDH) || defined(WITH_X25519) || defined(WITH_X448)) */
 
 #define ECDH_FIXED_VECTOR_NUM_TESTS \
         (sizeof(ecdh_fixed_vector_tests) / sizeof(ecdh_fixed_vector_tests[0]))

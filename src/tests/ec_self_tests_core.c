@@ -622,6 +622,8 @@ ATTRIBUTE_WARN_UNUSED_RET static int ec_sig_known_vector_tests_one(const ec_test
 			goto err;
 		}
 		u8 noncelen = (u8)(BYTECEIL(q_bit_len));
+		/* Force used variable to avoid warnings */
+		FORCE_USED_VAR(noncelen);
 		/* NOTE: the MUST_HAVE is protected by a preprocessing check
 		 * to avoid -Werror=type-limits errors:
 		 * "error: comparison is always true due to limited range of data type"
