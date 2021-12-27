@@ -169,6 +169,7 @@ int ecccdh_derive_secret(const ec_priv_key *our_priv_key, const u8 *peer_pub_key
 	int ret, iszero, isone;
 	ec_pub_key peer_pub_key;
 	prj_pt_t Q;
+	nn_src_t cofactor;
 	u8 expected_shared_secret_len;
 	peer_pub_key.magic = WORD(0);
 
@@ -183,13 +184,14 @@ int ecccdh_derive_secret(const ec_priv_key *our_priv_key, const u8 *peer_pub_key
 	ret = ec_pub_key_import_from_aff_buf(&peer_pub_key, our_priv_key->params, peer_pub_key_buf, peer_pub_key_buf_len, ECCCDH); EG(ret, err);
 	Q = &(peer_pub_key.y);
 
-	ret = nn_isone(&(our_priv_key->params->ec_gen_cofactor), &isone); EG(ret, err);
+	cofactor = &(our_priv_key->params->ec_gen_cofactor);
+	ret = nn_isone(cofactor, &isone); EG(ret, err);
 	if(!isone){
 		/* Perform a cofactor multiplication if necessary.
 		 * NOTE: since the cofactor and the base point are public, we perform an unprotected
 		 * scalar multiplication here.
 		 */
-		ret = _prj_pt_unprotected_mult(Q, &(our_priv_key->params->ec_gen_cofactor), Q); EG(ret, err);
+		ret = _prj_pt_unprotected_mult(Q, cofactor, Q); EG(ret, err);
 	}
 
 	/*
@@ -223,6 +225,7 @@ int ecccdh_derive_secret(const ec_priv_key *our_priv_key, const u8 *peer_pub_key
 
 err:
 	PTR_NULLIFY(Q);
+	PTR_NULLIFY(cofactor);
 	/* Uninit local peer pub key and zeroize intermediate computations */
 	IGNORE_RET_VAL(local_memset(&peer_pub_key, 0, sizeof(ec_pub_key)));
 
