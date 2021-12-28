@@ -50,6 +50,7 @@ err:
 #include <windows.h>
 int get_ms_time(u64 *time)
 {
+	int ret;
 	SYSTEMTIME st;
 
 	if (time == NULL) {
