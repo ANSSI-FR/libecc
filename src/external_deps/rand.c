@@ -85,19 +85,25 @@ int get_random(unsigned char *buf, u16 len)
 
 int get_random(unsigned char *buf, u16 len)
 {
+	int ret;
 	HCRYPTPROV hCryptProv = 0;
 
 	if (CryptAcquireContext(&hCryptProv, NULL, NULL,
 				PROV_RSA_FULL, CRYPT_VERIFYCONTEXT) == FALSE) {
-		return -1;
+		ret = -1;
+		goto err;
 	}
 
 	if (CryptGenRandom(hCryptProv, len, buf) == FALSE) {
 		CryptReleaseContext(hCryptProv, 0);
-		return -1;
+		ret = -1;
+		goto err;
 	}
 	CryptReleaseContext(hCryptProv, 0);
-	return 0;
+	ret = 0;
+
+err:
+	return ret;
 }
 
 /* No platform detected, the user must provide an implementation! */
