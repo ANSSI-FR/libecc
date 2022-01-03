@@ -100,7 +100,7 @@ do {                                    \
 
 #define ROTL_SHA0(x, n)      ((((u32)(x)) << (n)) | (((u32)(x)) >> (32-(n))))
 
-/* All the innder SHA-0 operations */
+/* All the inner SHA-0 operations */
 #define K1_SHA0	0x5a827999
 #define K2_SHA0	0x6ed9eba1
 #define K3_SHA0	0x8f1bbcdc

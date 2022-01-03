@@ -100,7 +100,7 @@ do {                                    \
 
 #define ROTL_SHA1(x, n)      ((((u32)(x)) << (n)) | (((u32)(x)) >> (32-(n))))
 
-/* All the innder SHA-1 operations */
+/* All the inner SHA-1 operations */
 #define K1_SHA1	0x5a827999
 #define K2_SHA1	0x6ed9eba1
 #define K3_SHA1	0x8f1bbcdc

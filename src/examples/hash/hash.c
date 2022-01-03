@@ -180,6 +180,13 @@ int gen_hash_get_hash_sizes(gen_hash_alg_type gen_hash_type, u8 *hlen, u8 *block
                         ret = 0;
                         break;
                 }
+		case HASH_GOST34_11_94_NORM:
+		case HASH_GOST34_11_94_RFC4357:{
+                        (*hlen) = GOSTR34_11_94_DIGEST_SIZE;
+                        (*block_size) = GOSTR34_11_94_BLOCK_SIZE;
+                        ret = 0;
+                        break;
+                }
                 /* The default case falls back to a genuine libecc hash function */
                 default:{
                         const hash_mapping *hm;
@@ -224,6 +231,14 @@ int gen_hash_hfunc_scattered(const u8 **input, const u32 *ilen, u8 *digest, gen_
 		}
 		case HASH_MDC2_PADDING2:{
 			ret = mdc2_scattered_padding2(input, ilen, digest); EG(ret, err);
+			break;
+		}
+		case HASH_GOST34_11_94_NORM:{
+			ret = gostr34_11_94_scattered_norm(input, ilen, digest); EG(ret, err);
+			break;
+		}
+		case HASH_GOST34_11_94_RFC4357:{
+			ret = gostr34_11_94_scattered_rfc4357(input, ilen, digest); EG(ret, err);
 			break;
 		}
 		/* The fallback should be libecc type */
@@ -287,6 +302,16 @@ int gen_hash_init(gen_hash_context *ctx, gen_hash_alg_type gen_hash_type)
 			ret = mdc2_set_padding_type(&(ctx->mdc2ctx), ISOIEC10118_TYPE2); EG(ret, err);
 			break;
 		}
+		case HASH_GOST34_11_94_NORM:{
+			ret = gostr34_11_94_init(&(ctx->gostr34_11_94ctx)); EG(ret, err);
+			ret = gostr34_11_94_set_type(&(ctx->gostr34_11_94ctx), GOST34_11_94_NORM); EG(ret, err);
+			break;
+		}
+		case HASH_GOST34_11_94_RFC4357:{
+			ret = gostr34_11_94_init(&(ctx->gostr34_11_94ctx)); EG(ret, err);
+			ret = gostr34_11_94_set_type(&(ctx->gostr34_11_94ctx), GOST34_11_94_RFC4357); EG(ret, err);
+			break;
+		}
 		/* The fallback should be libecc type */
 		default:{
 			const hash_mapping *hm;
@@ -333,6 +358,11 @@ int gen_hash_update(gen_hash_context *ctx, const u8 *chunk, u32 chunklen, gen_ha
 		case HASH_MDC2_PADDING1:
 		case HASH_MDC2_PADDING2:{
 			ret = mdc2_update(&(ctx->mdc2ctx), chunk, chunklen); EG(ret, err);
+			break;
+		}
+		case HASH_GOST34_11_94_NORM:
+		case HASH_GOST34_11_94_RFC4357:{
+			ret = gostr34_11_94_update(&(ctx->gostr34_11_94ctx), chunk, chunklen); EG(ret, err);
 			break;
 		}
 		/* The fallback should be libecc type */
@@ -383,6 +413,11 @@ int gen_hash_final(gen_hash_context *ctx, u8 *output, gen_hash_alg_type gen_hash
 			ret = mdc2_final(&(ctx->mdc2ctx), output); EG(ret, err);
 			break;
 		}
+		case HASH_GOST34_11_94_NORM:
+		case HASH_GOST34_11_94_RFC4357:{
+			ret = gostr34_11_94_final(&(ctx->gostr34_11_94ctx), output); EG(ret, err);
+			break;
+		}
 		/* The fallback should be libecc type */
 		default:{
 			const hash_mapping *hm;
@@ -400,20 +435,41 @@ err:
 }
 
 #ifdef HASH
+#include "utils/print_buf.h"
 int main(int argc, char *argv[])
 {
         int ret = 0;
+	unsigned int i;
         FORCE_USED_VAR(argc);
         FORCE_USED_VAR(argv);
 
 	const u8 input[] = "Now is the time for all ";
-	u8 output[16];
+	const u8 input2[] = "\x54\x68\x69\x73\x20\x69\x73\x20\x6D\x65\x73\x73\x61\x67\x65\x2C\x20\x6C\x65\x6E\x67\x74\x68\x3D\x33\x32\x20\x62\x79\x74\x65\x73";
+	const u8 input3[] = "";
+	const u8 input4[] = "Suppose the original message has length = 50 bytes";
+	u8 input5[128] = { 0 };
+	u8 output[32];
 
 	ret = gen_hash_hfunc(input, sizeof(input)-1, output, HASH_MDC2_PADDING1); EG(ret, err);
 	buf_print("mdc2 padding1", output, 16);
 
 	ret = gen_hash_hfunc(input, sizeof(input)-1, output, HASH_MDC2_PADDING2); EG(ret, err);
 	buf_print("mdc2 padding2", output, 16);
+
+	ret = gen_hash_hfunc(input2, sizeof(input2)-1, output, HASH_GOST34_11_94_NORM); EG(ret, err);
+	buf_print("gostr34_11_94 NORM", output, 32);
+
+	ret = gen_hash_hfunc(input3, sizeof(input3)-1, output, HASH_GOST34_11_94_NORM); EG(ret, err);
+	buf_print("gostr34_11_94 NORM", output, 32);
+
+	ret = gen_hash_hfunc(input4, sizeof(input4)-1, output, HASH_GOST34_11_94_NORM); EG(ret, err);
+	buf_print("gostr34_11_94 NORM", output, 32);
+
+	for(i = 0; i < sizeof(input5); i++){
+		input5[i] = 'U';
+	}
+	ret = gen_hash_hfunc(input5, sizeof(input5), output, HASH_GOST34_11_94_NORM); EG(ret, err);
+	buf_print("gostr34_11_94 NORM", output, 32);
 
 err:
         return ret;

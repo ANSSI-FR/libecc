@@ -30,6 +30,8 @@
 #include "sha1.h"
 /* MDC-2 source code */
 #include "mdc2.h"
+/* GOSTR34-11-94 source code */
+#include "gostr34_11_94.h"
 
 /****************************************************/
 /****************************************************/
@@ -64,7 +66,9 @@ typedef enum {
 	HASH_SHA1 = 19,
 	HASH_MDC2_PADDING1 = 20,
 	HASH_MDC2_PADDING2 = 21,
-	HASH_NO_HASH = 22,
+	HASH_GOST34_11_94_NORM = 22,
+	HASH_GOST34_11_94_RFC4357 = 23,
+	HASH_NO_HASH = 24,
 } gen_hash_alg_type;
 
 /* Our generic hash context */
@@ -81,8 +85,10 @@ typedef union {
 	sha0_context sha0ctx;
 	/* SHA-1 */
 	sha1_context sha1ctx;
-	/* MDC2-1 */
+	/* MDC2 */
 	mdc2_context mdc2ctx;
+	/* GOSTR34-11-94 */
+	gostr34_11_94_context gostr34_11_94ctx;
 } gen_hash_context;
 
 ATTRIBUTE_WARN_UNUSED_RET int gen_hash_get_hash_sizes(gen_hash_alg_type gen_hash_type, u8 *hlen, u8 *block_size);

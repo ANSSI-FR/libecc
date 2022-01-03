@@ -54,6 +54,9 @@ ATTRIBUTE_WARN_UNUSED_RET static inline int mdc2_set_padding_type(mdc2_context *
 
 	MDC2_HASH_CHECK_INITIALIZED(ctx, ret, err);
 
+	/* We cannot change the padding type after the first update */
+	MUST_HAVE((ctx->mdc2_total == 0), ret, err);
+
 	if((p != ISOIEC10118_TYPE1) && (p != ISOIEC10118_TYPE2)){
 		ret = -1;
 		goto err;
