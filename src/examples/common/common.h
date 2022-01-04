@@ -46,6 +46,29 @@ err:
 	return ret;
 }
 
+/* Reverses the endiannes of a buffer in place */
+ATTRIBUTE_WARN_UNUSED_RET static inline int _reverse_endianness(u8 *buf, u16 buf_size)
+{
+	u16 i;
+	u8 tmp;
+	int ret;
+
+	MUST_HAVE((buf != NULL), ret, err);
+
+	if(buf_size > 1){
+		for(i = 0; i < (buf_size / 2); i++){
+			tmp = buf[i];
+			buf[i] = buf[buf_size - 1 - i];
+			buf[buf_size - 1 - i] = tmp;
+		}
+	}
+
+	ret = 0;
+
+err:
+        return ret;
+}
+
 /* Helper to fix the MSB of a scalar using the trick in
  * https://eprint.iacr.org/2011/232.pdf
  *
