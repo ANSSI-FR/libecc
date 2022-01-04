@@ -147,7 +147,7 @@ restart:
 	ret = nn_copy(&k_, &k); EG(ret, err);
 #ifdef USE_SIG_BLINDING
 	/* Blind the scalar */
-	ret = _blind_scalar(&k_, q, &k_);
+	ret = _blind_scalar(&k_, q, &k_); EG(ret, err);
 #endif /* USE_SIG_BLINDING */
 	ret = _fix_scalar_msb(&k_, q, &k_); EG(ret, err);
 	/* r = (g**k mod p) mod q */
