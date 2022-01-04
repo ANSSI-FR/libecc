@@ -37,7 +37,7 @@ int get_ms_time(u64 *time)
 		goto err;
 	}
 
-	*time = (u64)(((tv.tv_sec) * 1000) + ((tv.tv_usec) / 1000));
+	(*time) = (u64)(((tv.tv_sec) * 1000) + ((tv.tv_usec) / 1000));
 	ret = 0;
 
 err:
@@ -59,7 +59,7 @@ int get_ms_time(u64 *time)
 	}
 
 	GetSystemTime(&st);
-	*time = (((st.wMinute * 60) + st.wSecond) * 1000) + st.wMilliseconds;
+	(*time) = (u64)((((st.wMinute * 60) + st.wSecond) * 1000) + st.wMilliseconds);
 	ret = 0;
 
 err:

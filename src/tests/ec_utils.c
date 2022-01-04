@@ -1118,7 +1118,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int verify_bin_file(const char *ec_name, const 
 		if (hdr.magic != HDR_MAGIC) {
 			ret = -1;
 			printf("Error: got magic 0x%08" PRIx32 " instead of 0x%08x "
-			       "from metadata header\n", hdr.magic, HDR_MAGIC);
+			       "from metadata header\n", hdr.magic, (unsigned int)HDR_MAGIC);
 			goto err;
 		}
 
