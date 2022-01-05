@@ -164,7 +164,7 @@ restart:
  	}
 
 	/* Export r */
-	ret = nn_export_to_buf(sig, (siglen / 2), &r); EG(ret, err);
+	ret = _i2osp(&r, sig, (siglen / 2)); EG(ret, err);
 
 	/* Compute the hash */
 	ret = gen_hash_hfunc(msg, msglen, hash, gostr34_10_94_hash); EG(ret, err);
@@ -176,7 +176,7 @@ restart:
         if ((hlen * 8) > N) {
                 rshift = (bitcnt_t)((hlen * 8) - N);
         }
-	ret = nn_init_from_buf(&z, hash, hlen); EG(ret, err);
+	ret = _os2ip(&z, hash, hlen); EG(ret, err);
 	if (rshift) {
 		ret = nn_rshift_fixedlen(&z, &z, rshift); EG(ret, err);
 	}
@@ -219,7 +219,7 @@ restart:
  	}
 
 	/* Export s */
-	ret = nn_export_to_buf(sig + (siglen / 2), (siglen / 2), &s);
+	ret = _i2osp(&s, sig + (siglen / 2), (siglen / 2));
 
 err:
 	if(ret && (sig != NULL)){
@@ -312,7 +312,7 @@ int gostr34_10_94_verify(const gostr34_10_94_pub_key *pub, const u8 *msg, u32 ms
         if ((hlen * 8) > N) {
                 rshift = (bitcnt_t)((hlen * 8) - N);
         }
-	ret = nn_init_from_buf(&z, hash, hlen); EG(ret, err);
+	ret = _os2ip(&z, hash, hlen); EG(ret, err);
 	if (rshift) {
 		ret = nn_rshift_fixedlen(&z, &z, rshift); EG(ret, err);
 	}
@@ -502,7 +502,7 @@ int main(int argc, char *argv[])
 	/****** Now check the signature procedure *********/
 	/* Get a random private key 0 < x < q */
 	ret = nn_get_random_mod(&x_, &(pub.q)); EG(ret, err);
-	ret = nn_export_to_buf(&x[0], sizeof(x), &x_); EG(ret, err);
+	ret = _i2osp(&x_, &x[0], sizeof(x)); EG(ret, err);
 	/* Import the private key */
 	ret = gostr34_10_94_import_priv_key(&priv, p, sizeof(p), q, sizeof(q), g, sizeof(g), x, sizeof(x)); EG(ret, err);
 	/* Compute the public key from the private key */
