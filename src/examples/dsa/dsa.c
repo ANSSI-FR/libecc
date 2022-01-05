@@ -62,10 +62,10 @@ int dsa_import_priv_key(dsa_priv_key *priv, const u8 *p, u16 plen,
 	MUST_HAVE((p != NULL) && (q != NULL) && (g != NULL) && (x != NULL), ret, err);
 
 	/* Import our big numbers */
-	ret = nn_init_from_buf(&(priv->p), p, plen); EG(ret, err);
-	ret = nn_init_from_buf(&(priv->q), q, qlen); EG(ret, err);
-	ret = nn_init_from_buf(&(priv->g), g, glen); EG(ret, err);
-	ret = nn_init_from_buf(&(priv->x), x, xlen); EG(ret, err);
+	ret = _os2ip(&(priv->p), p, plen); EG(ret, err);
+	ret = _os2ip(&(priv->q), q, qlen); EG(ret, err);
+	ret = _os2ip(&(priv->g), g, glen); EG(ret, err);
+	ret = _os2ip(&(priv->x), x, xlen); EG(ret, err);
 
 	/* Sanity check that q < p */
 	ret = nn_cmp(&(priv->q), &(priv->p), &cmp); EG(ret, err);
@@ -98,10 +98,10 @@ int dsa_import_pub_key(dsa_pub_key *pub, const u8 *p, u16 plen,
 	MUST_HAVE((p != NULL) && (q != NULL) && (g != NULL) && (y != NULL), ret, err);
 
 	/* Import our big numbers */
-	ret = nn_init_from_buf(&(pub->p), p, plen); EG(ret, err);
-	ret = nn_init_from_buf(&(pub->q), q, qlen); EG(ret, err);
-	ret = nn_init_from_buf(&(pub->g), g, glen); EG(ret, err);
-	ret = nn_init_from_buf(&(pub->y), y, ylen); EG(ret, err);
+	ret = _os2ip(&(pub->p), p, plen); EG(ret, err);
+	ret = _os2ip(&(pub->q), q, qlen); EG(ret, err);
+	ret = _os2ip(&(pub->g), g, glen); EG(ret, err);
+	ret = _os2ip(&(pub->y), y, ylen); EG(ret, err);
 
 	/* Sanity check that q < p */
 	ret = nn_cmp(&(pub->q), &(pub->p), &cmp); EG(ret, err);
@@ -272,7 +272,7 @@ restart:
  	}
 
 	/* Export r */
-	ret = nn_export_to_buf(sig, (siglen / 2), &r); EG(ret, err);
+	ret = _i2osp(&r, sig, (siglen / 2)); EG(ret, err);
 
 	/* Compute the hash */
 	ret = gen_hash_hfunc(msg, msglen, hash, dsa_hash); EG(ret, err);
@@ -281,7 +281,7 @@ restart:
         if ((hlen * 8) > N) {
                 rshift = (bitcnt_t)((hlen * 8) - N);
         }
-	ret = nn_init_from_buf(&z, hash, hlen); EG(ret, err);
+	ret = _os2ip(&z, hash, hlen); EG(ret, err);
 	if (rshift) {
 		ret = nn_rshift_fixedlen(&z, &z, rshift); EG(ret, err);
 	}
@@ -319,7 +319,7 @@ restart:
  	}
 
 	/* Export s */
-	ret = nn_export_to_buf(sig + (siglen / 2), (siglen / 2), &s);
+	ret = _i2osp(&s, sig + (siglen / 2), (siglen / 2));
 
 err:
 	if(ret && (sig != NULL)){
@@ -411,7 +411,7 @@ int dsa_verify(const dsa_pub_key *pub, const u8 *msg, u32 msglen,
         if ((hlen * 8) > N) {
                 rshift = (bitcnt_t)((hlen * 8) - N);
         }
-	ret = nn_init_from_buf(&z, hash, hlen); EG(ret, err);
+	ret = _os2ip(&z, hash, hlen); EG(ret, err);
 	if (rshift) {
 		ret = nn_rshift_fixedlen(&z, &z, rshift); EG(ret, err);
 	}
