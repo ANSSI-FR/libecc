@@ -20,6 +20,7 @@
 /* We include our common helpers */
 #include "../common/common.h"
 
+#include "../../utils/print_buf.h"
 /*
  * The purpose of this example is to implement the Schnorr signature
  * scheme (aka SDSA for Schnorr DSA) based on libecc arithmetic primitives.
@@ -169,8 +170,7 @@ restart:
 
 	/* Compute I2BS(alpha, pi)
 	 */
-	MUST_HAVE((sizeof(pi_buf) >= BYTECEIL(alpha)), ret, err);
-	ret = nn_export_to_buf(pi_buf, BYTECEIL(alpha), pi);
+	ret = _i2osp(pi, pi_buf, BYTECEIL(alpha)); EG(ret, err);
 
 	/* r = h(I2BS(alpha, pi) || M) */
 	ret = gen_hash_init(&hash_ctx, sdsa_hash); EG(ret, err);
@@ -180,7 +180,7 @@ restart:
 	ret = gen_hash_final(&hash_ctx, sig, sdsa_hash); EG(ret, err);
 
 	/* Import r as an integer modulo q */
-	ret = nn_init_from_buf(&r, sig, hlen); EG(ret, err);
+	ret = _os2ip(&r, sig, hlen); EG(ret, err);
 	ret = nn_mod(&r, &r, q); EG(ret, err);
 
 	/* If r is 0, restart the process */
@@ -221,7 +221,7 @@ restart:
  	}
 
 	/* Export s */
-	ret = nn_export_to_buf(sig + hlen, (siglen - hlen), &s);
+	ret = _i2osp(&s, sig + hlen, (siglen - hlen)); EG(ret, err);
 
 err:
 	if(ret && (sig != NULL)){
@@ -326,18 +326,17 @@ int sdsa_verify(const sdsa_pub_key *pub, const u8 *msg, u32 msglen,
 	 * manipulate public data.
 	 */
 	/* Compute (y ** -r) mod (p) */
-	ret = nn_modinv(&r, &r, q);
+	ret = nn_sub(&r, q, &r); /* compute -r = (q - r) mod q */
 	ret = _nn_mod_pow_insecure(&u, y, &r, p); EG(ret, err);
 	/* Compute (g ** s) mod (p) */
-	ret = nn_mod_mul(&pi, g, &s, p); EG(ret, err);
+	ret = _nn_mod_pow_insecure(&pi, g, &s, p); EG(ret, err);
 	/* Compute (y ** -r) * (g ** s) mod (p) */
 	ret = nn_mod_mul(&pi, &pi, &u, p); EG(ret, err);
 
 	/* Compute r' */
 	/* I2BS(alpha, pi)
 	 */
-	MUST_HAVE((sizeof(pi_buf) >= BYTECEIL(alpha)), ret, err);
-	ret = nn_export_to_buf(pi_buf, BYTECEIL(alpha), &pi);
+	ret = _i2osp(&pi, pi_buf, BYTECEIL(alpha)); EG(ret, err);
 	/* r' = h(I2BS(alpha, pi) || M) */
 	ret = gen_hash_init(&hash_ctx, sdsa_hash); EG(ret, err);
 	ret = gen_hash_update(&hash_ctx, pi_buf, BYTECEIL(alpha), sdsa_hash); EG(ret, err);
@@ -346,7 +345,7 @@ int sdsa_verify(const sdsa_pub_key *pub, const u8 *msg, u32 msglen,
 
 	/* Check that hash values r' == r */
 	ret = are_equal(sig, hash, hlen, &cmp); EG(ret, err);
-	ret = (cmp != 0) ? -1 : 0;
+	ret = (cmp != 1) ? -1 : 0;
 
 err:
 	nn_uninit(&r);
@@ -363,7 +362,6 @@ err:
 }
 
 #ifdef SDSA
-#include "../../utils/print_buf.h"
 int main(int argc, char *argv[])
 {
  	int ret = 0;
