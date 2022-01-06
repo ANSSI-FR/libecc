@@ -19,7 +19,7 @@
 #include "../lib_ecc_config.h"
 
 /* The hash algorithms wrapper */
-#include "../hash/hash.h"
+#include "../../hash/hash.h"
 
 /* The DSA include file as we reuse DSA primitives internally */
 #include "../dsa/dsa.h"

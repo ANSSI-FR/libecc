@@ -20,7 +20,6 @@
 /* We include our common helpers */
 #include "../common/common.h"
 
-#include "../../utils/print_buf.h"
 /*
  * The purpose of this example is to implement the Schnorr signature
  * scheme (aka SDSA for Schnorr DSA) based on libecc arithmetic primitives.
@@ -170,11 +169,11 @@ restart:
 
 	/* Compute I2BS(alpha, pi)
 	 */
-	ret = _i2osp(pi, pi_buf, BYTECEIL(alpha)); EG(ret, err);
+	ret = _i2osp(pi, pi_buf, (u16)BYTECEIL(alpha)); EG(ret, err);
 
 	/* r = h(I2BS(alpha, pi) || M) */
 	ret = gen_hash_init(&hash_ctx, sdsa_hash); EG(ret, err);
-	ret = gen_hash_update(&hash_ctx, pi_buf, BYTECEIL(alpha), sdsa_hash); EG(ret, err);
+	ret = gen_hash_update(&hash_ctx, pi_buf, (u16)BYTECEIL(alpha), sdsa_hash); EG(ret, err);
 	ret = gen_hash_update(&hash_ctx, msg, msglen, sdsa_hash); EG(ret, err);
 	/* Export r result of the hash function in sig */
 	ret = gen_hash_final(&hash_ctx, sig, sdsa_hash); EG(ret, err);
@@ -221,7 +220,7 @@ restart:
  	}
 
 	/* Export s */
-	ret = _i2osp(&s, sig + hlen, (siglen - hlen)); EG(ret, err);
+	ret = _i2osp(&s, sig + hlen, (u16)(siglen - hlen)); EG(ret, err);
 
 err:
 	if(ret && (sig != NULL)){
@@ -304,7 +303,7 @@ int sdsa_verify(const sdsa_pub_key *pub, const u8 *msg, u32 msglen,
 
 	/* Extract r and s */
 	ret = _os2ip(&r, sig, hlen); EG(ret, err);
-	ret = _os2ip(&s, sig + hlen, (siglen - hlen)); EG(ret, err);
+	ret = _os2ip(&s, sig + hlen, (u16)(siglen - hlen)); EG(ret, err);
 
 	/* Return an error if r = 0 or s = 0 */
 	ret = nn_iszero(&r, &iszero); EG(ret, err);
@@ -336,10 +335,10 @@ int sdsa_verify(const sdsa_pub_key *pub, const u8 *msg, u32 msglen,
 	/* Compute r' */
 	/* I2BS(alpha, pi)
 	 */
-	ret = _i2osp(&pi, pi_buf, BYTECEIL(alpha)); EG(ret, err);
+	ret = _i2osp(&pi, pi_buf, (u16)BYTECEIL(alpha)); EG(ret, err);
 	/* r' = h(I2BS(alpha, pi) || M) */
 	ret = gen_hash_init(&hash_ctx, sdsa_hash); EG(ret, err);
-	ret = gen_hash_update(&hash_ctx, pi_buf, BYTECEIL(alpha), sdsa_hash); EG(ret, err);
+	ret = gen_hash_update(&hash_ctx, pi_buf, (u16)BYTECEIL(alpha), sdsa_hash); EG(ret, err);
 	ret = gen_hash_update(&hash_ctx, msg, msglen, sdsa_hash); EG(ret, err);
 	ret = gen_hash_final(&hash_ctx, hash, sdsa_hash); EG(ret, err);
 
@@ -362,6 +361,7 @@ err:
 }
 
 #ifdef SDSA
+#include "utils/print_buf.h"
 int main(int argc, char *argv[])
 {
  	int ret = 0;

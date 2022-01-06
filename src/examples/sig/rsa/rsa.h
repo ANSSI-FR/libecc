@@ -19,7 +19,7 @@
 #include "../lib_ecc_config.h"
 
 /* The hash algorithms wrapper */
-#include "../hash/hash.h"
+#include "../../hash/hash.h"
 
 /* We define hereafter the types and functions for RSA.
  * The notations are taken from RFC 8017 and should be compliant

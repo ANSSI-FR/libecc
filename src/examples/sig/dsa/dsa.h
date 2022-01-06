@@ -19,7 +19,7 @@
 #include "../lib_ecc_config.h"
 
 /* The hash algorithms wrapper */
-#include "../hash/hash.h"
+#include "../../hash/hash.h"
 
 /* We define hereafter the types and functions for DSA.
  * The notations are taken from NIST FIPS 186-4 and should be

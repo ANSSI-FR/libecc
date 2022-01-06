@@ -15,7 +15,7 @@
 # */
 #!/bin/sh
 
-# Check if a file $1 exists. Copy it in $2 if 
+# Check if a file $1 exists. Copy it in $2 if
 # it exists, or else log and error in $3.
 check_and_copy(){
 	if [ -e $1 ]
@@ -24,6 +24,30 @@ check_and_copy(){
 	else
 		echo "$2 did not compile ..." >> $3
 	fi
+}
+
+copy_compiled_examples(){
+	ROOT_DIR=$1
+	CROSSBUILD_OUTPUT=$2
+	triplet=$3
+	wordsize=$4
+	ERROR_LOG_FILE=$5
+	suffix=$6
+	# Basic
+	check_and_copy $ROOT_DIR/src/examples/basic/nn_pollard_rho $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"/nn_pollard_rho_"$triplet"_word"$wordsize""$suffix" $ERROR_LOG_FILE
+	check_and_copy $ROOT_DIR/src/examples/basic/fp_square_residue $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"/fp_square_residue_"$triplet"_word"$wordsize""$suffix" $ERROR_LOG_FILE
+	check_and_copy $ROOT_DIR/src/examples/basic/curve_basic_examples $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"/curve_basic_examples_"$triplet"_word"$wordsize""$suffix" $ERROR_LOG_FILE
+	check_and_copy $ROOT_DIR/src/examples/basic/curve_ecdh $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"/curve_ecdh_"$triplet"_word"$wordsize""$suffix" $ERROR_LOG_FILE
+	# Hash
+	check_and_copy $ROOT_DIR/src/examples/"hash"/"hash" $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"/hash_"$triplet"_word"$wordsize""$suffix" $ERROR_LOG_FILE
+	# SSS
+	check_and_copy $ROOT_DIR/src/examples/sss/sss $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"/sss_"$triplet"_word"$wordsize""$suffix" $ERROR_LOG_FILE
+	# Signatures
+	check_and_copy $ROOT_DIR/src/examples/sig/rsa/rsa $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"/rsa_"$triplet"_word"$wordsize""$suffix" $ERROR_LOG_FILE
+	check_and_copy $ROOT_DIR/src/examples/sig/dsa/dsa $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"/dsa_"$triplet"_word"$wordsize""$suffix" $ERROR_LOG_FILE
+	check_and_copy $ROOT_DIR/src/examples/sig/sdsa/sdsa $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"/sdsa_"$triplet"_word"$wordsize""$suffix" $ERROR_LOG_FILE
+	check_and_copy $ROOT_DIR/src/examples/sig/kcdsa/kcdsa $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"/kcdsa_"$triplet"_word"$wordsize""$suffix" $ERROR_LOG_FILE
+	check_and_copy $ROOT_DIR/src/examples/sig/gostr34_10_94/gostr34_10_94 $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"/gostr34_10_94_"$triplet"_word"$wordsize""$suffix" $ERROR_LOG_FILE
 }
 
 check_triplet_wordsize(){
@@ -69,10 +93,7 @@ check_triplet_wordsize(){
 	check_and_copy $ROOT_DIR/build/ec_utils $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"/ec_utils_"$triplet"_word"$wordsize" $ERROR_LOG_FILE
 	# Examples
 	docker run -e ASSERT_PRINT="1" -e COMPLETE="$COMPLETE" -e BLINDING="$BLINDING" -e LADDER="$LADDER" -e CRYPTOFUZZ="$CRYPTOFUZZ" --rm -e CROSS_TRIPLE=$triplet -v $ROOT_DIR:$ROOT_DIR/ -w $ROOT_DIR/src/examples -e EXTRA_BIN_CFLAGS="$extra_bin_cflags" multiarch/crossbuild make "$wordsize" 2>&1 | tee -a $COMPILATION_LOG_FILE
-	check_and_copy $ROOT_DIR/src/examples/nn_pollard_rho $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"/nn_pollard_rho_"$triplet"_word"$wordsize" $ERROR_LOG_FILE
-	check_and_copy $ROOT_DIR/src/examples/fp_square_residue $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"/fp_square_residue_"$triplet"_word"$wordsize" $ERROR_LOG_FILE
-	check_and_copy $ROOT_DIR/src/examples/curve_basic_examples $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"/curve_basic_examples_"$triplet"_word"$wordsize" $ERROR_LOG_FILE
-	check_and_copy $ROOT_DIR/src/examples/curve_ecdh $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"/curve_ecdh_"$triplet"_word"$wordsize" $ERROR_LOG_FILE
+	copy_compiled_examples "$ROOT_DIR" "$CROSSBUILD_OUTPUT" "$triplet" "$wordsize" "$ERROR_LOG_FILE" ""
 	# Clean
 	docker run -e ASSERT_PRINT="1" -e COMPLETE="$COMPLETE" -e BLINDING="$BLINDING" -e LADDER="$LADDER" -e CRYPTOFUZZ="$CRYPTOFUZZ" --rm -e CROSS_TRIPLE=$triplet -v $ROOT_DIR:$ROOT_DIR -w $ROOT_DIR multiarch/crossbuild make clean
 	docker run -e ASSERT_PRINT="1" -e COMPLETE="$COMPLETE" -e BLINDING="$BLINDING" -e LADDER="$LADDER" -e CRYPTOFUZZ="$CRYPTOFUZZ" --rm -e CROSS_TRIPLE=$triplet -v $ROOT_DIR:$ROOT_DIR/src/examples -w $ROOT_DIR/src/examples multiarch/crossbuild make clean
@@ -86,10 +107,7 @@ check_triplet_wordsize(){
 	check_and_copy $ROOT_DIR/build/ec_utils $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"/ec_utils_"$triplet"_word"$wordsize"_debug $ERROR_LOG_FILE
 	# Examples
 	docker run -e ASSERT_PRINT="1" -e COMPLETE="$COMPLETE" -e BLINDING="$BLINDING" -e LADDER="$LADDER" -e CRYPTOFUZZ="$CRYPTOFUZZ" --rm -e CROSS_TRIPLE=$triplet -v $ROOT_DIR:$ROOT_DIR/ -w $ROOT_DIR/src/examples -e EXTRA_BIN_CFLAGS="$extra_bin_cflags" multiarch/crossbuild make debug"$wordsize" 2>&1 | tee -a $COMPILATION_LOG_FILE
-	check_and_copy $ROOT_DIR/src/examples/nn_pollard_rho $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"/nn_pollard_rho_"$triplet"_word"$wordsize"_debug $ERROR_LOG_FILE
-	check_and_copy $ROOT_DIR/src/examples/fp_square_residue $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"/fp_square_residue_"$triplet"_word"$wordsize"_debug $ERROR_LOG_FILE
-	check_and_copy $ROOT_DIR/src/examples/curve_basic_examples $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"/curve_basic_examples_"$triplet"_word"$wordsize"_debug $ERROR_LOG_FILE
-	check_and_copy $ROOT_DIR/src/examples/curve_ecdh $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"/curve_ecdh_"$triplet"_word"$wordsize"_debug $ERROR_LOG_FILE
+	copy_compiled_examples "$ROOT_DIR" "$CROSSBUILD_OUTPUT" "$triplet" "$wordsize" "$ERROR_LOG_FILE" "_debug"
 	# Clean
 	docker run -e ASSERT_PRINT="1" -e COMPLETE="$COMPLETE" -e BLINDING="$BLINDING" -e LADDER="$LADDER" -e CRYPTOFUZZ="$CRYPTOFUZZ" --rm -e CROSS_TRIPLE=$triplet -v $ROOT_DIR:$ROOT_DIR -w $ROOT_DIR multiarch/crossbuild make clean
 	docker run -e ASSERT_PRINT="1" -e COMPLETE="$COMPLETE" -e BLINDING="$BLINDING" -e LADDER="$LADDER" -e CRYPTOFUZZ="$CRYPTOFUZZ" --rm -e CROSS_TRIPLE=$triplet -v $ROOT_DIR:$ROOT_DIR/src/examples -w $ROOT_DIR/src/examples multiarch/crossbuild make clean
@@ -105,13 +123,25 @@ check_triplet_wordsize(){
 		check_and_copy $ROOT_DIR/build/ec_utils $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"/ec_utils_"$triplet"_word"$wordsize"_static $ERROR_LOG_FILE
 		# Examples
 		docker run -e ASSERT_PRINT="1" -e COMPLETE="$COMPLETE" -e BLINDING="$BLINDING" -e LADDER="$LADDER" -e CRYPTOFUZZ="$CRYPTOFUZZ" --rm -e CROSS_TRIPLE=$triplet -v $ROOT_DIR:$ROOT_DIR/ -w $ROOT_DIR/src/examples -e EXTRA_BIN_CFLAGS="$extra_bin_cflags" -e BIN_LDFLAGS="-static" multiarch/crossbuild make "$wordsize" 2>&1 | tee -a $COMPILATION_LOG_FILE
-		check_and_copy $ROOT_DIR/src/examples/nn_pollard_rho $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"/nn_pollard_rho_"$triplet"_word"$wordsize"_static $ERROR_LOG_FILE
-		check_and_copy $ROOT_DIR/src/examples/fp_square_residue $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"/fp_square_residue_"$triplet"_word"$wordsize"_static $ERROR_LOG_FILE
-		check_and_copy $ROOT_DIR/src/examples/curve_basic_examples $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"/curve_basic_examples_"$triplet"_word"$wordsize"_static $ERROR_LOG_FILE
-		check_and_copy $ROOT_DIR/src/examples/curve_ecdh $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"/curve_ecdh_"$triplet"_word"$wordsize"_static $ERROR_LOG_FILE
+		copy_compiled_examples "$ROOT_DIR" "$CROSSBUILD_OUTPUT" "$triplet" "$wordsize" "$ERROR_LOG_FILE" "_static"
 		# Clean
 		docker run -e ASSERT_PRINT="1" -e COMPLETE="$COMPLETE" -e BLINDING="$BLINDING" -e LADDER="$LADDER" -e CRYPTOFUZZ="$CRYPTOFUZZ" --rm -e CROSS_TRIPLE=$triplet -v $ROOT_DIR:$ROOT_DIR -w $ROOT_DIR multiarch/crossbuild make clean
 		docker run -e ASSERT_PRINT="1" -e COMPLETE="$COMPLETE" -e BLINDING="$BLINDING" -e LADDER="$LADDER" -e CRYPTOFUZZ="$CRYPTOFUZZ" --rm -e CROSS_TRIPLE=$triplet -v $ROOT_DIR:$ROOT_DIR/src/examples -w $ROOT_DIR/src/examples multiarch/crossbuild make clean
+		##### 4096 bits case for 64 bit word size only
+		###############################################
+		if [ "$wordsize" = "64" ]; then
+			# Self tests and utils
+			docker run -e ASSERT_PRINT="1" -e COMPLETE="$COMPLETE" -e BLINDING="$BLINDING" -e LADDER="$LADDER" -e CRYPTOFUZZ="$CRYPTOFUZZ" --rm -e CROSS_TRIPLE=$triplet -v $ROOT_DIR:$ROOT_DIR -w $ROOT_DIR -e EXTRA_LIB_CFLAGS="$extra_lib_cflags -DUSER_NN_BIT_LEN=4096" -e EXTRA_BIN_CFLAGS="$extra_bin_cflags -DUSER_NN_BIT_LEN=4096" -e BIN_LDFLAGS="-static" multiarch/crossbuild make "$wordsize" 2>&1 | tee -a $COMPILATION_LOG_FILE
+			mkdir -p $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"
+			check_and_copy $ROOT_DIR/build/ec_self_tests $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"/ec_self_tests_"$triplet"_word"$wordsize"_static_4096 $ERROR_LOG_FILE
+			check_and_copy $ROOT_DIR/build/ec_utils $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"/ec_utils_"$triplet"_word"$wordsize"_static_4096 $ERROR_LOG_FILE
+			# Examples
+			docker run -e ASSERT_PRINT="1" -e COMPLETE="$COMPLETE" -e BLINDING="$BLINDING" -e LADDER="$LADDER" -e CRYPTOFUZZ="$CRYPTOFUZZ" --rm -e CROSS_TRIPLE=$triplet -v $ROOT_DIR:$ROOT_DIR/ -w $ROOT_DIR/src/examples -e EXTRA_BIN_CFLAGS="$extra_bin_cflags -DUSER_NN_BIT_LEN=4096" -e BIN_LDFLAGS="-static" multiarch/crossbuild make "$wordsize" 2>&1 | tee -a $COMPILATION_LOG_FILE
+			copy_compiled_examples "$ROOT_DIR" "$CROSSBUILD_OUTPUT" "$triplet" "$wordsize" "$ERROR_LOG_FILE" "_static_4096"
+			# Clean
+			docker run -e ASSERT_PRINT="1" -e COMPLETE="$COMPLETE" -e BLINDING="$BLINDING" -e LADDER="$LADDER" -e CRYPTOFUZZ="$CRYPTOFUZZ" --rm -e CROSS_TRIPLE=$triplet -v $ROOT_DIR:$ROOT_DIR -w $ROOT_DIR multiarch/crossbuild make clean
+			docker run -e ASSERT_PRINT="1" -e COMPLETE="$COMPLETE" -e BLINDING="$BLINDING" -e LADDER="$LADDER" -e CRYPTOFUZZ="$CRYPTOFUZZ" --rm -e CROSS_TRIPLE=$triplet -v $ROOT_DIR:$ROOT_DIR/src/examples -w $ROOT_DIR/src/examples multiarch/crossbuild make clean
+		fi
 		############## Debug compilation with static binaries (for emulation)
 		echo "======== COMPILING STATIC DEBUG FOR $triplet / $wordsize" 2>&1 | tee -a $COMPILATION_LOG_FILE
 		############## Release compilation with static binaries (for emulation)
@@ -122,13 +152,25 @@ check_triplet_wordsize(){
 		check_and_copy $ROOT_DIR/build/ec_utils $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"/ec_utils_"$triplet"_word"$wordsize"_debug_static $ERROR_LOG_FILE
 		# Examples
 		docker run -e ASSERT_PRINT="1" -e COMPLETE="$COMPLETE" -e BLINDING="$BLINDING" -e LADDER="$LADDER" -e CRYPTOFUZZ="$CRYPTOFUZZ" --rm -e CROSS_TRIPLE=$triplet -v $ROOT_DIR:$ROOT_DIR/ -w $ROOT_DIR/src/examples -e EXTRA_BIN_CFLAGS="$extra_bin_cflags" -e BIN_LDFLAGS="-static" multiarch/crossbuild make debug"$wordsize" 2>&1 | tee -a $COMPILATION_LOG_FILE
-		check_and_copy $ROOT_DIR/src/examples/nn_pollard_rho $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"/nn_pollard_rho_"$triplet"_word"$wordsize"_debug_static $ERROR_LOG_FILE
-		check_and_copy $ROOT_DIR/src/examples/fp_square_residue $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"/fp_square_residue_"$triplet"_word"$wordsize"_debug_static $ERROR_LOG_FILE
-		check_and_copy $ROOT_DIR/src/examples/curve_basic_examples $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"/curve_basic_examples_"$triplet"_word"$wordsize"_debug_static $ERROR_LOG_FILE
-		check_and_copy $ROOT_DIR/src/examples/curve_ecdh $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"/curve_ecdh_"$triplet"_word"$wordsize"_debug_static $ERROR_LOG_FILE
+		copy_compiled_examples "$ROOT_DIR" "$CROSSBUILD_OUTPUT" "$triplet" "$wordsize" "$ERROR_LOG_FILE" "_debug_static"
 		# Clean
 		docker run -e ASSERT_PRINT="1" -e COMPLETE="$COMPLETE" -e BLINDING="$BLINDING" -e LADDER="$LADDER" -e CRYPTOFUZZ="$CRYPTOFUZZ" --rm -e CROSS_TRIPLE=$triplet -v $ROOT_DIR:$ROOT_DIR -w $ROOT_DIR multiarch/crossbuild make clean
 		docker run -e ASSERT_PRINT="1" -e COMPLETE="$COMPLETE" -e BLINDING="$BLINDING" -e LADDER="$LADDER" -e CRYPTOFUZZ="$CRYPTOFUZZ" --rm -e CROSS_TRIPLE=$triplet -v $ROOT_DIR:$ROOT_DIR/src/examples -w $ROOT_DIR/src/examples multiarch/crossbuild make clean
+		##### 4096 bits case for 64 bit word size only
+		###############################################
+		if [ "$wordsize" = "64" ]; then
+			# Self tests and utils
+			docker run -e ASSERT_PRINT="1" -e COMPLETE="$COMPLETE" -e BLINDING="$BLINDING" -e LADDER="$LADDER" -e CRYPTOFUZZ="$CRYPTOFUZZ" --rm -e CROSS_TRIPLE=$triplet -v $ROOT_DIR:$ROOT_DIR -w $ROOT_DIR -e EXTRA_LIB_CFLAGS="$extra_lib_cflags -DUSER_NN_BIT_LEN=4096" -e EXTRA_BIN_CFLAGS="$extra_bin_cflags -DUSER_NN_BIT_LEN=4096" -e BIN_LDFLAGS="-static" multiarch/crossbuild make debug"$wordsize" 2>&1 | tee -a $COMPILATION_LOG_FILE
+			mkdir -p $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"
+			check_and_copy $ROOT_DIR/build/ec_self_tests $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"/ec_self_tests_"$triplet"_word"$wordsize"_debug_static_4096 $ERROR_LOG_FILE
+			check_and_copy $ROOT_DIR/build/ec_utils $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"/ec_utils_"$triplet"_word"$wordsize"_debug_static_4096 $ERROR_LOG_FILE
+			# Examples
+			docker run -e ASSERT_PRINT="1" -e COMPLETE="$COMPLETE" -e BLINDING="$BLINDING" -e LADDER="$LADDER" -e CRYPTOFUZZ="$CRYPTOFUZZ" --rm -e CROSS_TRIPLE=$triplet -v $ROOT_DIR:$ROOT_DIR/ -w $ROOT_DIR/src/examples -e EXTRA_BIN_CFLAGS="$extra_bin_cflags -DUSER_NN_BIT_LEN=4096" -e BIN_LDFLAGS="-static" multiarch/crossbuild make debug"$wordsize" 2>&1 | tee -a $COMPILATION_LOG_FILE
+			copy_compiled_examples "$ROOT_DIR" "$CROSSBUILD_OUTPUT" "$triplet" "$wordsize" "$ERROR_LOG_FILE" "_debug_static_4096"
+			# Clean
+			docker run -e ASSERT_PRINT="1" -e COMPLETE="$COMPLETE" -e BLINDING="$BLINDING" -e LADDER="$LADDER" -e CRYPTOFUZZ="$CRYPTOFUZZ" --rm -e CROSS_TRIPLE=$triplet -v $ROOT_DIR:$ROOT_DIR -w $ROOT_DIR multiarch/crossbuild make clean
+			docker run -e ASSERT_PRINT="1" -e COMPLETE="$COMPLETE" -e BLINDING="$BLINDING" -e LADDER="$LADDER" -e CRYPTOFUZZ="$CRYPTOFUZZ" --rm -e CROSS_TRIPLE=$triplet -v $ROOT_DIR:$ROOT_DIR/src/examples -w $ROOT_DIR/src/examples multiarch/crossbuild make clean
+		fi
 		echo "===========================================" 2>&1 | tee -a $COMPILATION_LOG_FILE
 	fi
 	# Cleanup compilation stuff
@@ -147,9 +189,9 @@ print_help(){
 	echo "$0 with no argument will test the compilation for all the triplets and the word sizes."
 	echo "  -h: print this help"
 	echo "  -triplet: execute the crossbuild only for a given triplet:"
-	echo "      $ sh $0 arm-linux-gnueabi"
+	echo "      $ sh $0 -triplet arm-linux-gnueabi"
 	echo "      => This will execute cross-compilation for arm-linux-gnueabi for all the word sizes."
-	echo "      $ sh $0 arm-linux-gnueabi 64"
+	echo "      $ sh $0 -triplet arm-linux-gnueabi 64"
 	echo "      => This will execute cross-compilation for arm-linux-gnueabi only for 64-bit word size."
 	echo "  -cpu: will specify the number of tasks used for parallel compilation. The default behaviour is to"
 	echo "        use the maximum available CPUs on the machine, but one can reduce th enumber of parallel"

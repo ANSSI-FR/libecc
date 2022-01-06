@@ -454,7 +454,7 @@ err:
 }
 
 #ifdef DSA
-#include "../../utils/print_buf.h"
+#include "utils/print_buf.h"
 int main(int argc, char *argv[])
 {
  	int ret = 0;

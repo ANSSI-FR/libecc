@@ -190,13 +190,13 @@ int kcdsa_sign(const kcdsa_priv_key *priv, const u8 *msg, u32 msglen,
 	 * If "gamma" <= beta, length of R is "gamma", else length of R
 	 * The signature size is either "gamma" + beta or 2 * beta
 	 */
-	if(hlen <= BYTECEIL(beta)){
+	if(hlen <= (u16)BYTECEIL(beta)){
 		curr_rlen = hlen;
 	}
 	else{
-		curr_rlen = BYTECEIL(beta);
+		curr_rlen = (u16)BYTECEIL(beta);
 	}
-	curr_siglen = (curr_rlen + BYTECEIL(beta));
+	curr_siglen = (u16)(curr_rlen + BYTECEIL(beta));
 	MUST_HAVE((siglen == curr_siglen), ret, err);
 
 	/* Compute our public key for the witness */
@@ -228,19 +228,19 @@ restart:
 
 	/* Compute I2BS(alpha, pi)
 	 */
-	MUST_HAVE((sizeof(pi_buf) >= BYTECEIL(alpha)), ret, err);
-	ret = _i2osp(pi, pi_buf, BYTECEIL(alpha)); EG(ret, err);
+	MUST_HAVE((sizeof(pi_buf) >= (u16)BYTECEIL(alpha)), ret, err);
+	ret = _i2osp(pi, pi_buf, (u16)BYTECEIL(alpha)); EG(ret, err);
 
-	if(hlen <= BYTECEIL(beta)){
+	if(hlen <= (u16)BYTECEIL(beta)){
 		unsigned int i;
 		/* r = h(I2BS(alpha, pi)) */
 		ret = gen_hash_init(&hash_ctx, kcdsa_hash); EG(ret, err);
-		ret = gen_hash_update(&hash_ctx, pi_buf, BYTECEIL(alpha), kcdsa_hash); EG(ret, err);
+		ret = gen_hash_update(&hash_ctx, pi_buf, (u16)BYTECEIL(alpha), kcdsa_hash); EG(ret, err);
 		/* Export r result of the hash function in sig */
 		ret = gen_hash_final(&hash_ctx, sig, kcdsa_hash); EG(ret, err);
 		/* Compute v */
-		MUST_HAVE((block_size <= BYTECEIL(alpha)), ret, err);
-		ret = _i2osp(y, pi_buf, BYTECEIL(alpha)); EG(ret, err);
+		MUST_HAVE((block_size <= (u16)BYTECEIL(alpha)), ret, err);
+		ret = _i2osp(y, pi_buf, (u16)BYTECEIL(alpha)); EG(ret, err);
 		ret = buf_lshift(pi_buf, (u16)BYTECEIL(alpha), (u16)(BYTECEIL(alpha) - block_size)); EG(ret, err);
 		ret = gen_hash_init(&hash_ctx, kcdsa_hash); EG(ret, err);
 		ret = gen_hash_update(&hash_ctx, pi_buf, block_size, kcdsa_hash); EG(ret, err);
@@ -255,14 +255,14 @@ restart:
 		unsigned int i;
 		/* h(I2BS(alpha, pi)) */
 		ret = gen_hash_init(&hash_ctx, kcdsa_hash); EG(ret, err);
-		ret = gen_hash_update(&hash_ctx, pi_buf, BYTECEIL(alpha), kcdsa_hash); EG(ret, err);
+		ret = gen_hash_update(&hash_ctx, pi_buf, (u16)BYTECEIL(alpha), kcdsa_hash); EG(ret, err);
 		/* Export r result of the hash function in sig ... */
 		ret = gen_hash_final(&hash_ctx, hash, kcdsa_hash); EG(ret, err);
 		/* ... and proceed with the appropriate tuncation */
 		ret = buf_lshift(hash, hlen, (u16)(hlen - BYTECEIL(beta))); EG(ret, err);
-		ret = local_memcpy(sig, hash, BYTECEIL(beta)); EG(ret, err);
+		ret = local_memcpy(sig, hash, (u16)BYTECEIL(beta)); EG(ret, err);
 		/* Compute v */
-		MUST_HAVE((block_size <= BYTECEIL(alpha)), ret, err);
+		MUST_HAVE((block_size <= (u16)BYTECEIL(alpha)), ret, err);
 		ret = _i2osp(y, pi_buf, (u16)BYTECEIL(alpha)); EG(ret, err);
 		ret = buf_lshift(pi_buf, (u16)BYTECEIL(alpha), (u16)(BYTECEIL(alpha) - block_size)); EG(ret, err);
 		ret = gen_hash_init(&hash_ctx, kcdsa_hash); EG(ret, err);
@@ -271,10 +271,10 @@ restart:
 		ret = gen_hash_final(&hash_ctx, hash, kcdsa_hash); EG(ret, err);
 		/* ... and proceed with the appropriate tuncation */
 		ret = buf_lshift(hash, hlen, (u16)(hlen - BYTECEIL(beta))); EG(ret, err);
-		for(i = 0; i < BYTECEIL(beta); i++){
+		for(i = 0; i < (u16)BYTECEIL(beta); i++){
 			hash[i] = (hash[i] ^ sig[i]);
 		}
-		ret = _os2ip(&s, hash, BYTECEIL(beta)); EG(ret, err);
+		ret = _os2ip(&s, hash, (u16)BYTECEIL(beta)); EG(ret, err);
 	}
 
 	/* Reduce v modulo q */
@@ -311,7 +311,7 @@ restart:
  	}
 
 	/* Export s */
-	ret = _i2osp(&s, sig + curr_rlen, BYTECEIL(beta));
+	ret = _i2osp(&s, sig + curr_rlen, (u16)BYTECEIL(beta));
 
 err:
 	if(ret && (sig != NULL)){
@@ -396,17 +396,17 @@ int kcdsa_verify(const kcdsa_pub_key *pub, const u8 *msg, u32 msglen,
 	 * If "gamma" <= beta, length of R is "gamma", else length of R
 	 * The signature size is either "gamma" + beta or 2 * beta
 	 */
-	if(hlen <= BYTECEIL(beta)){
+	if(hlen <= (u16)BYTECEIL(beta)){
 		curr_rlen = hlen;
 	}
 	else{
-		curr_rlen = BYTECEIL(beta);
+		curr_rlen = (u16)BYTECEIL(beta);
 	}
-	curr_siglen = (curr_rlen + BYTECEIL(beta));
+	curr_siglen = (u16)(curr_rlen + BYTECEIL(beta));
 	MUST_HAVE((siglen == curr_siglen), ret, err);
 
 	/* Extract s */
-	ret = _os2ip(&s, sig + curr_rlen, (siglen - curr_rlen)); EG(ret, err);
+	ret = _os2ip(&s, sig + curr_rlen, (u16)(siglen - curr_rlen)); EG(ret, err);
 
 	/* Return an error if s = 0 */
 	ret = nn_iszero(&s, &iszero); EG(ret, err);
@@ -420,11 +420,11 @@ int kcdsa_verify(const kcdsa_pub_key *pub, const u8 *msg, u32 msglen,
 	ret = nn_init(&pi, 0);
 
 	/* Compute v */
-	if(hlen <= BYTECEIL(beta)){
+	if(hlen <= (u16)BYTECEIL(beta)){
 		unsigned int i;
 		/* r is of size hlen */
-		MUST_HAVE((block_size <= BYTECEIL(alpha)), ret, err);
-		ret = _i2osp(y, pi_buf, BYTECEIL(alpha)); EG(ret, err);
+		MUST_HAVE((block_size <= (u16)BYTECEIL(alpha)), ret, err);
+		ret = _i2osp(y, pi_buf, (u16)BYTECEIL(alpha)); EG(ret, err);
 		ret = buf_lshift(pi_buf, (u16)BYTECEIL(alpha), (u16)(BYTECEIL(alpha) - block_size)); EG(ret, err);
 		ret = gen_hash_init(&hash_ctx, kcdsa_hash); EG(ret, err);
 		ret = gen_hash_update(&hash_ctx, pi_buf, block_size, kcdsa_hash); EG(ret, err);
@@ -438,8 +438,8 @@ int kcdsa_verify(const kcdsa_pub_key *pub, const u8 *msg, u32 msglen,
 	else{
 		unsigned int i;
 		/* r is of size beta */
-		MUST_HAVE((block_size <= BYTECEIL(alpha)), ret, err);
-		ret = _i2osp(y, pi_buf, BYTECEIL(alpha)); EG(ret, err);
+		MUST_HAVE((block_size <= (u16)BYTECEIL(alpha)), ret, err);
+		ret = _i2osp(y, pi_buf, (u16)BYTECEIL(alpha)); EG(ret, err);
 		ret = buf_lshift(pi_buf, (u16)BYTECEIL(alpha), (u16)(BYTECEIL(alpha) - block_size)); EG(ret, err);
 		ret = gen_hash_init(&hash_ctx, kcdsa_hash); EG(ret, err);
 		ret = gen_hash_update(&hash_ctx, pi_buf, block_size, kcdsa_hash); EG(ret, err);
@@ -447,10 +447,10 @@ int kcdsa_verify(const kcdsa_pub_key *pub, const u8 *msg, u32 msglen,
 		ret = gen_hash_final(&hash_ctx, hash, kcdsa_hash); EG(ret, err);
 		/* ... and proceed with the appropriate tuncation */
 		ret = buf_lshift(hash, hlen, (u16)(hlen - BYTECEIL(beta))); EG(ret, err);
-		for(i = 0; i < BYTECEIL(beta); i++){
+		for(i = 0; i < (u16)BYTECEIL(beta); i++){
 			hash[i] = (hash[i] ^ sig[i]);
 		}
-		ret = _os2ip(&v, hash, BYTECEIL(beta)); EG(ret, err);
+		ret = _os2ip(&v, hash, (u16)BYTECEIL(beta)); EG(ret, err);
 	}
 
 	/* Reduce v modulo q */
@@ -468,20 +468,20 @@ int kcdsa_verify(const kcdsa_pub_key *pub, const u8 *msg, u32 msglen,
 
 	/* Compute I2BS(alpha, pi)
 	 */
-	MUST_HAVE((sizeof(pi_buf) >= BYTECEIL(alpha)), ret, err);
-	ret = _i2osp(&pi, pi_buf, BYTECEIL(alpha)); EG(ret, err);
+	MUST_HAVE((sizeof(pi_buf) >= (u16)BYTECEIL(alpha)), ret, err);
+	ret = _i2osp(&pi, pi_buf, (u16)BYTECEIL(alpha)); EG(ret, err);
 
-	if(hlen <= BYTECEIL(beta)){
+	if(hlen <= (u16)BYTECEIL(beta)){
 		/* r = h(I2BS(alpha, pi)) */
 		ret = gen_hash_init(&hash_ctx, kcdsa_hash); EG(ret, err);
-		ret = gen_hash_update(&hash_ctx, pi_buf, BYTECEIL(alpha), kcdsa_hash); EG(ret, err);
+		ret = gen_hash_update(&hash_ctx, pi_buf, (u16)BYTECEIL(alpha), kcdsa_hash); EG(ret, err);
 		/* Export r result of the hash function in sig */
 		ret = gen_hash_final(&hash_ctx, hash, kcdsa_hash); EG(ret, err);
 	}
 	else{
 		/* h(I2BS(alpha, pi)) */
 		ret = gen_hash_init(&hash_ctx, kcdsa_hash); EG(ret, err);
-		ret = gen_hash_update(&hash_ctx, pi_buf, BYTECEIL(alpha), kcdsa_hash); EG(ret, err);
+		ret = gen_hash_update(&hash_ctx, pi_buf, (u16)BYTECEIL(alpha), kcdsa_hash); EG(ret, err);
 		/* Export r result of the hash function in sig ... */
 		ret = gen_hash_final(&hash_ctx, hash, kcdsa_hash); EG(ret, err);
 		/* ... and proceed with the appropriate tuncation */
@@ -507,7 +507,7 @@ err:
 }
 
 #ifdef KCDSA
-#include "../../utils/print_buf.h"
+#include "utils/print_buf.h"
 int main(int argc, char *argv[])
 {
  	int ret = 0;

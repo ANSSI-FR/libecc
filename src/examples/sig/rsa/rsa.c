@@ -1512,6 +1512,7 @@ int main(int argc, char *argv[])
 		ret = 0;
 		goto err;
 	}
+
 	ret = perform_rsa_tests(all_rsa_tests, sizeof(all_rsa_tests) / sizeof(rsa_test*));
 
 err:
