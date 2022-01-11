@@ -80,7 +80,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int _sss_derive_seed(fp_t out, const u8 seed[SS
 	MUST_HAVE((SHA512_DIGEST_SIZE >= (2 * SSS_SECRET_SIZE)), ret, err);
 
 	/* out must be initialized with a context */
-	ret = fp_check_initialized(out);
+	ret = fp_check_initialized(out); EG(ret, err);
 
 	ret = local_memset(hmac_val, 0, sizeof(hmac_val)); EG(ret, err);
 	ret = local_memset(C, 0, sizeof(C)); EG(ret, err);
