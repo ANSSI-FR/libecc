@@ -418,7 +418,8 @@ int sss_generate(sss_share *shares, unsigned short k, unsigned short n, sss_secr
 	ret = _sss_raw_generate(shares, k, n, secret, input_secret); EG(ret, err);
 
 	/* Sanity check */
-	MUST_HAVE((SHA512_DIGEST_SIZE >= sizeof(shares[0].raw_share_hmac)), ret, err);
+	MUST_HAVE((SSS_HMAC_SIZE == sizeof(shares[0].raw_share_hmac)), ret, err);
+	MUST_HAVE((SHA256_DIGEST_SIZE >= sizeof(shares[0].raw_share_hmac)), ret, err);
 
 	/* Generate a random session ID */
 	ret = get_random(session_id, sizeof(session_id)); EG(ret, err);
