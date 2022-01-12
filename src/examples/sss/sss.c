@@ -11,7 +11,6 @@
 #include "sss_private.h"
 #include "sss.h"
 
-
 /*
  * The purpose of this example is to implement the SSS
  * (Shamir's Secret Sharing) scheme based on libecc arithmetic
@@ -45,6 +44,21 @@
  *
  */
 
+#ifndef GET_UINT16_BE
+#define GET_UINT16_BE(n, b, i)                          \
+do {                                                    \
+        (n) =     (u16)( ((u16) (b)[(i)    ]) << 8 )    \
+                | (u16)( ((u16) (b)[(i) + 1])       );  \
+} while( 0 )
+#endif
+
+#ifndef PUT_UINT16_BE
+#define PUT_UINT16_BE(n, b, i)                  \
+do {                                            \
+        (b)[(i)    ] = (u8) ( (n) >> 8 );       \
+        (b)[(i) + 1] = (u8) ( (n)       );      \
+} while( 0 )
+#endif
 
 /* The prime number we use: it is close to (2**256-1) but still stricly less
  * than this value, hence a theoretical security of more than 255 bits but less than
@@ -86,8 +100,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int _sss_derive_seed(fp_t out, const u8 seed[SS
 	ret = local_memset(C, 0, sizeof(C)); EG(ret, err);
 
 	/* Export our idx in big endian representation on two bytes */
-	C[0] = (u8)((idx >> 8) & 0xff);
-	C[1] = (u8)(idx & 0xff);
+	PUT_UINT16_BE(idx, C, 0);
 
 	len = sizeof(hmac_val);
 	ret = hmac(seed, SSS_SECRET_SIZE, SHA512, C, sizeof(C), hmac_val, &len); EG(ret, err);
@@ -236,7 +249,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int _sss_raw_generate(sss_share *shares, u16 k,
 			ret = fp_add(&s, &s, &tmp); EG(ret, err);
 		}
 		/* Export the computed share */
-		cur_share_i->index = curr_idx;
+		PUT_UINT16_BE(curr_idx, (u8*)&(cur_share_i->index), 0);
 		/* Unblind */
 		ret = fp_mul(&s, &s, &blind_inv); EG(ret, err);
 		ret = fp_export_to_buf(cur_share_i->share, SSS_SECRET_SIZE, &s); EG(ret, err);
@@ -324,13 +337,15 @@ ATTRIBUTE_WARN_UNUSED_RET static int _sss_raw_lagrange(const sss_share *shares, 
 	ret = fp_inv(&r_inv, &r_inv); EG(ret, err);
 	/* Proceed with the interpolation */
 	for(i = 0; i < k; i++){
+		u16 curr_idx;
 		const _sss_raw_share *cur_share_i = &(shares[i].raw_share);
 		/* Import s[i] */
 		ret = fp_import_from_buf(&s, cur_share_i->share, SSS_SECRET_SIZE); EG(ret, err);
 		/* Blind s[i] */
 		ret = fp_mul_monty(&s, &s, &blind); EG(ret, err);
 		/* Get the index */
-		ret = fp_set_word_value(&x_i, (word_t)(cur_share_i->index)); EG(ret, err);
+		GET_UINT16_BE(curr_idx, (const u8*)&(cur_share_i->index), 0);
+		ret = fp_set_word_value(&x_i, (word_t)(curr_idx)); EG(ret, err);
 		/* Initialize multiplication with "one" (actually Montgomery r^-1 for multiplication optimization) */
 		ret = fp_copy(&tmp2, &r_inv); EG(ret, err);
 		/* Compute the product for all k other than i
@@ -339,7 +354,8 @@ ATTRIBUTE_WARN_UNUSED_RET static int _sss_raw_lagrange(const sss_share *shares, 
 		 */
 		for(j = 0; j < k; j++){
 			const _sss_raw_share *cur_share_j = &(shares[j].raw_share);
-			ret = fp_set_word_value(&x_j, (word_t)(cur_share_j->index)); EG(ret, err);
+			GET_UINT16_BE(curr_idx, (const u8*)&(cur_share_j->index), 0);
+			ret = fp_set_word_value(&x_j, (word_t)(curr_idx)); EG(ret, err);
 			if(j != i){
 				if(val != 0){
 					ret = fp_sub(&tmp, &x_j, &x); EG(ret, err);
@@ -575,8 +591,10 @@ int sss_regenerate(sss_share *shares, unsigned short k, unsigned short n, sss_se
 	 */
 	max_idx = 0;
 	for(i = 0; i < k; i++){
-		if(shares[i].raw_share.index > max_idx){
-			max_idx = shares[i].raw_share.index;
+		u16 curr_idx;
+		GET_UINT16_BE(curr_idx, (u8*)&(shares[i].raw_share.index), 0);
+		if(curr_idx > max_idx){
+			max_idx = curr_idx;
 		}
 	}
 	/* Now regenerate as many shares as we need */
@@ -606,7 +624,7 @@ int sss_regenerate(sss_share *shares, unsigned short k, unsigned short n, sss_se
 		ret = local_memcpy(cur_id, cur_id0, SSS_SESSION_ID_SIZE); EG(ret, err);
 
 		ret = _sss_raw_lagrange(shares, k, (sss_secret*)(cur_share->share), curr_idx); EG(ret, err);
-		cur_share->index = curr_idx;
+		PUT_UINT16_BE(curr_idx, (u8*)&(cur_share->index), 0);
 
 		/* Compute the HMAC */
 		len = SSS_HMAC_SIZE;

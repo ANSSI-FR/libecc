@@ -44,8 +44,8 @@ typedef struct ATTRIBUTE_PACKED {
 	unsigned char secret[SSS_SECRET_SIZE];
 } sss_secret;
 typedef struct ATTRIBUTE_PACKED {
-	/* Index x of the share */
-	unsigned short index;
+	/* Index x of the share on two byts (a short) */
+	unsigned char index[2];
 	/* Value of the share */
 	unsigned char share[SSS_SECRET_SIZE];
 } _sss_raw_share;
