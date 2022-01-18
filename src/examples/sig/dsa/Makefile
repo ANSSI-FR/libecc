@@ -13,13 +13,17 @@ ifeq ($(WITH_DYNAMIC_LIBS),1)
 all:	dsa_dyn
 endif
 
-dsa:
-	$(CC) $(BIN_CFLAGS) -DDSA dsa.c ../../hash/hash.c $(ROOT_DIR)/src/external_deps/print.c $(ROOT_DIR)/src/external_deps/rand.c $(BIN_LDFLAGS) $(LIBSIGN) -o dsa
+libhash:
+	# Compile the hashes
+	cd ../../hash && EXTRA_CFLAGS="$(CFLAGS)" make libhash.a
+
+dsa: libhash
+	$(CC) $(BIN_CFLAGS) -DDSA dsa.c $(ROOT_DIR)/src/external_deps/print.c $(ROOT_DIR)/src/external_deps/rand.c $(BIN_LDFLAGS) ../../hash/libhash.a $(LIBSIGN) -o dsa
 
 # If the user asked for dynamic libraries, compile versions of our binaries against them
 ifeq ($(WITH_DYNAMIC_LIBS),1)
-dsa_dyn:
-	$(CC) $(BIN_CFLAGS) -DDSA dsa.c ../../hash/hash.c $(ROOT_DIR)/src/external_deps/print.c $(ROOT_DIR)/src/external_deps/rand.c $(BIN_LDFLAGS) $(LIBEC) -L$(BUILD_DIR) -lsign -o dsa_dyn
+dsa_dyn: libhash
+	$(CC) $(BIN_CFLAGS) -DDSA dsa.c ../../hash/hash.c $(ROOT_DIR)/src/external_deps/print.c $(ROOT_DIR)/src/external_deps/rand.c $(BIN_LDFLAGS) $(LIBEC) -L$(BUILD_DIR) ../../hash/libhash.a -lsign -o dsa_dyn
 endif
 
 

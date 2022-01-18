@@ -18,17 +18,17 @@
  */
 #include "libec.h"
 
-/* MD-2 source code */
+/* MD-2 */
 #include "md2.h"
-/* MD-4 source code */
+/* MD-4 */
 #include "md4.h"
-/* MD-5 source code */
+/* MD-5 */
 #include "md5.h"
-/* SHA-0 source code */
+/* SHA-0 */
 #include "sha0.h"
-/* SHA-1 source code */
+/* SHA-1 */
 #include "sha1.h"
-/* MDC-2 source code */
+/* MDC-2 */
 #include "mdc2.h"
 /* GOSTR34-11-94 source code */
 #include "gostr34_11_94.h"
