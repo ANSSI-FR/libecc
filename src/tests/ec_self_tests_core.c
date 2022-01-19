@@ -221,9 +221,9 @@ ATTRIBUTE_WARN_UNUSED_RET static int ec_import_export_test(const ec_test_case *c
 		u8 siglen;
 		u8 msg[MAX_MSG_LEN];
 		u8 sig[EC_MAX_SIGLEN];
-#ifdef USE_CRYPTOFUZZ
 		u8 check_type = 0;
-#endif
+		FORCE_USED_VAR(check_type);
+
 		ret = ec_get_sig_len(&params, c->sig_type, c->hash_type,
 				     (u8 *)&siglen);
 		if (ret) {
