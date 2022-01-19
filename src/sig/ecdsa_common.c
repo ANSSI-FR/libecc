@@ -848,17 +848,20 @@ int __ecdsa_verify_finalize(struct ec_verify_context *ctx,
  * a few possible R points can provide the same r. The following algorithm
  * assumes that Rx == r, i.e. Rx is < q and already reduced. This should
  * happen with a probability q / p, and "bad" cases with probability
- * (p - q) / p.
+ * (p - q) / p. Actually, some small multiples of r are also tested,
+ * but we give up after 10 tries as this can be very time consuming.
  *
- * With usual curve parameters, this last probability is negiligible if
+ * With usual curve parameters, this last probability is negligible if
  * everything is random (which should be the case for a "regular" signature
  * algorithm) for curves with cofactor = 1. However, an adversary could
- * willingly choose a Rx > q and the following algorithm will fail.
+ * willingly choose a Rx > q and the following algorithm will most certainly
+ * fail.
  *
  * For curves with cofactor > 1, q is usually some orders of magnitudes
- * smaller than p and this function will probably fail.
+ * smaller than p and this function will certainly fail.
  *
- * Please use the resulting public keys with care!
+ * Please use the resulting public keys with care and with all these
+ * warnings in mind!
  *
  */
 int __ecdsa_public_key_from_sig(ec_pub_key *out_pub1, ec_pub_key *out_pub2, const ec_params *params,

@@ -38,6 +38,10 @@ WARNING_CFLAGS = -Weverything -Werror \
 		 -Wno-reserved-id-macro -Wno-padded \
 		 -Wno-packed -Wno-covered-switch-default \
 		 -Wno-used-but-marked-unused -Wno-switch-enum
+# Add warnings if we are in pedantic mode
+ifeq ($(PEDANTIC),1)
+WARNING_CFLAGS += -Werror -Walloca -Wcast-qual -Wconversion -Wformat=2 -Wformat-security -Wnull-dereference -Wstack-protector -Wvla -Warray-bounds -Warray-bounds-pointer-arithmetic -Wassign-enum -Wbad-function-cast -Wconditional-uninitialized -Wconversion -Wfloat-equal -Wformat-type-confusion -Widiomatic-parentheses -Wimplicit-fallthrough -Wloop-analysis -Wpointer-arith -Wshift-sign-overflow -Wshorten-64-to-32 -Wtautological-constant-in-range-compare -Wunreachable-code-aggressive -Wthread-safety -Wthread-safety-beta -Wcomma
+endif
 # Clang version >= 13? Adapt
 CLANG_VERSION_GTE_13 := $(shell echo `$(CC) -dumpversion | cut -f1-2 -d.` \>= 13.0 | sed -e 's/\./*100+/g' | bc)
   ifeq ($(CLANG_VERSION_GTE_13), 1)
@@ -46,6 +50,10 @@ CLANG_VERSION_GTE_13 := $(shell echo `$(CC) -dumpversion | cut -f1-2 -d.` \>= 13
   endif
 else
 WARNING_CFLAGS = -W -Werror -Wextra -Wall -Wunreachable-code
+# Add warnings if we are in pedantic mode
+ifeq ($(PEDANTIC),1)
+WARNING_CFLAGS += -Wpedantic -Wformat=2 -Wformat-overflow=2 -Wformat-truncation=2 -Wformat-security -Wnull-dereference -Wstack-protector -Wtrampolines -Walloca -Wvla -Warray-bounds=2 -Wimplicit-fallthrough=3 -Wshift-overflow=2 -Wcast-qual -Wstringop-overflow=4 -Wconversion -Warith-conversion -Wlogical-op -Wduplicated-cond -Wduplicated-branches -Wformat-signedness -Wshadow -Wstrict-overflow=2 -Wundef -Wstrict-prototypes -Wswitch-default -Wcast-align=strict -Wjump-misses-init
+endif
 endif
 
 ifeq ($(WNOERROR), 1)
