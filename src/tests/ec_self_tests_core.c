@@ -383,9 +383,6 @@ pubkey_recovery_warning:
 				buf_print("digest", digest, digestlen);
 				buf_print("sig", sig, siglen);
 			}
-			if(!check){
-				ext_printf("	(ECDSA public key recovery also checked!)\n");
-			}
 		}
 #ifdef USE_CRYPTOFUZZ
 		check_type = 0;
@@ -678,9 +675,6 @@ pubkey_recovery_warning:
 			pub_key_print("pub_key", &(kp.pub_key));
 			buf_print("digest", digest, digestlen);
 			buf_print("sig", sig, siglen);
-		}
-		if(!check){
-			ext_printf("	(ECDSA public key recovery also checked!)\n");
 		}
 	}
 #ifdef USE_CRYPTOFUZZ
@@ -1077,6 +1071,9 @@ ATTRIBUTE_WARN_UNUSED_RET int perform_known_test_vectors_test(const char *sig, c
 		ext_printf("[%s] %30s selftests: known test vectors "
 			   "sig/verif %s\n", ret ? "-" : "+",
 			   cur_test->name, ret ? "failed" : "ok");
+#if defined(WITH_SIG_ECDSA) || defined(WITH_SIG_DECDSA)
+		ext_printf("\t(ECDSA public key recovery also checked!)\n");
+#endif
 #ifdef USE_CRYPTOFUZZ
 #if defined(WITH_SIG_ECDSA)
 		if(cur_test->sig_type == ECDSA){
@@ -1215,6 +1212,9 @@ ATTRIBUTE_WARN_UNUSED_RET static int rand_sig_verif_test_one(const ec_sig_mappin
 	ext_printf("[%s] %34s randtests: random import/export "
 		   "with sig/verif %s\n", ret ? "-" : "+", t.name,
 		   ret ? "failed" : "ok");
+#if defined(WITH_SIG_ECDSA) || defined(WITH_SIG_DECDSA)
+		ext_printf("\t(ECDSA public key recovery also checked!)\n");
+#endif
 #ifdef USE_CRYPTOFUZZ
 #if defined(WITH_SIG_ECDSA)
 	if(t.sig_type == ECDSA){
