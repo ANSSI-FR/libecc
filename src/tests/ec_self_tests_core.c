@@ -1071,9 +1071,20 @@ ATTRIBUTE_WARN_UNUSED_RET int perform_known_test_vectors_test(const char *sig, c
 		ext_printf("[%s] %30s selftests: known test vectors "
 			   "sig/verif %s\n", ret ? "-" : "+",
 			   cur_test->name, ret ? "failed" : "ok");
-#if defined(WITH_SIG_ECDSA) || defined(WITH_SIG_DECDSA)
-		ext_printf("\t(ECDSA public key recovery also checked!)\n");
+		check = 0;
+#if defined(WITH_SIG_ECDSA)
+		if(cur_test->sig_type == ECDSA){
+			check = 1;
+		}
 #endif
+#if defined(WITH_SIG_DECDSA)
+		if(cur_test->sig_type == DECDSA){
+			check = 1;
+		}
+#endif
+		if(check){
+			ext_printf("\t(ECDSA public key recovery also checked!)\n");
+		}
 #ifdef USE_CRYPTOFUZZ
 #if defined(WITH_SIG_ECDSA)
 		if(cur_test->sig_type == ECDSA){
@@ -1141,7 +1152,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int rand_sig_verif_test_one(const ec_sig_mappin
 	const unsigned int tn_size = sizeof(test_name) - 1; /* w/o trailing 0 */
 	const char *crv_name;
 	ec_test_case t;
-	int ret;
+	int ret, check;
 	u32 len;
 
 	ret = local_memset(test_name, 0, sizeof(test_name)); EG(ret, err);
@@ -1212,9 +1223,21 @@ ATTRIBUTE_WARN_UNUSED_RET static int rand_sig_verif_test_one(const ec_sig_mappin
 	ext_printf("[%s] %34s randtests: random import/export "
 		   "with sig/verif %s\n", ret ? "-" : "+", t.name,
 		   ret ? "failed" : "ok");
-#if defined(WITH_SIG_ECDSA) || defined(WITH_SIG_DECDSA)
-		ext_printf("\t(ECDSA public key recovery also checked!)\n");
+	check = 0;
+#if defined(WITH_SIG_ECDSA)
+	if(t.sig_type == ECDSA){
+		check = 1;
+	}
 #endif
+#if defined(WITH_SIG_DECDSA)
+	if(t.sig_type == DECDSA){
+		check = 1;
+	}
+#endif
+	if(check){
+		ext_printf("\t(ECDSA public key recovery also checked!)\n");
+	}
+
 #ifdef USE_CRYPTOFUZZ
 #if defined(WITH_SIG_ECDSA)
 	if(t.sig_type == ECDSA){
