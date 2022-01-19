@@ -70,6 +70,12 @@ int _ecdsa_verify_finalize(struct ec_verify_context *ctx)
 	return __ecdsa_verify_finalize(ctx, ECDSA);
 }
 
+int ecdsa_public_key_from_sig(ec_pub_key *out_pub1, ec_pub_key *out_pub2, const ec_params *params,
+                              const u8 *sig, u8 siglen, const u8 *hash, u8 hsize)
+{
+	return __ecdsa_public_key_from_sig(out_pub1, out_pub2, params, sig, siglen, hash, hsize, ECDSA);
+}
+
 #else /* WITH_SIG_ECDSA */
 
 /*

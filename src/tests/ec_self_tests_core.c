@@ -328,6 +328,65 @@ ATTRIBUTE_WARN_UNUSED_RET static int ec_import_export_test(const ec_test_case *c
 				goto err;
 			}
 		}
+		check_type = 0;
+#if defined(WITH_SIG_ECDSA)
+		if(c->sig_type == ECDSA){
+			check_type = 1;
+		}
+#endif
+#if defined(WITH_SIG_DECDSA)
+		if(c->sig_type == DECDSA){
+			check_type = 1;
+		}
+#endif
+		/* Try a public key recovery from the signature and the message.
+		 * This is only possible for ECDSA.
+		 */
+		if(check_type){
+			struct ec_sign_context sig_ctx;
+			u8 digest[MAX_DIGEST_SIZE] = { 0 };
+			u8 digestlen;
+			ec_pub_key pub_key1;
+			ec_pub_key pub_key2;
+			nn_src_t cofactor = &(params.ec_gen_cofactor);
+			int cofactorisone;
+			/* Initialize our signature context only for the hash */
+			ret = ec_sign_init(&sig_ctx, &kp, c->sig_type, c->hash_type, c->adata, c->adata_len); EG(ret, err);
+			/* Perform the hash of the data ourselves */
+			ret = hash_mapping_callbacks_sanity_check(sig_ctx.h); EG(ret, err);
+			const u8 *input[2] = { (const u8*)msg , NULL};
+			u32 ilens[2] = { msglen , 0 };
+			ret = sig_ctx.h->hfunc_scattered(input, ilens, digest); EG(ret, err);
+			digestlen = sig_ctx.h->digest_size;
+			MUST_HAVE(digestlen <= sizeof(digest), ret, err);
+			/* Check the cofactor */
+			ret = nn_isone(cofactor, &cofactorisone); EG(ret, err);
+			/* Compute the two possible public keys */
+			ret = __ecdsa_public_key_from_sig(&pub_key1, &pub_key2, &params, sig, siglen, digest, digestlen, c->sig_type);
+			if(ret){
+				ret = 0;
+				check = -1;
+				goto pubkey_recovery_warning;
+			}
+			/* Check equality with one of the two keys */
+			ret = prj_pt_cmp(&(pub_key1.y), &(kp.pub_key.y), &check); EG(ret, err);
+			if(check){
+				ret = prj_pt_cmp(&(pub_key2.y), &(kp.pub_key.y), &check); EG(ret, err);
+			}
+pubkey_recovery_warning:
+			if(check && cofactorisone){
+				ext_printf("[~] Warning: ECDSA recovered public key differs from real one ...");
+				ext_printf("This can happen with very low probability. Please check the trace:\n");
+				pub_key_print("pub_key1", &pub_key1);
+				pub_key_print("pub_key2", &pub_key2);
+				pub_key_print("pub_key", &(kp.pub_key));
+				buf_print("digest", digest, digestlen);
+				buf_print("sig", sig, siglen);
+			}
+			if(!check){
+				ext_printf("	(ECDSA public key recovery also checked!)\n");
+			}
+		}
 #ifdef USE_CRYPTOFUZZ
 		check_type = 0;
 		/* Specific case where we have access to raw signature API */
@@ -565,6 +624,65 @@ ATTRIBUTE_WARN_UNUSED_RET static int ec_sig_known_vector_tests_one(const ec_test
 		goto err;
 	}
 
+	check = 0;
+#if defined(WITH_SIG_ECDSA)
+	if(c->sig_type == ECDSA){
+		check = 1;
+	}
+#endif
+#if defined(WITH_SIG_DECDSA)
+	if(c->sig_type == DECDSA){
+		check = 1;
+	}
+#endif
+	/* Try a public key recovery from the signature and the message.
+	 * This is only possible for ECDSA.
+	 */
+	if(check){
+		struct ec_sign_context sig_ctx;
+		u8 digest[MAX_DIGEST_SIZE] = { 0 };
+		u8 digestlen;
+		ec_pub_key pub_key1;
+		ec_pub_key pub_key2;
+		nn_src_t cofactor = &(params.ec_gen_cofactor);
+		int cofactorisone;
+		/* Initialize our signature context only for the hash */
+		ret = ec_sign_init(&sig_ctx, &kp, c->sig_type, c->hash_type, c->adata, c->adata_len); EG(ret, err);
+		/* Perform the hash of the data ourselves */
+		ret = hash_mapping_callbacks_sanity_check(sig_ctx.h); EG(ret, err);
+		const u8 *input[2] = { (const u8*)(c->msg) , NULL};
+		u32 ilens[2] = { c->msglen , 0 };
+		ret = sig_ctx.h->hfunc_scattered(input, ilens, digest); EG(ret, err);
+		digestlen = sig_ctx.h->digest_size;
+		MUST_HAVE(digestlen <= sizeof(digest), ret, err);
+		/* Check the cofactor */
+		ret = nn_isone(cofactor, &cofactorisone); EG(ret, err);
+		/* Compute the two possible public keys */
+		ret = __ecdsa_public_key_from_sig(&pub_key1, &pub_key2, &params, sig, siglen, digest, digestlen, c->sig_type);
+		if(ret){
+			ret = 0;
+			check = -1;
+			goto pubkey_recovery_warning;
+		}
+		/* Check equality with one of the two keys */
+		ret = prj_pt_cmp(&(pub_key1.y), &(kp.pub_key.y), &check); EG(ret, err);
+		if(check){
+			ret = prj_pt_cmp(&(pub_key2.y), &(kp.pub_key.y), &check); EG(ret, err);
+		}
+pubkey_recovery_warning:
+		if(check && cofactorisone){
+			ext_printf("[~] Warning: ECDSA recovered public key differs from real one ...");
+			ext_printf("This can happen with very low probability. Please check the trace:\n");
+			pub_key_print("pub_key1", &pub_key1);
+			pub_key_print("pub_key2", &pub_key2);
+			pub_key_print("pub_key", &(kp.pub_key));
+			buf_print("digest", digest, digestlen);
+			buf_print("sig", sig, siglen);
+		}
+		if(!check){
+			ext_printf("	(ECDSA public key recovery also checked!)\n");
+		}
+	}
 #ifdef USE_CRYPTOFUZZ
 	check = 0;
 	/* Specific case where we have access to raw signature API */

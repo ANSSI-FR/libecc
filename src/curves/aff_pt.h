@@ -17,6 +17,7 @@
 #define __AFF_PT_H__
 
 #include "../fp/fp.h"
+#include "../fp/fp_sqrt.h"
 #include "ec_shortw.h"
 #include "ec_montgomery.h"
 #include "ec_edwards.h"
@@ -37,6 +38,7 @@ ATTRIBUTE_WARN_UNUSED_RET int aff_pt_init_from_coords(aff_pt_t in,
 			    ec_shortw_crv_src_t curve,
 			    fp_src_t xcoord, fp_src_t ycoord);
 void aff_pt_uninit(aff_pt_t in);
+ATTRIBUTE_WARN_UNUSED_RET int y_from_x_shortw_curve(fp_t y1, fp_t y2, fp_src_t x, ec_shortw_crv_src_t curve);
 ATTRIBUTE_WARN_UNUSED_RET int is_on_shortw_curve(fp_src_t x, fp_src_t y, ec_shortw_crv_src_t curve, int *on_curve);
 ATTRIBUTE_WARN_UNUSED_RET int aff_pt_is_on_curve(aff_pt_src_t pt, int *on_curve);
 ATTRIBUTE_WARN_UNUSED_RET int ec_shortw_aff_copy(aff_pt_t out, aff_pt_src_t in);

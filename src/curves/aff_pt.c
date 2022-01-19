@@ -92,7 +92,43 @@ void aff_pt_uninit(aff_pt_t in)
 }
 
 /*
- * Check if given point of corrdinate ('x', 'y') is on given curve 'curve' (i.e.
+ * Recover the two possible y coordinates from one x on a given
+ * curve.
+ * The two outputs y1 and y2 are initialized in the function.
+ *
+ * The function returns -1 on error, 0 on success.
+ *
+ */
+int y_from_x_shortw_curve(fp_t y1, fp_t y2, fp_src_t x, ec_shortw_crv_src_t curve)
+{
+	int ret;
+
+	MUST_HAVE((y1 != NULL) && (y2 != NULL), ret, err);
+	ret = ec_shortw_crv_check_initialized(curve); EG(ret, err);
+	ret = fp_check_initialized(x);  EG(ret, err);
+
+	/* Initialize our elements */
+	ret = fp_copy(y1, x); EG(ret, err);
+	ret = fp_copy(y2, x); EG(ret, err);
+
+	/* Compute x^3 + ax + b */
+	ret = fp_sqr(y1, y1); EG(ret, err);
+	ret = fp_mul(y1, y1, x); EG(ret, err);
+	ret = fp_mul(y2, y2, &(curve->a)); EG(ret, err);
+	ret = fp_add(y1, y1, y2); EG(ret, err);
+	ret = fp_add(y1, y1,  &(curve->b)); EG(ret, err);
+
+	/* Now compute the two possible square roots
+	 * realizing y^2 = x^3 + ax + b
+	 */
+	ret = fp_sqrt(y1, y2, y1);
+
+err:
+	return ret;
+}
+
+/*
+ * Check if given point of coordinate ('x', 'y') is on given curve 'curve' (i.e.
  * if it verifies curve equation y^2 = x^3 + ax + b). On success, the verdict is
  * given using 'on_curve' out parameter (1 if on curve, 0 if not). On error,
  * the function returns -1 and 'on_curve' is left unmodified.

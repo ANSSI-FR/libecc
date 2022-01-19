@@ -41,5 +41,8 @@ ATTRIBUTE_WARN_UNUSED_RET int _ecdsa_verify_update(struct ec_verify_context *ctx
 
 ATTRIBUTE_WARN_UNUSED_RET int _ecdsa_verify_finalize(struct ec_verify_context *ctx);
 
+ATTRIBUTE_WARN_UNUSED_RET int ecdsa_public_key_from_sig(ec_pub_key *out_pub1, ec_pub_key *out_pub2, const ec_params *params,
+                                const u8 *sig, u8 siglen, const u8 *hash, u8 hsize);
+
 #endif /* __ECDSA_H__ */
 #endif /* WITH_SIG_ECDSA */

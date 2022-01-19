@@ -839,6 +839,186 @@ int __ecdsa_verify_finalize(struct ec_verify_context *ctx,
 	return ret;
 }
 
+/* Public key recovery from a signature.
+ * For ECDSA, it is possible to recover two possible public keys from
+ * a signature and a digest.
+ *
+ * Please note that this recovery is not perfect as some information is
+ * lost when reducing Rx modulo the order q during the signature. Hence,
+ * a few possible R points can provide the same r. The following algorithm
+ * assumes that Rx == r, i.e. Rx is < q and already reduced. This should
+ * happen with a probability q / p, and "bad" cases with probability
+ * (p - q) / p.
+ *
+ * With usual curve parameters, this last probability is negiligible if
+ * everything is random (which should be the case for a "regular" signature
+ * algorithm) for curves with cofactor = 1. However, an adversary could
+ * willingly choose a Rx > q and the following algorithm will fail.
+ *
+ * For curves with cofactor > 1, q is usually some orders of magnitudes
+ * smaller than p and this function will probably fail.
+ *
+ * Please use the resulting public keys with care!
+ *
+ */
+int __ecdsa_public_key_from_sig(ec_pub_key *out_pub1, ec_pub_key *out_pub2, const ec_params *params,
+				const u8 *sig, u8 siglen, const u8 *hash, u8 hsize,
+	                        ec_alg_type key_type)
+{
+	int ret, iszero1, iszero2, cmp1, cmp2;
+	prj_pt uG;
+	prj_pt_t Y1, Y2;
+	prj_pt_src_t G;
+	nn u, v, e, r, s;
+	nn_src_t q, p;
+	bitcnt_t rshift, q_bit_len;
+	u8 q_len;
+	word_t order_multiplier = WORD(1);
+
+	uG.magic = WORD(0);
+	u.magic = v.magic = e.magic = r.magic = s.magic = WORD(0);
+
+	/* Zero init points */
+	ret = local_memset(&uG, 0, sizeof(prj_pt)); EG(ret, err);
+
+	/* Sanity checks */
+	MUST_HAVE((params != NULL) && (sig != NULL) && (hash != NULL) && (out_pub1 != NULL) && (out_pub2 != NULL), ret, err);
+
+	/* Import our params */
+	G = &(params->ec_gen);
+	p = &(params->ec_fp.p);
+	q = &(params->ec_gen_order);
+	q_bit_len = params->ec_gen_order_bitlen;
+	q_len = (u8)BYTECEIL(q_bit_len);
+	Y1 = &(out_pub1->y);
+	Y2 = &(out_pub2->y);
+
+	/* Check given signature length is the expected one */
+	MUST_HAVE((siglen == ECDSA_SIGLEN(q_bit_len)), ret, err);
+
+restart:
+	/* Import r and s values from signature buffer */
+	ret = nn_init_from_buf(&r, sig, q_len); EG(ret, err);
+	ret = nn_init_from_buf(&s, sig + q_len, q_len); EG(ret, err);
+
+	/* Reject the signature if r or s is 0. */
+	ret = nn_iszero(&r, &iszero1); EG(ret, err);
+	ret = nn_iszero(&s, &iszero2); EG(ret, err);
+	ret = nn_cmp(&r, q, &cmp1); EG(ret, err);
+	ret = nn_cmp(&s, q, &cmp2); EG(ret, err);
+	MUST_HAVE(((!iszero1) && (cmp1 < 0) && !iszero2 && (cmp2 < 0)), ret, err);
+
+	/* Add a multiple of the order to r using our current order multiplier */
+	if(order_multiplier > 1){
+		int cmp;
+		ret = nn_init(&u, 0);
+		ret = nn_mul_word(&u, q, order_multiplier); EG(ret, err);
+		ret = nn_add(&r, &r, &u); EG(ret, err);
+		/* If we have reached > p, leave with an error */
+		ret = nn_cmp(&r, p, &cmp); EG(ret, err);
+		MUST_HAVE((cmp < 0), ret, err);
+	}
+
+	/*
+	 * Compute e.
+	 * If |h| > bitlen(q), set h to bitlen(q)
+	 * leftmost bits of h.
+	 *
+	 * Note that it's easier to check here if the truncation
+	 * needs to be done but implement it using a logical
+	 * shift.
+	 */
+	rshift = 0;
+	if ((hsize * 8) > q_bit_len) {
+		rshift = (bitcnt_t)((hsize * 8) - q_bit_len);
+	}
+	ret = nn_init_from_buf(&e, hash, hsize); EG(ret, err);
+	if (rshift) {
+		ret = nn_rshift_fixedlen(&e, &e, rshift); EG(ret, err);
+	}
+	ret = nn_mod(&e, &e, q); EG(ret, err);
+
+	/* Now to find the y coordinate by solving the curve equation.
+	 * NOTE: we use uG as temporary storage.
+	 */
+	ret = fp_init(&(uG.X), &(params->ec_fp)); EG(ret, err);
+	ret = fp_init(&(uG.Y), &(params->ec_fp)); EG(ret, err);
+	ret = fp_init(&(uG.Z), &(params->ec_fp)); EG(ret, err);
+	ret = fp_set_nn(&(uG.Z), &r); EG(ret, err);
+	ret = y_from_x_shortw_curve(&(uG.X), &(uG.Y), &(uG.Z), &(params->ec_curve));
+	if(ret){
+		/* If we have failed here, this means that our r has certainly been
+		 * reduced. Increment our multiplier and restart the process.
+		 */
+		order_multiplier = (word_t)(order_multiplier + 1);
+		if(order_multiplier > 10){
+			/* Too much tries, leave ... */
+			ret = -1;
+			goto err;
+		}
+		goto restart;
+	}
+
+	/* Initialize Y1 and Y2 */
+	ret = fp_init(&(Y2->Z), &(params->ec_fp)); EG(ret, err);
+	ret = fp_one(&(Y2->Z)); EG(ret, err);
+	/* Y1 */
+	ret = prj_pt_init_from_coords(Y1, &(params->ec_curve), &(uG.Z), &(uG.X), &(Y2->Z)); EG(ret, err);
+	/* Y2 */
+	ret = prj_pt_init_from_coords(Y2, &(params->ec_curve), &(uG.Z), &(uG.Y), &(Y1->Z)); EG(ret, err);
+
+	/* Now compute u = (-e r^-1) mod q, and v = (s r^-1) mod q */
+	ret = nn_init(&u, 0); EG(ret, err);
+	ret = nn_init(&v, 0); EG(ret, err);
+	ret = nn_modinv(&r, &r, q); EG(ret, err);
+	/* u */
+	ret = nn_mod_mul(&u, &e, &r, q); EG(ret, err);
+	/* NOTE: -x mod q is (q - x) mod q, i.e. (q - x) when x is reduced */
+	ret = nn_sub(&u, q, &u); EG(ret, err);
+	/* v */
+	ret = nn_mod_mul(&v, &s, &r, q); EG(ret, err);
+
+	/* Compute uG */
+	ret = prj_pt_mul(&uG, &u, G); EG(ret, err);
+	/* Compute vR1 and possible Y1 */
+	ret = prj_pt_mul(Y1, &v, Y1); EG(ret, err);
+	ret = prj_pt_add(Y1, Y1, &uG); EG(ret, err);
+	/* Compute vR2 and possible Y2 */
+	ret = prj_pt_mul(Y2, &v, Y2); EG(ret, err);
+	ret = prj_pt_add(Y2, Y2, &uG); EG(ret, err);
+
+	/* Now initialize our two public keys */
+	/* out_pub1 */
+	out_pub1->key_type = key_type;
+	out_pub1->params = params;
+	out_pub1->magic = PUB_KEY_MAGIC;
+	/* out_pub2 */
+	out_pub2->key_type = key_type;
+	out_pub2->params = params;
+	out_pub2->magic = PUB_KEY_MAGIC;
+
+	ret = 0;
+
+err:
+	prj_pt_uninit(&uG);
+	nn_uninit(&r);
+	nn_uninit(&s);
+	nn_uninit(&u);
+	nn_uninit(&v);
+	nn_uninit(&e);
+
+	/* Clean what remains on the stack */
+	PTR_NULLIFY(G);
+	PTR_NULLIFY(Y1);
+	PTR_NULLIFY(Y2);
+	VAR_ZEROIFY(rshift);
+	VAR_ZEROIFY(q_bit_len);
+	PTR_NULLIFY(q);
+	PTR_NULLIFY(p);
+
+	return ret;
+}
+
 #else /* defined(WITH_SIG_ECDSA) || defined(WITH_SIG_DECDSA) */
 
 /*
