@@ -36,39 +36,40 @@
 /****************************************************/
 /****************************************************/
 /****************************************************/
+#define DEPRECATED_HASH_ENUM LOCAL_MAX(
 typedef enum {
-	/* libecc native hashes */
-	HASH_SHA224 = 0,
-	HASH_SHA256 = 1,
-	HASH_SHA384 = 2,
-	HASH_SHA512 = 3,
-	HASH_SHA512_224 = 4,
-	HASH_SHA512_256 = 5,
-	HASH_SHA3_224 = 6,
-	HASH_SHA3_256 = 7,
-	HASH_SHA3_384 = 8,
-	HASH_SHA3_512 = 9,
-	HASH_SM3 = 10,
-	HASH_STREEBOG256 = 11,
-	HASH_STREEBOG512 = 12,
-	HASH_SHAKE256 = 13,
-	HASH_RIPEMD160 = 14,
+	/* libecc native hashes: we map our enum on them */
+	HASH_UNKNOWN_HASH_ALG = UNKNOWN_HASH_ALG,
+	HASH_SHA224 = SHA224,
+	HASH_SHA256 = SHA256,
+	HASH_SHA384 = SHA384,
+	HASH_SHA512 = SHA512,
+	HASH_SHA512_224 = SHA512_224,
+	HASH_SHA512_256 = SHA512_256,
+	HASH_SHA3_224 = SHA3_224,
+	HASH_SHA3_256 = SHA3_256,
+	HASH_SHA3_384 = SHA3_384,
+	HASH_SHA3_512 = SHA3_512,
+	HASH_SM3 = SM3,
+	HASH_STREEBOG256 = STREEBOG256,
+	HASH_STREEBOG512 = STREEBOG512,
+	HASH_SHAKE256 = SHAKE256,
+	HASH_RIPEMD160 = RIPEMD160,
 	/* Deprecated hash algorithms not supported by libecc
 	 * (for security reasons).
 	 * XXX: NOTE: These algorithms are here as a playground e.g.
 	 * to test some backward compatibility of cryptographic cipher suites,
 	 * please DO NOT use them in production code!
 	 */
-	HASH_MD2 = 15,
-	HASH_MD4 = 16,
-	HASH_MD5 = 17,
-	HASH_SHA0 = 18,
-	HASH_SHA1 = 19,
-	HASH_MDC2_PADDING1 = 20,
-	HASH_MDC2_PADDING2 = 21,
-	HASH_GOST34_11_94_NORM = 22,
-	HASH_GOST34_11_94_RFC4357 = 23,
-	HASH_NO_HASH = 24,
+	HASH_MD2,
+	HASH_MD4,
+	HASH_MD5,
+	HASH_SHA0,
+	HASH_SHA1,
+	HASH_MDC2_PADDING1,
+	HASH_MDC2_PADDING2,
+	HASH_GOST34_11_94_NORM,
+	HASH_GOST34_11_94_RFC4357,
 } gen_hash_alg_type;
 
 /* Our generic hash context */
