@@ -948,7 +948,7 @@ restart:
 	ret = fp_init(&(uG.Y), &(params->ec_fp)); EG(ret, err);
 	ret = fp_init(&(uG.Z), &(params->ec_fp)); EG(ret, err);
 	ret = fp_set_nn(&(uG.Z), &r); EG(ret, err);
-	ret = y_from_x_shortw_curve(&(uG.X), &(uG.Y), &(uG.Z), &(params->ec_curve));
+	ret = aff_pt_y_from_x(&(uG.X), &(uG.Y), &(uG.Z), &(params->ec_curve));
 	if(ret){
 		/* If we have failed here, this means that our r has certainly been
 		 * reduced. Increment our multiplier and restart the process.

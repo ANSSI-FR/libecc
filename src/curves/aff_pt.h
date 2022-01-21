@@ -38,7 +38,7 @@ ATTRIBUTE_WARN_UNUSED_RET int aff_pt_init_from_coords(aff_pt_t in,
 			    ec_shortw_crv_src_t curve,
 			    fp_src_t xcoord, fp_src_t ycoord);
 void aff_pt_uninit(aff_pt_t in);
-ATTRIBUTE_WARN_UNUSED_RET int y_from_x_shortw_curve(fp_t y1, fp_t y2, fp_src_t x, ec_shortw_crv_src_t curve);
+ATTRIBUTE_WARN_UNUSED_RET int aff_pt_y_from_x(fp_t y1, fp_t y2, fp_src_t x, ec_shortw_crv_src_t curve);
 ATTRIBUTE_WARN_UNUSED_RET int is_on_shortw_curve(fp_src_t x, fp_src_t y, ec_shortw_crv_src_t curve, int *on_curve);
 ATTRIBUTE_WARN_UNUSED_RET int aff_pt_is_on_curve(aff_pt_src_t pt, int *on_curve);
 ATTRIBUTE_WARN_UNUSED_RET int ec_shortw_aff_copy(aff_pt_t out, aff_pt_src_t in);
@@ -88,6 +88,8 @@ ATTRIBUTE_WARN_UNUSED_RET int curve_shortw_to_edwards(ec_shortw_crv_src_t shortw
 ATTRIBUTE_WARN_UNUSED_RET int aff_pt_edwards_to_shortw(aff_pt_edwards_src_t in_edwards, ec_shortw_crv_src_t shortw_crv, aff_pt_t out_shortw, fp_src_t alpha_edwards);
 ATTRIBUTE_WARN_UNUSED_RET int aff_pt_shortw_to_edwards(aff_pt_src_t in_shortw, ec_edwards_crv_src_t edwards_crv, aff_pt_edwards_t out_edwards, fp_src_t alpha_edwards);
 
+ATTRIBUTE_WARN_UNUSED_RET int aff_pt_edwards_y_from_x(fp_t y1, fp_t y2, fp_src_t x, ec_edwards_crv_src_t crv);
+ATTRIBUTE_WARN_UNUSED_RET int aff_pt_edwards_x_from_y(fp_t x1, fp_t x2, fp_src_t y, ec_edwards_crv_src_t crv);
 
 /*** Montgomery curves related ***/
 typedef struct {
@@ -128,5 +130,7 @@ ATTRIBUTE_WARN_UNUSED_RET int aff_pt_shortw_to_montgomery(aff_pt_src_t in_shortw
 /*****/
 ATTRIBUTE_WARN_UNUSED_RET int aff_pt_edwards_to_montgomery(aff_pt_edwards_src_t in_edwards, ec_montgomery_crv_src_t montgomery_crv, aff_pt_montgomery_t out_montgomery, fp_src_t alpha);
 ATTRIBUTE_WARN_UNUSED_RET int aff_pt_montgomery_to_edwards(aff_pt_montgomery_src_t in_montgomery, ec_edwards_crv_src_t edwards_crv, aff_pt_edwards_t out_edwards, fp_src_t alpha);
+
+ATTRIBUTE_WARN_UNUSED_RET int aff_pt_montgomery_v_from_u(fp_t v1, fp_t v2, fp_src_t u, ec_montgomery_crv_src_t crv);
 
  #endif /* __AFF_PT_H__ */

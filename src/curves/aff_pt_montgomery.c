@@ -534,3 +534,44 @@ err:
 
 	return ret;
 }
+
+
+/*
+ * Recover the two possible v coordinates from one u on a given
+ * curve.
+ * The two outputs v1 and v2 are initialized in the function.
+ *
+ * The function returns -1 on error, 0 on success.
+ *
+ */
+int aff_pt_montgomery_v_from_u(fp_t v1, fp_t v2, fp_src_t u, ec_montgomery_crv_src_t crv)
+{
+	int ret;
+
+	/* Sanity checks */
+	ret = fp_check_initialized(u); EG(ret, err);
+	ret = ec_montgomery_crv_check_initialized(crv); EG(ret, err);
+	MUST_HAVE((u->ctx == crv->A.ctx) && (u->ctx == crv->B.ctx), ret, err);
+	MUST_HAVE((v1 != NULL) && (v2 != NULL), ret, err);
+
+	/* Initialize v1 and v2 with context */
+	ret = fp_init(v1, u->ctx); EG(ret, err);
+	ret = fp_init(v2, u->ctx); EG(ret, err);
+
+	/* v must satisfy the equation B v^2 = u^3 + A u^2 + u,
+	 * so we compute square root for B^-1 * (u^3 + A u^2 + u)
+	 */
+	ret = fp_sqr(v2, u); EG(ret, err);
+	ret = fp_mul(v1, v2, u); EG(ret, err);
+	ret = fp_mul(v2, v2, &(crv->A)); EG(ret, err);
+	ret = fp_add(v1, v1, v2); EG(ret, err);
+	ret = fp_add(v1, v1, u); EG(ret, err);
+	ret = fp_inv(v2, &(crv->B)); EG(ret, err);
+	ret = fp_mul(v1, v1, v2); EG(ret, err);
+
+	/* Choose any of the two square roots as the solution */
+	ret = fp_sqrt(v1, v2, v1);
+
+err:
+	return ret;
+}

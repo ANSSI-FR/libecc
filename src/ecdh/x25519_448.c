@@ -123,34 +123,12 @@ ATTRIBUTE_WARN_UNUSED_RET static int compute_v_from_u(fp_src_t u, fp_t v, ec_mon
 
 	tmp.magic = 0;
 
-	/* Sanity checks */
-	ret = fp_check_initialized(u); EG(ret, err);
-	ret = ec_montgomery_crv_check_initialized(crv); EG(ret, err);
-	MUST_HAVE((u->ctx == crv->A.ctx) && (u->ctx == crv->B.ctx), ret, err);
-
-	/* Initialize v with context */
-	ret = fp_init(v, u->ctx); EG(ret, err);
-	ret = fp_init(&tmp, u->ctx); EG(ret, err);
-
-	/* v must satisfy the equation B v^2 = u^3 + A u^2 + u,
-	 * so we compute square root for B^-1 * (u^3 + A u^2 + u)
-	 */
-	ret = fp_sqr(&tmp, u); EG(ret, err);
-	ret = fp_mul(v, &tmp, u); EG(ret, err);
-	ret = fp_mul(&tmp, &tmp, &(crv->A)); EG(ret, err);
-	ret = fp_add(v, v, &tmp); EG(ret, err);
-	ret = fp_add(v, v, u); EG(ret, err);
-	ret = fp_inv(&tmp, &(crv->B)); EG(ret, err);
-	ret = fp_mul(v, v, &tmp); EG(ret, err);
-
-	/* Choose any of the two square roots as the solution */
-	ret = fp_sqrt(v, &tmp, v);
+	ret = aff_pt_montgomery_v_from_u(v, &tmp, u, crv);
 	/* NOTE: this square root is possibly non-existing if the
 	 * u coordinate is on the quadratic twist of the curve.
 	 * An error is returned in this case.
 	 */
 
-err:
 	fp_uninit(&tmp);
 
 	return ret;

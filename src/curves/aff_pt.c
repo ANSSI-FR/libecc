@@ -99,7 +99,7 @@ void aff_pt_uninit(aff_pt_t in)
  * The function returns -1 on error, 0 on success.
  *
  */
-int y_from_x_shortw_curve(fp_t y1, fp_t y2, fp_src_t x, ec_shortw_crv_src_t curve)
+int aff_pt_y_from_x(fp_t y1, fp_t y2, fp_src_t x, ec_shortw_crv_src_t curve)
 {
 	int ret;
 

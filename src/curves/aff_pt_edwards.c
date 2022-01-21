@@ -754,3 +754,98 @@ err:
 
 	return ret;
 }
+
+/*
+ * Recover the two possible y coordinates from one x on a given
+ * curve.
+ * The two outputs y1 and y2 are initialized in the function.
+ *
+ * The function returns -1 on error, 0 on success.
+ *
+ */
+int aff_pt_edwards_y_from_x(fp_t y1, fp_t y2, fp_src_t x, ec_edwards_crv_src_t crv)
+{
+        int ret;
+	fp tmp;
+	tmp.magic = WORD(0);
+
+	/* Sanity checks */
+	ret = fp_check_initialized(x); EG(ret, err);
+	ret = ec_edwards_crv_check_initialized(crv); EG(ret, err);
+	MUST_HAVE((x->ctx == crv->a.ctx) && (x->ctx == crv->d.ctx), ret, err);
+	MUST_HAVE((y1 != NULL) && (y2 != NULL), ret, err);
+
+	ret = fp_init(y1, x->ctx); EG(ret, err);
+	ret = fp_init(y2, x->ctx); EG(ret, err);
+	ret = fp_init(&tmp, x->ctx); EG(ret, err);
+
+	/* In order to find our two possible y, we have to find the square
+	 * roots of (1 - a x**2) / (1 - d * x**2).
+	 */
+	ret = fp_one(&tmp); EG(ret, err);
+	/* (1 - a x**2) */
+	ret = fp_mul(y1, x, &(crv->a)); EG(ret, err);
+	ret = fp_mul(y1, y1, x); EG(ret, err);
+	ret = fp_sub(y1, &tmp, y1); EG(ret, err);
+	/* 1 / (1 - d * x**2) */
+	ret = fp_mul(y2, x, &(crv->d)); EG(ret, err);
+	ret = fp_mul(y2, y2, x); EG(ret, err);
+	ret = fp_sub(y2, &tmp, y2); EG(ret, err);
+	ret = fp_inv(y2, y2); EG(ret, err);
+
+	ret = fp_mul(&tmp, y1, y2); EG(ret, err);
+
+	ret = fp_sqrt(y1, y2, &tmp);
+
+err:
+	fp_uninit(&tmp);
+
+	return ret;
+}
+
+/*
+ * Recover the two possible x coordinates from one y on a given
+ * curve.
+ * The two outputs x1 and x2 are initialized in the function.
+ *
+ * The function returns -1 on error, 0 on success.
+ *
+ */
+int aff_pt_edwards_x_from_y(fp_t x1, fp_t x2, fp_src_t y, ec_edwards_crv_src_t crv)
+{
+        int ret;
+	fp tmp;
+	tmp.magic = WORD(0);
+
+	/* Sanity checks */
+	ret = fp_check_initialized(y); EG(ret, err);
+	ret = ec_edwards_crv_check_initialized(crv); EG(ret, err);
+	MUST_HAVE((y->ctx == crv->a.ctx) && (y->ctx == crv->d.ctx), ret, err);
+	MUST_HAVE((x1 != NULL) && (x2 != NULL), ret, err);
+
+	ret = fp_init(x1, y->ctx); EG(ret, err);
+	ret = fp_init(x2, y->ctx); EG(ret, err);
+	ret = fp_init(&tmp, y->ctx); EG(ret, err);
+
+	/* In order to find our two possible y, we have to find the square
+	 * roots of (1 - y**2) / (a - d * y**2).
+	 */
+	ret = fp_one(&tmp); EG(ret, err);
+	/* (1 - y**2) */
+	ret = fp_mul(x1, y, y); EG(ret, err);
+	ret = fp_sub(x1, &tmp, x1); EG(ret, err);
+	/* 1 / (a - d * x**2) */
+	ret = fp_mul(x2, y, &(crv->d)); EG(ret, err);
+	ret = fp_mul(x2, x2, y); EG(ret, err);
+	ret = fp_sub(x2, &(crv->a), x2); EG(ret, err);
+	ret = fp_inv(x2, x2); EG(ret, err);
+
+	ret = fp_mul(&tmp, x1, x2); EG(ret, err);
+
+	ret = fp_sqrt(x1, x2, &tmp);
+
+err:
+	fp_uninit(&tmp);
+
+	return ret;
+}

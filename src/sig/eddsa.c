@@ -432,19 +432,9 @@ ATTRIBUTE_WARN_UNUSED_RET static int eddsa_decode_point(aff_pt_edwards_t out, ec
 	int ret, iszero;
 
 #if defined(WITH_SIG_EDDSA448)
-	const u8 d_edwards448_buff[] = {
-		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-		0xff, 0xff, 0xff, 0xfe, 0xff, 0xff, 0xff, 0xff,
-		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-		0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x67, 0x56
-	};
-	fp d_edwards448;
-	d_edwards448.magic = WORD(0);
+        fp tmp;
+        tmp.magic = WORD(0);
 #endif
-
 	x.magic = y.magic = sqrt1.magic = sqrt2.magic = WORD(0);
 
 	MUST_HAVE((buf != NULL), ret, err);
@@ -473,39 +463,42 @@ ATTRIBUTE_WARN_UNUSED_RET static int eddsa_decode_point(aff_pt_edwards_t out, ec
 	/*
 	 * If we suceed, try to find our x coordinate that is the square root of
 	 * (y^2 - 1) / (d y^2 + 1) or (y^2 - 1) / (d y^2 - 1) depending on the
-	 * algorithm.
+	 * algorithm (EDDSA25519 our EDDSA448).
 	 */
-	ret = fp_init(&sqrt1, edwards_curve->a.ctx); EG(ret, err);
-	ret = fp_init(&sqrt2, edwards_curve->a.ctx); EG(ret, err);
-	ret = fp_init(&x, edwards_curve->a.ctx); EG(ret, err);
-	ret = fp_sqr(&sqrt1, &y); EG(ret, err);
-	ret = fp_copy(&sqrt2, &sqrt1); EG(ret, err);
-	ret = fp_dec(&sqrt1, &sqrt1); EG(ret, err);
+        ret = fp_init(&sqrt1, edwards_curve->a.ctx); EG(ret, err);
+        ret = fp_init(&sqrt2, edwards_curve->a.ctx); EG(ret, err);
+        ret = fp_init(&x, edwards_curve->a.ctx); EG(ret, err);
 #if defined(WITH_SIG_EDDSA448)
 	if((sig_type == EDDSA448) || (sig_type == EDDSA448PH)){
+		const u8 d_edwards448_buff[] = {
+			0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+			0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+			0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+			0xff, 0xff, 0xff, 0xfe, 0xff, 0xff, 0xff, 0xff,
+			0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+			0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+			0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x67, 0x56
+		};
+		ec_edwards_crv edwards_curve_edwards448;
+
+		ret = fp_init(&tmp, edwards_curve->a.ctx); EG(ret, err);
 		/*
 		 * If we deal with EDDSA448 we must handle the point on
 		 * Edwards448 so we use the dedicated d.
 		 */
-		ret = fp_init_from_buf(&d_edwards448, edwards_curve->a.ctx,
-				 (const u8*)d_edwards448_buff,
-				 sizeof(d_edwards448_buff)); EG(ret, err);
-		ret = fp_mul(&sqrt2, &sqrt2, &d_edwards448); EG(ret, err);
-		/* (d y^2 - 1) */
-		ret = fp_dec(&sqrt2, &sqrt2); EG(ret, err);
+		ret = fp_init_from_buf(&tmp, edwards_curve->a.ctx,
+          		(const u8*)d_edwards448_buff, sizeof(d_edwards448_buff)); EG(ret, err);
+		ret = ec_edwards_crv_init(&edwards_curve_edwards448, &(edwards_curve->a), &tmp, &(edwards_curve->order)); EG(ret, err);
+		/* Compute x from y using the dedicated primitive */
+		ret = aff_pt_edwards_x_from_y(&sqrt1, &sqrt2, &y, &edwards_curve_edwards448); EG(ret, err); /* Error or no square root found, this should not happen! */
+		ec_edwards_crv_uninit(&edwards_curve_edwards448);
 	}
 	else
-#endif /* !defined(WITH_SIG_EDDSA448) */
+#endif
 	{
-		FORCE_USED_VAR(sig_type); /* To avoid unused variable error */
-		ret = fp_mul(&sqrt2, &sqrt2, &(edwards_curve->d)); EG(ret, err);
-		/* (d y^2 + 1) */
-		ret = fp_inc(&sqrt2, &sqrt2); EG(ret, err);
+		/* Compute x from y using the dedicated primitive */
+		ret = aff_pt_edwards_x_from_y(&sqrt1, &sqrt2, &y, edwards_curve); EG(ret, err); /* Error or no square root found, this should not happen! */
 	}
-	/* NOTE: inversion by zero should be caught by lower layers */
-	ret = fp_inv(&sqrt2, &sqrt2); EG(ret, err);
-	ret = fp_mul(&x, &sqrt1, &sqrt2); EG(ret, err);
-	ret = fp_sqrt(&sqrt1, &sqrt2, &x); EG(ret, err); /* Error or no square root found, this should not happen! */
 	/* Now select the square root of the proper sign */
 	ret = nn_getbit(&(sqrt1.fp_val), 0, &lsb); EG(ret, err);
 	if(lsb == x_0){
@@ -528,16 +521,16 @@ ATTRIBUTE_WARN_UNUSED_RET static int eddsa_decode_point(aff_pt_edwards_t out, ec
 	if((sig_type == EDDSA448) || (sig_type == EDDSA448PH)){
 		/*
 		 * Use sqrt1 and sqrt2 as temporary buffers for x and y, and
-		 * d_edwards448 as scratch pad buffer
+		 * tmp as scratch pad buffer
 		 */
 		ret = fp_copy(&sqrt1, &x); EG(ret, err);
 		ret = fp_copy(&sqrt2, &y); EG(ret, err);
 
 		ret = fp_set_word_value(&x, WORD(2)); EG(ret, err);
-		ret = fp_sqr(&d_edwards448, &sqrt1); EG(ret, err);
-		ret = fp_sub(&x, &x, &d_edwards448); EG(ret, err);
-		ret = fp_sqr(&d_edwards448, &sqrt2); EG(ret, err);
-		ret = fp_sub(&x, &x, &d_edwards448); EG(ret, err);
+		ret = fp_sqr(&tmp, &sqrt1); EG(ret, err);
+		ret = fp_sub(&x, &x, &tmp); EG(ret, err);
+		ret = fp_sqr(&tmp, &sqrt2); EG(ret, err);
+		ret = fp_sub(&x, &x, &tmp); EG(ret, err);
 		/* NOTE: inversion by zero should be caught by lower layers */
 		ret = fp_inv(&x, &x); EG(ret, err);
 		ret = fp_mul(&x, &x, &sqrt1); EG(ret, err);
@@ -563,7 +556,7 @@ err:
 	fp_uninit(&x);
 	fp_uninit(&y);
 #if defined(WITH_SIG_EDDSA448)
-	fp_uninit(&d_edwards448);
+	fp_uninit(&tmp);
 #endif
 
 	return ret;
