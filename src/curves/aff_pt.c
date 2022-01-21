@@ -106,6 +106,9 @@ int aff_pt_y_from_x(fp_t y1, fp_t y2, fp_src_t x, ec_shortw_crv_src_t curve)
 	MUST_HAVE((y1 != NULL) && (y2 != NULL), ret, err);
 	ret = ec_shortw_crv_check_initialized(curve); EG(ret, err);
 	ret = fp_check_initialized(x);  EG(ret, err);
+	/* Aliasing is not supported */
+	MUST_HAVE((y1 != y2) && (y1 != x), ret, err);
+
 
 	/* Initialize our elements */
 	ret = fp_copy(y1, x); EG(ret, err);

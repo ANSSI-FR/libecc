@@ -774,6 +774,8 @@ int aff_pt_edwards_y_from_x(fp_t y1, fp_t y2, fp_src_t x, ec_edwards_crv_src_t c
 	ret = ec_edwards_crv_check_initialized(crv); EG(ret, err);
 	MUST_HAVE((x->ctx == crv->a.ctx) && (x->ctx == crv->d.ctx), ret, err);
 	MUST_HAVE((y1 != NULL) && (y2 != NULL), ret, err);
+	/* Aliasing is not supported */
+	MUST_HAVE((y1 != y2) && (y1 != x), ret, err);
 
 	ret = fp_init(y1, x->ctx); EG(ret, err);
 	ret = fp_init(y2, x->ctx); EG(ret, err);
@@ -822,6 +824,8 @@ int aff_pt_edwards_x_from_y(fp_t x1, fp_t x2, fp_src_t y, ec_edwards_crv_src_t c
 	ret = ec_edwards_crv_check_initialized(crv); EG(ret, err);
 	MUST_HAVE((y->ctx == crv->a.ctx) && (y->ctx == crv->d.ctx), ret, err);
 	MUST_HAVE((x1 != NULL) && (x2 != NULL), ret, err);
+	/* Aliasing is not supported */
+	MUST_HAVE((x1 != x2) && (x1 != y), ret, err);
 
 	ret = fp_init(x1, y->ctx); EG(ret, err);
 	ret = fp_init(x2, y->ctx); EG(ret, err);

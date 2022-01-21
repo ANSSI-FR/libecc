@@ -553,6 +553,8 @@ int aff_pt_montgomery_v_from_u(fp_t v1, fp_t v2, fp_src_t u, ec_montgomery_crv_s
 	ret = ec_montgomery_crv_check_initialized(crv); EG(ret, err);
 	MUST_HAVE((u->ctx == crv->A.ctx) && (u->ctx == crv->B.ctx), ret, err);
 	MUST_HAVE((v1 != NULL) && (v2 != NULL), ret, err);
+	/* Aliasing is not supported */
+	MUST_HAVE((v1 != v2) && (v1 != u), ret, err);
 
 	/* Initialize v1 and v2 with context */
 	ret = fp_init(v1, u->ctx); EG(ret, err);

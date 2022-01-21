@@ -448,16 +448,9 @@ static int uncompress_ecc_point(const ec_params *params, const u8 *peerpubkey, u
 
 	/* Import our x coordinate */
 	ret = fp_init_from_buf(&x, &(params->ec_fp), peerpubkey, peerpubkeylen); EG(ret, err);
-	ret = fp_init(&tmp, &(params->ec_fp));
-	/* Compute the Weierstrass equation y^2 = x^3 + ax + b */
-	ret = fp_sqr(&tmp, &x); EG(ret, err);
-	ret = fp_mul(&tmp, &tmp, &x); EG(ret, err); /* x^3 */
-	ret = fp_mul(&x, &x, &(params->ec_curve.a)); EG(ret, err);
-	ret = fp_add(&x, &x, &(params->ec_curve.b)); EG(ret, err); /* ax + b */
-	ret = fp_add(&tmp, &tmp, &x); EG(ret, err); /* x^3 + ax + b */
-
-	/* Get the two square roots */
-	ret = fp_sqrt(&x, &tmp, &tmp); EG(ret, err);
+	ret = fp_init(&tmp, &(params->ec_fp)); EG(ret, err);
+	/* Compute the Weierstrass equation y^2 = x^3 + ax + b solutions */
+	ret = aff_pt_y_from_x(&tmp, &x, &x, &(params->ec_curve)); EG(ret, err);
 
 	/* Choose the square root depending on the compression information */
 	sign = (compression - 2);
