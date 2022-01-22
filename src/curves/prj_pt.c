@@ -1781,10 +1781,13 @@ int _prj_pt_unprotected_mult(prj_pt_t out, nn_src_t scalar, prj_pt_src_t public_
 {
         u8 expbit;
         bitcnt_t explen;
-        int ret, iszero;
+        int ret, iszero, on_curve;
 
         ret = prj_pt_check_initialized(public_in); EG(ret, err);
         ret = nn_check_initialized(scalar); EG(ret, err);
+
+	/* Check that the input is on the curve */
+	MUST_HAVE((!prj_pt_is_on_curve(public_in, &on_curve)) && on_curve, ret, err);
 
         ret = nn_iszero(scalar, &iszero); EG(ret, err);
 	/* Multiplication by zero is the point at infinity */
@@ -1806,6 +1809,9 @@ int _prj_pt_unprotected_mult(prj_pt_t out, nn_src_t scalar, prj_pt_src_t public_
                         ret = prj_pt_add(out, out, public_in); EG(ret, err);
                 }
         }
+
+	/* Check that the output is on the curve */
+	MUST_HAVE((!prj_pt_is_on_curve(out, &on_curve)) && on_curve, ret, err);
 
 err:
         VAR_ZEROIFY(expbit);
