@@ -3,7 +3,7 @@
 # libecc project
 
 ## Copyright and license
-Copyright (C) 2017
+Copyright (C) 2017-2022
 
 This software is licensed under a dual BSD and GPL v2 license.
 See [LICENSE](LICENSE) file at the root folder of the project.
@@ -96,11 +96,14 @@ folder, notable ones being:
   * Pollard--Rho, Miller--Rabin and square residues over finite fields.
   * The RSA cryptosystem as defined in the PKCS#1 [RFC8017](https://datatracker.ietf.org/doc/html/rfc8017)
 standard. This implementation also comes with the integration of deprecated hash
-functions such as MD2, MD4, MD5, SHA-1 and so on in order to be compliant with existing
+functions such as MD2, MD4, MD5, SHA-0, SHA-1, MDC-2, GOSTR34-11-94 and so on in order to be compliant with existing
 signatures (e.g. in X.509). These primitives are **not** included in the core
 library on purpose: they are **dangerous and broken** and must only be used for
 tests purposes.
   * The DSA cryptosystem as defined in [FIPS 186-4](https://csrc.nist.gov/publications/detail/fips/186/4/final).
+  * The SDSA (Schnorr DSA) as defined in ISO14888-3
+  * The KCDSA (Korean DSA) as deinfed in ISO14888-3
+  * The GOSTR34-10-94 function as defined in [RFC4491](https://www.rfc-editor.org/rfc/rfc4491)
   * The SSS (Shamir Secret Sharing) algorithm over a prime field of 256 bits.
 
 

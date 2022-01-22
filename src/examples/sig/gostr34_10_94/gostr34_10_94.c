@@ -374,7 +374,7 @@ int main(int argc, char *argv[])
 	FORCE_USED_VAR(argc);
 	FORCE_USED_VAR(argv);
 
-	/**** Self-signed certificate taken from RFC4357 ****/
+	/**** Self-signed certificate taken from RFC4491 ****/
 	/* NOTE1: we can only perform verification using this self-signed certificate as we do not have the private key!
 	 * NOTE2: id-GostR3410-94-CryptoPro-A-ParamSet (values of p, q, g) are extracted from the same RFC
 	 */
