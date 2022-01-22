@@ -33,6 +33,8 @@ static const ec_test_case ed25519ph_1_test_case = {
 	.sig_type = EDDSA25519PH,
 	.exp_sig = ed25519ph_1_test_vectors_expected_sig,
 	.exp_siglen = sizeof(ed25519ph_1_test_vectors_expected_sig),
+	.adata = NULL,
+	.adata_len = 0
 };
 
 /************************************************/

@@ -26,6 +26,7 @@
 #define SHA384_STATE_SIZE   8
 #define SHA384_BLOCK_SIZE   128
 #define SHA384_DIGEST_SIZE  48
+#define SHA384_DIGEST_SIZE_BITS  384
 
 /* Compute max hash digest and block sizes */
 #ifndef MAX_DIGEST_SIZE
@@ -34,6 +35,14 @@
 #if (MAX_DIGEST_SIZE < SHA384_DIGEST_SIZE)
 #undef MAX_DIGEST_SIZE
 #define MAX_DIGEST_SIZE SHA384_DIGEST_SIZE
+#endif
+
+#ifndef MAX_DIGEST_SIZE_BITS
+#define MAX_DIGEST_SIZE_BITS    0
+#endif
+#if (MAX_DIGEST_SIZE_BITS < SHA384_DIGEST_SIZE_BITS)
+#undef MAX_DIGEST_SIZE_BITS
+#define MAX_DIGEST_SIZE_BITS SHA384_DIGEST_SIZE_BITS
 #endif
 
 #ifndef MAX_BLOCK_SIZE
@@ -45,8 +54,8 @@
 #endif
 
 #define SHA384_HASH_MAGIC ((word_t)(0x9227239b32098412ULL))
-#define SHA384_HASH_CHECK_INITIALIZED(A) \
-	MUST_HAVE((((void *)(A)) != NULL) && ((A)->magic == SHA384_HASH_MAGIC))
+#define SHA384_HASH_CHECK_INITIALIZED(A, ret, err) \
+	MUST_HAVE((((void *)(A)) != NULL) && ((A)->magic == SHA384_HASH_MAGIC), ret, err)
 
 typedef struct {
 	/* Number of bytes processed on 128 bits */
@@ -59,12 +68,12 @@ typedef struct {
 	word_t magic;
 } sha384_context;
 
-void sha384_init(sha384_context *ctx);
-void sha384_update(sha384_context *ctx, const u8 *input, u32 ilen);
-void sha384_final(sha384_context *ctx, u8 output[SHA384_DIGEST_SIZE]);
-void sha384_scattered(const u8 **inputs, const u32 *ilens,
-		      u8 output[SHA384_DIGEST_SIZE]);
-void sha384(const u8 *input, u32 ilen, u8 output[SHA384_DIGEST_SIZE]);
+ATTRIBUTE_WARN_UNUSED_RET int sha384_init(sha384_context *ctx);
+ATTRIBUTE_WARN_UNUSED_RET int sha384_update(sha384_context *ctx, const u8 *input, u32 ilen);
+ATTRIBUTE_WARN_UNUSED_RET int sha384_final(sha384_context *ctx, u8 output[SHA384_DIGEST_SIZE]);
+ATTRIBUTE_WARN_UNUSED_RET int sha384_scattered(const u8 **inputs, const u32 *ilens,
+		     u8 output[SHA384_DIGEST_SIZE]);
+ATTRIBUTE_WARN_UNUSED_RET int sha384(const u8 *input, u32 ilen, u8 output[SHA384_DIGEST_SIZE]);
 
 #endif /* __SHA384_H__ */
 #endif /* WITH_HASH_SHA384 */

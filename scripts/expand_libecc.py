@@ -123,7 +123,8 @@ def legendre_symbol(a, p):
 def mod_sqrt(a, p):
     # Simple cases
     if legendre_symbol(a, p) != 1:
-        return 0
+        # No square residue
+        return None
     elif a == 0:
         return 0
     elif p == 2:
@@ -1088,7 +1089,7 @@ def gen_self_test(curve, hashfunc, sig_alg_sign, sig_alg_verify, sig_alg_genkeyp
         out_vectors += "static int "+test_name+"_test_vectors_get_random(nn_t out, nn_src_t q)\n{\n"
         # k_buf MUST be exported padded to the length of q
         out_vectors += "\tconst u8 k_buf[] = "+bigint_to_C_array(k, getbytelen(curve.q))
-        out_vectors += "\tnn_init_from_buf(out, k_buf, sizeof(k_buf));\n\treturn (nn_cmp(out, q) >= 0);\n}\n"
+        out_vectors += "\tint ret, cmp;\n\tret = nn_init_from_buf(out, k_buf, sizeof(k_buf)); EG(ret, err);\n\tret = nn_cmp(out, q, &cmp); EG(ret, err);\n\tret = (cmp >= 0) ? -1 : 0;\nerr:\n\treturn ret;\n}\n"
         out_vectors += "static const u8 "+test_name+"_test_vectors_priv_key[] = \n"+bigint_to_C_array(keypair.privkey.x, getbytelen(keypair.privkey.x))
         out_vectors += "static const u8 "+test_name+"_test_vectors_expected_sig[] = \n"+bigint_to_C_array(stringtoint(sig), len(sig))
         out_vectors += "static const ec_test_case "+test_name+"_test_case = {\n"
@@ -1137,7 +1138,7 @@ def gen_self_test(curve, hashfunc, sig_alg_sign, sig_alg_verify, sig_alg_genkeyp
             out_vectors += "static int "+test_name+"_test_vectors_get_random(nn_t out, nn_src_t q)\n{\n"
             # k_buf MUST be exported padded to the length of q
             out_vectors += "\tconst u8 k_buf[] = "+bigint_to_C_array(k, getbytelen(curve.q))
-            out_vectors += "\tnn_init_from_buf(out, k_buf, sizeof(k_buf));\n\treturn (nn_cmp(out, q) >= 0);\n}\n"
+            out_vectors += "\tint ret, cmp;\n\tret = nn_init_from_buf(out, k_buf, sizeof(k_buf)); EG(ret, err);\n\tret = nn_cmp(out, q, &cmp); EG(ret, err);\n\tret = (cmp >= 0) ? -1 : 0;\nerr:\n\treturn ret;\n}\n"
             out_vectors += "static const u8 "+test_name+"_test_vectors_priv_key[] = \n"+bigint_to_C_array(keypair.privkey.x, getbytelen(keypair.privkey.x))
             out_vectors += "static const u8 "+test_name+"_test_vectors_expected_sig[] = \n"+bigint_to_C_array(stringtoint(sig), len(sig))
             out_vectors += "static const ec_test_case "+test_name+"_test_case = {\n"
@@ -1309,7 +1310,7 @@ def parse_DER_ECParameters(derbuf):
         gx = stringtoint(ECPoint)
         alpha = (pow(gx, 3, prime) + (a * gx) + b) % prime
         beta = mod_sqrt(alpha, prime)
-        if (beta == 0) and (alpha != 0):
+        if (beta == None) or ((beta == 0) and (alpha != 0)):
             return (False, 0)
         if (beta & 0x1) == (ECPoint_type & 0x1):
             gy = beta

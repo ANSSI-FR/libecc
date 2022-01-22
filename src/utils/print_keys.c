@@ -17,10 +17,26 @@
 
 void priv_key_print(const char *msg, const ec_priv_key *priv)
 {
+	int ret;
+
+	MUST_HAVE(msg != NULL, ret, err);
+	ret = priv_key_check_initialized(priv); EG(ret, err);
+
 	nn_print(msg, &(priv->x));
+
+err:
+	return;
 }
 
 void pub_key_print(const char *msg, const ec_pub_key *pub)
 {
+	int ret;
+
+	MUST_HAVE(msg != NULL, ret, err);
+	ret = pub_key_check_initialized(pub); EG(ret, err);
+
 	ec_point_print(msg, &(pub->y));
+
+err:
+	return;
 }

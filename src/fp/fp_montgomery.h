@@ -21,10 +21,10 @@
 #include "fp_mul.h"
 #include "fp_mul_redc1.h"
 
-void fp_add_monty(fp_t out, fp_src_t in1, fp_src_t in2);
-void fp_sub_monty(fp_t out, fp_src_t in1, fp_src_t in2);
-void fp_mul_monty(fp_t out, fp_src_t in1, fp_src_t in2);
-void fp_sqr_monty(fp_t out, fp_src_t in);
-void fp_div_monty(fp_t out, fp_src_t in1, fp_src_t in2);
+ATTRIBUTE_WARN_UNUSED_RET int fp_add_monty(fp_t out, fp_src_t in1, fp_src_t in2);
+ATTRIBUTE_WARN_UNUSED_RET int fp_sub_monty(fp_t out, fp_src_t in1, fp_src_t in2);
+ATTRIBUTE_WARN_UNUSED_RET int fp_mul_monty(fp_t out, fp_src_t in1, fp_src_t in2);
+ATTRIBUTE_WARN_UNUSED_RET int fp_sqr_monty(fp_t out, fp_src_t in);
+ATTRIBUTE_WARN_UNUSED_RET int fp_div_monty(fp_t out, fp_src_t in1, fp_src_t in2);
 
 #endif /* __FP_MONTGOMERY_H__ */

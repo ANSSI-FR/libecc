@@ -38,6 +38,10 @@ WARNING_CFLAGS = -Weverything -Werror \
 		 -Wno-reserved-id-macro -Wno-padded \
 		 -Wno-packed -Wno-covered-switch-default \
 		 -Wno-used-but-marked-unused -Wno-switch-enum
+# Add warnings if we are in pedantic mode
+ifeq ($(PEDANTIC),1)
+WARNING_CFLAGS += -Werror -Walloca -Wcast-qual -Wconversion -Wformat=2 -Wformat-security -Wnull-dereference -Wstack-protector -Wvla -Warray-bounds -Warray-bounds-pointer-arithmetic -Wassign-enum -Wbad-function-cast -Wconditional-uninitialized -Wconversion -Wfloat-equal -Wformat-type-confusion -Widiomatic-parentheses -Wimplicit-fallthrough -Wloop-analysis -Wpointer-arith -Wshift-sign-overflow -Wshorten-64-to-32 -Wtautological-constant-in-range-compare -Wunreachable-code-aggressive -Wthread-safety -Wthread-safety-beta -Wcomma
+endif
 # Clang version >= 13? Adapt
 CLANG_VERSION_GTE_13 := $(shell echo `$(CC) -dumpversion | cut -f1-2 -d.` \>= 13.0 | sed -e 's/\./*100+/g' | bc)
   ifeq ($(CLANG_VERSION_GTE_13), 1)
@@ -46,6 +50,10 @@ CLANG_VERSION_GTE_13 := $(shell echo `$(CC) -dumpversion | cut -f1-2 -d.` \>= 13
   endif
 else
 WARNING_CFLAGS = -W -Werror -Wextra -Wall -Wunreachable-code
+# Add warnings if we are in pedantic mode
+ifeq ($(PEDANTIC),1)
+WARNING_CFLAGS += -Wpedantic -Wformat=2 -Wformat-overflow=2 -Wformat-truncation=2 -Wformat-security -Wnull-dereference -Wstack-protector -Wtrampolines -Walloca -Wvla -Warray-bounds=2 -Wimplicit-fallthrough=3 -Wshift-overflow=2 -Wcast-qual -Wstringop-overflow=4 -Wconversion -Warith-conversion -Wlogical-op -Wduplicated-cond -Wduplicated-branches -Wformat-signedness -Wshadow -Wstrict-overflow=2 -Wundef -Wstrict-prototypes -Wswitch-default -Wcast-align=strict -Wjump-misses-init
+endif
 endif
 
 ifeq ($(WNOERROR), 1)
@@ -190,12 +198,17 @@ ifeq ($(ADALWAYS), 0)
 CFLAGS += -DUSE_MONTY_LADDER
 endif
 
-# Force Double and Add always usage
+# Force Montgomery Ladder always usage
 ifeq ($(LADDER), 1)
 CFLAGS += -DUSE_MONTY_LADDER
 endif
 ifeq ($(LADDER), 0)
 CFLAGS += -DUSE_DOUBLE_ADD_ALWAYS
+endif
+
+# Force small stack usage
+ifeq ($(SMALLSTACK), 1)
+CFLAGS += -DUSE_SMALL_STACK
 endif
 
 # Are we sure we will not execute known
@@ -209,16 +222,29 @@ endif
 # which is DANGEROUS. Do not activate in production
 # mode!
 ifeq ($(CRYPTOFUZZ), 1)
-CFLAGS += -DUSE_CRYPTOFUZZ -ffreestanding
+CFLAGS += -DUSE_CRYPTOFUZZ
 endif
 
 ifeq ($(ASSERT_PRINT), 1)
 CFLAGS += -DUSE_ASSERT_PRINT
 endif
 
+# By default, we want to catch all unused functions return values by
+# triggering a warning. We deactivate this is we are asked to by the user.
+ifneq ($(NO_WARN_UNUSED_RET), 1)
+CFLAGS += -DUSE_WARN_UNUSED_RET
+endif
+
 # Do we want to use clang or gcc sanitizers?
 ifeq ($(USE_SANITIZERS),1)
-CFLAGS += -fsanitize=undefined -fsanitize=address
+CFLAGS += -fsanitize=undefined -fsanitize=address -fsanitize=leak
+  ifneq ($(CLANG),)
+    # Clang version < 12 do not support unsigned-shift-base
+    CLANG_VERSION_GTE_12 := $(shell echo `$(CC) -dumpversion | cut -f1-2 -d.` \>= 12.0 | sed -e 's/\./*100+/g' | bc)
+    ifeq ($(CLANG_VERSION_GTE_12), 1)
+      CFLAGS += -fsanitize=integer -fno-sanitize=unsigned-integer-overflow -fno-sanitize=unsigned-shift-base
+    endif
+  endif
 endif
 
 # Do we want to use the ISO14888-3 version of the
@@ -226,4 +252,19 @@ endif
 # RFC references?
 ifeq ($(USE_ISO14888_3_ECRDSA),1)
 CFLAGS += -DUSE_ISO14888_3_ECRDSA
+endif
+
+# Do we have a C++ compiler instead of a C compiler?
+GPP := $(shell $(CC) -v 2>&1 | grep g++)
+CLANGPP := $(shell echo $(CC) | grep clang++)
+
+# g++ case
+ifneq ($(GPP),)
+CFLAGS := $(patsubst -std=c99, -std=c++2a, $(CFLAGS))
+CFLAGS += -Wno-deprecated
+endif
+# clang++ case
+ifneq ($(CLANGPP),)
+CFLAGS := $(patsubst -std=c99, -std=c++2a, $(CFLAGS))
+CFLAGS += -Wno-deprecated -Wno-c++98-c++11-c++14-c++17-compat-pedantic -Wno-old-style-cast -Wno-zero-as-null-pointer-constant -Wno-c++98-compat-pedantic
 endif

@@ -20,6 +20,7 @@
 
 #define STREEBOG256_BLOCK_SIZE   STREEBOG_BLOCK_SIZE
 #define STREEBOG256_DIGEST_SIZE  32
+#define STREEBOG256_DIGEST_SIZE_BITS  256
 
 /* Compute max hash digest and block sizes */
 #ifndef MAX_DIGEST_SIZE
@@ -28,6 +29,14 @@
 #if (MAX_DIGEST_SIZE < STREEBOG256_DIGEST_SIZE)
 #undef MAX_DIGEST_SIZE
 #define MAX_DIGEST_SIZE STREEBOG256_DIGEST_SIZE
+#endif
+
+#ifndef MAX_DIGEST_SIZE_BITS
+#define MAX_DIGEST_SIZE_BITS    0
+#endif
+#if (MAX_DIGEST_SIZE_BITS < STREEBOG256_DIGEST_SIZE_BITS)
+#undef MAX_DIGEST_SIZE_BITS
+#define MAX_DIGEST_SIZE_BITS STREEBOG256_DIGEST_SIZE_BITS
 #endif
 
 #ifndef MAX_BLOCK_SIZE
@@ -39,17 +48,18 @@
 #endif
 
 #define STREEBOG256_HASH_MAGIC ((word_t)(0x11221a2122328332ULL))
-#define STREEBOG256_HASH_CHECK_INITIALIZED(A) \
-	MUST_HAVE((((void *)(A)) != NULL) && ((A)->magic == STREEBOG256_HASH_MAGIC))
+#define STREEBOG256_HASH_CHECK_INITIALIZED(A, ret, err) \
+	MUST_HAVE((((void *)(A)) != NULL) && ((A)->magic == STREEBOG256_HASH_MAGIC) && \
+		  ((A)->streebog_digest_size == STREEBOG256_DIGEST_SIZE) && ((A)->streebog_block_size == STREEBOG256_BLOCK_SIZE), ret, err)
 
 typedef streebog_context streebog256_context;
 
-void streebog256_init(streebog256_context *ctx);
-void streebog256_update(streebog256_context *ctx, const u8 *input, u32 ilen);
-void streebog256_final(streebog256_context *ctx, u8 output[STREEBOG256_DIGEST_SIZE]);
-void streebog256_scattered(const u8 **inputs, const u32 *ilens,
+ATTRIBUTE_WARN_UNUSED_RET int streebog256_init(streebog256_context *ctx);
+ATTRIBUTE_WARN_UNUSED_RET int streebog256_update(streebog256_context *ctx, const u8 *input, u32 ilen);
+ATTRIBUTE_WARN_UNUSED_RET int streebog256_final(streebog256_context *ctx, u8 output[STREEBOG256_DIGEST_SIZE]);
+ATTRIBUTE_WARN_UNUSED_RET int streebog256_scattered(const u8 **inputs, const u32 *ilens,
 			   u8 output[STREEBOG256_DIGEST_SIZE]);
-void streebog256(const u8 *input, u32 ilen, u8 output[STREEBOG256_DIGEST_SIZE]);
+ATTRIBUTE_WARN_UNUSED_RET int streebog256(const u8 *input, u32 ilen, u8 output[STREEBOG256_DIGEST_SIZE]);
 
 #endif /* __STREEBOG256_H__ */
 #endif /* WITH_HASH_STREEBOG256 */

@@ -23,51 +23,54 @@
  *   Legendre(a) = a^((p-1)/2) (p) = { -1, 0, 1 }
  *
  */
-static int legendre(fp_src_t a)
+ATTRIBUTE_WARN_UNUSED_RET static int legendre(fp_src_t a)
 {
-	int ret;
-	/* The result if the exponentiation is in Fp */
-	fp pow;
-	/* The element 1 in the field */
-	fp one;
-	/* The power exponent is in NN */
-	nn exp;
+	int ret, iszero, cmp;
+	fp pow; /* The result if the exponentiation is in Fp */
+	fp one; /* The element 1 in the field */
+	nn exp; /* The power exponent is in NN */
+	pow.magic = one.magic = WORD(0);
+	exp.magic = WORD(0);
 
 	/* Initialize elements */
-	fp_init(&pow, a->ctx);
-	fp_init(&one, a->ctx);
-	nn_init(&exp, 0);
+	ret = fp_check_initialized(a); EG(ret, err);
+	ret = fp_init(&pow, a->ctx); EG(ret, err);
+	ret = fp_init(&one, a->ctx); EG(ret, err);
+	ret = nn_init(&exp, 0); EG(ret, err);
 
 	/* Initialize our variables from the Fp context of the
 	 * input a.
 	 */
-	fp_init(&pow, a->ctx);
-	fp_init(&one, a->ctx);
-	nn_init(&exp, 0);
+	ret = fp_init(&pow, a->ctx); EG(ret, err);
+	ret = fp_init(&one, a->ctx); EG(ret, err);
+	ret = nn_init(&exp, 0); EG(ret, err);
 
 	/* one = 1 in Fp */
-	fp_one(&one);
+	ret = fp_one(&one); EG(ret, err);
 
 	/* Compute the exponent (p-1)/2
 	 * The computation is done in NN, and the division by 2
 	 * is performed using a right shift by one
 	 */
-	nn_dec(&exp, &(a->ctx->p));
-	nn_rshift(&exp, &exp, 1);
+	ret = nn_dec(&exp, &(a->ctx->p)); EG(ret, err);
+	ret = nn_rshift(&exp, &exp, 1); EG(ret, err);
 
 	/* Compute a^((p-1)/2) in Fp using our fp_pow
 	 * API.
 	 */
-	fp_pow(&pow, a, &exp);
+	ret = fp_pow(&pow, a, &exp); EG(ret, err);
 
-	if (fp_iszero(&pow)) {
+	ret = fp_iszero(&pow, &iszero); EG(ret, err);
+	ret = fp_cmp(&pow, &one, &cmp); EG(ret, err);
+	if (iszero) {
 		ret = 0;
-	} else if (fp_cmp(&pow, &one) == 0) {
+	} else if (cmp == 0) {
 		ret = 1;
 	} else {
 		ret = -1;
 	}
 
+err:
 	/* Cleaning */
 	fp_uninit(&pow);
 	fp_uninit(&one);
@@ -103,141 +106,153 @@ static int legendre(fp_src_t a)
  */
 int fp_sqrt(fp_t sqrt1, fp_t sqrt2, fp_src_t n)
 {
-	int ret;
+	int ret, iszero, cmp, isodd;
 	nn q, s, one_nn, two_nn, m, i, tmp_nn;
 	fp z, t, b, r, c, one_fp, tmp_fp, __n;
 	fp_t _n = &__n;
+	q.magic = s.magic = one_nn.magic = two_nn.magic = m.magic = WORD(0);
+	i.magic = tmp_nn.magic = z.magic = t.magic = b.magic = WORD(0);
+	r.magic = c.magic = one_fp.magic = tmp_fp.magic = __n.magic = WORD(0);
 
-	nn_init(&q, 0);
-	nn_init(&s, 0);
-	nn_init(&tmp_nn, 0);
-	nn_init(&one_nn, 0);
-	nn_init(&two_nn, 0);
-	nn_init(&m, 0);
-	nn_init(&i, 0);
-	fp_init(&z, n->ctx);
-	fp_init(&t, n->ctx);
-	fp_init(&b, n->ctx);
-	fp_init(&r, n->ctx);
-	fp_init(&c, n->ctx);
-	fp_init(&one_fp, n->ctx);
-	fp_init(&tmp_fp, n->ctx);
+	ret = nn_init(&q, 0); EG(ret, err);
+	ret = nn_init(&s, 0); EG(ret, err);
+	ret = nn_init(&tmp_nn, 0); EG(ret, err);
+	ret = nn_init(&one_nn, 0); EG(ret, err);
+	ret = nn_init(&two_nn, 0); EG(ret, err);
+	ret = nn_init(&m, 0); EG(ret, err);
+	ret = nn_init(&i, 0); EG(ret, err);
+	ret = fp_init(&z, n->ctx); EG(ret, err);
+	ret = fp_init(&t, n->ctx); EG(ret, err);
+	ret = fp_init(&b, n->ctx); EG(ret, err);
+	ret = fp_init(&r, n->ctx); EG(ret, err);
+	ret = fp_init(&c, n->ctx); EG(ret, err);
+	ret = fp_init(&one_fp, n->ctx); EG(ret, err);
+	ret = fp_init(&tmp_fp, n->ctx); EG(ret, err);
 
 	/* Handle input aliasing */
-	fp_copy(_n, n);
+	ret = fp_copy(_n, n); EG(ret, err);
 
 	/* Initialize outputs */
-	fp_init(sqrt1, _n->ctx);
-	fp_init(sqrt2, _n->ctx);
+	ret = fp_init(sqrt1, _n->ctx); EG(ret, err);
+	ret = fp_init(sqrt2, _n->ctx); EG(ret, err);
 
 	/* one_nn = 1 in NN */
-	nn_one(&one_nn);
+	ret = nn_one(&one_nn); EG(ret, err);
 	/* two_nn = 2 in NN */
-	nn_set_word_value(&two_nn, WORD(2));
+	ret = nn_set_word_value(&two_nn, WORD(2)); EG(ret, err);
 
 	/* If our p prime of Fp is 2, then return the input as square roots */
-	if (nn_cmp(&(_n->ctx->p), &two_nn) == 0) {
-		fp_copy(sqrt1, _n);
-		fp_copy(sqrt2, _n);
+	ret = nn_cmp(&(_n->ctx->p), &two_nn, &cmp); EG(ret, err);
+	if (cmp == 0) {
+		ret = fp_copy(sqrt1, _n); EG(ret, err);
+		ret = fp_copy(sqrt2, _n); EG(ret, err);
 		ret = 0;
-		goto out;
+		goto err;
 	}
 
 	/* Square root of 0 is 0 */
-	if (fp_iszero(_n)) {
-		fp_zero(sqrt1);
-		fp_zero(sqrt2);
+	ret = fp_iszero(_n, &iszero); EG(ret, err);
+	if (iszero) {
+		ret = fp_zero(sqrt1); EG(ret, err);
+		ret = fp_zero(sqrt2); EG(ret, err);
 		ret = 0;
-		goto out;
+		goto err;
 	}
 	/* Step 0. Check that n is indeed a square  : (n | p) must be ≡ 1 */
 	if (legendre(_n) != 1) {
 		/* a is not a square */
 		ret = -1;
-		goto out;
+		goto err;
 	}
 	/* Step 1. [Factors out powers of 2 from p-1] Define q -odd- and s such as p-1 = q * 2^s */
 	/* s = 0 */
-	nn_zero(&s);
+	ret = nn_zero(&s); EG(ret, err);
 	/* q = p - 1 */
-	nn_copy(&q, &(_n->ctx->p));
-	nn_dec(&q, &q);
+	ret = nn_copy(&q, &(_n->ctx->p)); EG(ret, err);
+	ret = nn_dec(&q, &q); EG(ret, err);
 	while (1) {
 		/* i is used as a temporary unused variable here */
-		nn_divrem(&tmp_nn, &i, &q, &two_nn);
-		nn_inc(&s, &s);
-		nn_copy(&q, &tmp_nn);
+		ret = nn_divrem(&tmp_nn, &i, &q, &two_nn); EG(ret, err);
+		ret = nn_inc(&s, &s); EG(ret, err);
+		ret = nn_copy(&q, &tmp_nn); EG(ret, err);
 		/* If r is odd, we have finished our division */
-		if (nn_isodd(&q)) {
+		ret = nn_isodd(&q, &isodd); EG(ret, err);
+		if (isodd) {
 			break;
 		}
 	}
 	/* - if s = 1 , i.e p ≡ 3 (mod 4) , output the two solutions r ≡ +/- n^((p+1)/4) . */
-	if (nn_cmp(&s, &one_nn) == 0) {
-		nn_inc(&tmp_nn, &(_n->ctx->p));
-		nn_rshift(&tmp_nn, &tmp_nn, 2);
-		fp_pow(sqrt1, _n, &tmp_nn);
-		fp_neg(sqrt2, sqrt1);
+	ret = nn_cmp(&s, &one_nn, &cmp); EG(ret, err);
+	if (cmp == 0) {
+		ret = nn_inc(&tmp_nn, &(_n->ctx->p)); EG(ret, err);
+		ret = nn_rshift(&tmp_nn, &tmp_nn, 2); EG(ret, err);
+		ret = fp_pow(sqrt1, _n, &tmp_nn); EG(ret, err);
+		ret = fp_neg(sqrt2, sqrt1); EG(ret, err);
 		ret = 0;
-		goto out;
+		goto err;
 	}
 	/* Step 2. Select a non-square z such as (z | p) = -1 , and set c ≡ z^q . */
-	fp_zero(&z);
+	ret = fp_zero(&z); EG(ret, err);
 	while (legendre(&z) != -1) {
-		fp_inc(&z, &z);
+		ret = fp_inc(&z, &z); EG(ret, err);
 	}
-	fp_pow(&c, &z, &q);
+	ret = fp_pow(&c, &z, &q); EG(ret, err);
 	/* Step 3. Set r ≡ n ^((q+1)/2) , t ≡ n^q, m = s . */
-	nn_inc(&tmp_nn, &q);
-	nn_rshift(&tmp_nn, &tmp_nn, 1);
-	fp_pow(&r, _n, &tmp_nn);
-	fp_pow(&t, _n, &q);
-	nn_copy(&m, &s);
-	fp_one(&one_fp);
+	ret = nn_inc(&tmp_nn, &q); EG(ret, err);
+	ret = nn_rshift(&tmp_nn, &tmp_nn, 1); EG(ret, err);
+	ret = fp_pow(&r, _n, &tmp_nn); EG(ret, err);
+	ret = fp_pow(&t, _n, &q); EG(ret, err);
+	ret = nn_copy(&m, &s); EG(ret, err);
+	ret = fp_one(&one_fp); EG(ret, err);
 
 	/* Step 4. Loop. */
 	while (1) {
 		/* - if t ≡ 1 output r, p-r . */
-		if (fp_cmp(&t, &one_fp) == 0) {
-			fp_copy(sqrt1, &r);
-			fp_neg(sqrt2, sqrt1);
+		ret = fp_cmp(&t, &one_fp, &cmp); EG(ret, err);
+		if (cmp == 0) {
+			ret = fp_copy(sqrt1, &r); EG(ret, err);
+			ret = fp_neg(sqrt2, sqrt1); EG(ret, err);
 			ret = 0;
-			goto out;
+			goto err;
 		}
 		/* - Otherwise find, by repeated squaring, the lowest i , 0 < i < m , such as t^(2^i) ≡ 1 */
-		nn_one(&i);
-		fp_copy(&tmp_fp, &t);
+		ret = nn_one(&i); EG(ret, err);
+		ret = fp_copy(&tmp_fp, &t); EG(ret, err);
 		while (1) {
-			fp_sqr(&tmp_fp, &tmp_fp);
-			if (fp_cmp(&tmp_fp, &one_fp) == 0) {
+			ret = fp_sqr(&tmp_fp, &tmp_fp); EG(ret, err);
+			ret = fp_cmp(&tmp_fp, &one_fp, &cmp); EG(ret, err);
+			if (cmp == 0) {
 				break;
 			}
-			nn_inc(&i, &i);
-			if (nn_cmp(&i, &m) == 0) {
+			ret = nn_inc(&i, &i); EG(ret, err);
+			ret = nn_cmp(&i, &m, &cmp); EG(ret, err);
+			if (cmp == 0) {
 				/* i has reached m, that should not happen ... */
 				ret = -2;
-				goto out;
+				goto err;
 			}
 		}
 		/* - Let b ≡ c^(2^(m-i-1)), and set r ≡ r*b, t ≡ t*b^2 , c ≡ b^2 and m = i. */
-		nn_sub(&tmp_nn, &m, &i);
-		nn_dec(&tmp_nn, &tmp_nn);
-		fp_copy(&b, &c);
-		while (!nn_iszero(&tmp_nn)) {
-			fp_sqr(&b, &b);
-			nn_dec(&tmp_nn, &tmp_nn);
+		ret = nn_sub(&tmp_nn, &m, &i); EG(ret, err);
+		ret = nn_dec(&tmp_nn, &tmp_nn); EG(ret, err);
+		ret = fp_copy(&b, &c); EG(ret, err);
+		ret = nn_iszero(&tmp_nn, &iszero); EG(ret, err);
+		while (!iszero) {
+			ret = fp_sqr(&b, &b); EG(ret, err);
+			ret = nn_dec(&tmp_nn, &tmp_nn); EG(ret, err);
+			ret = nn_iszero(&tmp_nn, &iszero); EG(ret, err);
 		}
 		/* r ≡ r*b */
-		fp_mul(&r, &r, &b);
+		ret = fp_mul(&r, &r, &b); EG(ret, err);
 		/* c ≡ b^2 */
-		fp_sqr(&c, &b);
+		ret = fp_sqr(&c, &b); EG(ret, err);
 		/* t ≡ t*b^2 */
-		fp_mul(&t, &t, &c);
+		ret = fp_mul(&t, &t, &c); EG(ret, err);
 		/* m = i */
-		nn_copy(&m, &i);
+		ret = nn_copy(&m, &i); EG(ret, err);
 	}
 
- out:
+ err:
 	/* Uninitialize local variables */
 	nn_uninit(&q);
 	nn_uninit(&s);
@@ -253,7 +268,9 @@ int fp_sqrt(fp_t sqrt1, fp_t sqrt2, fp_src_t n)
 	fp_uninit(&c);
 	fp_uninit(&one_fp);
 	fp_uninit(&tmp_fp);
-	fp_uninit(_n);
+	fp_uninit(&__n);
+
+	PTR_NULLIFY(_n);
 
 	return ret;
 }

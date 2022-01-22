@@ -17,18 +17,18 @@
 #define __LOGICAL_H__
 #include "nn.h"
 
-void nn_rshift_fixedlen(nn_t out, nn_src_t in, bitcnt_t cnt);
-void nn_rshift(nn_t out, nn_src_t in, bitcnt_t cnt);
-void nn_lshift_fixedlen(nn_t out, nn_src_t in, bitcnt_t cnt);
-void nn_lshift(nn_t out, nn_src_t in, bitcnt_t cnt);
-void nn_rrot(nn_t out, nn_src_t in, bitcnt_t cnt, bitcnt_t bitlen);
-void nn_lrot(nn_t out, nn_src_t in, bitcnt_t cnt, bitcnt_t bitlen);
-void nn_xor(nn_t B, nn_src_t C, nn_src_t A);
-void nn_or(nn_t B, nn_src_t C, nn_src_t A);
-void nn_and(nn_t B, nn_src_t C, nn_src_t A);
-void nn_not(nn_t B, nn_src_t A);
-bitcnt_t nn_clz(nn_src_t A);
-bitcnt_t nn_bitlen(nn_src_t A);
-u8 nn_getbit(nn_src_t in, bitcnt_t bit);
+ATTRIBUTE_WARN_UNUSED_RET int nn_rshift_fixedlen(nn_t out, nn_src_t in, bitcnt_t cnt);
+ATTRIBUTE_WARN_UNUSED_RET int nn_rshift(nn_t out, nn_src_t in, bitcnt_t cnt);
+ATTRIBUTE_WARN_UNUSED_RET int nn_lshift_fixedlen(nn_t out, nn_src_t in, bitcnt_t cnt);
+ATTRIBUTE_WARN_UNUSED_RET int nn_lshift(nn_t out, nn_src_t in, bitcnt_t cnt);
+ATTRIBUTE_WARN_UNUSED_RET int nn_rrot(nn_t out, nn_src_t in, bitcnt_t cnt, bitcnt_t bitlen);
+ATTRIBUTE_WARN_UNUSED_RET int nn_lrot(nn_t out, nn_src_t in, bitcnt_t cnt, bitcnt_t bitlen);
+ATTRIBUTE_WARN_UNUSED_RET int nn_xor(nn_t B, nn_src_t C, nn_src_t A);
+ATTRIBUTE_WARN_UNUSED_RET int nn_or(nn_t B, nn_src_t C, nn_src_t A);
+ATTRIBUTE_WARN_UNUSED_RET int nn_and(nn_t B, nn_src_t C, nn_src_t A);
+ATTRIBUTE_WARN_UNUSED_RET int nn_not(nn_t B, nn_src_t A);
+ATTRIBUTE_WARN_UNUSED_RET int nn_clz(nn_src_t A, bitcnt_t *lz);
+ATTRIBUTE_WARN_UNUSED_RET int nn_bitlen(nn_src_t A, bitcnt_t *blen);
+ATTRIBUTE_WARN_UNUSED_RET int nn_getbit(nn_src_t in, bitcnt_t bit, u8 *bitval);
 
 #endif /* __LOGICAL_H__ */

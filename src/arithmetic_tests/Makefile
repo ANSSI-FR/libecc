@@ -10,7 +10,7 @@ NUM_TESTS ?= 1000
 all: bin tests
 
 bin:
-	$(CC) $(BIN_CFLAGS) -DDEBUG -DWITH_STDLIB arithmetic_tests.c $(LIBARITH) $(ROOT_DIR)/src/external_deps/print.c $(BIN_LDFLAGS) -o arithmetic_tests
+	$(CC) $(BIN_CFLAGS) -DDEBUG -DWITH_STDLIB arithmetic_tests.c $(LIBARITH) $(ROOT_DIR)/src/external_deps/print.c $(ROOT_DIR)/src/external_deps/rand.c $(BIN_LDFLAGS) -o arithmetic_tests
 
 tests:	bin
 	# Get the word size and maximum nn bit length

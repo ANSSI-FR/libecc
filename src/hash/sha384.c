@@ -18,16 +18,17 @@
 
 #include "sha384.h"
 
-/* SHA-2 core processing */
-static void sha384_process(sha384_context *ctx,
+/* SHA-2 core processing. Returns 0 on success, -1 on error. */
+ATTRIBUTE_WARN_UNUSED_RET static int sha384_process(sha384_context *ctx,
 			   const u8 data[SHA384_BLOCK_SIZE])
 {
 	u64 a, b, c, d, e, f, g, h;
 	u64 W[80];
 	unsigned int i;
+	int ret;
 
-	MUST_HAVE(data != NULL);
-	SHA384_HASH_CHECK_INITIALIZED(ctx);
+	MUST_HAVE((data != NULL), ret, err);
+	SHA384_HASH_CHECK_INITIALIZED(ctx, ret, err);
 
 	/* Init our inner variables */
 	a = ctx->sha384_state[0];
@@ -58,12 +59,19 @@ static void sha384_process(sha384_context *ctx,
 	ctx->sha384_state[5] += f;
 	ctx->sha384_state[6] += g;
 	ctx->sha384_state[7] += h;
+
+	ret = 0;
+
+err:
+	return ret;
 }
 
-/* Init hash function */
-void sha384_init(sha384_context *ctx)
+/* Init hash function. Returns 0 on success, -1 on error. */
+int sha384_init(sha384_context *ctx)
 {
-	MUST_HAVE(ctx != NULL);
+	int ret;
+
+	MUST_HAVE((ctx != NULL), ret, err);
 
 	ctx->sha384_total[0] = ctx->sha384_total[1] = 0;
 	ctx->sha384_state[0] = (u64)(0xCBBB9D5DC1059ED8);
@@ -77,68 +85,84 @@ void sha384_init(sha384_context *ctx)
 
 	/* Tell that we are initialized */
 	ctx->magic = SHA384_HASH_MAGIC;
+	ret = 0;
+
+err:
+	return ret;
 }
 
-/* Update hash function */
-void sha384_update(sha384_context *ctx, const u8 *input, u32 ilen)
+/* Update hash function. Returns 0 on success, -1 on error. */
+int sha384_update(sha384_context *ctx, const u8 *input, u32 ilen)
 {
 	u32 left;
 	u32 fill;
 	const u8 *data_ptr = input;
 	u32 remain_ilen = ilen;
+	int ret;
 
-	MUST_HAVE(input != NULL);
-	SHA384_HASH_CHECK_INITIALIZED(ctx);
+	MUST_HAVE((input != NULL), ret, err);
+	SHA384_HASH_CHECK_INITIALIZED(ctx, ret, err);
 
 	/* Nothing to process, return */
 	if (ilen == 0) {
-		return;
+		ret = 0;
+		goto err;
 	}
 
 	/* Get what's left in our local buffer */
-	left = ctx->sha384_total[0] & 0x7F;
-	fill = SHA384_BLOCK_SIZE - left;
+	left = (ctx->sha384_total[0] & 0x7F);
+	fill = (SHA384_BLOCK_SIZE - left);
 
 	ADD_UINT128_UINT64(ctx->sha384_total[0], ctx->sha384_total[1], ilen);
 
 	if ((left > 0) && (remain_ilen >= fill)) {
 		/* Copy data at the end of the buffer */
-		local_memcpy(ctx->sha384_buffer + left, data_ptr, fill);
-		sha384_process(ctx, ctx->sha384_buffer);
+		ret = local_memcpy(ctx->sha384_buffer + left, data_ptr, fill); EG(ret, err);
+		ret = sha384_process(ctx, ctx->sha384_buffer); EG(ret, err);
 		data_ptr += fill;
 		remain_ilen -= fill;
 		left = 0;
 	}
 
 	while (remain_ilen >= SHA384_BLOCK_SIZE) {
-		sha384_process(ctx, data_ptr);
+		ret = sha384_process(ctx, data_ptr); EG(ret, err);
 		data_ptr += SHA384_BLOCK_SIZE;
 		remain_ilen -= SHA384_BLOCK_SIZE;
 	}
 
 	if (remain_ilen > 0) {
-		local_memcpy(ctx->sha384_buffer + left, data_ptr, remain_ilen);
+		ret = local_memcpy(ctx->sha384_buffer + left, data_ptr, remain_ilen); EG(ret, err);
 	}
+
+	ret = 0;
+
+err:
+	return ret;
 }
 
-/* Finalize */
-void sha384_final(sha384_context *ctx, u8 output[SHA384_DIGEST_SIZE])
+/*
+ * Finalize hash function. Returns 0 on success, -1 on error. In all
+ * cases (success or error), hash context is no more usable after the
+ * call.
+ */
+int sha384_final(sha384_context *ctx, u8 output[SHA384_DIGEST_SIZE])
 {
 	unsigned int block_present = 0;
 	u8 last_padded_block[2 * SHA384_BLOCK_SIZE];
+	int ret;
 
-	MUST_HAVE(output != NULL);
-	SHA384_HASH_CHECK_INITIALIZED(ctx);
+	MUST_HAVE((output != NULL), ret, err);
+	SHA384_HASH_CHECK_INITIALIZED(ctx, ret, err);
 
 	/* Fill in our last block with zeroes */
-	local_memset(last_padded_block, 0, sizeof(last_padded_block));
+	ret = local_memset(last_padded_block, 0, sizeof(last_padded_block)); EG(ret, err);
 
 	/* This is our final step, so we proceed with the padding */
-	block_present = ctx->sha384_total[0] % SHA384_BLOCK_SIZE;
+	block_present = (ctx->sha384_total[0] % SHA384_BLOCK_SIZE);
 	if (block_present != 0) {
 		/* Copy what's left in our temporary context buffer */
-		local_memcpy(last_padded_block, ctx->sha384_buffer,
-			     block_present);
+		ret = local_memcpy(last_padded_block, ctx->sha384_buffer,
+			     block_present); EG(ret, err);
 	}
 
 	/* Put the 0x80 byte, beginning of padding  */
@@ -150,14 +174,14 @@ void sha384_final(sha384_context *ctx, u8 output[SHA384_DIGEST_SIZE])
 		PUT_MUL8_UINT128_BE(ctx->sha384_total[0], ctx->sha384_total[1],
 				    last_padded_block,
 				    2 * (SHA384_BLOCK_SIZE - sizeof(u64)));
-		sha384_process(ctx, last_padded_block);
-		sha384_process(ctx, last_padded_block + SHA384_BLOCK_SIZE);
+		ret = sha384_process(ctx, last_padded_block); EG(ret, err);
+		ret = sha384_process(ctx, last_padded_block + SHA384_BLOCK_SIZE); EG(ret, err);
 	} else {
 		/* We do not need an additional block */
 		PUT_MUL8_UINT128_BE(ctx->sha384_total[0], ctx->sha384_total[1],
 				    last_padded_block,
 				    SHA384_BLOCK_SIZE - (2 * sizeof(u64)));
-		sha384_process(ctx, last_padded_block);
+		ret = sha384_process(ctx, last_padded_block); EG(ret, err);
 	}
 
 	/* Output the hash result */
@@ -169,40 +193,57 @@ void sha384_final(sha384_context *ctx, u8 output[SHA384_DIGEST_SIZE])
 	PUT_UINT64_BE(ctx->sha384_state[5], output, 40);
 
 	/* Tell that we are uninitialized */
-	ctx->magic = 0;
+	ctx->magic = WORD(0);
+
+	ret = 0;
+
+err:
+	return ret;
 }
 
-void sha384_scattered(const u8 **inputs, const u32 *ilens,
+/*
+ * Scattered version performing init/update/finalize on a vector of buffers
+ * 'inputs' with the length of each buffer passed via 'ilens'. The function
+ * loops on pointers in 'inputs' until it finds a NULL pointer. The function
+ * returns 0 on success, -1 on error.
+ */
+int sha384_scattered(const u8 **inputs, const u32 *ilens,
 		      u8 output[SHA384_DIGEST_SIZE])
 {
 	sha384_context ctx;
 	int pos = 0;
+	int ret;
 
-	sha384_init(&ctx);
+	MUST_HAVE((inputs != NULL) && (ilens != NULL) && (output != NULL), ret, err);
+
+	ret = sha384_init(&ctx); EG(ret, err);
 
 	while (inputs[pos] != NULL) {
 		const u8 *buf = inputs[pos];
 		u32 buflen = ilens[pos];
 
-		sha384_update(&ctx, buf, buflen);
-
+		ret = sha384_update(&ctx, buf, buflen); EG(ret, err);
 		pos += 1;
 	}
 
-	sha384_final(&ctx, output);
+	ret = sha384_final(&ctx, output);
+
+err:
+	return ret;
 }
 
-void sha384(const u8 *input, u32 ilen, u8 output[SHA384_DIGEST_SIZE])
+/* init/update/finalize on a single buffer 'input' of length 'ilen'. */
+int sha384(const u8 *input, u32 ilen, u8 output[SHA384_DIGEST_SIZE])
 {
-	const u8 *inputs[2];
-	u32 ilens[1];
+	sha384_context ctx;
+	int ret;
 
-	inputs[0] = input;
-	inputs[1] = NULL;
+	ret = sha384_init(&ctx); EG(ret, err);
+	ret = sha384_update(&ctx, input, ilen); EG(ret, err);
+	ret = sha384_final(&ctx, output);
 
-	ilens[0] = ilen;
-
-	sha384_scattered(inputs, ilens, output);
+err:
+	return ret;
 }
 
 #else /* WITH_HASH_SHA384 */

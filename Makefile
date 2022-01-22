@@ -139,7 +139,7 @@ endif
 
 # Hash module
 
-HASH_SRC = $(wildcard src/hash/sha*.c) src/hash/hash_algs.c src/hash/sm3.c src/hash/streebog.c src/hash/hmac.c
+HASH_SRC = $(wildcard src/hash/sha*.c) src/hash/hash_algs.c src/hash/sm3.c src/hash/streebog.c src/hash/ripemd160.c src/hash/hmac.c
 HASH_OBJECTS = $(patsubst %.c, %.o, $(HASH_SRC))
 HASH_DEPS = $(patsubst %.c, %.d, $(HASH_SRC))
 
@@ -150,7 +150,7 @@ src/hash/%.o: src/hash/%.c $(CFG_DEPS)
 	$(if $(filter $(wildcard src/hash/*.c), $<), $(CC) $(LIB_CFLAGS) -c $< -o $@)
 
 
-# Key/Signature/Verification module
+# Key/Signature/Verification/ECDH module
 
 SIG_SRC = $(wildcard src/sig/*dsa.c) src/sig/ecdsa_common.c src/sig/ecsdsa_common.c src/sig/sig_algs.c src/sig/sm2.c src/sig/decdsa.c
 SIG_OBJECTS = $(patsubst %.c, %.o, $(SIG_SRC))
@@ -161,6 +161,16 @@ src/sig/%.d: src/sig/%.c $(NN_CONFIG) $(CFG_DEPS)
 
 src/sig/%.o: src/sig/%.c $(NN_CONFIG) $(CFG_DEPS)
 	$(if $(filter $(wildcard src/sig/*.c), $<), $(CC) $(LIB_CFLAGS) -c $< -o $@)
+
+ECDH_SRC = $(wildcard src/ecdh/*.c)
+ECDH_OBJECTS = $(patsubst %.c, %.o, $(ECDH_SRC))
+ECDH_DEPS = $(patsubst %.c, %.d, $(ECDH_SRC))
+
+src/ecdh/%.d: src/ecdh/%.c $(NN_CONFIG) $(CFG_DEPS)
+	$(if $(filter $(wildcard src/ecdh/*.c), $<), @$(CC) $(LIB_CFLAGS) -MM $< -MF $@)
+
+src/ecdh/%.o: src/ecdh/%.c $(NN_CONFIG) $(CFG_DEPS)
+	$(if $(filter $(wildcard src/ecdh/*.c), $<), $(CC) $(LIB_CFLAGS) -c $< -o $@)
 
 
 KEY_SRC = src/sig/ec_key.c
@@ -174,7 +184,7 @@ $(KEY_OBJECTS): $(KEY_SRC) $(NN_CONFIG) $(CFG_DEPS)
 	$(if $(filter $(wildcard src/sig/*.c), $<), $(CC) $(LIB_CFLAGS) -c $< -o $@)
 
 
-LIBSIGN_OBJECTS = $(LIBEC_OBJECTS) $(HASH_OBJECTS) $(SIG_OBJECTS) $(KEY_OBJECTS) $(UTILS_SIGN_OBJECTS)
+LIBSIGN_OBJECTS = $(LIBEC_OBJECTS) $(HASH_OBJECTS) $(SIG_OBJECTS) $(KEY_OBJECTS) $(UTILS_SIGN_OBJECTS) $(ECDH_OBJECTS)
 $(LIBSIGN): $(LIBSIGN_OBJECTS)
 	$(AR) $(AR_FLAGS) $@ $^
 	$(RANLIB) $(RANLIB_FLAGS) $@

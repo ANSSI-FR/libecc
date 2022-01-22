@@ -20,6 +20,6 @@
 #include "fp_mul.h"
 #include "fp_pow.h"
 
-int fp_sqrt(fp_t sqrt1, fp_t sqrt2, fp_src_t n);
+ATTRIBUTE_WARN_UNUSED_RET int fp_sqrt(fp_t sqrt1, fp_t sqrt2, fp_src_t n);
 
 #endif /* __FP_SQRT_H__ */

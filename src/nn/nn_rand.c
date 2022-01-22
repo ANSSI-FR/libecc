@@ -28,11 +28,15 @@
  */
 int nn_get_random_len(nn_t out, u16 len)
 {
-	MUST_HAVE(len <= NN_MAX_BYTE_LEN);
+	int ret;
 
-	nn_init(out, len);
+	MUST_HAVE((len <= NN_MAX_BYTE_LEN), ret, err);
 
-	return get_random((u8*) out->val, len);
+	ret = nn_init(out, len); EG(ret, err);
+	ret = get_random((u8*) out->val, len);
+
+err:
+	return ret;
 }
 
 /*
@@ -50,16 +54,18 @@ int nn_get_random_len(nn_t out, u16 len)
 int nn_get_random_maxlen(nn_t out, u16 max_len)
 {
 	u16 len;
+	int ret;
 
-	MUST_HAVE(max_len <= NN_MAX_BYTE_LEN);
+	MUST_HAVE((max_len <= NN_MAX_BYTE_LEN), ret, err);
 
-	if(get_random((u8 *)&len, 2)){
-		/* Failure of get_random */
-		return -1;
-	}
-	len %= max_len + 1;
+	ret = get_random((u8 *)&len, 2); EG(ret, err);
 
-	return nn_get_random_len(out, len);
+	len = (u16)(len % (max_len + 1));
+
+	ret = nn_get_random_len(out, len);
+
+err:
+	return ret;
 }
 
 /*
@@ -87,46 +93,38 @@ int nn_get_random_mod(nn_t out, nn_src_t q)
 {
 	nn tmp_rand, qprime;
 	bitcnt_t q_bit_len, q_len;
-	int ret;
+	int ret, isone;
+	qprime.magic = tmp_rand.magic = WORD(0);
 
 	/* Check q is initialized and get its bit length */
-	nn_check_initialized(q);
-	q_bit_len = nn_bitlen(q);
-	q_len = BYTECEIL(q_bit_len);
+	ret = nn_check_initialized(q); EG(ret, err);
+	ret = nn_bitlen(q, &q_bit_len); EG(ret, err);
+	q_len = (bitcnt_t)BYTECEIL(q_bit_len);
 
 	/* Check q is neither 0, nor 1 and its size is ok */
-	if ((!q_len) || nn_isone(q) || (q_len > (NN_MAX_BYTE_LEN / 2))) {
-		ret = -1;
-		goto err;
-	}
+	MUST_HAVE((q_len) && (q_len <= (NN_MAX_BYTE_LEN / 2)), ret, err);
+	MUST_HAVE((!nn_isone(q, &isone)) && (!isone), ret, err);
 
 	/* 1) compute q' = q - 1  */
-	nn_copy(&qprime, q);
-	nn_dec(&qprime, &qprime);
+	ret = nn_copy(&qprime, q); EG(ret, err);
+	ret = nn_dec(&qprime, &qprime); EG(ret, err);
 
 	/* 2) generate a random value tmp_rand twice the size of q */
-	nn_init(&tmp_rand, (u16)(2 * q_len));
-	ret = get_random((u8 *)tmp_rand.val, (u16)(2 * q_len));
-	if (ret == -1) {
-		goto err;
-	}
+	ret = nn_init(&tmp_rand, (u16)(2 * q_len)); EG(ret, err);
+	ret = get_random((u8 *)tmp_rand.val, (u16)(2 * q_len)); EG(ret, err);
 
 	/* 3) compute out = tmp_rand mod q' */
-	nn_init(out, (u16)q_len);
+	ret = nn_init(out, (u16)q_len); EG(ret, err);
+
 	/* Use nn_mod_notrim to avoid exposing the generated random length */
-	nn_mod_notrim(out, &tmp_rand, &qprime);
+	ret = nn_mod_notrim(out, &tmp_rand, &qprime); EG(ret, err);
 
 	/* 4) compute out += 1 */
-	nn_inc(out, out);
-
-	ret = 0;
+	ret = nn_inc(out, out);
 
  err:
-	if(nn_is_initialized(&qprime)){
-		nn_uninit(&qprime);
-	}
-	if(nn_is_initialized(&tmp_rand)){
-		nn_uninit(&tmp_rand);
-	}
+	nn_uninit(&qprime);
+	nn_uninit(&tmp_rand);
+
 	return ret;
 }

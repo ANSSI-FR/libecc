@@ -45,9 +45,10 @@
 #define EC_MAX_SIGLEN ECRDSA_MAX_SIGLEN
 #endif
 
-int ecrdsa_init_pub_key(ec_pub_key *out_pub, const ec_priv_key *in_priv);
+ATTRIBUTE_WARN_UNUSED_RET int ecrdsa_init_pub_key(ec_pub_key *out_pub, const ec_priv_key *in_priv);
 
-u8 ecrdsa_siglen(u16 p_bit_len, u16 q_bit_len, u8 hsize, u8 blocksize);
+ATTRIBUTE_WARN_UNUSED_RET int ecrdsa_siglen(u16 p_bit_len, u16 q_bit_len, u8 hsize, u8 blocksize,
+		  u8 *siglen);
 
 typedef struct {
 	hash_context h_ctx;
@@ -56,12 +57,12 @@ typedef struct {
 
 struct ec_sign_context;
 
-int _ecrdsa_sign_init(struct ec_sign_context *ctx);
+ATTRIBUTE_WARN_UNUSED_RET int _ecrdsa_sign_init(struct ec_sign_context *ctx);
 
-int _ecrdsa_sign_update(struct ec_sign_context *ctx,
+ATTRIBUTE_WARN_UNUSED_RET int _ecrdsa_sign_update(struct ec_sign_context *ctx,
 			const u8 *chunk, u32 chunklen);
 
-int _ecrdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen);
+ATTRIBUTE_WARN_UNUSED_RET int _ecrdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen);
 
 typedef struct {
 	hash_context h_ctx;
@@ -72,13 +73,13 @@ typedef struct {
 
 struct ec_verify_context;
 
-int _ecrdsa_verify_init(struct ec_verify_context *ctx,
+ATTRIBUTE_WARN_UNUSED_RET int _ecrdsa_verify_init(struct ec_verify_context *ctx,
 			const u8 *sig, u8 siglen);
 
-int _ecrdsa_verify_update(struct ec_verify_context *ctx,
+ATTRIBUTE_WARN_UNUSED_RET int _ecrdsa_verify_update(struct ec_verify_context *ctx,
 			  const u8 *chunk, u32 chunklen);
 
-int _ecrdsa_verify_finalize(struct ec_verify_context *ctx);
+ATTRIBUTE_WARN_UNUSED_RET int _ecrdsa_verify_finalize(struct ec_verify_context *ctx);
 
 #endif /* __ECRDSA_H__ */
 #endif /* WITH_SIG_ECRDSA */

@@ -17,8 +17,18 @@
 #include "fp_rand.h"
 #include "../nn/nn_rand.h"
 
+/*
+ * Initialize given Fp element in 'out' storage space to a Fp value chosen
+ * uniformly at random in [1, p-1] where p is provided by 'ctx'. The function
+ * returns 0 on success, -1 on error.
+ */
 int fp_get_random(fp_t out, fp_ctx_src_t ctx)
 {
-	fp_init(out, ctx);
-	return nn_get_random_mod(&(out->fp_val), &(ctx->p));
+	int ret;
+
+	ret = fp_init(out, ctx); EG(ret, err);
+	ret = nn_get_random_mod(&(out->fp_val), &(ctx->p));
+
+err:
+	return ret;
 }

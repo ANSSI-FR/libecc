@@ -12,12 +12,14 @@
 #include "shake.h"
 
 /* Init function depending on the digest size */
-void _shake_init(shake_context *ctx, u8 digest_size, u8 block_size)
+int _shake_init(shake_context *ctx, u8 digest_size, u8 block_size)
 {
-	MUST_HAVE(ctx != NULL);
+	int ret;
+
+	MUST_HAVE((ctx != NULL), ret, err);
 
         /* Zeroize the internal state */
-        local_memset(ctx->shake_state, 0, sizeof(ctx->shake_state));
+        ret = local_memset(ctx->shake_state, 0, sizeof(ctx->shake_state)); EG(ret, err);
 
         ctx->shake_idx = 0;
         ctx->shake_digest_size = digest_size;
@@ -26,16 +28,18 @@ void _shake_init(shake_context *ctx, u8 digest_size, u8 block_size)
 	/* Detect endianness */
 	ctx->shake_endian = arch_is_big_endian() ? SHAKE_BIG : SHAKE_LITTLE;
 
-        return;
+err:
+        return ret;
 }
 
 /* Update hash function */
-void _shake_update(shake_context *ctx, const u8 *input, u32 ilen)
+int _shake_update(shake_context *ctx, const u8 *input, u32 ilen)
 {
         u32 i;
         u8 *state;
+	int ret;
 
-        MUST_HAVE((ctx != NULL) && (input != NULL));
+        MUST_HAVE((ctx != NULL) && (input != NULL), ret, err);
 
         state = (u8*)(ctx->shake_state);
 
@@ -50,18 +54,21 @@ void _shake_update(shake_context *ctx, const u8 *input, u32 ilen)
                         ctx->shake_idx = 0;
                 }
         }
+	ret = 0;
 
-        return;
+err:
+        return ret;
 }
 
 /* Finalize hash function */
-void _shake_finalize(shake_context *ctx, u8 *output)
+int _shake_finalize(shake_context *ctx, u8 *output)
 {
         unsigned int i;
         u8 *state;
+	int ret;
 
-        MUST_HAVE((ctx != NULL) && (output != NULL));
-        MUST_HAVE(ctx->shake_digest_size <= sizeof(ctx->shake_state));
+        MUST_HAVE((ctx != NULL) && (output != NULL), ret, err);
+        MUST_HAVE((ctx->shake_digest_size <= sizeof(ctx->shake_state)), ret, err);
 
         state = (u8*)(ctx->shake_state);
 
@@ -86,5 +93,11 @@ void _shake_finalize(shake_context *ctx, u8 *output)
                 output[i] = (ctx->shake_endian == SHAKE_LITTLE) ? state[i] : state[SWAP64_Idx(i)];
 	}
 
-        return;
+        /* Uninit our context magic */
+        ctx->magic = WORD(0);
+
+        ret = 0;
+
+err:
+        return ret;
 }

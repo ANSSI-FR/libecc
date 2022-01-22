@@ -34,8 +34,8 @@ typedef struct shake_context_ {
 } shake_context;
 
 
-void _shake_init(shake_context *ctx, u8 digest_size, u8 block_size);
-void _shake_update(shake_context *ctx, const u8 *buf, u32 buflen);
-void _shake_finalize(shake_context *ctx, u8 *output);
+ATTRIBUTE_WARN_UNUSED_RET int _shake_init(shake_context *ctx, u8 digest_size, u8 block_size);
+ATTRIBUTE_WARN_UNUSED_RET int _shake_update(shake_context *ctx, const u8 *buf, u32 buflen);
+ATTRIBUTE_WARN_UNUSED_RET int _shake_finalize(shake_context *ctx, u8 *output);
 
 #endif /* __SHAKE_H__ */

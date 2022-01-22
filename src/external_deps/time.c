@@ -26,15 +26,22 @@ int get_ms_time(u64 *time)
 	struct timeval tv;
 	int ret;
 
-	ret = gettimeofday(&tv, NULL);
-	if (ret < 0) {
+	if (time == NULL) {
+		ret = -1;
 		goto err;
 	}
-	*time = (u64)(((tv.tv_sec) * 1000) + ((tv.tv_usec) / 1000));
 
-	return 0;
- err:
-	return -1;
+	ret = gettimeofday(&tv, NULL);
+	if (ret < 0) {
+		ret = -1;
+		goto err;
+	}
+
+	(*time) = (u64)(((tv.tv_sec) * 1000) + ((tv.tv_usec) / 1000));
+	ret = 0;
+
+err:
+	return ret;
 }
 
 /* Windows case */
@@ -43,12 +50,20 @@ int get_ms_time(u64 *time)
 #include <windows.h>
 int get_ms_time(u64 *time)
 {
+	int ret;
 	SYSTEMTIME st;
 
-	GetSystemTime(&st);
-	*time = (((st.wMinute * 60) + st.wSecond) * 1000) + st.wMilliseconds;
+	if (time == NULL) {
+		ret = -1;
+		goto err;
+	}
 
-	return 0;
+	GetSystemTime(&st);
+	(*time) = (u64)((((st.wMinute * 60) + st.wSecond) * 1000) + st.wMilliseconds);
+	ret = 0;
+
+err:
+	return ret;
 }
 
 /* No platform detected, the used must provide an implementation! */
