@@ -106,12 +106,12 @@ int sdsa_sign(const sdsa_priv_key *priv, const u8 *msg, u32 msglen,
 	u8 pi_buf[NN_USABLE_MAX_BYTE_LEN];
 	/* hash context */
 	gen_hash_context hash_ctx;
-	k.magic = k_.magic = r.magic = s.magic = WORD(0);
 #ifdef USE_SIG_BLINDING
 	/* b is the blinding mask */
 	nn b;
 	b.magic = WORD(0);
 #endif /* USE_SIG_BLINDING */
+	k.magic = k_.magic = r.magic = s.magic = WORD(0);
 
 	/* Sanity checks */
 	MUST_HAVE((priv != NULL) && (msg != NULL) && (sig != NULL), ret, err);
@@ -365,8 +365,6 @@ err:
 int main(int argc, char *argv[])
 {
  	int ret = 0;
-	FORCE_USED_VAR(argc);
-	FORCE_USED_VAR(argv);
 
 	/* This example is taken from ISO14888-3 SDSA (Appendix F "Numerical examples" */
 	const u8 p[] = {
@@ -432,6 +430,9 @@ int main(int argc, char *argv[])
 	sdsa_pub_key pub;
 	sdsa_pub_key pub2;
 	u8 sig[32*2] = { 0 };
+
+	FORCE_USED_VAR(argc);
+	FORCE_USED_VAR(argv);
 
 	/* Sanity check on size for DSA.
 	 * NOTE: the double parentheses are here to handle -Wunreachable-code

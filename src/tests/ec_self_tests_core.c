@@ -222,6 +222,8 @@ ATTRIBUTE_WARN_UNUSED_RET static int ec_import_export_test(const ec_test_case *c
 		u8 msg[MAX_MSG_LEN];
 		u8 sig[EC_MAX_SIGLEN];
 		u8 check_type = 0;
+		u8 sig_tmp1[EC_MAX_SIGLEN];
+		u8 sig_tmp2[EC_MAX_SIGLEN];
 		FORCE_USED_VAR(check_type);
 
 		ret = ec_get_sig_len(&params, c->sig_type, c->hash_type,
@@ -250,9 +252,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int ec_import_export_test(const ec_test_case *c
 			ext_printf("Error when signing\n");
 			goto err;
 		}
-		u8 sig_tmp1[EC_MAX_SIGLEN];
 		ret = local_memset(sig_tmp1, 0, sizeof(sig_tmp1)); EG(ret, err);
-		u8 sig_tmp2[EC_MAX_SIGLEN];
 		ret = local_memset(sig_tmp2, 0, sizeof(sig_tmp2)); EG(ret, err);
 		/* If the algorithm supports streaming mode, test it against direct mode */
 		ret = is_sign_streaming_mode_supported(c->sig_type, &check); EG(ret, err);
@@ -350,12 +350,12 @@ ATTRIBUTE_WARN_UNUSED_RET static int ec_import_export_test(const ec_test_case *c
 			ec_pub_key pub_key2;
 			nn_src_t cofactor = &(params.ec_gen_cofactor);
 			int cofactorisone;
+			const u8 *input[2] = { (const u8*)msg , NULL};
+			u32 ilens[2] = { msglen , 0 };
 			/* Initialize our signature context only for the hash */
 			ret = ec_sign_init(&sig_ctx, &kp, c->sig_type, c->hash_type, c->adata, c->adata_len); EG(ret, err);
 			/* Perform the hash of the data ourselves */
 			ret = hash_mapping_callbacks_sanity_check(sig_ctx.h); EG(ret, err);
-			const u8 *input[2] = { (const u8*)msg , NULL};
-			u32 ilens[2] = { msglen , 0 };
 			ret = sig_ctx.h->hfunc_scattered(input, ilens, digest); EG(ret, err);
 			digestlen = sig_ctx.h->digest_size;
 			MUST_HAVE(digestlen <= sizeof(digest), ret, err);
@@ -407,12 +407,12 @@ pubkey_recovery_warning:
 			struct ec_verify_context verif_ctx;
 			u8 digest[MAX_DIGEST_SIZE] = { 0 };
 			u8 digestlen;
+			const u8 *input[2] = { (const u8*)msg , NULL};
+			u32 ilens[2] = { msglen , 0 };
 			/* Initialize our signature context */
 			ret = ec_sign_init(&sig_ctx, &kp, c->sig_type, c->hash_type, c->adata, c->adata_len); EG(ret, err);
 			/* Perform the hash of the data ourselves */
 			ret = hash_mapping_callbacks_sanity_check(sig_ctx.h); EG(ret, err);
-			const u8 *input[2] = { (const u8*)msg , NULL};
-			u32 ilens[2] = { msglen , 0 };
 			ret = sig_ctx.h->hfunc_scattered(input, ilens, digest); EG(ret, err);
 			digestlen = sig_ctx.h->digest_size;
 			MUST_HAVE(digestlen <= sizeof(digest), ret, err);
@@ -643,12 +643,12 @@ ATTRIBUTE_WARN_UNUSED_RET static int ec_sig_known_vector_tests_one(const ec_test
 		ec_pub_key pub_key2;
 		nn_src_t cofactor = &(params.ec_gen_cofactor);
 		int cofactorisone;
+		const u8 *input[2] = { (const u8*)(c->msg) , NULL};
+		u32 ilens[2] = { c->msglen , 0 };
 		/* Initialize our signature context only for the hash */
 		ret = ec_sign_init(&sig_ctx, &kp, c->sig_type, c->hash_type, c->adata, c->adata_len); EG(ret, err);
 		/* Perform the hash of the data ourselves */
 		ret = hash_mapping_callbacks_sanity_check(sig_ctx.h); EG(ret, err);
-		const u8 *input[2] = { (const u8*)(c->msg) , NULL};
-		u32 ilens[2] = { c->msglen , 0 };
 		ret = sig_ctx.h->hfunc_scattered(input, ilens, digest); EG(ret, err);
 		digestlen = sig_ctx.h->digest_size;
 		MUST_HAVE(digestlen <= sizeof(digest), ret, err);
@@ -701,6 +701,12 @@ pubkey_recovery_warning:
 		struct ec_verify_context verif_ctx;
 		u8 digest[MAX_DIGEST_SIZE] = { 0 };
 		u8 digestlen;
+		const u8 *input[2] = { (const u8*)(c->msg) , NULL};
+		u32 ilens[2] = { c->msglen , 0 };
+		u8 nonce[LOCAL_MIN(255, BIT_LEN_WORDS(NN_MAX_BIT_LEN) * (WORDSIZE / 8))] = { 0 };
+		nn n_nonce;
+		bitcnt_t q_bit_len;
+		u8 noncelen;
 		/* Initialize our signature context */
 		if(ec_sign_init(&sig_ctx, &kp, c->sig_type, c->hash_type, c->adata, c->adata_len)){
 			ret = -1;
@@ -713,15 +719,11 @@ pubkey_recovery_warning:
 			failed_test = TEST_SIG_ERROR;
 			goto err;
 		}
-		const u8 *input[2] = { (const u8*)(c->msg) , NULL};
-		u32 ilens[2] = { c->msglen , 0 };
 		ret = sig_ctx.h->hfunc_scattered(input, ilens, digest); EG(ret, err);
 		digestlen = sig_ctx.h->digest_size;
 		MUST_HAVE(digestlen <= sizeof(digest), ret, err);
 		/* Import the fixed nonce */
-		u8 nonce[LOCAL_MIN(255, BIT_LEN_WORDS(NN_MAX_BIT_LEN) * (WORDSIZE / 8))] = { 0 };
-		nn n_nonce;
-		bitcnt_t q_bit_len = kp.priv_key.params->ec_gen_order_bitlen;
+		q_bit_len = kp.priv_key.params->ec_gen_order_bitlen;
 		if(c->nn_random(&n_nonce, &(kp.priv_key.params->ec_gen_order))){
 			ret = -1;
 			failed_test = TEST_SIG_ERROR;
@@ -733,7 +735,7 @@ pubkey_recovery_warning:
 			failed_test = TEST_SIG_ERROR;
 			goto err;
 		}
-		u8 noncelen = (u8)(BYTECEIL(q_bit_len));
+		noncelen = (u8)(BYTECEIL(q_bit_len));
 		/* Force used variable to avoid warnings */
 		FORCE_USED_VAR(noncelen);
 		/* NOTE: the MUST_HAVE is protected by a preprocessing check
@@ -1155,8 +1157,6 @@ ATTRIBUTE_WARN_UNUSED_RET static int rand_sig_verif_test_one(const ec_sig_mappin
 	int ret, check;
 	u32 len;
 
-	ret = local_memset(test_name, 0, sizeof(test_name)); EG(ret, err);
-
 #if defined(WITH_SIG_EDDSA25519) || defined(WITH_SIG_SM2)
 	u8 rand_adata[255];
 	ret = local_memset(rand_adata, 0, sizeof(rand_adata));
@@ -1164,6 +1164,8 @@ ATTRIBUTE_WARN_UNUSED_RET static int rand_sig_verif_test_one(const ec_sig_mappin
 	 * Create a random string of size <= 255 for this.
 	 */
 #endif
+	ret = local_memset(test_name, 0, sizeof(test_name)); EG(ret, err);
+
 	MUST_HAVE((sig != NULL), ret, err);
 	MUST_HAVE((hash != NULL), ret, err);
 	MUST_HAVE((ec != NULL), ret, err);

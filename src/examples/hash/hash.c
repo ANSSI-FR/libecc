@@ -440,15 +440,18 @@ int main(int argc, char *argv[])
 {
         int ret = 0;
 	unsigned int i;
-        FORCE_USED_VAR(argc);
-        FORCE_USED_VAR(argv);
 
 	const u8 input[] = "Now is the time for all ";
 	const u8 input2[] = "\x54\x68\x69\x73\x20\x69\x73\x20\x6D\x65\x73\x73\x61\x67\x65\x2C\x20\x6C\x65\x6E\x67\x74\x68\x3D\x33\x32\x20\x62\x79\x74\x65\x73";
 	const u8 input3[] = "";
 	const u8 input4[] = "Suppose the original message has length = 50 bytes";
-	u8 input5[128] = { 0 };
+	u8 input5[128];
 	u8 output[32];
+
+        FORCE_USED_VAR(argc);
+        FORCE_USED_VAR(argv);
+
+	ret = local_memset(input5, 0, sizeof(input5)); EG(ret, err);
 
 	ret = gen_hash_hfunc(input, sizeof(input)-1, output, HASH_MDC2_PADDING1); EG(ret, err);
 	buf_print("mdc2 padding1", output, 16);

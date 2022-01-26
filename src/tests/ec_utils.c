@@ -1584,6 +1584,8 @@ int main(int argc, char *argv[])
 {
 	int ret, check, found;
 	u32 len;
+	const char *adata = NULL;
+	u16 adata_len = 0;
 
 	if (argc < 2) {
 		ret = -1;
@@ -1660,8 +1662,6 @@ int main(int argc, char *argv[])
 			printf("\t<arg7 (optional) = ancillary data to be used>\n");
 			goto err;
 		}
-		const char *adata = NULL;
-		u16 adata_len = 0;
 		if(argc == 9){
 			adata = argv[8];
 			ret = local_strlen(adata, &len); EG(ret, err);
@@ -1710,8 +1710,6 @@ int main(int argc, char *argv[])
 			printf("\t<arg7 (optional) = ancillary data to be used>\n");
 			goto err;
 		}
-		const char *adata = NULL;
-		u16 adata_len = 0;
 		if(argc == 9){
 			adata = argv[8];
 			ret = local_strlen(adata, &len); EG(ret, err);
@@ -1766,8 +1764,6 @@ int main(int argc, char *argv[])
 			printf("\t<arg9 (optional) = ancillary data to be used>\n");
 			goto err;
 		}
-		const char *adata = NULL;
-		u16 adata_len = 0;
 		if(argc == 11){
 			adata = argv[10];
 			ret = local_strlen(adata, &len); EG(ret, err);
@@ -1814,8 +1810,6 @@ int main(int argc, char *argv[])
 			printf("\t<arg6 (optional) = ancillary data to be used>\n");
 			goto err;
 		}
-		const char *adata = NULL;
-		u16 adata_len = 0;
 		if(argc == 8){
 			adata = argv[7];
 			ret = local_strlen(adata, &len); EG(ret, err);

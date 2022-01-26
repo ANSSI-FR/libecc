@@ -152,12 +152,12 @@ int kcdsa_sign(const kcdsa_priv_key *priv, const u8 *msg, u32 msglen,
 	/* hash context */
 	gen_hash_context hash_ctx;
 	u8 hash[MAX_DIGEST_SIZE];
-	k.magic = k_.magic = r.magic = s.magic = WORD(0);
 #ifdef USE_SIG_BLINDING
 	/* b is the blinding mask */
 	nn b;
 	b.magic = WORD(0);
 #endif /* USE_SIG_BLINDING */
+	k.magic = k_.magic = r.magic = s.magic = WORD(0);
 
 	/* Sanity checks */
 	MUST_HAVE((priv != NULL) && (msg != NULL) && (sig != NULL), ret, err);
@@ -511,8 +511,6 @@ err:
 int main(int argc, char *argv[])
 {
  	int ret = 0;
-	FORCE_USED_VAR(argc);
-	FORCE_USED_VAR(argv);
 
 #if 0
 	/* This example is taken from ISO14888-3 KCDSA (Appendix F "Numerical examples" */
@@ -724,6 +722,9 @@ int main(int argc, char *argv[])
 	kcdsa_priv_key priv;
 	kcdsa_pub_key pub;
 	kcdsa_pub_key pub2;
+
+	FORCE_USED_VAR(argc);
+	FORCE_USED_VAR(argv);
 
 	/* Sanity check on size for DSA.
 	 * NOTE: the double parentheses are here to handle -Wunreachable-code

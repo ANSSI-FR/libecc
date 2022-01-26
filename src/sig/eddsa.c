@@ -790,6 +790,7 @@ int eddsa_init_pub_key(ec_pub_key *out_pub, const ec_priv_key *in_priv)
 	/* Secret scalar used for public generation */
 	nn s;
 	hash_alg_type hash_type;
+	u8 digest_size_;
 	int ret;
 	s.magic = WORD(0);
 
@@ -807,7 +808,6 @@ int eddsa_init_pub_key(ec_pub_key *out_pub, const ec_priv_key *in_priv)
 	/* Get the digest in proper format */
 	MUST_HAVE(((hash_type = get_eddsa_hash_type(in_priv->key_type)) != UNKNOWN_HASH_ALG), ret, err);
 
-	u8 digest_size_;
 	digest_size_ = 0;
 	ret = get_hash_sizes(hash_type, &digest_size_, NULL); EG(ret, err);
 

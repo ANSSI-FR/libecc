@@ -207,12 +207,12 @@ int dsa_sign(const dsa_priv_key *priv, const u8 *msg, u32 msglen,
 	nn r, s, z;
 	/* Hash */
 	u8 hash[MAX_DIGEST_SIZE];
-	k.magic = kinv.magic = k_.magic = r.magic = s.magic = z.magic = WORD(0);
 #ifdef USE_SIG_BLINDING
 	/* b is the blinding mask */
 	nn b;
 	b.magic = WORD(0);
 #endif /* USE_SIG_BLINDING */
+	k.magic = kinv.magic = k_.magic = r.magic = s.magic = z.magic = WORD(0);
 
 	/* Sanity checks */
 	MUST_HAVE((priv != NULL) && (msg != NULL) && (sig != NULL), ret, err);
@@ -458,8 +458,6 @@ err:
 int main(int argc, char *argv[])
 {
  	int ret = 0;
-	FORCE_USED_VAR(argc);
-	FORCE_USED_VAR(argv);
 
 	const u8 p[] = {
 		0x90, 0x06, 0x64, 0x55, 0xB5, 0xCF, 0xC3, 0x8F, 0x9C, 0xAA, 0x4A, 0x48, 0xB4, 0x28, 0x1F, 0x29, 0x2C, 0x26, 0x0F, 0xEE, 0xF0, 0x1F, 0xD6, 0x10, 0x37, 0xE5, 0x62, 0x58,
@@ -520,6 +518,9 @@ int main(int argc, char *argv[])
 	dsa_pub_key pub;
 	dsa_pub_key pub2;
 	u8 sig[32*2] = { 0 };
+
+	FORCE_USED_VAR(argc);
+	FORCE_USED_VAR(argv);
 
 	/* Sanity check on size for DSA.
 	 * NOTE: the double parentheses are here to handle -Wunreachable-code

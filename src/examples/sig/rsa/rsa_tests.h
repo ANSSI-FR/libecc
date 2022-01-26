@@ -113,10 +113,10 @@ ATTRIBUTE_WARN_UNUSED_RET static inline int perform_rsa_tests(const rsa_test **t
 				break;
 			}
 			case RSA_PKCS1_v1_5_SIG:{
-				ret = rsassa_pkcs1_v1_5_verify(&pub, t->m, t->mlen, t->res, t->reslen, modbits, t->hash); EG(ret, err1);
-				/* Try to sign */
 				u8 sig[NN_USABLE_MAX_BYTE_LEN];
 				u16 siglen = sizeof(sig);
+				ret = rsassa_pkcs1_v1_5_verify(&pub, t->m, t->mlen, t->res, t->reslen, modbits, t->hash); EG(ret, err1);
+				/* Try to sign */
 				ret = rsassa_pkcs1_v1_5_sign(&priv, t->m, t->mlen, sig, &siglen, modbits, t->hash); EG(ret, err1);
 				/* Check the result */
 				MUST_HAVE((siglen == t->reslen), ret, err1);

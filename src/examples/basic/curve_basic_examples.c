@@ -120,15 +120,15 @@ int check_curve(const u8 *curve_name)
 	aff_pt T;
 	u32 len;
 
-	nn_k.magic = WORD(0);
-	A.magic = B.magic = C.magic = D.magic = WORD(0);
-	TMP.magic = T.magic = WORD(0);
-
 	/* Importing a specific curve parameters from the constant static
 	 * buffers describing it:
 	 * It is possible to import a curves parameters by its name.
 	 */
 	const ec_str_params *the_curve_const_parameters;
+
+	nn_k.magic = WORD(0);
+	A.magic = B.magic = C.magic = D.magic = WORD(0);
+	TMP.magic = T.magic = WORD(0);
 
 	MUST_HAVE((curve_name != NULL), ret, err);
 

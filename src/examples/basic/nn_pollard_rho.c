@@ -225,17 +225,18 @@ err:
 #ifdef NN_EXAMPLE
 int main(int argc, char *argv[])
 {
-	nn n;
 	int ret;
-	n.magic = WORD(0);
-	FORCE_USED_VAR(argc);
-	FORCE_USED_VAR(argv);
 
 	/* Fermat F5 = 2^32 + 1 = 641 x 6700417 */
 	const unsigned char fermat_F5[] = { 0x01, 0x00, 0x00, 0x00, 0x01 };
 	/* Fermat F6 = 2^64 + 1 = 274177 x 67280421310721 */
 	const unsigned char fermat_F6[] =
 		{ 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01 };
+	nn n;
+	n.magic = WORD(0);
+
+	FORCE_USED_VAR(argc);
+	FORCE_USED_VAR(argv);
 
 	ret = nn_init(&n, 0); EG(ret, err);
 	/* Execute factorization on F5 */

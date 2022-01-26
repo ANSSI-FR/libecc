@@ -99,12 +99,12 @@ int gostr34_10_94_sign(const gostr34_10_94_priv_key *priv, const u8 *msg, u32 ms
 	nn r, s, z;
 	/* Hash */
 	u8 hash[MAX_DIGEST_SIZE];
-	k.magic = k_.magic = r.magic = s.magic = z.magic = WORD(0);
 #ifdef USE_SIG_BLINDING
 	/* b is the blinding mask */
 	nn b;
 	b.magic = WORD(0);
 #endif /* USE_SIG_BLINDING */
+	k.magic = k_.magic = r.magic = s.magic = z.magic = WORD(0);
 
 	/* Sanity checks */
 	MUST_HAVE((priv != NULL) && (msg != NULL) && (sig != NULL), ret, err);
@@ -371,8 +371,6 @@ err:
 int main(int argc, char *argv[])
 {
  	int ret = 0;
-	FORCE_USED_VAR(argc);
-	FORCE_USED_VAR(argv);
 
 	/**** Self-signed certificate taken from RFC4491 ****/
 	/* NOTE1: we can only perform verification using this self-signed certificate as we do not have the private key!
@@ -408,8 +406,6 @@ int main(int argc, char *argv[])
 		0x9A,
 	};
 
-	nn x_;
-	x_.magic = WORD(0);
 	u8 x[sizeof(q)];
 
 	u8 y_self_signed[] = {
@@ -476,6 +472,11 @@ int main(int argc, char *argv[])
 
 	gostr34_10_94_pub_key pub;
 	gostr34_10_94_priv_key priv;
+	nn x_;
+	x_.magic = WORD(0);
+
+	FORCE_USED_VAR(argc);
+	FORCE_USED_VAR(argv);
 
 	/* Sanity check on size for GOSTR34_10_94.
 	 * NOTE: the double parentheses are here to handle -Wunreachable-code
