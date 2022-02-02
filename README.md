@@ -107,6 +107,20 @@ tests purposes.
   * The SSS (Shamir Secret Sharing) algorithm over a prime field of 256 bits.
 
 
+**NOTE**: for all the primitives (specifically relevant for signature primitives), a maximum
+allowed size for bug numbers is **4096 bits** with word size **64 bits** (this will be less
+for word sizes 16 and 32 bits). This is due to an internal limitation of libecc
+on big numbers allocation documented [here](src/nn/nn_config.h). We can live with
+this limitation as the library is primarily intented to focus on ECC based algorithms.
+However, one should be aware that for example RSA with modulus > 4096 will fail (as well
+and DSA and other El-Gamal based algorithms): these primitives are only included as
+examples and should be used with care.
+
+**NOTE**: handling 4096 bits NN numbers must be explicitly configured at compilation
+time using the `-DUSER_NN_BIT_LEN=4096` toggle in the `CFLAGS` or `EXTRA_CFLAGS` as explained
+in [the dedicated section](https://github.com/ANSSI-FR/libecc#modifying-the-big-numbers-size).
+
+
 Compared to other cryptographic libraries providing such
 features, the differentiating points are:
 
