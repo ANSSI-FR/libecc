@@ -26,6 +26,7 @@
 #define SHA224_STATE_SIZE   8
 #define SHA224_BLOCK_SIZE   64
 #define SHA224_DIGEST_SIZE  28
+#define SHA224_DIGEST_SIZE_BITS  224
 
 /* Compute max hash digest and block sizes */
 #ifndef MAX_DIGEST_SIZE
@@ -34,6 +35,14 @@
 #if (MAX_DIGEST_SIZE < SHA224_DIGEST_SIZE)
 #undef MAX_DIGEST_SIZE
 #define MAX_DIGEST_SIZE SHA224_DIGEST_SIZE
+#endif
+
+#ifndef MAX_DIGEST_SIZE_BITS
+#define MAX_DIGEST_SIZE_BITS    0
+#endif
+#if (MAX_DIGEST_SIZE_BITS < SHA224_DIGEST_SIZE_BITS)
+#undef MAX_DIGEST_SIZE_BITS
+#define MAX_DIGEST_SIZE_BITS SHA224_DIGEST_SIZE_BITS
 #endif
 
 #ifndef MAX_BLOCK_SIZE
@@ -45,8 +54,8 @@
 #endif
 
 #define SHA224_HASH_MAGIC ((word_t)(0x1120323b32342910ULL))
-#define SHA224_HASH_CHECK_INITIALIZED(A) \
-        MUST_HAVE((((void *)(A)) != NULL) && ((A)->magic == SHA224_HASH_MAGIC))
+#define SHA224_HASH_CHECK_INITIALIZED(A, ret, err) \
+        MUST_HAVE((((void *)(A)) != NULL) && ((A)->magic == SHA224_HASH_MAGIC), ret, err)
 
 typedef struct {
 	/* Number of bytes processed */
@@ -59,12 +68,12 @@ typedef struct {
         word_t magic;
 } sha224_context;
 
-void sha224_init(sha224_context *ctx);
-void sha224_update(sha224_context *ctx, const u8 *input, u32 ilen);
-void sha224_final(sha224_context *ctx, u8 output[SHA224_DIGEST_SIZE]);
-void sha224_scattered(const u8 **inputs, const u32 *ilens,
-		      u8 output[SHA224_DIGEST_SIZE]);
-void sha224(const u8 *input, u32 ilen, u8 output[SHA224_DIGEST_SIZE]);
+ATTRIBUTE_WARN_UNUSED_RET int sha224_init(sha224_context *ctx);
+ATTRIBUTE_WARN_UNUSED_RET int sha224_update(sha224_context *ctx, const u8 *input, u32 ilen);
+ATTRIBUTE_WARN_UNUSED_RET int sha224_final(sha224_context *ctx, u8 output[SHA224_DIGEST_SIZE]);
+ATTRIBUTE_WARN_UNUSED_RET int sha224_scattered(const u8 **inputs, const u32 *ilens,
+		     u8 output[SHA224_DIGEST_SIZE]);
+ATTRIBUTE_WARN_UNUSED_RET int sha224(const u8 *input, u32 ilen, u8 output[SHA224_DIGEST_SIZE]);
 
 #endif /* __SHA224_H__ */
 #endif /* WITH_HASH_SHA224 */

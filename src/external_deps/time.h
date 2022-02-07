@@ -18,6 +18,6 @@
 
 #include "../words/words.h"
 
-int get_ms_time(u64 *time);
+ATTRIBUTE_WARN_UNUSED_RET int get_ms_time(u64 *time);
 
 #endif /* __TIME_H__ */

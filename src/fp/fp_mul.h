@@ -17,10 +17,10 @@
 #define __FP_MUL_H__
 #include "fp.h"
 
-void fp_mul(fp_t out, fp_src_t in1, fp_src_t in2);
-void fp_sqr(fp_t out, fp_src_t in);
-void fp_inv(fp_t out, fp_src_t in);
-void fp_inv_word(fp_t out, word_t w);
-void fp_div(fp_t out, fp_src_t num, fp_src_t den);
+ATTRIBUTE_WARN_UNUSED_RET int fp_mul(fp_t out, fp_src_t in1, fp_src_t in2);
+ATTRIBUTE_WARN_UNUSED_RET int fp_sqr(fp_t out, fp_src_t in);
+ATTRIBUTE_WARN_UNUSED_RET int fp_inv(fp_t out, fp_src_t in);
+ATTRIBUTE_WARN_UNUSED_RET int fp_inv_word(fp_t out, word_t w);
+ATTRIBUTE_WARN_UNUSED_RET int fp_div(fp_t out, fp_src_t num, fp_src_t den);
 
 #endif /* __FP_MUL_H__ */

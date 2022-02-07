@@ -62,7 +62,7 @@ static const u8 keccak_rot[KECCAK_SLICES][KECCAK_SLICES] =
 
 
 /* Macro to handle endianness conversion */
-#define SWAP64_Idx(a)   ((sizeof(u64) * ((a) / sizeof(u64))) + (sizeof(u64) - 1 - ((a) % sizeof(u64))))
+#define SWAP64_Idx(a)   ((sizeof(u64) * ((u8)(a) / sizeof(u64))) + (sizeof(u64) - 1 - ((u8)(a) % sizeof(u64))))
 
 #define Idx_slices(x, y)	((x) + (KECCAK_SLICES * (y)))
 #define Idx(A, x, y)		((A)[Idx_slices(x, y)])

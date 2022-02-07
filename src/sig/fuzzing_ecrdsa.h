@@ -20,9 +20,9 @@
 #ifndef __FUZZING_ECRDSA_H__
 #define __FUZZING_ECRDSA_H__
 
-int ecrdsa_sign_raw(struct ec_sign_context *ctx, const u8 *input, u8 inputlen, u8 *sig, u8 siglen, const u8 *nonce, u8 noncelen);
+ATTRIBUTE_WARN_UNUSED_RET int ecrdsa_sign_raw(struct ec_sign_context *ctx, const u8 *input, u8 inputlen, u8 *sig, u8 siglen, const u8 *nonce, u8 noncelen);
 
-int ecrdsa_verify_raw(struct ec_verify_context *ctx, const u8 *input, u8 inputlen);
+ATTRIBUTE_WARN_UNUSED_RET int ecrdsa_verify_raw(struct ec_verify_context *ctx, const u8 *input, u8 inputlen);
 
 #endif /* __FUZZING_ECRDSA_H__ */
 #endif /* WITH_SIG_ECRDSA && USE_CRYPTOFUZZ */

@@ -17,9 +17,10 @@
 #define __NN_MUL_REDC1_H__
 #include "nn.h"
 
-word_t nn_compute_redc1_coefs(nn_t r, nn_t r_square, nn_src_t p_in);
-void nn_mul_redc1(nn_t out, nn_src_t in1, nn_src_t in2, nn_src_t p,
+ATTRIBUTE_WARN_UNUSED_RET int nn_compute_redc1_coefs(nn_t r, nn_t r_square, nn_src_t p_in,
+			      word_t *mpinv);
+ATTRIBUTE_WARN_UNUSED_RET int nn_mul_redc1(nn_t out, nn_src_t in1, nn_src_t in2, nn_src_t p,
 		  word_t mpinv);
-void nn_mul_mod(nn_t out, nn_src_t in1, nn_src_t in2, nn_src_t p);
+ATTRIBUTE_WARN_UNUSED_RET int nn_mod_mul(nn_t out, nn_src_t in1, nn_src_t in2, nn_src_t p);
 
 #endif /* __NN_MUL_REDC1_H__ */

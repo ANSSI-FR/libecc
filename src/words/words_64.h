@@ -47,9 +47,19 @@ typedef uint32_t hword_t;
 #define PRIx32 "x"
 #endif
 #ifndef PRIx64
-#define PRIx64 "lx"
+#define PRIx64 "llx"
 #endif
 
 #define PRINTF_WORD_HEX_FMT "%016" PRIx64
+
+#ifndef PRIu16
+#define PRIu16 "hu"
+#endif
+#ifndef PRIu32
+#define PRIu32 "u"
+#endif
+#ifndef PRIu64
+#define PRIu64 "llu"
+#endif
 
 #endif /* __WORDS_64_H__ */

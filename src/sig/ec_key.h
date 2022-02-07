@@ -23,7 +23,7 @@
 #include "../nn/nn_rand.h"
 #include "../nn/nn_add.h"
 #include "../nn/nn_logical.h"
-#include "../curves/prj_pt_monty.h"
+#include "../curves/prj_pt.h"
 #include "../hash/hash_algs.h"
 
 /* Enum for exported keys */
@@ -39,7 +39,7 @@ typedef enum {
 #define PRIV_KEY_MAGIC ((word_t)(0x2feb91e938a4855dULL))
 typedef struct {
 	/* A key type can only be used for a given sig alg */
-	ec_sig_alg_type key_type;
+	ec_alg_type key_type;
 
 	/* Elliptic curve parameters */
 	const ec_params *params;
@@ -92,26 +92,23 @@ typedef struct {
 #define EC_STRUCTURED_PRIV_KEY_EXPORT_SIZE(priv_key)			\
 	((u8)(EC_PRIV_KEY_EXPORT_SIZE(priv_key) + (3 * sizeof(u8))))
 
-void priv_key_check_initialized(const ec_priv_key *A);
-void priv_key_check_initialized_and_type(const ec_priv_key *A,
-					 ec_sig_alg_type sig_type);
-int priv_key_is_initialized(const ec_priv_key *A);
-int priv_key_is_initialized_and_type(const ec_priv_key *A,
-				     ec_sig_alg_type sig_type);
+ATTRIBUTE_WARN_UNUSED_RET int priv_key_check_initialized(const ec_priv_key *A);
+ATTRIBUTE_WARN_UNUSED_RET int priv_key_check_initialized_and_type(const ec_priv_key *A,
+					ec_alg_type sig_type);
 
-void ec_priv_key_import_from_buf(ec_priv_key *priv_key,
-				 const ec_params *params,
-				 const u8 *priv_key_buf, u8 priv_key_buf_len,
-				 ec_sig_alg_type ec_key_alg);
-int ec_priv_key_export_to_buf(const ec_priv_key *priv_key, u8 *priv_key_buf,
+ATTRIBUTE_WARN_UNUSED_RET int ec_priv_key_import_from_buf(ec_priv_key *priv_key,
+				const ec_params *params,
+				const u8 *priv_key_buf, u8 priv_key_buf_len,
+				ec_alg_type ec_key_alg);
+ATTRIBUTE_WARN_UNUSED_RET int ec_priv_key_export_to_buf(const ec_priv_key *priv_key, u8 *priv_key_buf,
 			      u8 priv_key_buf_len);
 
-int ec_structured_priv_key_import_from_buf(ec_priv_key *priv_key,
+ATTRIBUTE_WARN_UNUSED_RET int ec_structured_priv_key_import_from_buf(ec_priv_key *priv_key,
 					   const ec_params *params,
 					   const u8 *priv_key_buf,
 					   u8 priv_key_buf_len,
-					   ec_sig_alg_type ec_key_alg);
-int ec_structured_priv_key_export_to_buf(const ec_priv_key *priv_key,
+					   ec_alg_type ec_key_alg);
+ATTRIBUTE_WARN_UNUSED_RET int ec_structured_priv_key_export_to_buf(const ec_priv_key *priv_key,
 					 u8 *priv_key_buf,
 					 u8 priv_key_buf_len);
 
@@ -122,7 +119,7 @@ int ec_structured_priv_key_export_to_buf(const ec_priv_key *priv_key,
 #define PUB_KEY_MAGIC ((word_t)(0x31327f37741ffb76ULL))
 typedef struct {
 	/* A key type can only be used for a given sig alg */
-	ec_sig_alg_type key_type;
+	ec_alg_type key_type;
 
 	/* Elliptic curve parameters */
 	const ec_params *params;
@@ -143,34 +140,31 @@ typedef struct {
 #error "All structured pub keys size are expected to fit on an u8."
 #endif
 #define EC_STRUCTURED_PUB_KEY_EXPORT_SIZE(pub_key)			\
-	((u8)(EC_PUB_KEY_EXPORT_SIZE(pub_key) + (3 * sizeof(u8))))
+	((u8)(EC_PUB_KEY_EXPORT_SIZE(pub_key) + (u8)(3 * sizeof(u8))))
 
-void pub_key_check_initialized(const ec_pub_key *A);
-void pub_key_check_initialized_and_type(const ec_pub_key *A,
-					ec_sig_alg_type sig_type);
-int pub_key_is_initialized(const ec_pub_key *A);
-int pub_key_is_initialized_and_type(const ec_pub_key *A,
-				    ec_sig_alg_type sig_type);
+ATTRIBUTE_WARN_UNUSED_RET int pub_key_check_initialized(const ec_pub_key *A);
+ATTRIBUTE_WARN_UNUSED_RET int pub_key_check_initialized_and_type(const ec_pub_key *A,
+				       ec_alg_type sig_type);
 
-int ec_pub_key_import_from_buf(ec_pub_key *pub_key, const ec_params *params,
+ATTRIBUTE_WARN_UNUSED_RET int ec_pub_key_import_from_buf(ec_pub_key *pub_key, const ec_params *params,
 			       const u8 *pub_key_buf, u8 pub_key_buf_len,
-			       ec_sig_alg_type ec_key_alg);
-int ec_pub_key_export_to_buf(const ec_pub_key *pub_key, u8 *pub_key_buf,
+			       ec_alg_type ec_key_alg);
+ATTRIBUTE_WARN_UNUSED_RET int ec_pub_key_export_to_buf(const ec_pub_key *pub_key, u8 *pub_key_buf,
 			     u8 pub_key_buf_len);
 
-int ec_pub_key_import_from_aff_buf(ec_pub_key *pub_key, const ec_params *params,
-                               const u8 *pub_key_buf, u8 pub_key_buf_len,
-                               ec_sig_alg_type ec_key_alg);
+ATTRIBUTE_WARN_UNUSED_RET int ec_pub_key_import_from_aff_buf(ec_pub_key *pub_key, const ec_params *params,
+			       const u8 *pub_key_buf, u8 pub_key_buf_len,
+			       ec_alg_type ec_key_alg);
 
-int ec_pub_key_export_to_aff_buf(const ec_pub_key *pub_key, u8 *pub_key_buf,
-                             u8 pub_key_buf_len);
+ATTRIBUTE_WARN_UNUSED_RET int ec_pub_key_export_to_aff_buf(const ec_pub_key *pub_key, u8 *pub_key_buf,
+			     u8 pub_key_buf_len);
 
-int ec_structured_pub_key_import_from_buf(ec_pub_key *pub_key,
+ATTRIBUTE_WARN_UNUSED_RET int ec_structured_pub_key_import_from_buf(ec_pub_key *pub_key,
 					  const ec_params *params,
 					  const u8 *pub_key_buf,
 					  u8 pub_key_buf_len,
-					  ec_sig_alg_type ec_key_alg);
-int ec_structured_pub_key_export_to_buf(const ec_pub_key *pub_key,
+					  ec_alg_type ec_key_alg);
+ATTRIBUTE_WARN_UNUSED_RET int ec_structured_pub_key_export_to_buf(const ec_pub_key *pub_key,
 					u8 *pub_key_buf, u8 pub_key_buf_len);
 
 /*
@@ -182,36 +176,31 @@ typedef struct {
 	ec_pub_key pub_key;
 } ec_key_pair;
 
-void key_pair_check_initialized(const ec_key_pair *A);
+ATTRIBUTE_WARN_UNUSED_RET int key_pair_check_initialized(const ec_key_pair *A);
 
-int key_pair_is_initialized(const ec_key_pair *A);
+ATTRIBUTE_WARN_UNUSED_RET int key_pair_check_initialized_and_type(const ec_key_pair *A,
+					 ec_alg_type sig_type);
 
-void key_pair_check_initialized_and_type(const ec_key_pair *A,
-					 ec_sig_alg_type sig_type);
-
-int key_pair_is_initialized_and_type(const ec_key_pair *A,
-				     ec_sig_alg_type sig_type);
-
-int ec_key_pair_import_from_priv_key_buf(ec_key_pair *kp,
+ATTRIBUTE_WARN_UNUSED_RET int ec_key_pair_import_from_priv_key_buf(ec_key_pair *kp,
 					 const ec_params *params,
 					 const u8 *priv_key, u8 priv_key_len,
-					 ec_sig_alg_type ec_key_alg);
-int ec_key_pair_gen(ec_key_pair *kp, const ec_params *params,
-		    ec_sig_alg_type ec_key_alg);
+					 ec_alg_type ec_key_alg);
+ATTRIBUTE_WARN_UNUSED_RET int ec_key_pair_gen(ec_key_pair *kp, const ec_params *params,
+		    ec_alg_type ec_key_alg);
 
-int ec_structured_key_pair_import_from_priv_key_buf(ec_key_pair *kp,
+ATTRIBUTE_WARN_UNUSED_RET int ec_structured_key_pair_import_from_priv_key_buf(ec_key_pair *kp,
 						    const ec_params *params,
 						    const u8 *priv_key_buf,
 						    u8 priv_key_buf_len,
-						    ec_sig_alg_type ec_key_alg);
-int ec_structured_key_pair_import_from_buf(ec_key_pair *kp,
+						    ec_alg_type ec_key_alg);
+ATTRIBUTE_WARN_UNUSED_RET int ec_structured_key_pair_import_from_buf(ec_key_pair *kp,
 					   const ec_params *params,
 					   const u8 *priv_key_buf,
 					   u8 priv_key_buf_len,
 					   const u8 *pub_key_buf,
 					   u8 pub_key_buf_len,
-					   ec_sig_alg_type ec_key_alg);
+					   ec_alg_type ec_key_alg);
 
-int generic_gen_priv_key(ec_priv_key *priv_key);
+ATTRIBUTE_WARN_UNUSED_RET int generic_gen_priv_key(ec_priv_key *priv_key);
 
 #endif /* __EC_KEY_H__ */

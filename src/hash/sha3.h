@@ -27,20 +27,20 @@ typedef enum {
  * value, initialized in init() call and used in finalize().
  */
 typedef struct sha3_context_ {
-        u8 sha3_digest_size;
-        u8 sha3_block_size;
+	u8 sha3_digest_size;
+	u8 sha3_block_size;
 	sha3_endianness sha3_endian;
-        /* Local index, useful for the absorbing phase */
-        u64 sha3_idx;
-        /* Keccak's state, viewed as a bi-dimensional array */
-        u64 sha3_state[KECCAK_SLICES * KECCAK_SLICES];
-        /* Initialization magic value */
-        word_t magic;
+	/* Local index, useful for the absorbing phase */
+	u64 sha3_idx;
+	/* Keccak's state, viewed as a bi-dimensional array */
+	u64 sha3_state[KECCAK_SLICES * KECCAK_SLICES];
+	/* Initialization magic value */
+	word_t magic;
 } sha3_context;
 
 
-void _sha3_init(sha3_context *ctx, u8 digest_size);
-void _sha3_update(sha3_context *ctx, const u8 *buf, u32 buflen);
-void _sha3_finalize(sha3_context *ctx, u8 *output);
+ATTRIBUTE_WARN_UNUSED_RET int _sha3_init(sha3_context *ctx, u8 digest_size);
+ATTRIBUTE_WARN_UNUSED_RET int _sha3_update(sha3_context *ctx, const u8 *buf, u32 buflen);
+ATTRIBUTE_WARN_UNUSED_RET int _sha3_finalize(sha3_context *ctx, u8 *output);
 
 #endif /* __SHA3_H__ */

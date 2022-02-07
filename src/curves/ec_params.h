@@ -68,11 +68,13 @@ typedef struct {
 	/* Curve cofactor */
 	nn ec_gen_cofactor;
 
+#if !defined(USE_SMALL_STACK)
 	/* Optional transfer coefficients with Montgomery curves */
 	fp ec_alpha_montgomery;
 	fp ec_gamma_montgomery;
 	/* Optional transfer coefficient with Edwards curves */
 	fp ec_alpha_edwards;
+#endif
 
 	/* Object Identifier for the curve */
 	u8 curve_oid[MAX_CURVE_OID_LEN];
@@ -84,6 +86,6 @@ typedef struct {
 	ec_curve_type curve_type;
 } ec_params;
 
-void import_params(ec_params *out_params, const ec_str_params *in_str_params);
+ATTRIBUTE_WARN_UNUSED_RET int import_params(ec_params *out_params, const ec_str_params *in_str_params);
 
 #endif /* __EC_PARAMS_H__ */

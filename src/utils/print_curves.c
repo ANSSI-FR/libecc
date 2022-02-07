@@ -19,41 +19,58 @@
  * Locally convert given projective point to affine representation and
  * print x and y coordinates.
  */
-void ec_point_print(const char *msg, prj_pt_src_t prj_pt)
+void ec_point_print(const char *msg, prj_pt_src_t pt)
 {
 	aff_pt y_aff;
+	int ret, iszero;
+	y_aff.magic = WORD(0);
 
-	if(prj_pt_iszero(prj_pt)){
+	MUST_HAVE(msg != NULL, ret, err);
+	ret = prj_pt_iszero(pt, &iszero); EG(ret, err);
+	if (iszero) {
 		ext_printf("%s: infinity\n", msg);
-		goto out;
+		goto err;
 	}
 
-	prj_pt_to_aff(&y_aff, prj_pt);
+	ret = prj_pt_to_aff(&y_aff, pt); EG(ret, err);
 	ext_printf("%s", msg);
 	nn_print("x", &(y_aff.x.fp_val));
 	ext_printf("%s", msg);
 	nn_print("y", &(y_aff.y.fp_val));
 
-out:
+err:
 	aff_pt_uninit(&y_aff);
+	return;
 }
 
 void ec_montgomery_point_print(const char *msg, aff_pt_montgomery_src_t pt)
 {
-	aff_pt_montgomery_check_initialized(pt);
+	int ret;
+
+	MUST_HAVE(msg != NULL, ret, err);
+	ret = aff_pt_montgomery_check_initialized(pt); EG(ret, err);
 
 	ext_printf("%s", msg);
 	nn_print("u", &(pt->u.fp_val));
 	ext_printf("%s", msg);
 	nn_print("v", &(pt->v.fp_val));
+
+err:
+	return;
 }
 
 void ec_edwards_point_print(const char *msg, aff_pt_edwards_src_t pt)
 {
-	aff_pt_edwards_check_initialized(pt);
+	int ret;
+
+	MUST_HAVE(msg != NULL, ret, err);
+	ret = aff_pt_edwards_check_initialized(pt); EG(ret, err);
 
 	ext_printf("%s", msg);
 	nn_print("x", &(pt->x.fp_val));
 	ext_printf("%s", msg);
 	nn_print("y", &(pt->y.fp_val));
+
+err:
+	return;
 }

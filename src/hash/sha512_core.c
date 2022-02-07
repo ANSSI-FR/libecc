@@ -17,15 +17,16 @@
 #if defined(WITH_HASH_SHA512) || defined(WITH_HASH_SHA512_224) || defined(WITH_HASH_SHA512_256)
 #include "sha512_core.h"
 
-/* SHA-2 core processing */
-static void sha512_core_process(sha512_core_context *ctx,
+/* SHA-2 core processing. Returns 0 on success, -1 on error. */
+ATTRIBUTE_WARN_UNUSED_RET static int sha512_core_process(sha512_core_context *ctx,
 			   const u8 data[SHA512_CORE_BLOCK_SIZE])
 {
 	u64 a, b, c, d, e, f, g, h;
 	u64 W[80];
 	unsigned int i;
+	int ret;
 
-	MUST_HAVE((ctx != NULL) && (data != NULL));
+	MUST_HAVE(((ctx != NULL) && (data != NULL)), ret, err);
 
 	/* Init our inner variables */
 	a = ctx->sha512_state[0];
@@ -56,67 +57,79 @@ static void sha512_core_process(sha512_core_context *ctx,
 	ctx->sha512_state[5] += f;
 	ctx->sha512_state[6] += g;
 	ctx->sha512_state[7] += h;
+
+	ret = 0;
+
+err:
+	return ret;
 }
 
-/* Core update hash function */
-void sha512_core_update(sha512_core_context *ctx, const u8 *input, u32 ilen)
+/* Core update hash function. Returns 0 on success, -1 on error. */
+int sha512_core_update(sha512_core_context *ctx, const u8 *input, u32 ilen)
 {
 	const u8 *data_ptr = input;
 	u32 remain_ilen = ilen;
 	u16 fill;
 	u8 left;
+	int ret;
 
-	MUST_HAVE((ctx != NULL) && (input != NULL));
+	MUST_HAVE(((ctx != NULL) && (input != NULL)), ret, err);
 
 	/* Nothing to process, return */
 	if (ilen == 0) {
-		return;
+		ret = 0;
+		goto err;
 	}
 
 	/* Get what's left in our local buffer */
 	left = ctx->sha512_total[0] & 0x7F;
-	fill = SHA512_CORE_BLOCK_SIZE - left;
+	fill = (u16)(SHA512_CORE_BLOCK_SIZE - left);
 
 	ADD_UINT128_UINT64(ctx->sha512_total[0], ctx->sha512_total[1], ilen);
 
 	if ((left > 0) && (remain_ilen >= fill)) {
 		/* Copy data at the end of the buffer */
-		local_memcpy(ctx->sha512_buffer + left, data_ptr, fill);
-		sha512_core_process(ctx, ctx->sha512_buffer);
+		ret = local_memcpy(ctx->sha512_buffer + left, data_ptr, fill); EG(ret, err);
+		ret = sha512_core_process(ctx, ctx->sha512_buffer); EG(ret, err);
 		data_ptr += fill;
 		remain_ilen -= fill;
 		left = 0;
 	}
 
 	while (remain_ilen >= SHA512_CORE_BLOCK_SIZE) {
-		sha512_core_process(ctx, data_ptr);
+		ret = sha512_core_process(ctx, data_ptr); EG(ret, err);
 		data_ptr += SHA512_CORE_BLOCK_SIZE;
 		remain_ilen -= SHA512_CORE_BLOCK_SIZE;
 	}
 
 	if (remain_ilen > 0) {
-		local_memcpy(ctx->sha512_buffer + left, data_ptr, remain_ilen);
+		ret = local_memcpy(ctx->sha512_buffer + left, data_ptr, remain_ilen); EG(ret, err);
 	}
-	return;
+
+	ret = 0;
+
+err:
+	return ret;
 }
 
-/* Core finalize */
-void sha512_core_final(sha512_core_context *ctx, u8 *output, u32 output_size)
+/* Core finalize. Returns 0 on success, -1 on error. */
+int sha512_core_final(sha512_core_context *ctx, u8 *output, u32 output_size)
 {
 	unsigned int block_present = 0;
 	u8 last_padded_block[2 * SHA512_CORE_BLOCK_SIZE];
+	int ret;
 
-	MUST_HAVE((ctx != NULL) && (output != NULL));
+	MUST_HAVE(((ctx != NULL) && (output != NULL)), ret, err);
 
 	/* Fill in our last block with zeroes */
-	local_memset(last_padded_block, 0, sizeof(last_padded_block));
+	ret = local_memset(last_padded_block, 0, sizeof(last_padded_block)); EG(ret, err);
 
 	/* This is our final step, so we proceed with the padding */
 	block_present = ctx->sha512_total[0] % SHA512_CORE_BLOCK_SIZE;
 	if (block_present != 0) {
 		/* Copy what's left in our temporary context buffer */
-		local_memcpy(last_padded_block, ctx->sha512_buffer,
-			     block_present);
+		ret = local_memcpy(last_padded_block, ctx->sha512_buffer,
+			     block_present); EG(ret, err);
 	}
 
 	/* Put the 0x80 byte, beginning of padding  */
@@ -128,39 +141,43 @@ void sha512_core_final(sha512_core_context *ctx, u8 *output, u32 output_size)
 		PUT_MUL8_UINT128_BE(ctx->sha512_total[0], ctx->sha512_total[1],
 				    last_padded_block,
 				    2 * (SHA512_CORE_BLOCK_SIZE - sizeof(u64)));
-		sha512_core_process(ctx, last_padded_block);
-		sha512_core_process(ctx, last_padded_block + SHA512_CORE_BLOCK_SIZE);
+		ret = sha512_core_process(ctx, last_padded_block); EG(ret, err);
+		ret = sha512_core_process(ctx, last_padded_block + SHA512_CORE_BLOCK_SIZE); EG(ret, err);
 	} else {
 		/* We do not need an additional block */
 		PUT_MUL8_UINT128_BE(ctx->sha512_total[0], ctx->sha512_total[1],
 				    last_padded_block,
 				    SHA512_CORE_BLOCK_SIZE - (2 * sizeof(u64)));
-		sha512_core_process(ctx, last_padded_block);
+		ret = sha512_core_process(ctx, last_padded_block); EG(ret, err);
 	}
 
 	/* Output the hash result truncated to the output size */
 	if(output_size >= SHA512_CORE_DIGEST_SIZE){
-		PUT_UINT64_BE(ctx->sha512_state[0], output,  0);
-		PUT_UINT64_BE(ctx->sha512_state[1], output,  8);
+		PUT_UINT64_BE(ctx->sha512_state[0], output, 0);
+		PUT_UINT64_BE(ctx->sha512_state[1], output, 8);
 		PUT_UINT64_BE(ctx->sha512_state[2], output, 16);
 		PUT_UINT64_BE(ctx->sha512_state[3], output, 24);
 		PUT_UINT64_BE(ctx->sha512_state[4], output, 32);
 		PUT_UINT64_BE(ctx->sha512_state[5], output, 40);
 		PUT_UINT64_BE(ctx->sha512_state[6], output, 48);
 		PUT_UINT64_BE(ctx->sha512_state[7], output, 56);
-	}
-	else{
+	} else {
 		u8 tmp_output[SHA512_CORE_DIGEST_SIZE] = { 0 };
-		PUT_UINT64_BE(ctx->sha512_state[0], tmp_output,  0);
-		PUT_UINT64_BE(ctx->sha512_state[1], tmp_output,  8);
+		PUT_UINT64_BE(ctx->sha512_state[0], tmp_output, 0);
+		PUT_UINT64_BE(ctx->sha512_state[1], tmp_output, 8);
 		PUT_UINT64_BE(ctx->sha512_state[2], tmp_output, 16);
 		PUT_UINT64_BE(ctx->sha512_state[3], tmp_output, 24);
 		PUT_UINT64_BE(ctx->sha512_state[4], tmp_output, 32);
 		PUT_UINT64_BE(ctx->sha512_state[5], tmp_output, 40);
 		PUT_UINT64_BE(ctx->sha512_state[6], tmp_output, 48);
 		PUT_UINT64_BE(ctx->sha512_state[7], tmp_output, 56);
-		local_memcpy(output, tmp_output, output_size);
+		ret = local_memcpy(output, tmp_output, output_size); EG(ret, err);
 	}
+
+	ret = 0;
+
+err:
+	return ret;
 }
 
 #else /* defined(WITH_HASH_SHA512) || defined(WITH_HASH_SHA512_224) || defined(WITH_HASH_SHA512_256) */

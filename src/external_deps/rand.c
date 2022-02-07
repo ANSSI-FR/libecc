@@ -32,16 +32,23 @@
  * Copy file content to buffer. Return 0 on success, i.e. if the request
  * size has been read and copied to buffer and -1 otherwise.
  */
-static int fimport(unsigned char *buf, u16 buflen, const char *path)
+ATTRIBUTE_WARN_UNUSED_RET static int fimport(unsigned char *buf, u16 buflen,
+					     const char *path)
 {
 	u16 rem = buflen, copied = 0;
 	ssize_t ret;
 	int fd;
 
+	if ((buf == NULL) || (path == NULL)) {
+		ret = -1;
+		goto err;
+	}
+
 	fd = open(path, O_RDONLY);
 	if (fd == -1) {
 		printf("Unable to open input file %s\n", path);
-		return -1;
+		ret = -1;
+		goto err;
 	}
 
 	while (rem) {
@@ -49,14 +56,21 @@ static int fimport(unsigned char *buf, u16 buflen, const char *path)
 		if (ret <= 0) {
 			break;
 		} else {
-			rem -= (u16)ret;
-			copied += (u16)ret;
+			rem = (u16)(rem - ret);
+			copied = (u16)(copied + ret);
 		}
 	}
 
-	close(fd);
+	if (close(fd)) {
+		printf("Unable to close input file %s\n", path);
+		ret = -1;
+		goto err;
+	}
 
-	return (copied == buflen) ? 0 : -1;
+	ret = (copied == buflen) ? 0 : -1;
+
+err:
+	return (int)ret;
 }
 
 int get_random(unsigned char *buf, u16 len)
@@ -71,19 +85,25 @@ int get_random(unsigned char *buf, u16 len)
 
 int get_random(unsigned char *buf, u16 len)
 {
+	int ret;
 	HCRYPTPROV hCryptProv = 0;
 
 	if (CryptAcquireContext(&hCryptProv, NULL, NULL,
 				PROV_RSA_FULL, CRYPT_VERIFYCONTEXT) == FALSE) {
-		return -1;
+		ret = -1;
+		goto err;
 	}
 
 	if (CryptGenRandom(hCryptProv, len, buf) == FALSE) {
 		CryptReleaseContext(hCryptProv, 0);
-		return -1;
+		ret = -1;
+		goto err;
 	}
 	CryptReleaseContext(hCryptProv, 0);
-	return 0;
+	ret = 0;
+
+err:
+	return ret;
 }
 
 /* No platform detected, the user must provide an implementation! */

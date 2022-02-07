@@ -17,8 +17,8 @@
 #define __NN_RAND_H__
 #include "nn.h"
 
-int nn_get_random_len(nn_t out, u16 len);
-int nn_get_random_maxlen(nn_t out, u16 max_len);
-int nn_get_random_mod(nn_t out, nn_src_t q);
+ATTRIBUTE_WARN_UNUSED_RET int nn_get_random_len(nn_t out, u16 len);
+ATTRIBUTE_WARN_UNUSED_RET int nn_get_random_maxlen(nn_t out, u16 max_len);
+ATTRIBUTE_WARN_UNUSED_RET int nn_get_random_mod(nn_t out, nn_src_t q);
 
 #endif /* __NN_RAND_H__ */

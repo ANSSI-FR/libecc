@@ -21,6 +21,13 @@
  * (prime and order of the curve).
  */
 #include "../curves/curves_list.h"
+/*
+ * We also include the hash layer to adapt the maximum NN size to the
+ * maximum digest size as we have to import full digests as NN when dealing
+ * with some signature algorithms.
+ *
+ */
+#include "../hash/hash_algs.h"
 
 /*
  * All the big num used in the lib are statically allocated. This constant
@@ -32,7 +39,7 @@
  * Rationale for the default value: the main purpose of the lirary is to
  * support for an ECC implementation. ATM, a forseeable upper limit for the
  * numbers that will be dealt with is 521 bits.
- * 
+ *
  * However, the user is allowed to overload the maximum bit length of the
  * numbers through the USER_NN_BIT_LEN macro definition (see below). A
  * hard limit 'nn_max' for this size depends on the word size and verifies
@@ -41,8 +48,8 @@
  *             floor((nn_max + w - 1) / w) * 3 = 255
  *
  * This equation is explained by elements given below, and by the fact that
- * the length in words of our big numbers are encoded on an u8. This yields 
- * in max sizes of around 5300 bits for 64-bit words, around 2650 bits for 
+ * the length in words of our big numbers are encoded on an u8. This yields
+ * in max sizes of around 5300 bits for 64-bit words, around 2650 bits for
  * 32-bit words, and around 1300 bits for 16-bit words.
  *
  * Among all the functions we have, some need to handle something which
@@ -56,6 +63,9 @@
  * is a multiple of the word size we support, i.e. 64/32/16 bits. Hence the
  * rounding.
  */
+
+/* Macro to round a bit length size to a word size */
+#define BIT_LEN_ROUNDING(x, w) ((((x) + (w) - 1) / (w)) * (w))
 
 /*
  * Macro to round a bit length size of a NN value to a word size, and
@@ -104,8 +114,55 @@
 #endif
 #endif
 
+/* Now adjust the maximum length with our maximum digest size as we
+ * have to import full digests as big numbers in some signature algorithms.
+ *
+ * The division by 2 here is related to the fact that we usually import hash values
+ * without performing much NN operations on them (immediately reducing them modulo q), so
+ * it is safe to remove some additional space left for multiplications.
+ */
+#if NN_MAX_BIT_LEN < MAX_BIT_LEN_ROUNDING(((8 * MAX_DIGEST_SIZE) / 2), WORD_BITS)
+#undef NN_MAX_BIT_LEN
+#define NN_MAX_BIT_LEN MAX_BIT_LEN_ROUNDING(((8 * MAX_DIGEST_SIZE) / 2), WORD_BITS)
+#undef NN_MAX_BASE
+#define NN_MAX_BASE MAX_DIGEST_SIZE_BITS
+#endif
+/*
+ * NOTE: the only exception to the rule above (i.e. immediately reducing hash sized
+ * values modulo q) is when we use blinding and EdDSA and there might be not enough
+ * room for our computations. This is actually *specific to EdDSA 25519* as EdDSA 448
+ * always uses SHAKE256 digest with 114 bytes hash output that has enough room for
+ * computation when compared to the 448-bit size order of the curve.
+ *
+ * This is kind of ugly to have this specific case here, but
+ * being too conservative always using the maximum size adapated to MAX_DIGEST_SIZE
+ * sacrifices *ALL* the sognature performance only for the specific case of EdDSA 25519!
+ *
+ */
+#if defined(WITH_SIG_EDDSA25519) && defined(USE_SIG_BLINDING)
+#if NN_MAX_BIT_LEN < MAX_BIT_LEN_ROUNDING((8 * SHA512_DIGEST_SIZE), WORD_BITS)
+#undef NN_MAX_BIT_LEN
+#define NN_MAX_BIT_LEN MAX_BIT_LEN_ROUNDING((8 * SHA512_DIGEST_SIZE), WORD_BITS)
+#undef NN_MAX_BASE
+#define NN_MAX_BASE MAX_DIGEST_SIZE_BITS
+#endif
+#endif /* defined(WITH_SIG_EDDSA25519) && defined(USE_SIG_BLINDING) */
+
+/************/
+/* NN maximum internal lengths to be "safe" in our computations */
 #define NN_MAX_BYTE_LEN (NN_MAX_BIT_LEN / 8)
 #define NN_MAX_WORD_LEN (NN_MAX_BYTE_LEN / WORD_BYTES)
+/* Usable maximum sizes, to be used by the end user to be "safe" in
+ * all the computations.
+ */
+#define NN_USABLE_MAX_BIT_LEN  (NN_MAX_BASE)
+#define NN_USABLE_MAX_BYTE_LEN ((BIT_LEN_ROUNDING(NN_USABLE_MAX_BIT_LEN, 8)) / 8)
+#define NN_USABLE_MAX_WORD_LEN ((BIT_LEN_ROUNDING(NN_USABLE_MAX_BIT_LEN, WORD_BITS)) / WORD_BITS)
+
+/* Sanity checks */
+#if (NN_USABLE_MAX_BIT_LEN > NN_MAX_BIT_LEN) || (NN_USABLE_MAX_BYTE_LEN > NN_MAX_BYTE_LEN) || (NN_USABLE_MAX_WORD_LEN > NN_MAX_WORD_LEN)
+#error "usable maximum length > internal maximum length, this should not happen!"
+#endif
 
 #if (NN_MAX_WORD_LEN > 255)
 #error "nn.wlen is encoded on an u8. NN_MAX_WORD_LEN cannot be larger than 255!"
@@ -123,37 +180,37 @@
  * or not.
  */
 #ifdef NO_USE_COMPLETE_FORMULAS
-#define _CONCATENATE(a, b, c, d) a##b##c##d
-#define CONCATENATE(a, b, c, d) _CONCATENATE(a, b, c, d)
-void CONCATENATE(nn_consistency_check_maxbitlen, NN_MAX_BASE, wordsize,
+#define _LIBECC_CONCATENATE(a, b, c, d) a##b##c##d
+#define LIBECC_CONCATENATE(a, b, c, d) _LIBECC_CONCATENATE(a, b, c, d)
+void LIBECC_CONCATENATE(nn_consistency_check_maxbitlen, NN_MAX_BASE, wordsize,
 		 WORDSIZE) (void);
 #ifdef NN_CONSISTENCY_CHECK
-ATTRIBUTE_USED void CONCATENATE(nn_consistency_check_maxbitlen, NN_MAX_BASE,
+ATTRIBUTE_USED void LIBECC_CONCATENATE(nn_consistency_check_maxbitlen, NN_MAX_BASE,
 				wordsize, WORDSIZE) (void) {
 	return;
 }
 #else
 ATTRIBUTE_USED static inline void nn_check_libconsistency(void)
 {
-	CONCATENATE(nn_consistency_check_maxbitlen, NN_MAX_BASE, wordsize,
+	LIBECC_CONCATENATE(nn_consistency_check_maxbitlen, NN_MAX_BASE, wordsize,
 		    WORDSIZE) ();
 	return;
 }
 #endif
 #else /* NO_USE_COMPLETE_FORMULAS */
-#define _CONCATENATE(a, b, c, d, e) a##b##c##d##e
-#define CONCATENATE(a, b, c, d, e) _CONCATENATE(a, b, c, d, e)
-void CONCATENATE(nn_consistency_check_maxbitlen, NN_MAX_BASE, wordsize,
+#define _LIBECC_CONCATENATE(a, b, c, d, e) a##b##c##d##e
+#define LIBECC_CONCATENATE(a, b, c, d, e) _LIBECC_CONCATENATE(a, b, c, d, e)
+void LIBECC_CONCATENATE(nn_consistency_check_maxbitlen, NN_MAX_BASE, wordsize,
 		 WORDSIZE, complete_formulas) (void);
 #ifdef NN_CONSISTENCY_CHECK
-ATTRIBUTE_USED void CONCATENATE(nn_consistency_check_maxbitlen, NN_MAX_BASE,
+ATTRIBUTE_USED void LIBECC_CONCATENATE(nn_consistency_check_maxbitlen, NN_MAX_BASE,
 				wordsize, WORDSIZE, complete_formulas) (void) {
 	return;
 }
 #else
 ATTRIBUTE_USED static inline void nn_check_libconsistency(void)
 {
-	CONCATENATE(nn_consistency_check_maxbitlen, NN_MAX_BASE, wordsize,
+	LIBECC_CONCATENATE(nn_consistency_check_maxbitlen, NN_MAX_BASE, wordsize,
 		    WORDSIZE, complete_formulas) ();
 	return;
 }
