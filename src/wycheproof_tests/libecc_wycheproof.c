@@ -163,20 +163,20 @@ static int check_wycheproof_eddsa(void)
 			goto err;
 		}
 		/* Check */
-		ret = eddsa_export_pub_key(&pub_key, exported_pub_key, 56);
+		ret = eddsa_export_pub_key(&pub_key, exported_pub_key, 57);
 		if(ret){
 			ext_printf("Error: EDDSA tests error when exporting public key\n");
 			ret = -1;
 			goto err;
 		}
-		ret = eddsa_export_pub_key(&pub_key_check, exported_pub_key_check, 56);
+		ret = eddsa_export_pub_key(&pub_key_check, exported_pub_key_check, 57);
 		if(ret){
 			ext_printf("Error: EDDSA tests error when exporting public key\n");
 			ret = -1;
 			goto err;
 		}
 		/* */
-		ret = are_equal(&exported_pub_key, &exported_pub_key_check, 56, &check); EG(ret, err);
+		ret = are_equal(&exported_pub_key, &exported_pub_key_check, 57, &check); EG(ret, err);
 		if(!check){
 			ext_printf("Error: EDDSA tests error when checking public key from private\n");
 			ret = -1;
