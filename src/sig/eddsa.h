@@ -25,9 +25,26 @@
  * EDDSA exported encoded public keys are of fixed known sizes depending
  * on the EDDSA variant
  */
+#if defined(WITH_SIG_EDDSA25519)
 #define EDDSA25519_PUB_KEY_ENCODED_LEN 32
+#endif
+#if defined(WITH_SIG_EDDSA448)
 #define EDDSA448_PUB_KEY_ENCODED_LEN   57
+#endif
+
+/* Maximum size depending on what is defined */
+#if defined(WITH_SIG_EDDSA25519) && defined(WITH_SIG_EDDSA448)
 #define EDDSA_MAX_PUB_KEY_ENCODED_LEN LOCAL_MAX(EDDSA25519_PUB_KEY_ENCODED_LEN, EDDSA448_PUB_KEY_ENCODED_LEN)
+#endif
+
+#if defined(WITH_SIG_EDDSA25519) && !defined(WITH_SIG_EDDSA448)
+#define EDDSA_MAX_PUB_KEY_ENCODED_LEN EDDSA25519_PUB_KEY_ENCODED_LEN
+#endif
+
+#if !defined(WITH_SIG_EDDSA25519) && defined(WITH_SIG_EDDSA448)
+#define EDDSA_MAX_PUB_KEY_ENCODED_LEN EDDSA448_PUB_KEY_ENCODED_LEN
+#endif
+
 
 /*
  * NOTE: for EDDSA, the signature length is twice the encoding of integers,

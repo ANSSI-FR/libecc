@@ -888,6 +888,18 @@ int eddsa_import_pub_key(ec_pub_key *pub_key, const u8 *buf, u16 buflen,
 
 	MUST_HAVE((pub_key != NULL) && (shortw_curve_params != NULL) && (buf != NULL), ret, err);
 
+	/* Check for sizes on the buffer for strict size depending on EdDSA types */
+#if defined(WITH_SIG_EDDSA25519)
+	if((sig_type == EDDSA25519) || (sig_type == EDDSA25519CTX) || (sig_type == EDDSA25519PH)){
+		MUST_HAVE((buflen == EDDSA25519_PUB_KEY_ENCODED_LEN), ret, err);
+	}
+#endif
+#if defined(WITH_SIG_EDDSA448)
+	if((sig_type == EDDSA448) || (sig_type == EDDSA448PH)){
+		MUST_HAVE((buflen == EDDSA448_PUB_KEY_ENCODED_LEN), ret, err);
+	}
+#endif
+
 	/* Make things more readable */
 	shortw_curve = &(shortw_curve_params->ec_curve);
 	alpha_montgomery = &(shortw_curve_params->ec_alpha_montgomery);
@@ -958,6 +970,7 @@ int eddsa_export_pub_key(const ec_pub_key *in_pub, u8 *buf, u16 buflen)
 {
 	aff_pt_edwards _Tmp;
 	ec_edwards_crv edwards_curve;
+	ec_alg_type sig_type;
 	int ret;
 	ec_shortw_crv_src_t shortw_curve;
 	fp_src_t alpha_montgomery;
@@ -975,6 +988,19 @@ int eddsa_export_pub_key(const ec_pub_key *in_pub, u8 *buf, u16 buflen)
 	gamma_montgomery = &(in_pub->params->ec_gamma_montgomery);
 	alpha_edwards = &(in_pub->params->ec_alpha_edwards);
 	pub_key_y = &(in_pub->y);
+	sig_type = in_pub->key_type;
+
+	/* Check for sizes on the buffer for strict size depending on EdDSA types */
+#if defined(WITH_SIG_EDDSA25519)
+	if((sig_type == EDDSA25519) || (sig_type == EDDSA25519CTX) || (sig_type == EDDSA25519PH)){
+		MUST_HAVE((buflen == EDDSA25519_PUB_KEY_ENCODED_LEN), ret, err);
+	}
+#endif
+#if defined(WITH_SIG_EDDSA448)
+	if((sig_type == EDDSA448) || (sig_type == EDDSA448PH)){
+		MUST_HAVE((buflen == EDDSA448_PUB_KEY_ENCODED_LEN), ret, err);
+	}
+#endif
 
 	/* Transfer our short Weierstrass to Edwards representation */
 	ret = curve_shortw_to_edwards(shortw_curve, &edwards_curve, alpha_montgomery,

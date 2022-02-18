@@ -121,7 +121,6 @@ static int check_wycheproof_eddsa(void)
 		ec_params params;
 		int check;
 		u8 exported_pub_key[EDDSA_MAX_PUB_KEY_ENCODED_LEN];
-		u8 exported_pub_key_check[EDDSA_MAX_PUB_KEY_ENCODED_LEN];
 
 		if (t == NULL){
 			continue;
@@ -129,7 +128,6 @@ static int check_wycheproof_eddsa(void)
 
 		eddsa_all_performed++;
 		ret = local_memset(&pub_key, 0, sizeof(pub_key)); EG(ret, err);
-		ret = local_memset(&pub_key_check, 0, sizeof(pub_key_check)); EG(ret, err);
 		ret = local_memset(&priv_key, 0, sizeof(priv_key)); EG(ret, err);
 		ret = local_memset(&params, 0, sizeof(params)); EG(ret, err);
 
@@ -163,20 +161,14 @@ static int check_wycheproof_eddsa(void)
 			goto err;
 		}
 		/* Check */
-		ret = eddsa_export_pub_key(&pub_key, exported_pub_key, 57);
-		if(ret){
-			ext_printf("Error: EDDSA tests error when exporting public key\n");
-			ret = -1;
-			goto err;
-		}
-		ret = eddsa_export_pub_key(&pub_key_check, exported_pub_key_check, 57);
+		ret = eddsa_export_pub_key(&pub_key, exported_pub_key, (u8)(t->pubkeylen));
 		if(ret){
 			ext_printf("Error: EDDSA tests error when exporting public key\n");
 			ret = -1;
 			goto err;
 		}
 		/* */
-		ret = are_equal(&exported_pub_key, &exported_pub_key_check, 57, &check); EG(ret, err);
+		ret = are_equal(t->pubkey, &exported_pub_key, (u8)(t->pubkeylen), &check); EG(ret, err);
 		if(!check){
 			ext_printf("Error: EDDSA tests error when checking public key from private\n");
 			ret = -1;
