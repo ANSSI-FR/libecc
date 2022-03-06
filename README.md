@@ -78,9 +78,9 @@ a compilation toggle that will force this mode `USE_ISO14888_3_ECRDSA=1`:
 	$ USE_ISO14888_3_ECRDSA=1 make
 </pre>
 
-ECDH (Elliptic Curve Diffie--Hellman) variants are also implemented in the
+ECDH (Elliptic Curve Diffie-Hellman) variants are also implemented in the
 library. Classical ECDH over Weierstrass curves is implemented in the form
-of ECC-CDH (Elliptic Curve Cryptography Cofactor Diffie--Hellman) as described
+of ECC-CDH (Elliptic Curve Cryptography Cofactor Diffie-Hellman) as described
 in [section 5.7.1.2 of the NIST SP 800-56A Rev. 3](https://csrc.nist.gov/publications/detail/sp/800-56a/rev-3/final) standard. Montgomery curves
 based algorithms (Curve25519 and Curve448) are included as specified in [RFC7748](https://datatracker.ietf.org/doc/html/rfc7748),
 although the implementation somehow diverges from the canonical ones as u coordinates on the curve
@@ -93,7 +93,7 @@ of elliptic curve based protocols as well as any algorithm
 on top of prime fields based elliptic curves (or prime fields, or rings
 of integers). Many examples are present in the [src/examples](src/examples)
 folder, notable ones being:
-  * Pollard--Rho, Miller--Rabin and square residues over finite fields.
+  * Pollard-Rho, Miller-Rabin and square residues over finite fields.
   * The RSA cryptosystem as defined in the PKCS#1 [RFC8017](https://datatracker.ietf.org/doc/html/rfc8017)
 standard. This implementation also comes with the integration of deprecated hash
 functions such as MD2, MD4, MD5, SHA-0, SHA-1, MDC-2, GOSTR34-11-94 and so on in order to be compliant with existing
@@ -102,16 +102,16 @@ library on purpose: they are **dangerous and broken** and must only be used for
 tests purposes.
   * The DSA cryptosystem as defined in [FIPS 186-4](https://csrc.nist.gov/publications/detail/fips/186/4/final).
   * The SDSA (Schnorr DSA) as defined in ISO14888-3
-  * The KCDSA (Korean DSA) as deinfed in ISO14888-3
+  * The KCDSA (Korean DSA) as defined in ISO14888-3
   * The GOSTR34-10-94 function as defined in [RFC4491](https://www.rfc-editor.org/rfc/rfc4491)
   * The SSS (Shamir Secret Sharing) algorithm over a prime field of 256 bits.
 
 
 **NOTE**: for all the primitives (specifically relevant for signature primitives), a maximum
-allowed size for bug numbers is **4096 bits** with word size **64 bits** (this will be less
+allowed size for big numbers is **4096 bits** with word size **64 bits** (this will be less
 for word sizes 16 and 32 bits). This is due to an internal limitation of libecc
 on big numbers allocation documented [here](src/nn/nn_config.h). We can live with
-this limitation as the library is primarily intented to focus on ECC based algorithms.
+this limitation as the library is primarily intended to focus on ECC based algorithms.
 However, one should be aware that for example RSA with modulus > 4096 will fail (as well
 and DSA and other El-Gamal based algorithms): these primitives are only included as
 examples and should be used with care.
@@ -1031,8 +1031,10 @@ might depend on the low-level compilation process and are difficult to handle
 at high-level in pure C.
 
 For now, we check if points are on the curve when entering and leaving the
-scalar multiplication algorithm. Efforts are also made to sanity check
-the signature and verification contexts whenever possible.
+scalar multiplication algorithm, as well as when importing external public points.
+Efforts are also made to sanity check the signature and verification contexts whenever possible,
+as well as all the intermediate contexts (natural numbers, fields, hash functions, etc.).
+
 Currently, no specific effort has been made to render conditional operations robust
 (e.g. using double if and limiting compilation optimization).
 
