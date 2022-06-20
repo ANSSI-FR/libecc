@@ -1159,7 +1159,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int rand_sig_verif_test_one(const ec_sig_mappin
 
 #if defined(WITH_SIG_EDDSA25519) || defined(WITH_SIG_SM2)
 	u8 rand_adata[255];
-	ret = local_memset(rand_adata, 0, sizeof(rand_adata));
+	ret = local_memset(rand_adata, 0, sizeof(rand_adata)); EG(ret, err);
 	/* The case of EDDSA25519CTX and SM2 needs a non NULL context (ancillary data).
 	 * Create a random string of size <= 255 for this.
 	 */
