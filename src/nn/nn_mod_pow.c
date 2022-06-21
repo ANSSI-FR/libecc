@@ -203,7 +203,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int _nn_mod_pow(nn_t out, nn_src_t base, nn_src
 		_out.magic = WORD(0);
 
 		ret = nn_init(&_out, 0); EG(ret, err);
-		ret = _nn_exp_monty_ladder_ltr(&_out, base, exp, mod, NULL, NULL, WORD(0));
+		ret = _nn_exp_monty_ladder_ltr(&_out, base, exp, mod, NULL, NULL, WORD(0)); EG(ret, err);
 		ret = nn_copy(out, &_out);
 	}
 	else{

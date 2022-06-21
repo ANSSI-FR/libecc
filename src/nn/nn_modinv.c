@@ -453,7 +453,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int _nn_modinv_fermat_common(nn_t out, nn_src_t
 	ret = nn_cmp_word(p, WORD(2), &cmp); EG(ret, err);
         if(cmp == 0){
 		/* This is the p = 2 case, parity of x provides the result */
-		ret = nn_isodd(x, &isodd);
+		ret = nn_isodd(x, &isodd); EG(ret, err);
 		if(isodd){
 			/* x is odd, 1 is its inverse */
 			ret = nn_init(out, 0); EG(ret, err);

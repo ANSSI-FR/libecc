@@ -32,8 +32,8 @@
  * ================
  * Some efforts have been put on providing a clean code and constant time
  * as well as some SCA (side-channel attacks) resistance (e.g. blinding some
- * operations manipulating secrets). However, no absolute guarantee can be made:
- * use this code knowingly and at your own risk!
+ * operations manipulating secrets). However, no absolute guarantee can be claimed:
+ * use this code knowingly and at your own risks!
  *
  * Also, as for all other libecc primitives, beware of randomness sources. By default,
  * the library uses the OS random sources (e.g. "/dev/urandom"), but the user
@@ -176,13 +176,13 @@ ATTRIBUTE_WARN_UNUSED_RET static int _sss_raw_generate(sss_share *shares, u16 k,
 	if(input_secret == SSS_TRUE){
 		/* Import the secret the user provides
 		 * XXX: NOTE: the user shared secret MUST be in Fp! Since our prime is < (2**256 - 1),
-		 * some 256 bit strings can be rejected here (namely those >= p and < (2**256 - 1)).
+		 * some 256 bit strings can be rejected here (namely those >= p and <= (2**256 - 1)).
 		 */
 		ret = fp_import_from_buf(&a0, secret->secret, SSS_SECRET_SIZE); EG(ret, err);
 	}
 	else{
 		/* Generate the secret from our seed */
-		ret = _sss_derive_seed(&a0, secret_seed, 0);
+		ret = _sss_derive_seed(&a0, secret_seed, 0); EG(ret, err);
 	}
 
 	/* Compute the shares P(x) for x in [idx_shift + 0, ..., idx_shift + n] (or
@@ -224,7 +224,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int _sss_raw_generate(sss_share *shares, u16 k,
 		/* Get a random base x as u16 for share index */
 		ret = fp_set_word_value(&base, (word_t)curr_idx); EG(ret, err);
 		/* Set the exp to 1 */
-		ret = fp_one(&exp);
+		ret = fp_one(&exp); EG(ret, err);
 		for(j = 1; j < k; j++){
 			/* Compute x**j by iterative multiplications */
 			ret = fp_mul_monty(&exp, &exp, &base); EG(ret, err);
@@ -374,7 +374,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int _sss_raw_lagrange(const sss_share *shares, 
 				ret = fp_mul_monty(&tmp2, &tmp2, &tmp); EG(ret, err);
 			}
 		}
-		/* Inverse all the (x_j - x_i) poducts */
+		/* Invert all the (x_j - x_i) poducts */
 		ret = fp_inv(&tmp, &tmp2); EG(ret, err);
 		ret = fp_mul_monty(&s, &s, &tmp); EG(ret, err);
 		/* Accumulate in secret */
@@ -430,6 +430,8 @@ int sss_generate(sss_share *shares, unsigned short k, unsigned short n, sss_secr
 	u8 len;
 	u8 session_id[SSS_SESSION_ID_SIZE];
 
+	ret = local_memset(session_id, 0, sizeof(session_id)); EG(ret, err);
+
 	/* Generate raw shares */
 	ret = _sss_raw_generate(shares, k, n, secret, input_secret); EG(ret, err);
 
@@ -459,6 +461,8 @@ int sss_generate(sss_share *shares, unsigned short k, unsigned short n, sss_secr
 	}
 
 err:
+	IGNORE_RET_VAL(local_memset(session_id, 0, sizeof(session_id)));
+
 	return ret;
 }
 
@@ -548,7 +552,7 @@ int sss_regenerate(sss_share *shares, unsigned short k, unsigned short n, sss_se
 	ret = local_memset(hmac_val, 0, sizeof(hmac_val)); EG(ret, err);
 
 	/* Compute the secret */
-	ret = _sss_raw_lagrange(shares, k, secret, 0);
+	ret = _sss_raw_lagrange(shares, k, secret, 0); EG(ret, err);
 	/* Check the authenticity of our shares */
 	for(i = 0; i < k; i++){
 		_sss_raw_share *cur_share = &(shares[i].raw_share);
