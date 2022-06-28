@@ -19,33 +19,46 @@
 #include "fp_mul_redc1.h"
 #include "fp_montgomery.h"
 
-/* Compute out = in1 + in2 mod p. Returns 0 on success, -1 on error. */
+/* Compute out = in1 + in2 mod p in the Montgomery form.
+ * Inputs and outputs are in their Montgomery form.
+ * Returns 0 on success, -1 on error.
+ */
 int fp_add_monty(fp_t out, fp_src_t in1, fp_src_t in2)
 {
 	return fp_add(out, in1, in2);
 }
 
-/* Compute out = in1 - in2 mod p. Returns 0 on success, -1 on error. */
+/* Compute out = in1 - in2 mod p in the Montgomery form.
+ * Inputs and outputs are in their Montgomery form.
+ * Returns 0 on success, -1 on error.
+ */
 int fp_sub_monty(fp_t out, fp_src_t in1, fp_src_t in2)
 {
 	return fp_sub(out, in1, in2);
 }
 
-/* Compute out = in1 * in2 mod p. Returns 0 on success, -1 on error. */
+/* Compute out = in1 * in2 mod p in the Montgomery form.
+ * Inputs and outputs are in their Montgomery form.
+ * Returns 0 on success, -1 on error.
+ */
 int fp_mul_monty(fp_t out, fp_src_t in1, fp_src_t in2)
 {
 	return fp_mul_redc1(out, in1, in2);
 }
 
-/* Compute out = in * in mod p. Returns 0 on success, -1 on error. */
+/* Compute out = in * in mod p in the Montgomery form.
+ * Inputs and outputs are in their Montgomery form.
+ * Returns 0 on success, -1 on error.
+ */
 int fp_sqr_monty(fp_t out, fp_src_t in)
 {
 	return fp_sqr_redc1(out, in);
 }
 
 /*
- * Compute out such that in1 = out * in2 mod p. Returns 0 on success,
- * -1 on error. out must be initialized by the caler.
+ * Compute out such that in1 = out * in2 mod p in the Montgomery form.
+ * Inputs and outputs are in their Montgomery form.
+ * Returns 0 on success, -1 on error. out must be initialized by the caler.
  *
  */
 int fp_div_monty(fp_t out, fp_src_t in1, fp_src_t in2)
