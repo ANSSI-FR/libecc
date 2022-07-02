@@ -675,9 +675,6 @@ ATTRIBUTE_WARN_UNUSED_RET static int sign_bin_file(const char *ec_name, const ch
 	MUST_HAVE(in_fname != NULL, ret, err);
 	MUST_HAVE(in_key_fname != NULL, ret, err);
 	MUST_HAVE(out_fname != NULL, ret, err);
-	MUST_HAVE(hdr_type != NULL, ret, err);
-	MUST_HAVE(version != NULL, ret, err);
-	MUST_HAVE(adata != NULL, ret, err);
 
 	/************************************/
 	/* Get parameters from pretty names */
@@ -687,8 +684,10 @@ ATTRIBUTE_WARN_UNUSED_RET static int sign_bin_file(const char *ec_name, const ch
 		ret = -1;
 		goto err;
 	}
-	/* Check if ancillary data will be used */
-	ret = check_ancillary_data(adata, sig_type, ec_sig_name, &check); EG(ret, err);
+	if(adata != NULL){
+		/* Check if ancillary data will be used */
+		ret = check_ancillary_data(adata, sig_type, ec_sig_name, &check); EG(ret, err);
+	}
 	/* Import the parameters */
 	ret = import_params(&params, ec_str_p); EG(ret, err);
 
@@ -1039,15 +1038,15 @@ ATTRIBUTE_WARN_UNUSED_RET static int verify_bin_file(const char *ec_name, const 
 	MUST_HAVE(hash_algorithm != NULL, ret, err);
 	MUST_HAVE(in_fname != NULL, ret, err);
 	MUST_HAVE(in_key_fname != NULL, ret, err);
-	MUST_HAVE(in_sig_fname != NULL, ret, err);
-	MUST_HAVE(adata != NULL, ret, err);
 
 	/************************************/
 	/* Get parameters from pretty names */
 	ret = string_to_params(ec_name, ec_sig_name, &sig_type, &ec_str_p,
                              hash_algorithm, &hash_type); EG(ret, err);
-	/* Check if ancillary data will be used */
-	ret = check_ancillary_data(adata, sig_type, ec_sig_name, &check); EG(ret, err);
+	if(adata != NULL){
+		/* Check if ancillary data will be used */
+		ret = check_ancillary_data(adata, sig_type, ec_sig_name, &check); EG(ret, err);
+	}
 	/* Import the parameters */
 	ret = import_params(&params, ec_str_p); EG(ret, err);
 
