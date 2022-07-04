@@ -637,7 +637,7 @@ int emsa_pss_encode(const u8 *m, u16 mlen, u8 *em, u32 embits,
 	/* We only allow salt up to a certain size */
 	MUST_HAVE((slen <= sizeof(salt)), ret, err);
 	emlen = BYTECEIL(embits);
-	MUST_HAVE((emlen < (u32)(0x1 << 16)), ret, err);
+	MUST_HAVE((emlen < (u32)((u32)0x1 << 16)), ret, err);
 
 	/* Check that we have enough room for the output */
 	MUST_HAVE(((*eminlen) >= emlen), ret, err);
@@ -766,7 +766,7 @@ int emsa_pss_verify(const u8 *m, u16 mlen, const u8 *em,
 	MUST_HAVE((embits >= ((8*(u32)hlen) + (8*(u32)slen) + 9)), ret, err);
 
 	/* Check that emLen == \ceil(emBits/8) */
-	MUST_HAVE((((embits / 8) + 1) < (u32)(0x1 << 16)), ret, err);
+	MUST_HAVE((((embits / 8) + 1) < (u32)((u32)0x1 << 16)), ret, err);
 	_emlen = ((embits % 8) == 0) ? (u16)(embits / 8) : (u16)((embits / 8) + 1);
 	MUST_HAVE((_emlen == emlen), ret, err);
 
@@ -944,7 +944,7 @@ int rsaes_pkcs1_v1_5_encrypt(const rsa_pub_key *pub, const u8 *m, u16 mlen,
 
 	/* RSA encryption */
 	/*   m = OS2IP (EM) */
-	MUST_HAVE((k < (u32)(0x1 << 16)), ret, err);
+	MUST_HAVE((k < (u32)((u32)0x1 << 16)), ret, err);
 	ret = rsa_os2ip(&m_, em, (u16)k); EG(ret, err);
 	/*   c = RSAEP ((n, e), m) */
 	ret = rsaep(pub, &m_, &c_); EG(ret, err);
@@ -991,7 +991,7 @@ int rsaes_pkcs1_v1_5_decrypt(const rsa_priv_key *priv, const u8 *c, u16 clen,
 	/*   m = RSADP ((n, d), c) */
 	ret = rsadp(priv, &c_, &m_); EG(ret, err);
 	/*   EM = I2OSP (m, k) */
-	MUST_HAVE((k < (u32)(0x1 << 16)), ret, err);
+	MUST_HAVE((k < (u32)((u32)0x1 << 16)), ret, err);
 	ret = rsa_i2osp(&m_, em, (u16)k); EG(ret, err);
 
 	/* EME-PKCS1-v1_5 decoding: EM = 0x00 || 0x02 || PS || 0x00 || M */
@@ -1125,7 +1125,7 @@ int rsaes_oaep_encrypt(const rsa_pub_key *pub, const u8 *m, u16 mlen,
 		maskeddb[i] = (db[i] ^ dbmask[i]);
 	}
 	/* Let seedMask = MGF(maskedDB, hLen) */
-	MUST_HAVE((khlen < (u32)(0x1 << 16)), ret, err);
+	MUST_HAVE((khlen < (u32)((u32)0x1 << 16)), ret, err);
 	ret = _mgf1(maskeddb, (u16)khlen, seedmask, hlen, mgf_hash_type); EG(ret, err);
 	/* Let maskedSeed = seed \xor seedMask */
 	for(i = 0; i < hlen; i++){
@@ -1136,7 +1136,7 @@ int rsaes_oaep_encrypt(const rsa_pub_key *pub, const u8 *m, u16 mlen,
 
 	/* RSA encryption */
 	/*   m = OS2IP (EM) */
-	MUST_HAVE((k < (u32)(0x1 << 16)), ret, err);
+	MUST_HAVE((k < (u32)((u32)0x1 << 16)), ret, err);
 	ret = rsa_os2ip(&m_, em, (u16)k); EG(ret, err);
 	/*   c = RSAEP ((n, e), m) */
 	ret = rsaep(pub, &m_, &c_); EG(ret, err);
@@ -1204,7 +1204,7 @@ int rsaes_oaep_decrypt(const rsa_priv_key *priv, const u8 *c, u16 clen,
 	/*   m = RSADP ((n, d), c) */
 	ret = rsadp(priv, &c_, &m_); EG(ret, err);
 	/*   EM = I2OSP (m, k) */
-	MUST_HAVE((k < (u32)(0x1 << 16)), ret, err);
+	MUST_HAVE((k < (u32)((u32)0x1 << 16)), ret, err);
 	ret = rsa_i2osp(&m_, em, (u16)k); EG(ret, err);
 
 	/* EME-OAEP decoding */
@@ -1222,7 +1222,7 @@ int rsaes_oaep_decrypt(const rsa_priv_key *priv, const u8 *c, u16 clen,
 	maskeddb   = &em[hlen + 1];
 	/* seedMask = MGF(maskedDB, hLen) */
 	khlen = (k - hlen - 1);
-	MUST_HAVE((khlen < (u32)(0x1 << 16)), ret, err);
+	MUST_HAVE((khlen < (u32)((u32)0x1 << 16)), ret, err);
 	ret = _mgf1(maskeddb, (u16)khlen, seedmask, hlen, mgf_hash_type); EG(ret, err);
 	/* Let maskedSeed = seed \xor seedMask */
 	for(i = 0; i < hlen; i++){
@@ -1307,7 +1307,7 @@ int rsassa_pkcs1_v1_5_sign(const rsa_priv_key *priv, const u8 *m, u16 mlen,
 	k = BYTECEIL(modbits);
 
 	/* Only accept reasonable sizes */
-	MUST_HAVE((k < (u32)(0x1 << 16)), ret, err);
+	MUST_HAVE((k < (u32)((u32)0x1 << 16)), ret, err);
 	/* Sanity check on size */
 	MUST_HAVE(((*slen) >= k), ret, err);
 
@@ -1356,7 +1356,7 @@ int rsassa_pkcs1_v1_5_verify(const rsa_pub_key *pub, const u8 *m, u16 mlen,
 
 	k = BYTECEIL(modbits);
 	/* Only accept reasonable sizes */
-	MUST_HAVE((k < (u32)(0x1 << 16)), ret, err);
+	MUST_HAVE((k < (u32)((u32)0x1 << 16)), ret, err);
 
 	/* Length checking: If the length of the signature S is not k
          * octets, output "invalid signature" and stop.
@@ -1406,7 +1406,7 @@ int rsassa_pss_sign(const rsa_priv_key *priv, const u8 *m, u16 mlen,
 	MUST_HAVE((modbits > 1), ret, err);
 
 	k = BYTECEIL(modbits);
-	MUST_HAVE((k < (u32)(0x1 << 16)), ret, err);
+	MUST_HAVE((k < (u32)((u32)0x1 << 16)), ret, err);
 
 	/* Sanity check on size */
 	MUST_HAVE(((*slen) >= k), ret, err);
@@ -1423,7 +1423,7 @@ int rsassa_pss_sign(const rsa_priv_key *priv, const u8 *m, u16 mlen,
 	/* s = RSASP1 (K, m) */
 	ret = rsasp1(priv, &m_, &s_); EG(ret, err);
 	/* S = I2OSP (s, k) */
-	MUST_HAVE((k < (0x1 << 16)), ret, err);
+	MUST_HAVE((k < ((u32)0x1 << 16)), ret, err);
 	ret = rsa_i2osp(&s_, s, (u16)k);
 	(*slen) = (u16)k;
 
@@ -1462,14 +1462,14 @@ int rsassa_pss_verify(const rsa_pub_key *pub, const u8 *m, u16 mlen,
 
 	MUST_HAVE((modbits > 1), ret, err);
 	k = BYTECEIL(modbits);
-	MUST_HAVE((k < (u32)(0x1 << 16)), ret, err);
+	MUST_HAVE((k < (u32)((u32)0x1 << 16)), ret, err);
 
 	/* s = OS2IP (S) */
 	ret = rsa_os2ip(&s_, s, slen); EG(ret, err);
 	/* m = RSAVP1 ((n, e), s) */
 	ret = rsavp1(pub, &s_, &m_); EG(ret, err);
 	/* emLen = \ceil ((modBits - 1)/8) */
-	MUST_HAVE((((modbits - 1) / 8) + 1) < (u32)(0x1 << 16), ret, err);
+	MUST_HAVE((((modbits - 1) / 8) + 1) < (u32)((u32)0x1 << 16), ret, err);
 	emlen = (((modbits - 1) % 8) == 0) ? (u16)((modbits - 1) / 8) : (u16)(((modbits - 1) / 8) + 1);
 
 	/* Note that emLen will be one less than k if modBits - 1 is divisible by 8 and equal to k otherwise */
