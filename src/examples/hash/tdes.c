@@ -17,25 +17,25 @@
 #ifndef GET_UINT32
 #define GET_UINT32(n,b,i)                             \
 do {                                                  \
-    (n) = ( (unsigned int) (b)[(i)    ] << 24 )       \
-        | ( (unsigned int) (b)[(i) + 1] << 16 )       \
-        | ( (unsigned int) (b)[(i) + 2] <<  8 )       \
-        | ( (unsigned int) (b)[(i) + 3]       );      \
+    (n) = ( (u32) (b)[(i)    ] << 24 )       \
+        | ( (u32) (b)[(i) + 1] << 16 )       \
+        | ( (u32) (b)[(i) + 2] <<  8 )       \
+        | ( (u32) (b)[(i) + 3]       );      \
 } while( 0 )
 #endif
 
 #ifndef PUT_UINT32
 #define PUT_UINT32(n,b,i)                               \
 do {                                                    \
-    (b)[(i)    ] = (unsigned char) ( (n) >> 24 );       \
-    (b)[(i) + 1] = (unsigned char) ( (n) >> 16 );       \
-    (b)[(i) + 2] = (unsigned char) ( (n) >>  8 );       \
-    (b)[(i) + 3] = (unsigned char) ( (n)       );       \
+    (b)[(i)    ] = (u8) ( (n) >> 24 );       \
+    (b)[(i) + 1] = (u8) ( (n) >> 16 );       \
+    (b)[(i) + 2] = (u8) ( (n) >>  8 );       \
+    (b)[(i) + 3] = (u8) ( (n)       );       \
 } while( 0 )
 #endif
 
 /* DES 8 S-Boxes */
-static const unsigned int SB[8][64] = {
+static const u32 SB[8][64] = {
   {
     0x01010400, 0x00000000, 0x00010000, 0x01010404,
     0x01010004, 0x00010404, 0x00000004, 0x00010000,
@@ -184,7 +184,7 @@ static const unsigned int SB[8][64] = {
 
 /* PC1: left and right halves bit-swap */
 
-static const unsigned int LH[16] =
+static const u32 LH[16] =
 {
     0x00000000, 0x00000001, 0x00000100, 0x00000101,
     0x00010000, 0x00010001, 0x00010100, 0x00010101,
@@ -192,7 +192,7 @@ static const unsigned int LH[16] =
     0x01010000, 0x01010001, 0x01010100, 0x01010101
 };
 
-static const unsigned int RH[16] =
+static const u32 RH[16] =
 {
     0x00000000, 0x01000000, 0x00010000, 0x01010000,
     0x00000100, 0x01000100, 0x00010100, 0x01010100,
@@ -201,9 +201,9 @@ static const unsigned int RH[16] =
 };
 
 /* DES Initial Permutation (IP) */
-static inline void des_ip(unsigned int L[1], unsigned int R[1])
+static inline void des_ip(u32 L[1], u32 R[1])
 {
-	unsigned int T;
+	u32 T;
 
 	T = ((L[0] >>  4) ^ R[0]) & 0x0F0F0F0F; R[0] ^= T; L[0] ^= (T <<  4);
 	T = ((L[0] >> 16) ^ R[0]) & 0x0000FFFF; R[0] ^= T; L[0] ^= (T << 16);
@@ -217,9 +217,9 @@ static inline void des_ip(unsigned int L[1], unsigned int R[1])
 }
 
 /* DES Final Permutation (FP) */
-static inline void des_fp(unsigned int L[1], unsigned int R[1])
+static inline void des_fp(u32 L[1], u32 R[1])
 {
-	unsigned int T;
+	u32 T;
 
 	L[0] = ((L[0] << 31) | (L[0] >> 1)) & 0xFFFFFFFF;
 	T = (L[0] ^ R[0]) & 0xAAAAAAAA; L[0] ^= T; R[0] ^= T;
@@ -233,13 +233,13 @@ static inline void des_fp(unsigned int L[1], unsigned int R[1])
 }
 
 /* DES function: F(R, K) + L with inversion */
-static inline void des_round(unsigned int L[1], unsigned int R[1], unsigned long long K)
+static inline void des_round(u32 L[1], u32 R[1], u64 K)
 {
-	unsigned int T;
-	unsigned int k1, k2;
+	u32 T;
+	u32 k1, k2;
 
-	k1 = (unsigned int)K;
-	k2 = (unsigned int)(K >> 32);
+	k1 = (u32)K;
+	k2 = (u32)(K >> 32);
 
 	T = k1 ^ L[0];
 	R[0] ^= SB[7][ (T) & 0x3f] ^ SB[5][ (T >> 8) & 0x3f] ^ SB[3][ (T >> 16) & 0x3f] ^ SB[1][ (T >> 24) & 0x3f];
@@ -250,10 +250,10 @@ static inline void des_round(unsigned int L[1], unsigned int R[1], unsigned long
 }
 
 /* DES key schedule */
-ATTRIBUTE_WARN_UNUSED_RET int des_set_key(des_context *ctx, const unsigned char k[8], des_direction dir)
+ATTRIBUTE_WARN_UNUSED_RET int des_set_key(des_context *ctx, const u8 k[8], des_direction dir)
 {
-	unsigned int i;
-	unsigned int C, D, T;
+	u32 i;
+	u32 C, D, T;
 	int ret;
 
 	if((ctx == NULL) || (k == NULL)){
@@ -285,7 +285,7 @@ ATTRIBUTE_WARN_UNUSED_RET int des_set_key(des_context *ctx, const unsigned char 
 
 	/* Compute the subkeys */
 	for( i = 0; i < 16; i++ ){
-		unsigned int k1, k2;
+		u32 k1, k2;
 		if((i < 2) || (i == 8) || (i == 15)){
 			C = ((C <<  1) | (C >> 27)) & 0x0FFFFFFF;
 			D = ((D <<  1) | (D >> 27)) & 0x0FFFFFFF;
@@ -320,10 +320,10 @@ ATTRIBUTE_WARN_UNUSED_RET int des_set_key(des_context *ctx, const unsigned char 
 		  	| ((D <<  2) & 0x00000004) | ((D >> 21) & 0x00000002);
 
 		if(dir == DES_ENCRYPTION){
-			ctx->sk[i] = (((unsigned long long)k2) << 32) | (unsigned long long)k1;
+			ctx->sk[i] = (((u64)k2) << 32) | (u64)k1;
 		}
 		else if(dir == DES_DECRYPTION){
-			ctx->sk[15-i] = (((unsigned long long)k2) << 32) | (unsigned long long)k1;
+			ctx->sk[15-i] = (((u64)k2) << 32) | (u64)k1;
 		}
 		else{
 			ret = -1;
@@ -338,10 +338,10 @@ err:
 }
 
 /* DES encryption core */
-ATTRIBUTE_WARN_UNUSED_RET static inline int des_core(const des_context *ctx, const unsigned char input[8], unsigned char output[8])
+ATTRIBUTE_WARN_UNUSED_RET static inline int des_core(const des_context *ctx, const u8 input[8], u8 output[8])
 {
-	unsigned int L, R;
-	unsigned int i;
+	u32 L, R;
+	u32 i;
 	int ret;
 
 	if((ctx == NULL) || (input == NULL) || (output == NULL)){
@@ -374,13 +374,13 @@ err:
 }
 
 /* DES encryption/decryption */
-ATTRIBUTE_WARN_UNUSED_RET int des(const des_context *ctx, const unsigned char input[8], unsigned char output[8])
+ATTRIBUTE_WARN_UNUSED_RET int des(const des_context *ctx, const u8 input[8], u8 output[8])
 {
 	return des_core(ctx, input, output);
 }
 
 /* TDES key schedules */
-ATTRIBUTE_WARN_UNUSED_RET int des3_set_keys(des3_context *ctx, const unsigned char k1[8], const unsigned char k2[8], const unsigned char k3[8], des_direction dir)
+ATTRIBUTE_WARN_UNUSED_RET int des3_set_keys(des3_context *ctx, const u8 k1[8], const u8 k2[8], const u8 k3[8], des_direction dir)
 {
 	int ret;
 
@@ -444,10 +444,10 @@ err:
 }
 
 /* TDES encryption/decryption */
-ATTRIBUTE_WARN_UNUSED_RET int des3(const des3_context *ctx, const unsigned char input[8], unsigned char output[8])
+ATTRIBUTE_WARN_UNUSED_RET int des3(const des3_context *ctx, const u8 input[8], u8 output[8])
 {
 	int ret;
-	unsigned char tmp[8];
+	u8 tmp[8];
 
 	if(ctx == NULL){
 		ret = -1;

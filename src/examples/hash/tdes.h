@@ -23,7 +23,7 @@ typedef enum {
 /* DES context */
 typedef struct {
     des_direction dir;
-    unsigned long long sk[16]; /* encryption/decryption subkeys */
+    u64 sk[16]; /* encryption/decryption subkeys */
 } des_context;
 
 /* Triple DES context */
@@ -33,7 +33,7 @@ typedef struct {
 } des3_context;
 
 /* Odd parity table */
-static const unsigned char odd_parity[256] = {
+static const u8 odd_parity[256] = {
     1, 1, 2, 2, 4, 4, 7, 7, 8, 8, 11, 11, 13, 13, 14, 14,
     16, 16, 19, 19, 21, 21, 22, 22, 25, 25, 26, 26, 28, 28, 31, 31,
     32, 32, 35, 35, 37, 37, 38, 38, 41, 41, 42, 42, 44, 44, 47, 47,
@@ -63,15 +63,15 @@ static const unsigned char odd_parity[256] = {
 };
 
 /* DES key schedule */
-ATTRIBUTE_WARN_UNUSED_RET int des_set_key(des_context *ctx, const unsigned char k[8], des_direction dir);
+ATTRIBUTE_WARN_UNUSED_RET int des_set_key(des_context *ctx, const u8 k[8], des_direction dir);
 
 /* DES encryption/decryption */
-ATTRIBUTE_WARN_UNUSED_RET int des(const des_context *ctx, const unsigned char input[8], unsigned char output[8]);
+ATTRIBUTE_WARN_UNUSED_RET int des(const des_context *ctx, const u8 input[8], u8 output[8]);
 
 /* TDES key schedules */
-ATTRIBUTE_WARN_UNUSED_RET int des3_set_keys(des3_context *ctx, const unsigned char k1[8], const unsigned char k2[8], const unsigned char k3[8], des_direction dir);
+ATTRIBUTE_WARN_UNUSED_RET int des3_set_keys(des3_context *ctx, const u8 k1[8], const u8 k2[8], const u8 k3[8], des_direction dir);
 
 /* TDES encryption/decryption */
-ATTRIBUTE_WARN_UNUSED_RET int des3(const des3_context *ctx, const unsigned char input[8], unsigned char output[8]);
+ATTRIBUTE_WARN_UNUSED_RET int des3(const des3_context *ctx, const u8 input[8], u8 output[8]);
 
 #endif /* __TDES_H__ */
