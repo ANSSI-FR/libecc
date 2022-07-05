@@ -123,6 +123,11 @@ ifneq ($(LIBECC_NOSTDLIB),1)
 CFLAGS += -DWITH_STDLIB
 endif
 
+# By default, we don't use blank external dependencies
+ifneq ($(LIBECC_BLANK_EXTERNAL_DEPENDENCIES),1)
+CFLAGS += -DWITH_BLANK_EXTERNAL_DEPENDENCIES
+endif
+
 # Let's now define the two kinds of CFLAGS we will use for building our
 # library (LIB_CFLAGS) and binaries (BIN_CFLAGS) objects.
 # If the user has not overriden the CFLAGS, we add the usual gcc/clang

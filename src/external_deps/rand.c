@@ -106,6 +106,11 @@ err:
 	return ret;
 }
 
+#elif defined(WITH_BLANK_EXTERNAL_DEPENDENCIES)
+int get_random(unsigned char *buf, u16 len) {
+  return -1;
+}
+
 /* No platform detected, the user must provide an implementation! */
 #else
 /* WARNING: when providing/implementing the get_random function, one must:

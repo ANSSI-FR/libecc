@@ -693,7 +693,8 @@ compiler is not gcc/clang compatible, the user can modify the CFLAGS as well as 
 for 8-bit MCUs to 64-bit CPUs. If the toolchain does not have a [`stdint.h`](http://pubs.opengroup.org/onlinepubs/009695399/basedefs/stdint.h.html)
 header, it is still possible to compile libecc by exporting LIBECC_NOSTDLIB=1: in this case, the code will try to
 guess and fit to native C types or throw an error so that the user can adapt [src/words/types.h](src/words/types.h) to its specific case.
-* The library core is platform independent. However, when the platform is not recognized (i.e. everything aside UNIX/Windows/Mac OS),
+* The library core is platform independent. However, when the platform is not recognized (i.e. everything aside UNIX/Windows/Mac OS)
+and when not compiled with `WITH_BLANK_EXTERNAL_DEPENDENCIES` specified,
 an error is thrown at compilation time asking the user to provide implementations for **external dependencies**
 in [src/external&lowbar;deps/](src/external_deps), namely:
   * The printing helper in [src/external&lowbar;deps/print.c](src/external_deps/print.c). This helper serves output debugging purposes.
@@ -702,6 +703,11 @@ in [src/external&lowbar;deps/](src/external_deps), namely:
   * The random helper in [src/external&lowbar;deps/rand.c](src/external_deps/rand.c). This helper is used in the core library for the signature
   schemes. One should notice that a **good random source** is **crucial** for the security of Elliptic Curve based signature schemes,
   so great care must be taken when implementing this.
+
+If `WITH_BLANK_EXTERNAL_DEPENDENCIES` is specified in compiling time, blank implementation for these helpers are provided.
+As using many algorithms with no reliable CSRNGs can be quite dangerous, with `WITH_BLANK_EXTERNAL_DEPENDENCIES` `get_random`
+will just return error, you should not using algorithms depending on random number generation. They are provided
+because it is useful in some restricted environments or in some specific applications (e.g. deterministic signature generation).
 
 Some other external dependencies could arise depending on the compilation chain and/or the platform. Such an example is the
 implementation of the gcc and clang stack protection option, usually expecting the user to provide stack canaries generation
@@ -890,7 +896,8 @@ other compilers (`-c` flag to generate object files, `-o` flag to define output 
 [partially implemented](http://sdcc.sourceforge.net/mediawiki/index.php/Standard_compliance).
 * The compiler has "exotic" targets such as the Zilog Z80 MCU.
 
-We suppose that the user has also provided the **external dependencies** for print, random and time
+Unless compiling with `WITH_BLANK_EXTERNAL_DEPENDENCIES` specified,
+we suppose that the user has also provided the **external dependencies** for print, random and time
 functions (otherwise explicit errors will be thrown by #error directives).
 
 We will show how overloading the Makefile flags can be of use in this case. Say that we want

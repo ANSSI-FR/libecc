@@ -66,6 +66,14 @@ err:
 	return ret;
 }
 
+#elif defined(WITH_BLANK_EXTERNAL_DEPENDENCIES)
+int get_ms_time(u64 *time) {
+  static u64 current_time = 0;
+  *time = current_time;
+  current_time++;
+  return 0;
+}
+
 /* No platform detected, the used must provide an implementation! */
 #else
 #error "time.c: you have to implement get_ms_time()"
