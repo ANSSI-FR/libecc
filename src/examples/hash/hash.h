@@ -36,7 +36,6 @@
 /****************************************************/
 /****************************************************/
 /****************************************************/
-#define DEPRECATED_HASH_ENUM LOCAL_MAX(
 typedef enum {
 	/* libecc native hashes: we map our enum on them */
 	HASH_UNKNOWN_HASH_ALG = UNKNOWN_HASH_ALG,

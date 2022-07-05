@@ -167,7 +167,7 @@ int prj_pt_is_on_curve(prj_pt_src_t in,  int *on_curve)
 	 * tentatively in constant time when we have to
 	 * deal with the point at infinity.
 	 */
-	dummy_Z = iszero ? (&Y) : &(in->Z);
+	dummy_Z = iszero ? ((fp_src_t)&Y) : &(in->Z);
 
  	ret = fp_inv(&X, dummy_Z); EG(ret, err);
 

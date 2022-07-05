@@ -174,7 +174,11 @@ LIBARITH_DYN = $(BUILD_DIR)/libarith.so
 LIBEC_DYN = $(BUILD_DIR)/libec.so
 LIBSIGN_DYN = $(BUILD_DIR)/libsign.so
 # The ld flags to generate shared librarie
+ifeq ($(APPLE),)
+LIB_DYN_LDFLAGS ?= -shared -Wl,-undefined,dynamic_lookup
+else
 LIB_DYN_LDFLAGS ?= -shared -Wl,-z,relro,-z,now
+endif
 endif
 
 # Do we want to use blinding to secure signature against some side channels?

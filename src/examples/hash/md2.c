@@ -168,7 +168,7 @@ ATTRIBUTE_WARN_UNUSED_RET int md2_final(md2_context *ctx, u8 output[MD2_DIGEST_S
 	ret = md2_process(ctx, ctx->md2_checksum); EG(ret, err);
 
 	/* Output the hash result */
-	ret = local_memcpy(output, ctx->md2_state, MD2_DIGEST_SIZE);
+	ret = local_memcpy(output, ctx->md2_state, MD2_DIGEST_SIZE); EG(ret, err);
 
 	/* Tell that we are uninitialized */
 	ctx->magic = WORD(0);
