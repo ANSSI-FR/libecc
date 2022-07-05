@@ -199,7 +199,7 @@ ATTRIBUTE_WARN_UNUSED_RET int mdc2_final(mdc2_context *ctx, u8 output[MDC2_DIGES
 	}
 
 	/* Output the hash result */
-	ret = local_memcpy(output, ctx->mdc2_state, MDC2_DIGEST_SIZE);
+	ret = local_memcpy(output, ctx->mdc2_state, MDC2_DIGEST_SIZE); EG(ret, err);
 
 	/* Tell that we are uninitialized */
 	ctx->magic = WORD(0);
