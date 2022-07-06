@@ -193,6 +193,16 @@ ATTRIBUTE_WARN_UNUSED_RET int ec_structured_key_pair_import_from_priv_key_buf(ec
 						    const u8 *priv_key_buf,
 						    u8 priv_key_buf_len,
 						    ec_alg_type ec_key_alg);
+/*
+ * NOTE: please use the following API with care as it does not check the consistency
+ * between the private and public keys! On one side, this "saves" a costly
+ * scalar multiplication when there is confidence in the source of the buffers,
+ * but on the other side the user of the API MUST check the source (integrity)
+ * of the private/public key pair. If unsure, it is advised to use the
+ * ec_structured_key_pair_import_from_priv_key_buf API that safely derives the
+ * public key from the private key.
+ *
+ */
 ATTRIBUTE_WARN_UNUSED_RET int ec_structured_key_pair_import_from_buf(ec_key_pair *kp,
 					   const ec_params *params,
 					   const u8 *priv_key_buf,

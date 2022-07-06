@@ -552,6 +552,15 @@ int ec_structured_key_pair_import_from_priv_key_buf(ec_key_pair *kp,
  * Import a key pair from a two structured key buffer (private and public one)
  * The function does not verify the coherency between private and public parts.
  * The function returns 0 on success, -1 on error.
+ *
+ * NOTE: please use this API with care as it does not check the consistency
+ * between the private and public keys! On one side, this "saves" a costly
+ * scalar multiplication when there is confidence in the source of the buffers,
+ * but on the other side the user of the API MUST check the source (integrity)
+ * of the private/public key pair. If unsure, it is advised to use the
+ * ec_structured_key_pair_import_from_priv_key_buf API that safely derives the
+ * public key from the private key.
+ *
  */
 int ec_structured_key_pair_import_from_buf(ec_key_pair *kp,
 					   const ec_params *params,
