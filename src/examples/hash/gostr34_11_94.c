@@ -39,10 +39,10 @@ static const u8 gostr34_11_94_sbox_rfc4357[8][16] =
 /* Endianness handling */
 ATTRIBUTE_WARN_UNUSED_RET static inline int gostr34_11_94_arch_is_big_endian(void)
 {
-        const u16 val = 0x0102;
-        const u8 *buf = (const u8 *)(&val);
+	const u16 val = 0x0102;
+	const u8 *buf = (const u8 *)(&val);
 
-        return (buf[0] == 0x01);
+	return (buf[0] == 0x01);
 }
 
 /* A and P linear transformations */
@@ -210,23 +210,37 @@ err:
 	return ret;
 }
 
+/*
+ * NOTE: we use a somehow "artificial" union here in order to deal with
+ * possible alignment issues in the gostr34_11_94_state_psi function
+ * (as we have to interpret an array of 4 u64 into an array of 16 u16
+ *  in order to apply our Psi function).
+ */
+typedef union {
+	u64 A[GOSTR34_11_94_STATE_SIZE];
+	u16 B[16];
+} gostr34_11_94_union;
+
 /* GOSTR34_11_94 output transformation */
 static inline void gostr34_11_94_state_psi(const u64 G[GOSTR34_11_94_STATE_SIZE], u64 G_[GOSTR34_11_94_STATE_SIZE])
 {
 	unsigned int i;
-	u16 *g_ = (u16*)G_;
-	u16 g[16];
+	/* Use our unions in order to deal with alignment issues
+	 * (see the rationale above).
+	 */
+	gostr34_11_94_union G_copy;
+	gostr34_11_94_union *g  = &G_copy;
+	gostr34_11_94_union *g_ = (gostr34_11_94_union*)G_;
 
-	/* Copy the input */
-	IGNORE_RET_VAL(local_memcpy(g, G, sizeof(g)));
-
+	/* Copy input */
+	IGNORE_RET_VAL(local_memcpy(g, G, sizeof(gostr34_11_94_union)));
 	/* ψ(Γ) = (γ0 ⊕ γ1 ⊕ γ2 ⊕ γ3 ⊕ γ12 ⊕ γ15) γ15 γ14 · · · γ1
 	 * where Γ is split into sixteen 16-bit words, i.e. Γ = γ15 γ14 · · · γ0.
 	 */
 	for(i = 0; i < 15; i++){
-		g_[i] = g[i + 1];
+		g_->B[i] = g->B[i + 1];
 	}
-	g_[15] = (u16)(g[0] ^ g[1] ^ g[2] ^ g[3] ^ g[12] ^ g[15]);
+	g_->B[15] = (u16)((g->B[0]) ^ (g->B[1]) ^ (g->B[2]) ^ (g->B[3]) ^ (g->B[12]) ^ (g->B[15]));
 
 	return;
 }
