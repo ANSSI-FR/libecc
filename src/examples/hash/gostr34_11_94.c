@@ -222,8 +222,9 @@ typedef union {
 } gostr34_11_94_union;
 
 /* GOSTR34_11_94 output transformation */
-static inline void gostr34_11_94_state_psi(const u64 G[GOSTR34_11_94_STATE_SIZE], u64 G_[GOSTR34_11_94_STATE_SIZE])
+ATTRIBUTE_WARN_UNUSED_RET static inline int gostr34_11_94_state_psi(const u64 G[GOSTR34_11_94_STATE_SIZE], u64 G_[GOSTR34_11_94_STATE_SIZE])
 {
+	int ret;
 	unsigned int i;
 	/* Use our unions in order to deal with alignment issues
 	 * (see the rationale above).
@@ -232,8 +233,12 @@ static inline void gostr34_11_94_state_psi(const u64 G[GOSTR34_11_94_STATE_SIZE]
 	gostr34_11_94_union *g  = &G_copy;
 	gostr34_11_94_union *g_ = (gostr34_11_94_union*)G_;
 
+	/* Better safe than sorry ... */
+	MUST_HAVE((sizeof(gostr34_11_94_union) == (sizeof(u64) * GOSTR34_11_94_STATE_SIZE)), ret, err);
+
 	/* Copy input */
-	IGNORE_RET_VAL(local_memcpy(g, G, sizeof(gostr34_11_94_union)));
+	ret = local_memcpy(g, G, sizeof(gostr34_11_94_union)); EG(ret, err);
+
 	/* ψ(Γ) = (γ0 ⊕ γ1 ⊕ γ2 ⊕ γ3 ⊕ γ12 ⊕ γ15) γ15 γ14 · · · γ1
 	 * where Γ is split into sixteen 16-bit words, i.e. Γ = γ15 γ14 · · · γ0.
 	 */
@@ -242,7 +247,10 @@ static inline void gostr34_11_94_state_psi(const u64 G[GOSTR34_11_94_STATE_SIZE]
 	}
 	g_->B[15] = (u16)((g->B[0]) ^ (g->B[1]) ^ (g->B[2]) ^ (g->B[3]) ^ (g->B[12]) ^ (g->B[15]));
 
-	return;
+	ret = 0;
+
+err:
+	return ret;
 }
 
 ATTRIBUTE_WARN_UNUSED_RET static inline int gostr34_11_94_state_output_transform(const u64 H[GOSTR34_11_94_STATE_SIZE], const u64 S[GOSTR34_11_94_STATE_SIZE], const u64 M[GOSTR34_11_94_STATE_SIZE], u64 H_[GOSTR34_11_94_STATE_SIZE])
@@ -253,7 +261,7 @@ ATTRIBUTE_WARN_UNUSED_RET static inline int gostr34_11_94_state_output_transform
 	/* Compute psi^12 of S */
 	ret = local_memcpy(H_, S, GOSTR34_11_94_STATE_SIZE * sizeof(u64)); EG(ret, err);
 	for(i = 0; i < 12; i++){
-		gostr34_11_94_state_psi(H_, H_);
+		ret = gostr34_11_94_state_psi(H_, H_); EG(ret, err);
 	}
 	/* Compute M xor psi^12  */
 	for(i = 0; i < GOSTR34_11_94_STATE_SIZE; i++){
@@ -266,7 +274,7 @@ ATTRIBUTE_WARN_UNUSED_RET static inline int gostr34_11_94_state_output_transform
 		}
 		H_[i] = (u64)(H_[i] ^ m);
 	}
-	gostr34_11_94_state_psi(H_, H_);
+	ret = gostr34_11_94_state_psi(H_, H_); EG(ret, err);
 	/* Xor it with H */
 	for(i = 0; i < GOSTR34_11_94_STATE_SIZE; i++){
 		u64 h;
@@ -280,7 +288,7 @@ ATTRIBUTE_WARN_UNUSED_RET static inline int gostr34_11_94_state_output_transform
 	}
 	/* Now compute psi^61 */
 	for(i = 0; i < 61; i++){
-		gostr34_11_94_state_psi(H_, H_);
+		ret = gostr34_11_94_state_psi(H_, H_); EG(ret, err);
 	}
 
 	ret = 0;
