@@ -87,7 +87,7 @@ int hmac_update(hmac_context *ctx, const u8 *input, u32 ilen)
 	const hash_mapping *h;
 
 	HMAC_CHECK_INITIALIZED(ctx, ret, err);
-	MUST_HAVE((input != NULL), ret, err);
+	MUST_HAVE((input != NULL) || (ilen == 0), ret, err);
 
 	/* Make things more readable */
 	h = ctx->hash;

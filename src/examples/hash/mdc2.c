@@ -115,7 +115,7 @@ ATTRIBUTE_WARN_UNUSED_RET int mdc2_update(mdc2_context *ctx, const u8 *input, u3
 	u8 left;
 	int ret;
 
-	MUST_HAVE((input != NULL), ret, err);
+	MUST_HAVE((input != NULL) || (ilen == 0), ret, err);
 	MDC2_HASH_CHECK_INITIALIZED(ctx, ret, err);
 
 	/* Nothing to process, return */

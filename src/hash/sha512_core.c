@@ -73,7 +73,7 @@ int sha512_core_update(sha512_core_context *ctx, const u8 *input, u32 ilen)
 	u8 left;
 	int ret;
 
-	MUST_HAVE(((ctx != NULL) && (input != NULL)), ret, err);
+	MUST_HAVE(((ctx != NULL) && ((input != NULL) || (ilen == 0))), ret, err);
 
 	/* Nothing to process, return */
 	if (ilen == 0) {

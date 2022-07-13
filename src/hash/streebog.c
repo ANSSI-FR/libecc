@@ -61,7 +61,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int streebog_update(streebog_context *ctx, cons
 	u8 left;
 	int ret;
 
-	MUST_HAVE((ctx != NULL) && (input != NULL), ret, err);
+	MUST_HAVE((ctx != NULL) && ((input != NULL) || (ilen == 0)), ret, err);
 
 	/* Nothing to process, return */
 	if (ilen == 0) {
