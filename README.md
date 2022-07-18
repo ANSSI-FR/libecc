@@ -712,9 +712,9 @@ implementation of the gcc and clang stack protection option, usually expecting t
 
 Compiling for Cortex-M targets should be straightforward using the arm-gcc none-eabi (for bare metal) cross-compiler as
 well as the specific Cortex-M target platform SDK. In order to compile the core libsign.a static library, the only thing to do is to execute
-the makefile command by overloading `CC`and the `CFLAGS`:
+the makefile command by overloading `CROSS_COMPILE`, `CC` and the `CFLAGS`:
 <pre>
-	$ CC=arm-none-eabi-gcc CFLAGS="$(TARGET_OPTS) -W -Wextra -Wall -Wunreachable-code \
+	$ CROSS_COMPILE=arm-none-eabi- CC=gcc CFLAGS="$(TARGET_OPTS) -W -Wextra -Wall -Wunreachable-code \
 	-pedantic -fno-builtin -std=c99 -Os \
 	-ffreestanding -fno-builtin -nostdlib -DWORDSIZE=64" \
 	make build/libsign.a
@@ -730,7 +730,7 @@ a firmware suitable for the target (ST for STM32, NXP for LPC, Atmel for SAM, ..
 If the external dependencies have been implemented by the user, it is also possible to build a self-tests binary by adding the
 GNU ld linker script specific to the target platform (`linker_script.ld` in the example below):
 <pre>
-	$ CC=arm-none-eabi-gcc CFLAGS="$(TARGET_OPTS) -W -Wextra -Wall -Wunreachable-code \
+	$ CROSS_COMPILE=arm-none-eabi- CFLAGS="$(TARGET_OPTS) -W -Wextra -Wall -Wunreachable-code \
 	-pedantic -fno-builtin -std=c99 -Os \
 	-ffreestanding -fno-builtin -nostdlib -DWORDSIZE=64" \
 	LDFLAGS="-T linker_script.ld" \
