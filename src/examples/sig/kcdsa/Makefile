@@ -15,15 +15,15 @@ endif
 
 libhash:
 	# Compile the hashes
-	cd ../../hash && EXTRA_CFLAGS="$(CFLAGS)" make libhash.a
+	$(VERBOSE_MAKE)cd ../../hash && EXTRA_CFLAGS="$(CFLAGS)" make libhash.a
 
 kcdsa: libhash
-	$(CC) $(BIN_CFLAGS) -DKCDSA kcdsa.c ../dsa/dsa.c $(ROOT_DIR)/src/external_deps/print.c $(ROOT_DIR)/src/external_deps/rand.c $(BIN_LDFLAGS) ../../hash/libhash.a $(LIBSIGN) -o kcdsa
+	$(VERBOSE_MAKE)$(CROSS_COMPILE)$(CC) $(BIN_CFLAGS) -DKCDSA kcdsa.c ../dsa/dsa.c $(ROOT_DIR)/src/external_deps/print.c $(ROOT_DIR)/src/external_deps/rand.c $(BIN_LDFLAGS) ../../hash/libhash.a $(LIBSIGN) -o kcdsa
 
 # If the user asked for dynamic libraries, compile versions of our binaries against them
 ifeq ($(WITH_DYNAMIC_LIBS),1)
 kcdsa_dyn: libhash
-	$(CC) $(BIN_CFLAGS) -DKCDSA kcdsa.c ../dsa/dsa.c $(ROOT_DIR)/src/external_deps/print.c $(ROOT_DIR)/src/external_deps/rand.c $(BIN_LDFLAGS) $(LIBEC) -L$(BUILD_DIR) ../../hash/libhash.a -lsign -o kcdsa_dyn
+	$(VERBOSE_MAKE)$(CROSS_COMPILE)$(CC) $(BIN_CFLAGS) -DKCDSA kcdsa.c ../dsa/dsa.c $(ROOT_DIR)/src/external_deps/print.c $(ROOT_DIR)/src/external_deps/rand.c $(BIN_LDFLAGS) $(LIBEC) -L$(BUILD_DIR) ../../hash/libhash.a -lsign -o kcdsa_dyn
 endif
 
 

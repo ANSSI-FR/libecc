@@ -20,31 +20,31 @@ all:	_basic_dync _hash_dyn _sig_dyn _sss_dyn
 endif
 
 _basic:
-	cd $(BASIC_DIR) && EXTRA_CFLAGS="$(CFLAGS)" make
+	$(VERBOSE_MAKE)cd $(BASIC_DIR) && EXTRA_CFLAGS="$(CFLAGS)" make
 _hash:
-	cd $(HASH_DIR) && EXTRA_CFLAGS="$(CFLAGS)" make
+	$(VERBOSE_MAKE)cd $(HASH_DIR) && EXTRA_CFLAGS="$(CFLAGS)" make
 _sig:
-	cd $(SIG_DIR) && EXTRA_CFLAGS="$(CFLAGS)" make
+	$(VERBOSE_MAKE)cd $(SIG_DIR) && EXTRA_CFLAGS="$(CFLAGS)" make
 _sss:
-	cd $(SSS_DIR) && EXTRA_CFLAGS="$(CFLAGS)" make
+	$(VERBOSE_MAKE)cd $(SSS_DIR) && EXTRA_CFLAGS="$(CFLAGS)" make
 
 # If the user asked for dynamic libraries, compile versions of our binaries against them
 ifeq ($(WITH_DYNAMIC_LIBS),1)
 _basic_dync:
-	cd $(BASIC_DIR) && EXTRA_CFLAGS="$(CFLAGS)" make
+	$(VERBOSE_MAKE)cd $(BASIC_DIR) && EXTRA_CFLAGS="$(CFLAGS)" make
 _hash_dyn:
-	cd $(HASH_DIR) && EXTRA_CFLAGS="$(CFLAGS)" make
+	$(VERBOSE_MAKE)cd $(HASH_DIR) && EXTRA_CFLAGS="$(CFLAGS)" make
 _sig_dyn:
-	cd $(SIG_DIR) && EXTRA_CFLAGS="$(CFLAGS)" make
+	$(VERBOSE_MAKE)cd $(SIG_DIR) && EXTRA_CFLAGS="$(CFLAGS)" make
 _sss_dyn:
-	cd $(SSS_DIR) && EXTRA_CFLAGS="$(CFLAGS)" make
+	$(VERBOSE_MAKE)cd $(SSS_DIR) && EXTRA_CFLAGS="$(CFLAGS)" make
 endif
 
 
 clean:
-	cd $(BASIC_DIR) && make clean
-	cd $(HASH_DIR) && make clean
-	cd $(SIG_DIR) && make clean
-	cd $(SSS_DIR) && make clean
+	$(VERBOSE_MAKE)cd $(BASIC_DIR) && make clean
+	$(VERBOSE_MAKE)cd $(HASH_DIR) && make clean
+	$(VERBOSE_MAKE)cd $(SIG_DIR) && make clean
+	$(VERBOSE_MAKE)cd $(SSS_DIR) && make clean
 
 .PHONY: all clean 16 32 64 debug debug16 debug32 debug64 force_arch32 force_arch64

@@ -15,15 +15,15 @@ endif
 
 libhash:
 	# Compile the hashes
-	cd ../../hash && EXTRA_CFLAGS="$(CFLAGS)" make libhash.a
+	$(VERBOSE_MAKE)cd ../../hash && EXTRA_CFLAGS="$(CFLAGS)" make libhash.a
 
 gostr34_10_94: libhash
-	$(CC) $(BIN_CFLAGS) -DGOSTR34_10_94 gostr34_10_94.c ../dsa/dsa.c $(ROOT_DIR)/src/external_deps/print.c $(ROOT_DIR)/src/external_deps/rand.c $(BIN_LDFLAGS) ../../hash/libhash.a $(LIBSIGN) -o gostr34_10_94
+	$(VERBOSE_MAKE)$(CROSS_COMPILE)$(CC) $(BIN_CFLAGS) -DGOSTR34_10_94 gostr34_10_94.c ../dsa/dsa.c $(ROOT_DIR)/src/external_deps/print.c $(ROOT_DIR)/src/external_deps/rand.c $(BIN_LDFLAGS) ../../hash/libhash.a $(LIBSIGN) -o gostr34_10_94
 
 # If the user asked for dynamic libraries, compile versions of our binaries against them
 ifeq ($(WITH_DYNAMIC_LIBS),1)
 gostr34_10_94_dyn: libhash
-	$(CC) $(BIN_CFLAGS) -DGOSTR34_10_94 gostr34_10_94.c ../dsa/dsa.c $(ROOT_DIR)/src/external_deps/print.c $(ROOT_DIR)/src/external_deps/rand.c $(BIN_LDFLAGS) ../../hash/libhash.a $(LIBEC) -L$(BUILD_DIR) -lsign -o gostr34_10_94_dyn
+	$(VERBOSE_MAKE)$(CROSS_COMPILE)$(CC) $(BIN_CFLAGS) -DGOSTR34_10_94 gostr34_10_94.c ../dsa/dsa.c $(ROOT_DIR)/src/external_deps/print.c $(ROOT_DIR)/src/external_deps/rand.c $(BIN_LDFLAGS) ../../hash/libhash.a $(LIBEC) -L$(BUILD_DIR) -lsign -o gostr34_10_94_dyn
 endif
 
 

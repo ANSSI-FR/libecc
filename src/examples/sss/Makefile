@@ -16,23 +16,23 @@ all:	sss_dyn
 endif
 
 sss:
-	$(CC) $(BIN_CFLAGS) -DSSS sss.c $(ROOT_DIR)/src/external_deps/print.c $(ROOT_DIR)/src/external_deps/rand.c $(BIN_LDFLAGS) $(LIBSIGN) -o sss
+	$(VERBOSE_MAKE)$(CROSS_COMPILE)$(CC) $(BIN_CFLAGS) -DSSS sss.c $(ROOT_DIR)/src/external_deps/print.c $(ROOT_DIR)/src/external_deps/rand.c $(BIN_LDFLAGS) $(LIBSIGN) -o sss
 
 sss_lib:
 	# Compile libsss archive
-	$(CC) $(LIB_CFLAGS) -c sss.c $(ROOT_DIR)/src/external_deps/print.c $(ROOT_DIR)/src/external_deps/rand.c
-	cp $(LIBSIGN) ./
-	$(AR) xv libsign.a
+	$(VERBOSE_MAKE)$(CROSS_COMPILE)$(CC) $(LIB_CFLAGS) -c sss.c $(ROOT_DIR)/src/external_deps/print.c $(ROOT_DIR)/src/external_deps/rand.c
+	$(VERBOSE_MAKE)cp $(LIBSIGN) ./
+	$(VERBOSE_MAKE)$(CROSS_COMPILE)$(AR) xv libsign.a
 	# Make unnecessary symbols local
-	for f in `ls *.o`; do objcopy $(KEEP_SYMBOLS) $$f && echo "Processing $$f"; done
+	$(VERBOSE_MAKE)for f in `ls *.o`; do objcopy $(KEEP_SYMBOLS) $$f && echo "Processing $$f"; done
 	# Combine the archives
-	$(AR) $(AR_FLAGS) libsss.a *.o
+	$(VERBOSE_MAKE)$(CROSS_COMPILE)$(AR) $(AR_FLAGS) libsss.a *.o
 	@rm -f *.o libsign.a
 
 # If the user asked for dynamic libraries, compile versions of our binaries against them
 ifeq ($(WITH_DYNAMIC_LIBS),1)
 sss_dyn:
-	$(CC) $(BIN_CFLAGS) -DSSS sss.c $(ROOT_DIR)/src/external_deps/print.c $(ROOT_DIR)/src/external_deps/rand.c $(BIN_LDFLAGS) $(LIBSIGN) -L$(BUILD_DIR) -lsign -o sss_dyn
+	$(VERBOSE_MAKE)$(CROSS_COMPILE)$(CC) $(BIN_CFLAGS) -DSSS sss.c $(ROOT_DIR)/src/external_deps/print.c $(ROOT_DIR)/src/external_deps/rand.c $(BIN_LDFLAGS) $(LIBSIGN) -L$(BUILD_DIR) -lsign -o sss_dyn
 endif
 
 
