@@ -919,7 +919,15 @@ restart:
 		ret = nn_add(&r, &r, &u); EG(ret, err);
 		/* If we have reached > p, leave with an error */
 		ret = nn_cmp(&r, p, &cmp); EG(ret, err);
-		MUST_HAVE((cmp < 0), ret, err);
+		/* NOTE: we do not use a MUST_HAVE macro here since
+		 * this condition can nominally happen, and we do not want
+		 * a MUST_HAVE in debug mode (i.e. with an assert) to break
+		 * the execution flow.
+		 */
+		if(cmp < 0){
+			ret = -1;
+			goto err;
+		}
 	}
 
 	/*
