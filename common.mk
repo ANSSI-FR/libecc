@@ -85,7 +85,7 @@ RANLIB_FLAGS ?=
 DEBUG_CFLAGS = -DDEBUG -O -g
 
 ifeq ($(VERBOSE_INNER_VALUES),1)
-DEBUG_CFLAGS += -DVERBOSE_INNER_VALUES
+CFLAGS += -DVERBOSE_INNER_VALUES
 endif
 
 # Default all and clean target that will be expanded
