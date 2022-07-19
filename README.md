@@ -151,6 +151,13 @@ executing:
 	$ make
 </pre>
 
+By default, compilation is quiet. **Verbose compilation** (i.e. showing all the compilation
+executed commands) can be achieved using the `VERBOSE=1` toggle:
+
+<pre>
+	$ VERBOSE=1 make
+</pre>
+
 This will compile different elements in the [build](build/) directory:
 
   * Three **archive** static libraries, each one containing (based on) the previous ones:
