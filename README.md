@@ -867,6 +867,7 @@ the **less efficient but more compatible** `-fstack-protector-all`.
 In addition to compilation flags, it is also possible to overload the library **word sizes** as well as **debug**
 modes through Makefile targets:
 * `make debug` will compile a debug version of the library and binaries, with debugging symbols.
+Setting the environment variable `VERBOSE_INNER_VALUES=1` will print out more values.
 * `make 16`, `make 32` and `make 64` will respectively compile the library with 16, 32 and 64 bits word sizes. `make debug16`,
 `make debug32` and `make debug64` will compile the debug versions of these.
 * `make force_arch32` and `make force_arch64` will force 32-bit and 64-bit architectures compilation (`-m32` and `-m64`
