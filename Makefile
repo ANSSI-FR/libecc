@@ -158,6 +158,11 @@ $(OBJ_DIR)/%.o: %.c
 $(shell mkdir -p $(dir $(OBJS)) >/dev/null)
 $(shell mkdir -p $(BUILD_DIR) >/dev/null)
 
+# Make a note of the MAKEFILE_LIST at this stage of parsing the Makefile
+# It is important here to use the ':=' operator so it is evaluated only once,
+# and to do this before all the DEPS files are included as makefiles.
+MAKEFILES:=$(MAKEFILE_LIST)
+
 # Make object files depend on all makefiles used - this forces a rebuild if any
 # of the makefiles are changed
 $(OBJS) : $(MAKEFILES)
