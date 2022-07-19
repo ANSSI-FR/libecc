@@ -2,6 +2,8 @@
 
 # Where to put generated objects
 BUILD_DIR ?= build
+# Default to the previous behaviour and keep generated .o & .d files next to the source code
+OBJ_DIR ?=.
 include common.mk
 
 
@@ -23,218 +25,148 @@ endif
 EXEC_TO_CLEAN = $(BUILD_DIR)/ec_self_tests $(BUILD_DIR)/ec_utils $(BUILD_DIR)/ec_self_tests_dyn $(BUILD_DIR)/ec_utils_dyn
 
 # all and clean, as you might expect
-all: depend $(LIBS) $(TESTS_EXEC)
+all: $(LIBS) $(TESTS_EXEC)
 
 clean:
 	@rm -f $(LIBS) $(EXEC_TO_CLEAN)
-	@find . -name '*.o' -exec rm -f '{}' \;
-	@find . -name '*.d' -exec rm -f '{}' \;
-	@find . -name '*.a' -exec rm -f '{}' \;
-	@find . -name '*.so' -exec rm -f '{}' \;
+	@find $(OBJ_DIR)/ -name '*.o' -exec rm -f '{}' \;
+	@find $(OBJ_DIR)/ -name '*.d' -exec rm -f '{}' \;
+	@find $(BUILD_DIR)/ -name '*.a' -exec rm -f '{}' \;
+	@find $(BUILD_DIR)/ -name '*.so' -exec rm -f '{}' \;
 	@find . -name '*~'  -exec rm -f '{}' \;
 
-# library configuration files
 
-CFG_DEPS = $(wildcard src/*.h)
+
+# --- Source Code ---
 
 # external dependencies
-
 EXT_DEPS_SRC = $(wildcard src/external_deps/*.c)
-EXT_DEPS_OBJECTS = $(patsubst %.c, %.o, $(EXT_DEPS_SRC))
-EXT_DEPS_DEPS = $(patsubst %.c, %.d, $(EXT_DEPS_SRC))
-
-src/external_deps/%.d: src/external_deps/%.c
-	$(CC) $(LIB_CFLAGS) -MM $< -MF $@
-
-src/external_deps/%.o: src/external_deps/%.c
-	$(CC) $(LIB_CFLAGS) -c $< -o $@
 
 # utils module (for the ARITH layer, we only need
 # NN and FP - and not curves - related stuff. Same goes
 # for EC and SIGN. Hence the distinction between three
 # sets of utils objects.
-
 UTILS_ARITH_SRC = src/utils/utils.c
 UTILS_ARITH_SRC += $(wildcard src/utils/*_nn.c)
 UTILS_ARITH_SRC += $(wildcard src/utils/*_fp.c)
 UTILS_ARITH_SRC += $(wildcard src/utils/*_buf.c)
-UTILS_ARITH_OBJECTS = $(patsubst %.c, %.o, $(UTILS_ARITH_SRC))
-UTILS_ARITH_DEPS = $(patsubst %.c, %.d, $(UTILS_ARITH_SRC))
-
 UTILS_EC_SRC = $(wildcard src/utils/*_curves.c)
-UTILS_EC_OBJECTS = $(patsubst %.c, %.o, $(UTILS_EC_SRC))
-UTILS_EC_DEPS = $(patsubst %.c, %.d, $(UTILS_EC_SRC))
-
 UTILS_SIGN_SRC = $(wildcard src/utils/*_keys.c)
-UTILS_SIGN_OBJECTS = $(patsubst %.c, %.o, $(UTILS_SIGN_SRC))
-UTILS_SIGN_DEPS = $(patsubst %.c, %.d, $(UTILS_SIGN_SRC))
-
-src/utils/%.d: src/utils/%.c
-	$(CC) $(LIB_CFLAGS) -MM $< -MF $@
-
-src/utils/%.o: src/utils/%.c
-	$(CC) $(LIB_CFLAGS) -c $< -o $@
-
 
 # nn module
-
-NN_CONFIG = src/nn/nn_config.h
 NN_SRC = $(wildcard src/nn/n*.c)
-NN_OBJECTS = $(patsubst %.c, %.o, $(NN_SRC))
-NN_DEPS = $(patsubst %.c, %.d, $(NN_SRC))
-
-src/nn/%.d: src/nn/%.c $(NN_CONFIG) $(CFG_DEPS)
-	$(if $(filter $(wildcard src/nn/*.c), $<), @$(CC) $(LIB_CFLAGS) -MM $< -MF $@)
-
-src/nn/%.o: src/nn/%.c $(NN_CONFIG) $(CFG_DEPS)
-	$(if $(filter $(wildcard src/nn/*.c), $<), $(CC) $(LIB_CFLAGS) -c $< -o $@)
 
 # fp module
-
 FP_SRC = $(wildcard src/fp/fp*.c)
-FP_OBJECTS = $(patsubst %.c, %.o, $(FP_SRC))
-FP_DEPS = $(patsubst %.c, %.d, $(FP_SRC))
-
-src/fp/%.d: src/fp/%.c $(NN_CONFIG) $(CFG_DEPS)
-	$(if $(filter $(wildcard src/fp/*.c), $<), @$(CC) $(LIB_CFLAGS) -MM $< -MF $@)
-
-src/fp/%.o: src/fp/%.c $(NN_CONFIG) $(CFG_DEPS)
-	$(if $(filter $(wildcard src/fp/*.c), $<), $(CC) $(LIB_CFLAGS) -c $< -o $@)
-
-
-LIBARITH_OBJECTS = $(FP_OBJECTS) $(NN_OBJECTS) $(RAND_OBJECTS) $(UTILS_ARITH_OBJECTS)
-$(LIBARITH): $(LIBARITH_OBJECTS)
-	$(AR) $(AR_FLAGS) $@ $^
-	$(RANLIB) $(RANLIB_FLAGS) $@
-
-# Compile dynamic libraries if the user asked to
-ifeq ($(WITH_DYNAMIC_LIBS),1)
-$(LIBARITH_DYN): $(LIBARITH_OBJECTS)
-	$(CC) $(LIB_CFLAGS) $(LIB_DYN_LDFLAGS) $^ -o $@
-endif
 
 # curve module
-
 CURVES_SRC = $(wildcard src/curves/*.c)
-CURVES_OBJECTS = $(patsubst %.c, %.o, $(CURVES_SRC))
-CURVES_DEPS = $(patsubst %.c, %.d, $(CURVES_SRC))
-
-src/curves/%.d: src/curves/%.c $(NN_CONFIG) $(CFG_DEPS)
-	$(if $(filter $(wildcard src/curves/*.c), $<), @$(CC) $(LIB_CFLAGS) -MM $< -MF $@)
-
-src/curves/%.o: src/curves/%.c $(NN_CONFIG) $(CFG_DEPS)
-	$(if $(filter $(wildcard src/curves/*.c), $<), $(CC) $(LIB_CFLAGS) -c $< -o $@)
-
-
-LIBEC_OBJECTS = $(LIBARITH_OBJECTS) $(CURVES_OBJECTS) $(UTILS_EC_OBJECTS)
-$(LIBEC): $(LIBEC_OBJECTS)
-	$(AR) $(AR_FLAGS) $@ $^
-	$(RANLIB) $(RANLIB_FLAGS) $@
-
-# Compile dynamic libraries if the user asked to
-ifeq ($(WITH_DYNAMIC_LIBS),1)
-$(LIBEC_DYN): $(LIBEC_OBJECTS)
-	$(CC) $(LIB_CFLAGS) $(LIB_DYN_LDFLAGS) $^ -o $@
-endif
 
 # Hash module
-
 HASH_SRC = $(wildcard src/hash/sha*.c) src/hash/hash_algs.c src/hash/sm3.c src/hash/streebog.c src/hash/ripemd160.c src/hash/hmac.c
-HASH_OBJECTS = $(patsubst %.c, %.o, $(HASH_SRC))
-HASH_DEPS = $(patsubst %.c, %.d, $(HASH_SRC))
-
-src/hash/%.d: src/hash/%.c $(CFG_DEPS)
-	$(if $(filter $(wildcard src/hash/*.c), $<), @$(CC) $(LIB_CFLAGS) -MM $< -MF $@)
-
-src/hash/%.o: src/hash/%.c $(CFG_DEPS)
-	$(if $(filter $(wildcard src/hash/*.c), $<), $(CC) $(LIB_CFLAGS) -c $< -o $@)
-
 
 # Key/Signature/Verification/ECDH module
-
 SIG_SRC = $(wildcard src/sig/*dsa.c) src/sig/ecdsa_common.c src/sig/ecsdsa_common.c src/sig/sig_algs.c src/sig/sm2.c src/sig/decdsa.c
-SIG_OBJECTS = $(patsubst %.c, %.o, $(SIG_SRC))
-SIG_DEPS = $(patsubst %.c, %.d, $(SIG_SRC))
-
-src/sig/%.d: src/sig/%.c $(NN_CONFIG) $(CFG_DEPS)
-	$(if $(filter $(wildcard src/sig/*.c), $<), @$(CC) $(LIB_CFLAGS) -MM $< -MF $@)
-
-src/sig/%.o: src/sig/%.c $(NN_CONFIG) $(CFG_DEPS)
-	$(if $(filter $(wildcard src/sig/*.c), $<), $(CC) $(LIB_CFLAGS) -c $< -o $@)
-
 ECDH_SRC = $(wildcard src/ecdh/*.c)
-ECDH_OBJECTS = $(patsubst %.c, %.o, $(ECDH_SRC))
-ECDH_DEPS = $(patsubst %.c, %.d, $(ECDH_SRC))
-
-src/ecdh/%.d: src/ecdh/%.c $(NN_CONFIG) $(CFG_DEPS)
-	$(if $(filter $(wildcard src/ecdh/*.c), $<), @$(CC) $(LIB_CFLAGS) -MM $< -MF $@)
-
-src/ecdh/%.o: src/ecdh/%.c $(NN_CONFIG) $(CFG_DEPS)
-	$(if $(filter $(wildcard src/ecdh/*.c), $<), $(CC) $(LIB_CFLAGS) -c $< -o $@)
-
-
 KEY_SRC = src/sig/ec_key.c
-KEY_OBJECTS = $(patsubst %.c, %.o, $(KEY_SRC))
-KEY_DEPS = $(patsubst %.c, %.d, $(KEY_SRC))
 
-$(KEY_DEPS): $(KEY_SRC) $(NN_CONFIG) $(CFG_DEPS)
-	$(if $(filter $(wildcard src/sig/*.c), $<), @$(CC) $(LIB_CFLAGS) -MM $< -MF $@)
-
-$(KEY_OBJECTS): $(KEY_SRC) $(NN_CONFIG) $(CFG_DEPS)
-	$(if $(filter $(wildcard src/sig/*.c), $<), $(CC) $(LIB_CFLAGS) -c $< -o $@)
-
-
-LIBSIGN_OBJECTS = $(LIBEC_OBJECTS) $(HASH_OBJECTS) $(SIG_OBJECTS) $(KEY_OBJECTS) $(UTILS_SIGN_OBJECTS) $(ECDH_OBJECTS)
-$(LIBSIGN): $(LIBSIGN_OBJECTS)
-	$(AR) $(AR_FLAGS) $@ $^
-	$(RANLIB) $(RANLIB_FLAGS) $@
-
-# Compile dynamic libraries if the user asked to
-ifeq ($(WITH_DYNAMIC_LIBS),1)
-$(LIBSIGN_DYN): $(LIBSIGN_OBJECTS)
-	$(CC) $(LIB_CFLAGS) $(LIB_DYN_LDFLAGS) $^ -o $@
-endif
-
-# Test elements (objects and binaries)
-
+# Test elements
 TESTS_OBJECTS_CORE_SRC = src/tests/ec_self_tests_core.c
-TESTS_OBJECTS_CORE = $(patsubst %.c, %.o, $(TESTS_OBJECTS_CORE_SRC))
-TESTS_OBJECTS_CORE_DEPS = $(patsubst %.c, %.d, $(TESTS_OBJECTS_CORE_SRC))
 TESTS_OBJECTS_SELF_SRC = src/tests/ec_self_tests.c
-TESTS_OBJECTS_SELF = $(patsubst %.c, %.o, $(TESTS_OBJECTS_SELF_SRC))
-TESTS_OBJECTS_SELF_DEPS = $(patsubst %.c, %.d, $(TESTS_OBJECTS_SELF_SRC))
 TESTS_OBJECTS_UTILS_SRC = src/tests/ec_utils.c
-TESTS_OBJECTS_UTILS = $(patsubst %.c, %.o, $(TESTS_OBJECTS_UTILS_SRC))
-TESTS_OBJECTS_UTILS_DEPS = $(patsubst %.c, %.d, $(TESTS_OBJECTS_UTILS_SRC))
-
-$(TESTS_OBJECTS_CORE_DEPS): $(TESTS_OBJECTS_CORE_SRC) $(CFG_DEPS)
-	$(if $(filter $(wildcard src/tests/*.c), $<), @$(CC) $(LIB_CFLAGS) -MM $< -MF $@)
-
-$(TESTS_OBJECTS_CORE): $(TESTS_OBJECTS_CORE_SRC) $(CFG_DEPS)
-	$(if $(filter $(wildcard src/tests/*.c), $<), $(CC) $(LIB_CFLAGS) -c $< -o $@)
-
-src/tests/%.d:  src/tests/%.c $(CFG_DEPS)
-	$(if $(filter src/tests/ec_utils.c, $<), $(CC) $(LIB_CFLAGS) -MM $< -MF $@)
-	$(if $(filter-out src/tests/ec_utils.c, $<), $(CC) $(LIB_CFLAGS) -MM $< -MF $@)
-
-$(BUILD_DIR)/ec_self_tests: $(TESTS_OBJECTS_CORE) $(TESTS_OBJECTS_SELF_SRC) $(EXT_DEPS_OBJECTS) $(LIBSIGN)
-	$(CC) $(BIN_CFLAGS) $(BIN_LDFLAGS) $^ -o $@
-
-$(BUILD_DIR)/ec_utils: $(TESTS_OBJECTS_CORE) $(TESTS_OBJECTS_UTILS_SRC) $(EXT_DEPS_OBJECTS) $(LIBSIGN)
-	$(CC) $(BIN_CFLAGS) $(BIN_LDFLAGS) -DWITH_STDLIB  $^ -o $@
-
-# If the user asked for dynamic libraries, compile versions of our binaries against them
-ifeq ($(WITH_DYNAMIC_LIBS),1)
-$(BUILD_DIR)/ec_self_tests_dyn: $(TESTS_OBJECTS_CORE) $(TESTS_OBJECTS_SELF_SRC) $(EXT_DEPS_OBJECTS)
-	$(CC) $(BIN_CFLAGS) $(BIN_LDFLAGS) -L$(BUILD_DIR) $^ -lsign -o $@
-
-$(BUILD_DIR)/ec_utils_dyn: $(TESTS_OBJECTS_CORE) $(TESTS_OBJECTS_UTILS_SRC) $(EXT_DEPS_OBJECTS)
-	$(CC) $(BIN_CFLAGS) $(BIN_LDFLAGS) -L$(BUILD_DIR) -DWITH_STDLIB  $^ -lsign -o $@
-endif
 
 
-DEPENDS = $(EXT_DEPS_DEPS) $(UTILS_ARITH_DEPS) $(UTILS_EC_DEPS) $(UTILS_SIGN_DEPS) $(NN_DEPS) $(FP_DEPS) $(CURVES_DEPS) \
-	  $(HASH_DEPS) $(SIG_DEPS) $(KEY_DEPS) $(TESTS_OBJECTS_CORE_DEPS) $(TESTS_OBJECTS_SELF_DEPS) $(TESTS_OBJECTS_UTILS_DEPS)
-depend: $(DEPENDS)
 
-.PHONY: all depend clean 16 32 64 debug debug16 debug32 debug64 force_arch32 force_arch64
+# --- Static Libraries ---
+
+LIBARITH_SRC = $(FP_SRC) $(NN_SRC) $(RAND_SRC) $(UTILS_ARITH_SRC)
+LIBARITH_OBJECTS = $(patsubst %,$(OBJ_DIR)/%.o,$(basename $(LIBARITH_SRC)))
+$(LIBARITH): $(LIBARITH_OBJECTS)
+	@$(CROSS_COMPILE)$(AR) $(AR_FLAGS) $@ $^
+	@$(CROSS_COMPILE)$(RANLIB) $(RANLIB_FLAGS) $@
+
+LIBEC_SRC = $(LIBARITH_SRC) $(CURVES_SRC) $(UTILS_EC_SRC)
+LIBEC_OBJECTS = $(patsubst %,$(OBJ_DIR)/%.o,$(basename $(LIBEC_SRC)))
+$(LIBEC): $(LIBEC_OBJECTS)
+	@$(CROSS_COMPILE)$(AR) $(AR_FLAGS) $@ $^
+	@$(CROSS_COMPILE)$(RANLIB) $(RANLIB_FLAGS) $@
+
+LIBSIGN_SRC = $(LIBEC_SRC) $(HASH_SRC) $(SIG_SRC) $(KEY_SRC) $(UTILS_SIGN_SRC) $(ECDH_SRC)
+LIBSIGN_OBJECTS = $(patsubst %,$(OBJ_DIR)/%.o,$(basename $(LIBSIGN_SRC)))
+$(LIBSIGN): $(LIBSIGN_OBJECTS)
+	@$(CROSS_COMPILE)$(AR) $(AR_FLAGS) $@ $^
+	@$(CROSS_COMPILE)$(RANLIB) $(RANLIB_FLAGS) $@
+
+
+
+# --- Dynamic Libraries ---
+
+$(LIBARITH_DYN): $(LIBARITH_OBJECTS)
+	@$(CROSS_COMPILE)$(CC) $(LIB_CFLAGS) $(LIB_DYN_LDFLAGS) $^ -o $@
+
+$(LIBEC_DYN): $(LIBEC_OBJECTS)
+	@$(CROSS_COMPILE)$(CC) $(LIB_CFLAGS) $(LIB_DYN_LDFLAGS) $^ -o $@
+
+$(LIBSIGN_DYN): $(LIBSIGN_OBJECTS)
+	@$(CROSS_COMPILE)$(CC) $(LIB_CFLAGS) $(LIB_DYN_LDFLAGS) $^ -o $@
+
+
+
+# --- Executables (Static linkage with libsign object files) ---
+
+EC_SELF_TESTS_SRC = $(TESTS_OBJECTS_CORE_SRC) $(TESTS_OBJECTS_SELF_SRC) $(EXT_DEPS_SRC)
+EC_SELF_TESTS_OBJECTS = $(patsubst %,$(OBJ_DIR)/%.o,$(basename $(EC_SELF_TESTS_SRC)))
+$(BUILD_DIR)/ec_self_tests: $(EC_SELF_TESTS_OBJECTS) $(LIBSIGN_OBJECTS)
+	@$(CROSS_COMPILE)$(CC) $(BIN_CFLAGS) $(BIN_LDFLAGS) $^ -o $@
+
+EC_UTILS_SRC = $(TESTS_OBJECTS_CORE_SRC) $(TESTS_OBJECTS_UTILS_SRC) $(EXT_DEPS_SRC)
+EC_UTILS_OBJECTS = $(patsubst %,$(OBJ_DIR)/%.o,$(basename $(EC_UTILS_SRC)))
+$(BUILD_DIR)/ec_utils: $(EC_UTILS_SRC) $(LIBSIGN_OBJECTS)
+	@$(CROSS_COMPILE)$(CC) $(BIN_CFLAGS) $(BIN_LDFLAGS) -DWITH_STDLIB  $^ -o $@
+
+
+
+# --- Excutables (Dynamic linkage with libsign shared library) ---
+
+$(BUILD_DIR)/ec_self_tests_dyn: $(EC_SELF_TESTS_OBJECTS)
+	@$(CROSS_COMPILE)$(CC) $(BIN_CFLAGS) $(BIN_LDFLAGS) -L$(BUILD_DIR) $^ -lsign -o $@
+
+$(BUILD_DIR)/ec_utils_dyn: $(EC_UTILS_OBJECTS)
+	@$(CROSS_COMPILE)$(CC) $(BIN_CFLAGS) $(BIN_LDFLAGS) -L$(BUILD_DIR) -DWITH_STDLIB  $^ -lsign -o $@
+
+
+
+.PHONY: all clean 16 32 64 debug debug16 debug32 debug64 force_arch32 force_arch64
+
+# All source files, used to construct general rules
+SRC += $(EXT_DEPS_SRC) $(UTILS_ARITH_SRC) $(UTILS_EC_SRC) $(UTILS_SIGN_SRC)
+SRC += $(NN_SRC) $(FP_SRC) $(CURVES_SRC) $(HASH_SRC) $(SIG_SRC) $(ECDH_SRC)
+SRC += $(KEY_SRC) $(TESTS_OBJECTS_CORE_SRC) $(TESTS_OBJECTS_SELF_SRC)
+SRC += $(TESTS_OBJECTS_UTILS_SRC)
+
+# All object files
+OBJS = $(patsubst %,$(OBJ_DIR)/%.o,$(basename $(SRC)))
+
+# General dependency rule between .o and .d files
+DEPS = $(OBJS:.o=.d)
+
+# General rule for creating .o (and .d) file from .c
+$(OBJ_DIR)/%.o: %.c
+	@$(CROSS_COMPILE)$(CC) -c $(LIB_CFLAGS) -MMD -MP -o $@ $<
+
+# Populate the directory structure to contain the .o and .d files, if necessary
+$(shell mkdir -p $(dir $(OBJS)) >/dev/null)
+$(shell mkdir -p $(BUILD_DIR) >/dev/null)
+
+# Make a note of the MAKEFILE_LIST at this stage of parsing the Makefile
+# It is important here to use the ':=' operator so it is evaluated only once,
+# and to do this before all the DEPS files are included as makefiles.
+MAKEFILES:=$(MAKEFILE_LIST)
+
+# Make object files depend on all makefiles used - this forces a rebuild if any
+# of the makefiles are changed
+$(OBJS) : $(MAKEFILES)
+
+# Dep files are makefiles that keep track of which header files are used by the
+# c source code. Include them to allow them to work correctly.
+-include $(DEPS)
