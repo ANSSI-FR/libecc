@@ -1313,7 +1313,6 @@ err:
 
 ATTRIBUTE_WARN_UNUSED_RET int perform_random_sig_verif_test(const char *sig, const char *hash, const char *curve)
 {
-	unsigned int i;
 	unsigned int num_sig_maps, num_hash_maps;
 	int ret = 0;
 
@@ -1326,20 +1325,13 @@ ATTRIBUTE_WARN_UNUSED_RET int perform_random_sig_verif_test(const char *sig, con
 	 * (combination of sign algo/hash function/curve)
 	 */
 	ext_printf("======= Random sig/verif test ===================\n");
+	for (unsigned int i = 0; i < num_sig_maps; i++) {
 #ifdef WITH_OPENMP_SELF_TESTS
-        #pragma omp parallel
-        #pragma omp for schedule(static, 1) nowait
+		#pragma omp parallel for collapse(2)
 #endif
-	for (i = 0; i < num_sig_maps; i++) {
-		unsigned int j;
-#ifdef WITH_OPENMP_SELF_TESTS
-	        #pragma omp parallel
-        	#pragma omp for schedule(static, 1) nowait
-#endif
-		for (j = 0; j < num_hash_maps; j++) {
-			unsigned int k;
-			int check;
-			for (k = 0; k < EC_CURVES_NUM; k++) {
+		for (unsigned int j = 0; j < num_hash_maps; j++) {
+			for (unsigned int k = 0; k < EC_CURVES_NUM; k++) {
+				int check;
 				if(sig != NULL){
 					ret = are_str_equal(ec_sig_maps[i].name, sig, &check); OPENMP_EG(ret, err);
 					if(!check){
