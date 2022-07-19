@@ -203,6 +203,13 @@ This will compile different elements in the [build](build/) directory:
 	...
 </pre>
 
+**NOTE**: it is possible to parallelize self tests (known and random) using the
+[OpenMP](https://en.wikipedia.org/wiki/OpenMP) framework (usually packaged with
+most distros) by using the `OPENMP_SELF_TESTS=1` compilation toggle. This requires
+the `WITH_STDLIB` option (as it obviously uses the standard library). Performance
+tests are not parallelized due to possible shared ressources exhaustion between CPUs and cores
+(e.g. caches, Branch Prediction Units, etc.).
+
 - **ec\_utils**: a tool for signing and verifying user defined files, with a user
 provided signature algorithm/curve/hash function triplet. The tool can also be
 used to generate signature keys.
