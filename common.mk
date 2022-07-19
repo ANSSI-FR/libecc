@@ -283,3 +283,8 @@ VERBOSE_MAKE=
 else
 VERBOSE_MAKE=@
 endif
+
+# Self tests parallelization
+ifeq ($(OPENMP_SELF_TESTS),1)
+CFLAGS += -DWITH_OPENMP_SELF_TESTS -fopenmp
+endif

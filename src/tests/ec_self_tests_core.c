@@ -19,6 +19,39 @@
 #include "../external_deps/time.h"
 #include "../external_deps/print.h"
 
+/* Parallelize self tests? */
+#ifdef WITH_OPENMP_SELF_TESTS
+/* No openmp without stdlib ... */
+#ifndef WITH_STDLIB
+#error "Sorry: no possible self tests parallelization (OpenMP) without stdlib! Please use WITH_STDLIB"
+#endif
+#include <omp.h>
+#include <stdlib.h>
+static omp_lock_t global_lock;
+static volatile u8 global_lock_initialized = 0;
+#define OPENMP_LOCK() do {					  \
+	if(!global_lock_initialized){				  \
+		omp_init_lock(&global_lock);			  \
+		global_lock_initialized = 1;			  \
+	}							  \
+	omp_set_lock(&global_lock); 				  \
+} while(0)
+#define OPENMP_UNLOCK() do {					  \
+	omp_unset_lock(&global_lock); 				  \
+} while(0)
+#define OPENMP_EG(ret, err) do {				  \
+	if(ret){						  \
+		ext_printf("OpenMP abort following error ...\n"); \
+		exit(-1);					  \
+	}							  \
+} while(0)
+#else
+#define OPENMP_LOCK()
+#define OPENMP_UNLOCK()
+#define OPENMP_EG(ret, err) do {				  \
+	EG(ret, err);						  \
+} while(0)
+#endif
 
 ATTRIBUTE_WARN_UNUSED_RET static int ec_gen_import_export_kp(ec_key_pair *kp, const ec_params *params,
 				   const ec_test_case *c)
@@ -375,6 +408,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int ec_import_export_test(const ec_test_case *c
 			}
 pubkey_recovery_warning:
 			if(check && cofactorisone){
+				OPENMP_LOCK();
 				ext_printf("[~] Warning: ECDSA recovered public key differs from real one ...");
 				ext_printf("This can happen with very low probability. Please check the trace:\n");
 				pub_key_print("pub_key1", &pub_key1);
@@ -382,6 +416,7 @@ pubkey_recovery_warning:
 				pub_key_print("pub_key", &(kp.pub_key));
 				buf_print("digest", digest, digestlen);
 				buf_print("sig", sig, siglen);
+				OPENMP_UNLOCK();
 			}
 		}
 #ifdef USE_CRYPTOFUZZ
@@ -668,6 +703,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int ec_sig_known_vector_tests_one(const ec_test
 		}
 pubkey_recovery_warning:
 		if(check && cofactorisone){
+			OPENMP_LOCK();
 			ext_printf("[~] Warning: ECDSA recovered public key differs from real one ...");
 			ext_printf("This can happen with very low probability. Please check the trace:\n");
 			pub_key_print("pub_key1", &pub_key1);
@@ -675,6 +711,7 @@ pubkey_recovery_warning:
 			pub_key_print("pub_key", &(kp.pub_key));
 			buf_print("digest", digest, digestlen);
 			buf_print("sig", sig, siglen);
+			OPENMP_UNLOCK();
 		}
 	}
 #ifdef USE_CRYPTOFUZZ
@@ -1028,6 +1065,10 @@ ATTRIBUTE_WARN_UNUSED_RET int perform_known_test_vectors_test(const char *sig, c
 	int check;
 
 	ext_printf("======= Known test vectors test =================\n");
+#ifdef WITH_OPENMP_SELF_TESTS
+        #pragma omp parallel
+        #pragma omp for schedule(static, 1) nowait
+#endif
 	for (i = 0; i < EC_FIXED_VECTOR_NUM_TESTS; i++) {
 		cur_test = ec_fixed_vector_tests[i];
 		if(cur_test == NULL){
@@ -1040,22 +1081,22 @@ ATTRIBUTE_WARN_UNUSED_RET int perform_known_test_vectors_test(const char *sig, c
 		/* Filter out */
 		if(sig != NULL){
 			const ec_sig_mapping *sig_map;
-			ret = get_sig_by_type(cur_test->sig_type, &sig_map); EG(ret, err);
+			ret = get_sig_by_type(cur_test->sig_type, &sig_map); OPENMP_EG(ret, err);
 			if(sig_map == NULL){
 				continue;
 			}
-			ret = are_str_equal(sig_map->name, sig, &check); EG(ret, err);
+			ret = are_str_equal(sig_map->name, sig, &check); OPENMP_EG(ret, err);
 			if(!check){
 				continue;
 			}
 		}
 		if(hash != NULL){
 			const hash_mapping *hash_map;
-			ret = get_hash_by_type(cur_test->hash_type, &hash_map); EG(ret, err);
+			ret = get_hash_by_type(cur_test->hash_type, &hash_map); OPENMP_EG(ret, err);
 			if(hash_map == NULL){
 				continue;
 			}
-			ret = are_str_equal(hash_map->name, hash, &check); EG(ret, err);
+			ret = are_str_equal(hash_map->name, hash, &check); OPENMP_EG(ret, err);
 			if(!check){
 				continue;
 			}
@@ -1064,12 +1105,13 @@ ATTRIBUTE_WARN_UNUSED_RET int perform_known_test_vectors_test(const char *sig, c
 			if(cur_test->ec_str_p == NULL){
 				continue;
 			}
-			ret = are_str_equal((const char*)cur_test->ec_str_p->name->buf, curve, &check); EG(ret, err);
+			ret = are_str_equal((const char*)cur_test->ec_str_p->name->buf, curve, &check); OPENMP_EG(ret, err);
 			if(!check){
 				continue;
 			}
 		}
 		ret = ec_sig_known_vector_tests_one(cur_test);
+		OPENMP_LOCK();
 		ext_printf("[%s] %30s selftests: known test vectors "
 			   "sig/verif %s\n", ret ? "-" : "+",
 			   cur_test->name, ret ? "failed" : "ok");
@@ -1104,14 +1146,17 @@ ATTRIBUTE_WARN_UNUSED_RET int perform_known_test_vectors_test(const char *sig, c
 		}
 #endif
 #endif
-		if (ret) {
-			goto err;
-		}
+		OPENMP_UNLOCK();
+		OPENMP_EG(ret, err);
 	}
 #if defined(WITH_ECCCDH) || defined(WITH_X25519) || defined(WITH_X448)
 	/* Now take care of ECDH */
 	if((sig == NULL) && (hash == NULL)){
 		const ecdh_test_case *ecdh_cur_test;
+#ifdef WITH_OPENMP_SELF_TESTS
+	        #pragma omp parallel
+        	#pragma omp for schedule(static, 1) nowait
+#endif
 		for (i = 0; i < ECDH_FIXED_VECTOR_NUM_TESTS; i++) {
 			ecdh_cur_test = ecdh_fixed_vector_tests[i];
 			if(ecdh_cur_test == NULL){
@@ -1125,23 +1170,25 @@ ATTRIBUTE_WARN_UNUSED_RET int perform_known_test_vectors_test(const char *sig, c
 				if(ecdh_cur_test->ec_str_p == NULL){
 					continue;
 				}
-				ret = are_str_equal((const char*)ecdh_cur_test->ec_str_p->name->buf, curve, &check); EG(ret, err);
+				ret = are_str_equal((const char*)ecdh_cur_test->ec_str_p->name->buf, curve, &check); OPENMP_EG(ret, err);
 				if(!check){
 					continue;
 				}
 			}
 			ret = ecdh_known_vector_tests_one(ecdh_cur_test);
+			OPENMP_LOCK();
 			ext_printf("[%s] %30s selftests: known test vectors "
 				   "ecdh %s\n", ret ? "-" : "+",
 				   ecdh_cur_test->name, ret ? "failed" : "ok");
-			if (ret) {
-				goto err;
-			}
+			OPENMP_EG(ret, err);
+			OPENMP_UNLOCK();
 		}
 	}
 #endif
 
- err:
+#ifndef WITH_OPENMP_SELF_TESTS
+err:
+#endif
 	return ret;
 }
 
@@ -1222,6 +1269,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int rand_sig_verif_test_one(const ec_sig_mappin
 
 	/* Execute the test */
 	ret = ec_import_export_test(&t);
+	OPENMP_LOCK();
 	ext_printf("[%s] %34s randtests: random import/export "
 		   "with sig/verif %s\n", ret ? "-" : "+", t.name,
 		   ret ? "failed" : "ok");
@@ -1257,6 +1305,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int rand_sig_verif_test_one(const ec_sig_mappin
 	}
 #endif
 #endif
+	OPENMP_UNLOCK();
 
 err:
 	return ret;
@@ -1264,31 +1313,47 @@ err:
 
 ATTRIBUTE_WARN_UNUSED_RET int perform_random_sig_verif_test(const char *sig, const char *hash, const char *curve)
 {
-	unsigned int i, j, k;
-	int ret, check;
+	unsigned int i;
+	unsigned int num_sig_maps, num_hash_maps;
+	int ret = 0;
+
+	/* Compute number of sig and hash maps */
+	for (num_sig_maps = 0; ec_sig_maps[num_sig_maps].type != UNKNOWN_ALG; num_sig_maps++) {}
+	for (num_hash_maps = 0; hash_maps[num_hash_maps].type != UNKNOWN_HASH_ALG; num_hash_maps++) {}
 
 	/*
 	 * Perform basic sign/verify tests on all the cipher suites
 	 * (combination of sign algo/hash function/curve)
 	 */
 	ext_printf("======= Random sig/verif test ===================\n");
-	for (i = 0; ec_sig_maps[i].type != UNKNOWN_ALG; i++) {
-		for (j = 0; hash_maps[j].type != UNKNOWN_HASH_ALG; j++) {
+#ifdef WITH_OPENMP_SELF_TESTS
+        #pragma omp parallel
+        #pragma omp for schedule(static, 1) nowait
+#endif
+	for (i = 0; i < num_sig_maps; i++) {
+		unsigned int j;
+#ifdef WITH_OPENMP_SELF_TESTS
+	        #pragma omp parallel
+        	#pragma omp for schedule(static, 1) nowait
+#endif
+		for (j = 0; j < num_hash_maps; j++) {
+			unsigned int k;
+			int check;
 			for (k = 0; k < EC_CURVES_NUM; k++) {
 				if(sig != NULL){
-					ret = are_str_equal(ec_sig_maps[i].name, sig, &check); EG(ret, err);
+					ret = are_str_equal(ec_sig_maps[i].name, sig, &check); OPENMP_EG(ret, err);
 					if(!check){
 						continue;
 					}
 				}
 				if(hash != NULL){
-					ret = are_str_equal(hash_maps[j].name, hash, &check); EG(ret, err);
+					ret = are_str_equal(hash_maps[j].name, hash, &check); OPENMP_EG(ret, err);
 					if(!check){
 						continue;
 					}
 				}
 				if(curve != NULL){
-					ret = are_str_equal((const char*)ec_maps[k].params->name->buf, curve, &check); EG(ret, err);
+					ret = are_str_equal((const char*)ec_maps[k].params->name->buf, curve, &check); OPENMP_EG(ret, err);
 					if(!check){
 						continue;
 					}
@@ -1318,17 +1383,15 @@ ATTRIBUTE_WARN_UNUSED_RET int perform_random_sig_verif_test(const char *sig, con
 				ret = rand_sig_verif_test_one(&ec_sig_maps[i],
 							      &hash_maps[j],
 							      &ec_maps[k]);
-				if (ret) {
-					goto err;
-				}
+				OPENMP_EG(ret, err);
 			}
 		}
 	}
 
-	return 0;
-
+#ifndef WITH_OPENMP_SELF_TESTS
 err:
-	return -1;
+#endif
+	return ret;
 }
 
 #define PERF_NUM_OP	300
@@ -1546,11 +1609,13 @@ ATTRIBUTE_WARN_UNUSED_RET static int perf_test_one(const ec_sig_mapping *sig, co
 
 	/* Sign and verify some random data during some time */
 	ret = ec_performance_test(&t, &n_perf_sign, &n_perf_verif);
+	OPENMP_LOCK();
 	ext_printf("[%s] %30s perf: %d sign/s and %d verif/s\n",
 		   ret ? "-" : "+", t.name, n_perf_sign, n_perf_verif);
 	if ((n_perf_sign == 0) || (n_perf_verif == 0)) {
 		ext_printf("\t(0 is less than one sig/verif per sec)\n");
 	}
+	OPENMP_UNLOCK();
 
 err:
 	return ret;
@@ -1563,23 +1628,27 @@ ATTRIBUTE_WARN_UNUSED_RET int perform_performance_test(const char *sig, const ch
 
 	/* Perform performance tests like "openssl speed" command */
 	ext_printf("======= Performance test ========================\n");
+#ifdef WITH_OPENMP_SELF_TESTS
+	ext_printf("== NOTE: OpenMP parallelization is not applied to performance tests ...\n");
+	ext_printf("== (because of CPU/cores shared ressources such as caches, BPU, etc.)\n");
+#endif
 	for (i = 0; ec_sig_maps[i].type != UNKNOWN_ALG; i++) {
 		for (j = 0; hash_maps[j].type != UNKNOWN_HASH_ALG; j++) {
 			for (k = 0; k < EC_CURVES_NUM; k++) {
 				if(sig != NULL){
-					ret = are_str_equal(ec_sig_maps[i].name, sig, &check); EG(ret, err);
+					ret = are_str_equal(ec_sig_maps[i].name, sig, &check); OPENMP_EG(ret, err);
 					if(!check){
 						continue;
 					}
 				}
 				if(hash != NULL){
-					ret = are_str_equal(hash_maps[j].name, hash, &check); EG(ret, err);
+					ret = are_str_equal(hash_maps[j].name, hash, &check); OPENMP_EG(ret, err);
 					if(!check){
 						continue;
 					}
 				}
 				if(curve != NULL){
-					ret = are_str_equal((const char*)ec_maps[k].params->name->buf, curve, &check); EG(ret, err);
+					ret = are_str_equal((const char*)ec_maps[k].params->name->buf, curve, &check); OPENMP_EG(ret, err);
 					if(!check){
 						continue;
 					}
