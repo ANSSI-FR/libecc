@@ -1579,6 +1579,15 @@ static void print_help(const char *prog_name)
 	printf("\targ1 = 'gen_keys', 'sign', 'verify', 'struct_sign', 'struct_verify' or 'scalar_mult'\n");
 }
 
+#ifdef __cplusplus
+/* In case of a C++ compiler, preserve our "main"
+ * linkage.
+ */
+extern "C" {
+int main(int argc, char *argv[]);
+}
+#endif
+
 int main(int argc, char *argv[])
 {
 	int ret, check, found;

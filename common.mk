@@ -286,5 +286,6 @@ endif
 
 # Self tests parallelization
 ifeq ($(OPENMP_SELF_TESTS),1)
-CFLAGS += -DWITH_OPENMP_SELF_TESTS -fopenmp
+CFLAGS  += -DWITH_OPENMP_SELF_TESTS -fopenmp
+LDFLAGS += -fopenmp
 endif

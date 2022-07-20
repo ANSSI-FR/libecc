@@ -147,6 +147,15 @@ static void print_help(const char *bad_arg)
 #define MAX_FILTERS 100
 #endif
 
+#ifdef __cplusplus
+/* In case of a C++ compiler, preserve our "main"
+ * linkage.
+ */
+extern "C" {
+int main(int argc, char *argv[]);
+}
+#endif
+
 int main(int argc, char *argv[])
 {
 	int ret;
