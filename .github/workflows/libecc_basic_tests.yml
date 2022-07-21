@@ -53,8 +53,8 @@ jobs:
           make 64 && ./build/ec_self_tests vectors && ./build/ec_self_tests rand && cd src/arithmetic_tests/ && make clean && make 64 && make clean && cd -;
           cd src/examples/ && make clean && make 64 && cd - && make clean;
           # We perform one test with the sanitizers
-          USE_SANITIZERS=1 make && ./build/ec_self_tests vectors && ./build/ec_self_tests rand && cd src/arithmetic_tests/ && make clean && USE_SANITIZERS=1 make && make clean && cd -;
-          cd src/examples/ && make clean && make && cd - && make clean;
+          USE_SANITIZERS=1 make && ./build/ec_self_tests vectors && ./build/ec_self_tests rand;
+          cd src/examples/ && make clean && USE_SANITIZERS=1 make && cd - && make clean;
           #
           make debug && ./build/ec_self_tests vectors && ./build/ec_self_tests rand && cd src/arithmetic_tests/ && make clean && make debug && make clean && cd -;
           cd src/examples/ && make clean && make debug && cd - && make clean;
