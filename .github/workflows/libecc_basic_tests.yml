@@ -56,12 +56,12 @@ jobs:
           USE_SANITIZERS=1 make && ./build/ec_self_tests vectors && ./build/ec_self_tests rand;
           cd src/examples/ && make clean && USE_SANITIZERS=1 make && cd - && make clean;
           #
-          make debug && ./build/ec_self_tests vectors && ./build/ec_self_tests rand && cd src/arithmetic_tests/ && make clean && make debug && make clean && cd -;
+          make debug && ./build/ec_self_tests vectors && ./build/ec_self_tests rand;
           cd src/examples/ && make clean && make debug && cd - && make clean;
-          make debug16 && ./build/ec_self_tests vectors && ./build/ec_self_tests rand && cd src/arithmetic_tests/ && make clean && make debug16 && make clean && cd -;
+          make debug16 && ./build/ec_self_tests vectors && ./build/ec_self_tests rand;
           cd src/examples/ && make clean && make debug16 && cd - && make clean;
-          make debug32 && ./build/ec_self_tests vectors && ./build/ec_self_tests rand && cd src/arithmetic_tests/ && make clean && make debug32 && make clean && cd -;
+          make debug32 && ./build/ec_self_tests vectors && ./build/ec_self_tests rand;
           cd src/examples/ && make clean && make debug32 && cd - && make clean;
-          make debug64 && ./build/ec_self_tests vectors && ./build/ec_self_tests rand && cd src/arithmetic_tests/ && make clean && make debug64 && make clean && cd -;
+          make debug64 && ./build/ec_self_tests vectors && ./build/ec_self_tests rand;
           cd src/examples/ && make clean && make debug64 && cd - && make clean;
         continue-on-error: false
