@@ -151,6 +151,13 @@ executing:
 	$ make
 </pre>
 
+By default, compilation is quiet. **Verbose compilation** (i.e. showing all the compilation
+executed commands) can be achieved using the `VERBOSE=1` toggle:
+
+<pre>
+	$ VERBOSE=1 make
+</pre>
+
 This will compile different elements in the [build](build/) directory:
 
   * Three **archive** static libraries, each one containing (based on) the previous ones:
@@ -195,6 +202,13 @@ This will compile different elements in the [build](build/) directory:
 	[+] ECDSA-SHA224/SECP224R1 perf: 533 sign/s and 276 verif/s
 	...
 </pre>
+
+**NOTE**: it is possible to parallelize self tests (known and random) using the
+[OpenMP](https://en.wikipedia.org/wiki/OpenMP) framework (usually packaged with
+most distros) by using the `OPENMP_SELF_TESTS=1` compilation toggle. This requires
+the `WITH_STDLIB` option (as it obviously uses the standard library). Performance
+tests are not parallelized due to possible shared ressources exhaustion between CPUs and cores
+(e.g. caches, Branch Prediction Units, etc.).
 
 - **ec\_utils**: a tool for signing and verifying user defined files, with a user
 provided signature algorithm/curve/hash function triplet. The tool can also be
@@ -248,25 +262,25 @@ we provide some examples in the [src/examples](src/examples) folder. Compiling t
 </pre>
 
 * NN layer examples:
-  * [src/examples/nn&lowbar;miller&lowbar;rabin.c](src/examples/nn_miller_rabin.c): this example implements the
+  * [src/examples/basic/nn&lowbar;miller&lowbar;rabin.c](src/examples/basic/nn_miller_rabin.c): this example implements the
     [Miller-Rabin](https://en.wikipedia.org/wiki/Miller%E2%80%93Rabin_primality_test) composition (or probabilistic primality) test as
     described in the [Handbook of Applied Cryptography (4.29)](http://cacr.uwaterloo.ca/hac/about/chap4.pdf).
-  * [src/examples/nn&lowbar;pollard&lowbar;rho.c](src/examples/nn_pollard_rho.c): this example is a straightforward
+  * [src/examples/basic/nn&lowbar;pollard&lowbar;rho.c](src/examples/nn_pollard_rho.c): this example is a straightforward
     implementation of the [Pollard's Rho](https://en.wikipedia.org/wiki/Pollard%27s_rho_algorithm) integer factorization
     algorithm as specified in the [Handbook of Applied Cryptography (3.9)](http://cacr.uwaterloo.ca/hac/about/chap3.pdf).
 
 * Fp layer examples:
-  * [src/examples/fp&lowbar;square&lowbar;residue.c](src/examples/fp_square_residue.c): this is an implementation of
+  * [src/examples/basic/fp&lowbar;square&lowbar;residue.c](src/examples/basic/fp_square_residue.c): this is an implementation of
   the [Tonelli-Shanks](https://en.wikipedia.org/wiki/Tonelli%E2%80%93Shanks_algorithm) algorithm for finding quadratic residues
   over a prime field Fp. Given a prime field element x, the algorithm finds y so that y<sup>2</sup> = x (or informs that there
   is no solution if this is the case).
 
 * Curves layer examples:
-  * [src/examples/curve&lowbar;basic&lowbar;examples.c](src/examples/curve_basic_examples.c): this example shows basic
+  * [src/examples/basic/curve&lowbar;basic&lowbar;examples.c](src/examples/basic/curve_basic_examples.c): this example shows basic
   features of libec for playing with elliptic curves group arithmetic, namely loading defined named curves, generating random points on
   these curves, checking point addition and doubling formulas as well as scalar multiplication (both Montgomery and non Montgomery based).
   
-  * [src/examples/curve&lowbar;ecdh.c](src/examples/curve_ecdh.c): the purpose of this code is to provide a toy example of
+  * [src/examples/basic/curve&lowbar;ecdh.c](src/examples/basic/curve_ecdh.c): the purpose of this code is to provide a toy example of
   how to implement an [Elliptic Curve Diffie-Hellman](https://en.wikipedia.org/wiki/Elliptic_curve_Diffie%E2%80%93Hellman) protocol between two
   entities 'Alice' and 'Bob' in order to produce a shared secret over a public channel.
 
@@ -277,6 +291,21 @@ libarith and libec libraries.
 The **public headers** containing the functions to be used by higher level code are [src/libarith.h](src/libarith.h),
 [src/libec.h](src/libec.h) and [src/libsig.h](src/libsig.h): they are respectively used for the NN and Fp arithmetic layers,
 the Elliptic Curves layer, and the signature layer.
+
+More advanced examples are present in the examples folder:
+
+* Obsolete hash algorithms as an expansion to libecc core algorithms, in [src/examples/hash](src/examples/hash) (MD2, MD4, MD5, MDC2, SHA-0,
+SHA-1, and TDES for supporting MDC2). Please **be careful** when using them, it is advised to use them as toy primitives in **non-production code**
+(e.g. for checking old protocols and cipher suites).
+
+* Pre-ECC Signature schemes (based on Fp finite fields discrete logarithm) in [src/examples/sig](src/examples/sig) (RSA, DSA, SDSA, KCDSA,
+GOSTR34-10-94). Beware that for these signatures, you will have to expand the NN size to bigger values than the default (e.g. supporting RSA 4096
+will need a size of at least 4096 bits for NN, see how to expand the size in the documentation [here](src/nn/nn_config.h)). Although some
+efforts have been made when developing these signature algorithms, using them in production code should be decided with care (e.g. regarding
+side-channel attack and so on).
+
+* SSS (Shamir Secret Sharing) in [src/examples/sss](src/examples/sss).
+
 
 ### Building the NN and Fp arithmetic tests
 
@@ -712,9 +741,9 @@ implementation of the gcc and clang stack protection option, usually expecting t
 
 Compiling for Cortex-M targets should be straightforward using the arm-gcc none-eabi (for bare metal) cross-compiler as
 well as the specific Cortex-M target platform SDK. In order to compile the core libsign.a static library, the only thing to do is to execute
-the makefile command by overloading `CC`and the `CFLAGS`:
+the makefile command by overloading `CROSS_COMPILE`, `CC` and the `CFLAGS`:
 <pre>
-	$ CC=arm-none-eabi-gcc CFLAGS="$(TARGET_OPTS) -W -Wextra -Wall -Wunreachable-code \
+	$ CROSS_COMPILE=arm-none-eabi- CC=gcc CFLAGS="$(TARGET_OPTS) -W -Wextra -Wall -Wunreachable-code \
 	-pedantic -fno-builtin -std=c99 -Os \
 	-ffreestanding -fno-builtin -nostdlib -DWORDSIZE=64" \
 	make build/libsign.a
@@ -730,7 +759,7 @@ a firmware suitable for the target (ST for STM32, NXP for LPC, Atmel for SAM, ..
 If the external dependencies have been implemented by the user, it is also possible to build a self-tests binary by adding the
 GNU ld linker script specific to the target platform (`linker_script.ld` in the example below):
 <pre>
-	$ CC=arm-none-eabi-gcc CFLAGS="$(TARGET_OPTS) -W -Wextra -Wall -Wunreachable-code \
+	$ CROSS_COMPILE=arm-none-eabi- CFLAGS="$(TARGET_OPTS) -W -Wextra -Wall -Wunreachable-code \
 	-pedantic -fno-builtin -std=c99 -Os \
 	-ffreestanding -fno-builtin -nostdlib -DWORDSIZE=64" \
 	LDFLAGS="-T linker_script.ld" \
@@ -867,6 +896,7 @@ the **less efficient but more compatible** `-fstack-protector-all`.
 In addition to compilation flags, it is also possible to overload the library **word sizes** as well as **debug**
 modes through Makefile targets:
 * `make debug` will compile a debug version of the library and binaries, with debugging symbols.
+Setting the environment variable `VERBOSE_INNER_VALUES=1` will print out more values.
 * `make 16`, `make 32` and `make 64` will respectively compile the library with 16, 32 and 64 bits word sizes. `make debug16`,
 `make debug32` and `make debug64` will compile the debug versions of these.
 * `make force_arch32` and `make force_arch64` will force 32-bit and 64-bit architectures compilation (`-m32` and `-m64`

@@ -1,9 +1,9 @@
 # Detect mingw, since some versions throw a warning with the -fPIC option
 # (which would be caught as an error in our case with -Werror)
 # The ELF PIE related hardening flags are also non sense for Windows
-MINGW := $(shell $(CC) -dumpmachine 2>&1 | grep -v mingw)
+MINGW := $(shell $(CROSS_COMPILE)$(CC) -dumpmachine 2>&1 | grep -v mingw)
 # Detect Mac OS compilers: these usually don't like ELF pie related flags ...
-APPLE := $(shell $(CC) -dumpmachine 2>&1 | grep -v apple)
+APPLE := $(shell $(CROSS_COMPILE)$(CC) -dumpmachine 2>&1 | grep -v apple)
 ifneq ($(MINGW),)
 FPIC_CFLAG=-fPIC
 ifneq ($(APPLE),)
@@ -32,7 +32,7 @@ FORTIFY_FLAGS=-D_FORTIFY_SOURCE=2
 #   -Wno-covered-switch-default
 #   -Wno-used-but-marked-unused
 #
-CLANG :=  $(shell $(CC) -v 2>&1 | grep clang)
+CLANG :=  $(shell $(CROSS_COMPILE)$(CC) -v 2>&1 | grep clang)
 ifneq ($(CLANG),)
 WARNING_CFLAGS = -Weverything -Werror \
 		 -Wno-reserved-id-macro -Wno-padded \
@@ -43,7 +43,7 @@ ifeq ($(PEDANTIC),1)
 WARNING_CFLAGS += -Werror -Walloca -Wcast-qual -Wconversion -Wformat=2 -Wformat-security -Wnull-dereference -Wstack-protector -Wvla -Warray-bounds -Warray-bounds-pointer-arithmetic -Wassign-enum -Wbad-function-cast -Wconditional-uninitialized -Wconversion -Wfloat-equal -Wformat-type-confusion -Widiomatic-parentheses -Wimplicit-fallthrough -Wloop-analysis -Wpointer-arith -Wshift-sign-overflow -Wshorten-64-to-32 -Wtautological-constant-in-range-compare -Wunreachable-code-aggressive -Wthread-safety -Wthread-safety-beta -Wcomma
 endif
 # Clang version >= 13? Adapt
-CLANG_VERSION_GTE_13 := $(shell echo `$(CC) -dumpversion | cut -f1-2 -d.` \>= 13.0 | sed -e 's/\./*100+/g' | bc)
+CLANG_VERSION_GTE_13 := $(shell echo `$(CROSS_COMPILE)$(CC) -dumpversion | cut -f1-2 -d.` \>= 13.0 | sed -e 's/\./*100+/g' | bc)
   ifeq ($(CLANG_VERSION_GTE_13), 1)
   # We have to do this because the '_' prefix seems now reserved to builtins
   WARNING_CFLAGS += -Wno-reserved-identifier
@@ -83,6 +83,10 @@ RANLIB_FLAGS ?=
 
 # Our debug flags
 DEBUG_CFLAGS = -DDEBUG -O -g
+
+ifeq ($(VERBOSE_INNER_VALUES),1)
+CFLAGS += -DVERBOSE_INNER_VALUES
+endif
 
 # Default all and clean target that will be expanded
 # later in the Makefile
@@ -244,7 +248,7 @@ ifeq ($(USE_SANITIZERS),1)
 CFLAGS += -fsanitize=undefined -fsanitize=address -fsanitize=leak
   ifneq ($(CLANG),)
     # Clang version < 12 do not support unsigned-shift-base
-    CLANG_VERSION_GTE_12 := $(shell echo `$(CC) -dumpversion | cut -f1-2 -d.` \>= 12.0 | sed -e 's/\./*100+/g' | bc)
+    CLANG_VERSION_GTE_12 := $(shell echo `$(CROSS_COMPILE)$(CC) -dumpversion | cut -f1-2 -d.` \>= 12.0 | sed -e 's/\./*100+/g' | bc)
     ifeq ($(CLANG_VERSION_GTE_12), 1)
       CFLAGS += -fsanitize=integer -fno-sanitize=unsigned-integer-overflow -fno-sanitize=unsigned-shift-base
     endif
@@ -259,8 +263,8 @@ CFLAGS += -DUSE_ISO14888_3_ECRDSA
 endif
 
 # Do we have a C++ compiler instead of a C compiler?
-GPP := $(shell $(CC) -v 2>&1 | grep g++)
-CLANGPP := $(shell echo $(CC) | grep clang++)
+GPP := $(shell $(CROSS_COMPILE)$(CC) -v 2>&1 | grep g++)
+CLANGPP := $(shell echo $(CROSS_COMPILE)$(CC) | grep clang++)
 
 # g++ case
 ifneq ($(GPP),)
@@ -271,4 +275,17 @@ endif
 ifneq ($(CLANGPP),)
 CFLAGS := $(patsubst -std=c99, -std=c++2a, $(CFLAGS))
 CFLAGS += -Wno-deprecated -Wno-c++98-c++11-c++14-c++17-compat-pedantic -Wno-old-style-cast -Wno-zero-as-null-pointer-constant -Wno-c++98-compat-pedantic
+endif
+
+# Makefile verbosity
+ifeq ($(VERBOSE),1)
+VERBOSE_MAKE=
+else
+VERBOSE_MAKE=@
+endif
+
+# Self tests parallelization
+ifeq ($(OPENMP_SELF_TESTS),1)
+CFLAGS  += -DWITH_OPENMP_SELF_TESTS -fopenmp
+LDFLAGS += -fopenmp
 endif

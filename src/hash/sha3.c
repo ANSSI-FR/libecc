@@ -50,7 +50,7 @@ int _sha3_update(sha3_context *ctx, const u8 *input, u32 ilen)
 	u8 *state;
 	int ret;
 
-	MUST_HAVE(((ctx != NULL) && (input != NULL)), ret, err);
+	MUST_HAVE(((ctx != NULL) && ((input != NULL) || (ilen == 0))), ret, err);
 
 	state = (u8*)(ctx->sha3_state);
 

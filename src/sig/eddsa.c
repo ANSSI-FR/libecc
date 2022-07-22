@@ -1640,7 +1640,7 @@ int _eddsa_sign(u8 *sig, u8 siglen, const ec_key_pair *key_pair,
 	dbg_nn_print("q", &(priv_key->params->ec_gen_order));
 	dbg_priv_key_print("x", priv_key);
 	dbg_ec_point_print("G", &(priv_key->params->ec_gen));
-	dbg_pub_key_print("Y", &(pub_key));
+	dbg_pub_key_print("Y", pub_key);
 
 	/* Check provided signature length */
 	MUST_HAVE((siglen == EDDSA_SIGLEN(hsize)) && (siglen == (r_len + s_len)), ret, err);

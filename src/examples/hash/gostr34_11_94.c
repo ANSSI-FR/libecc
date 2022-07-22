@@ -449,7 +449,7 @@ ATTRIBUTE_WARN_UNUSED_RET int gostr34_11_94_update(gostr34_11_94_context *ctx, c
 	u8 left;
 	int ret;
 
-	MUST_HAVE((input != NULL), ret, err);
+	MUST_HAVE((input != NULL) || (ilen == 0), ret, err);
 	GOSTR34_11_94_HASH_CHECK_INITIALIZED(ctx, ret, err);
 
 	/* Nothing to process, return */

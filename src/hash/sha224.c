@@ -101,7 +101,7 @@ int sha224_update(sha224_context *ctx, const u8 *input, u32 ilen)
 	u8 left;
 	int ret;
 
-	MUST_HAVE((input != NULL), ret, err);
+	MUST_HAVE((input != NULL) || (ilen == 0), ret, err);
 	SHA224_HASH_CHECK_INITIALIZED(ctx, ret, err);
 
 	/* Nothing to process, return */

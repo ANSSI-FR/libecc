@@ -123,7 +123,7 @@ ATTRIBUTE_WARN_UNUSED_RET int md5_update(md5_context *ctx, const u8 *input, u32 
 	u8 left;
 	int ret;
 
-	MUST_HAVE((input != NULL), ret, err);
+	MUST_HAVE((input != NULL) || (ilen == 0), ret, err);
 	MD5_HASH_CHECK_INITIALIZED(ctx, ret, err);
 
 	/* Nothing to process, return */
