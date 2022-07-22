@@ -33,6 +33,8 @@ jobs:
           # Install stuff
           sudo dpkg --add-architecture i386;
           sudo apt-get update;
+          # Here because of a broken wine32 dependency
+          sudo apt install -y --allow-downgrades libpcre2-8-0=10.34-7
           sudo apt-get -y install qemu-user-static wine-stable wine32 wine64;
           # Cross build jobs
           docker pull multiarch/crossbuild;
