@@ -31,10 +31,10 @@ jobs:
         shell: bash
         run: |
           # Install stuff
-          sudo dpkg --add-architecture i386;
           sudo apt-get update;
-          # Here because of a broken wine32 dependency
-          sudo apt install -y --allow-downgrades libpcre2-8-0=10.34-7
+          # Here because of a broken wine32 dependency in ubuntu-latest (see https://github.com/actions/virtual-environments/issues/4589)
+          sudo apt-get install -yqq --allow-downgrades libpcre2-8-0/focal libpcre2-16-0/focal libpcre2-32-0/focal libpcre2-posix2/focal
+          sudo dpkg --add-architecture i386;
           sudo apt-get -y install qemu-user-static wine-stable wine32 wine64;
           # Cross build jobs
           docker pull multiarch/crossbuild;
