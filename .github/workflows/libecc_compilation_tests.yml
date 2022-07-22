@@ -34,24 +34,24 @@ jobs:
         run: |
           # Compilation tests of all cases
           #
-          make && cd src/arithmetic_tests/ && make clean && make && make clean && cd -;
+          make && cd src/arithmetic_tests/ && make clean && make bin && make clean && cd -;
           cd src/examples/ && make clean && make && cd - && make clean;
-          make 16 && cd src/arithmetic_tests/ && make clean && make 16 && make clean && cd -;
+          make 16;
           cd src/examples/ && make clean && make 16 && cd - && make clean;
-          make 32 && cd src/arithmetic_tests/ && make clean && make 32 && make clean && cd -;
+          make 32;
           cd src/examples/ && make clean && make 32 && cd - && make clean;
-          make 64 && cd src/arithmetic_tests/ && make clean && make 64 && make clean && cd -;
+          make 64;
           cd src/examples/ && make clean && make 64 && cd - && make clean;
           # We perform one test with the sanitizers
           USE_SANITIZERS=1 make;
           cd src/examples/ && make clean && USE_SANITIZERS=1 make && cd - && make clean;
           #
-          make debug && cd src/arithmetic_tests/ && make clean && make debug && make clean && cd -;
+          make debug;
           cd src/examples/ && make clean && make debug && cd - && make clean;
-          make debug16 && cd src/arithmetic_tests/ && make clean && make debug16 && make clean && cd -;
+          make debug16;
           cd src/examples/ && make clean && make debug16 && cd - && make clean;
-          make debug32 && cd src/arithmetic_tests/ && make clean && make debug32 && make clean && cd -;
+          make debug32;
           cd src/examples/ && make clean && make debug32 && cd - && make clean;
-          make debug64 && cd src/arithmetic_tests/ && make clean && make debug64 && make clean && cd -;
+          make debug64;
           cd src/examples/ && make clean && make debug64 && cd - && make clean;
         continue-on-error: false
