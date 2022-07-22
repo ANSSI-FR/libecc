@@ -17,10 +17,11 @@ jobs:
         optflags: ["-O3", "-O2", "-O1"]
     steps:
       # Checkout repository
-      - uses: actions/checkout@v2
+      - name: checkout repository
+        uses: actions/checkout@v2
       # Run actions
       # libecc compilation tests
-        name: libecc compilation tests
+      - name: libecc compilation tests
         env:
           CC: ${{ matrix.cc }}
           BLINDING: ${{ matrix.blinding }}
