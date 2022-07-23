@@ -19,7 +19,7 @@ jobs:
       - name: Set Swap Space
         uses: pierotofy/set-swap-space@master
         with:
-          swap-size-gb: 32
+          swap-size-gb: 16
       # Checkout repository
       - name: checkout repository
         uses: actions/checkout@v2
