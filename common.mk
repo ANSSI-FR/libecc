@@ -270,6 +270,10 @@ CLANGPP := $(shell echo $(CROSS_COMPILE)$(CC) | grep clang++)
 ifneq ($(GPP),)
 CFLAGS := $(patsubst -std=c99, -std=c++2a, $(CFLAGS))
 CFLAGS += -Wno-deprecated
+# Remove C++ unused pedantic flags
+CFLAGS := $(patsubst -Wstrict-prototypes,,$(CFLAGS))
+CFLAGS := $(patsubst -Wjump-misses-init,,$(CFLAGS))
+CFLAGS := $(patsubst -Wduplicated-branches,,$(CFLAGS))
 endif
 # clang++ case
 ifneq ($(CLANGPP),)

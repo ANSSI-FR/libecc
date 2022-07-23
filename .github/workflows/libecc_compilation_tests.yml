@@ -30,6 +30,8 @@ jobs:
           CRYPTOFUZZ: ${{ matrix.cryptofuzz }}
           EXTRA_LIB_CFLAGS: ${{ matrix.optflags }}
           EXTRA_BIN_CFLAGS: ${{ matrix.optflags }}
+          # Use the strict pedantic compilation flags here
+          PEDANTIC: 1
         shell: bash
         run: |
           # Compilation tests of all cases

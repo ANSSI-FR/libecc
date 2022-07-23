@@ -7,7 +7,7 @@ include $(ROOT_DIR)/common.mk
 BIN_CFLAGS += -I$(ROOT_DIR)/src/ -Wno-shadow -Wno-conversion -Wno-cast-align -Wno-unused-macros
 
 # Remove some false alarms
-BIN_CFLAGS += -Wno-unused-but-set-variable -Wno-declaration-after-statement -Wno-maybe-uninitialized -Wno-stringop-truncation
+BIN_CFLAGS += -Wno-unused-but-set-variable -Wno-declaration-after-statement
 
 NUM_TESTS ?= 1000
 

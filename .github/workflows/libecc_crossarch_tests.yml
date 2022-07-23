@@ -5,7 +5,7 @@ on: push
 
 jobs:
   cross_arch_tests:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
     strategy:
       #max-parallel: 10
       matrix:
@@ -32,7 +32,12 @@ jobs:
         run: |
           # Install stuff
           sudo apt-get update;
+          # This oddity is due to ubuntu (18.04 and 20.04) issue with wine32 in
+          # githbub actions runners ...
+          sudo apt-get -y install software-properties-common;
+          sudo apt-add-repository "ppa:ondrej/php" -y;
           sudo dpkg --add-architecture i386;
+          sudo apt-get update;
           sudo apt-get -y install qemu-user-static wine-stable wine32 wine64;
           # Cross build jobs
           docker pull multiarch/crossbuild;
