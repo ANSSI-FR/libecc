@@ -9,7 +9,7 @@ jobs:
     strategy:
       #max-parallel: 10
       matrix:
-        cc: [gcc, clang]
+        cc: [gcc, clang, g++, clang++]
         blinding: [0, 1]
         complete: [0, 1]
         ladder: [0, 1]

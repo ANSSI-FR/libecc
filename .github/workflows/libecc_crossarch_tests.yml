@@ -5,7 +5,7 @@ on: push
 
 jobs:
   cross_arch_tests:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-18.04
     strategy:
       #max-parallel: 10
       matrix:
@@ -32,10 +32,8 @@ jobs:
         run: |
           # Install stuff
           sudo apt-get update;
-          # Here because of a broken wine32 dependency in ubuntu-latest (see https://github.com/actions/virtual-environments/issues/4589)
-          sudo apt-get install -yqq --allow-downgrades libpcre2-8-0/focal libpcre2-16-0/focal libpcre2-32-0/focal libpcre2-posix2/focal
           sudo dpkg --add-architecture i386;
-          sudo apt-get -y install qemu-user-static wine-stable;
+          sudo apt-get -y install qemu-user-static wine-stable wine32 wine64;
           # Cross build jobs
           docker pull multiarch/crossbuild;
           sh scripts/crossbuild.sh -triplet "${CROSS_TARGET}" "${CROSS_SIZE}";
