@@ -30,9 +30,9 @@ jobs:
         run: |
           # Test our Python libecc expanding script
           # Python2
-          echo "y" | python2 scripts/expand_libecc.py --remove-all && PYTHON=python2 sh scripts/gen_curves_tests.sh && make clean && make && ./build/ec_self_tests vectors && ./build/ec_self_tests rand;
+          #echo "y" | python2 scripts/expand_libecc.py --remove-all && PYTHON=python2 sh scripts/gen_curves_tests.sh && make clean && make && ./build/ec_self_tests vectors rand;
           # Python3
-          echo "y" | python3 scripts/expand_libecc.py --remove-all && PYTHON=python3 sh scripts/gen_curves_tests.sh && make clean && make && ./build/ec_self_tests vectors && ./build/ec_self_tests rand;
+          echo "y" | python3 scripts/expand_libecc.py --remove-all && PYTHON=python3 sh scripts/gen_curves_tests.sh && make clean && make && ./build/ec_self_tests vectors rand;
           # Clean
           echo "y" | python2 scripts/expand_libecc.py --remove-all && make clean;
           # Vanilla tests
