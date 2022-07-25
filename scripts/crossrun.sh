@@ -22,7 +22,8 @@ run_triplet_wordsize(){
         if [ "$triplet" != "i386-apple-darwin" ] && [ "$triplet" != "x86_64-apple-darwin" ] && [ "$triplet" != "x86_64h-apple-darwin" ] && [ "$triplet" != "i686-w64-mingw32" ] && [ "$triplet" != "x86_64-w64-mingw32" ]; then
 		echo "  [X] Using QEMU static"
 		$CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"/ec_self_tests_"$triplet"_word"$wordsize"_static vectors
-		$CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"/ec_self_tests_"$triplet"_word"$wordsize"_static rand
+		$CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"/ec_self_tests_"$triplet"_word"$wordsize"_debug_static vectors
+		#$CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"/ec_self_tests_"$triplet"_word"$wordsize"_static rand
 	fi
 	if [ "$triplet" = "i386-apple-darwin" ] || [ "$triplet" = "x86_64-apple-darwin" ] || [ "$triplet" = "x86_64h-apple-darwin" ]; then
 		echo "  [X] Testing MAC-OS binaries is futur work!"
@@ -30,7 +31,8 @@ run_triplet_wordsize(){
 	if [ "$triplet" = "i686-w64-mingw32" ] || [ "$triplet" = "x86_64-w64-mingw32" ]; then
 		echo "  [X] Using WINE"
 		wine $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"/ec_self_tests_"$triplet"_word"$wordsize"_static vectors
-		wine $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"/ec_self_tests_"$triplet"_word"$wordsize"_static rand
+		wine $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"/ec_self_tests_"$triplet"_word"$wordsize"_debug_static vectors
+		#wine $CROSSBUILD_OUTPUT/"$triplet"/word"$wordsize"/ec_self_tests_"$triplet"_word"$wordsize"_static rand
 	fi
 }
 
