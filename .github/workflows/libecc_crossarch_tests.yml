@@ -9,11 +9,11 @@ jobs:
     strategy:
       #max-parallel: 10
       matrix:
-        blinding: [0]
-        complete: [1]
-        ladder: [1]
+        blinding: [0, 1]
+        complete: [0, 1]
+        ladder: [0, 1]
         #cross_target: [arm-linux-gnueabi, arm-linux-gnueabihf, aarch64-linux-gnu, powerpc64le-linux-gnu, mipsel-linux-gnu, i686-w64-mingw32, x86_64-w64-mingw32, i386-apple-darwin, x86_64-apple-darwin, x86_64h-apple-darwin]
-        cross_target: [mipsel-linux-gnu, i686-w64-mingw32, x86_64-w64-mingw32]
+        cross_target: [arm-linux-gnueabi, arm-linux-gnueabihf, aarch64-linux-gnu, powerpc64le-linux-gnu, mipsel-linux-gnu, i686-w64-mingw32, x86_64-w64-mingw32]
         cross_size: [16, 32, 64]
     steps:
       # Add swap because of possible out of memory issues
