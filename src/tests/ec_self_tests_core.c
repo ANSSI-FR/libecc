@@ -1256,7 +1256,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int rand_sig_verif_test_one(const ec_sig_mappin
 	{
 		u8 rand_len = 0;
 		ret = get_random((u8 *)&rand_len, sizeof(rand_len)); EG(ret, err);
-		ret = get_random((u8 *)rand_adata, (rand_len % sizeof(rand_adata))); EG(ret, err);
+		ret = get_random((u8 *)rand_adata, (u16)(rand_len % sizeof(rand_adata))); EG(ret, err);
 		t.adata = rand_adata;
 		t.adata_len = rand_len;
 	}
@@ -1588,7 +1588,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int perf_test_one(const ec_sig_mapping *sig, co
 	{
 		u8 rand_len = 0;
 		ret = get_random((u8 *)&rand_len, sizeof(rand_len)); EG(ret, err);
-		ret = get_random((u8 *)rand_adata, (rand_len % sizeof(rand_adata))); EG(ret, err);
+		ret = get_random((u8 *)rand_adata, (u16)(rand_len % sizeof(rand_adata))); EG(ret, err);
 		t.adata = rand_adata;
 		t.adata_len = rand_len;
 	}

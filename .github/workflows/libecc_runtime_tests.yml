@@ -30,27 +30,20 @@ jobs:
         run: |
           # Test our Python libecc expanding script
           # Python2
-          echo "y" | python2 scripts/expand_libecc.py --remove-all && PYTHON=python2 sh scripts/gen_curves_tests.sh && make clean && make && ./build/ec_self_tests vectors && ./build/ec_self_tests rand;
+          #echo "y" | python2 scripts/expand_libecc.py --remove-all && PYTHON=python2 sh scripts/gen_curves_tests.sh && make clean && make && ./build/ec_self_tests vectors rand;
           # Python3
-          echo "y" | python3 scripts/expand_libecc.py --remove-all && PYTHON=python3 sh scripts/gen_curves_tests.sh && make clean && make && ./build/ec_self_tests vectors && ./build/ec_self_tests rand;
+          echo "y" | python3 scripts/expand_libecc.py --remove-all && PYTHON=python3 sh scripts/gen_curves_tests.sh && make clean && make && ./build/ec_self_tests vectors rand;
           # Clean
           echo "y" | python2 scripts/expand_libecc.py --remove-all && make clean;
           # Vanilla tests
           #
-          make && ./build/ec_self_tests vectors && ./build/ec_self_tests rand && cd src/arithmetic_tests/ && make clean && make && make clean && cd -;
-          cd src/examples/ && make clean && make && cd - && make clean;
-          make 16 && ./build/ec_self_tests vectors && ./build/ec_self_tests rand && cd src/arithmetic_tests/ && make clean && make 16 && make clean && cd -;
-          cd src/examples/ && make clean && make 16 && cd - && make clean;
-          make 32 && ./build/ec_self_tests vectors && ./build/ec_self_tests rand && cd src/arithmetic_tests/ && make clean && make 32 && make clean && cd -;
-          cd src/examples/ && make clean && make 32 && cd - && make clean;
+          make && ./build/ec_self_tests vectors rand;
+          make 16 && ./build/ec_self_tests vectors rand;
+          make 32 && ./build/ec_self_tests vectors rand;
           # We perform one test with the sanitizers
-          USE_SANITIZERS=1 make && ./build/ec_self_tests vectors && ./build/ec_self_tests rand;
-          cd src/examples/ && make clean && USE_SANITIZERS=1 make && cd - && make clean;
+          USE_SANITIZERS=1 make && ./build/ec_self_tests vectors rand;
           #
-          make debug && ./build/ec_self_tests vectors && ./build/ec_self_tests rand;
-          cd src/examples/ && make clean && make debug && cd - && make clean;
-          make debug16 && ./build/ec_self_tests vectors && ./build/ec_self_tests rand;
-          cd src/examples/ && make clean && make debug16 && cd - && make clean;
-          make debug32 && ./build/ec_self_tests vectors && ./build/ec_self_tests rand;
-          cd src/examples/ && make clean && make debug32 && cd - && make clean;
+          make debug && ./build/ec_self_tests vectors rand;
+          make debug16 && ./build/ec_self_tests vectors rand;
+          make debug32 && ./build/ec_self_tests vectors rand;
         continue-on-error: false

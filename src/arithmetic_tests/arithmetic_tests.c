@@ -152,96 +152,96 @@ struct dispatch_table {
 
 #define GENERIC_TEST_FP_DECL_INIT1(name, ctx) \
 	fp name##0; \
-	ret = fp_init(&name##0, ctx); EG(ret, err);\
-	fp_t name##_ptr[] = { &name##0 };
+	fp_t name##_ptr[] = { &name##0 };\
+	ret |= fp_init(&name##0, ctx);\
 
 #define GENERIC_TEST_FP_DECL_INIT2(name, ctx) \
 	fp name##0, name##1;\
-	ret = fp_init(&name##0, ctx); EG(ret, err);\
-	ret = fp_init(&name##1, ctx); EG(ret, err);\
-	fp_t name##_ptr[] = { &name##0, &name##1 };
+	fp_t name##_ptr[] = { &name##0, &name##1 };\
+	ret |= fp_init(&name##0, ctx);\
+	ret |= fp_init(&name##1, ctx);\
 
 #define GENERIC_TEST_FP_DECL_INIT3(name, ctx) \
 	fp name##0, name##1, name##2;\
-	ret = fp_init(&name##0, ctx); EG(ret, err);\
-	ret = fp_init(&name##1, ctx); EG(ret, err);\
-	ret = fp_init(&name##2, ctx); EG(ret, err);\
-	fp_t name##_ptr[] = { &name##0, &name##1, &name##2 };
+	fp_t name##_ptr[] = { &name##0, &name##1, &name##2 };\
+	ret |= fp_init(&name##0, ctx);\
+	ret |= fp_init(&name##1, ctx);\
+	ret |= fp_init(&name##2, ctx);\
 
 #define GENERIC_TEST_FP_DECL_INIT4(name, ctx) \
 	fp name##0, name##1, name##2, name##3;\
-	ret = fp_init(&name##0, ctx); EG(ret, err);\
-	ret = fp_init(&name##1, ctx); EG(ret, err);\
-	ret = fp_init(&name##2, ctx); EG(ret, err);\
-	ret = fp_init(&name##3, ctx); EG(ret, err);\
-	fp_t name##_ptr[] = { &name##0, &name##1, &name##2, &name##3 };
+	fp_t name##_ptr[] = { &name##0, &name##1, &name##2, &name##3 };\
+	ret |= fp_init(&name##0, ctx);\
+	ret |= fp_init(&name##1, ctx);\
+	ret |= fp_init(&name##2, ctx);\
+	ret |= fp_init(&name##3, ctx);\
 
 #define GENERIC_TEST_FP_DECL_INIT5(name, ctx) \
 	fp name##0, name##1, name##2, name##3, name##4;\
-	ret = fp_init(&name##0, ctx); EG(ret, err);\
-	ret = fp_init(&name##1, ctx); EG(ret, err);\
-	ret = fp_init(&name##2, ctx); EG(ret, err);\
-	ret = fp_init(&name##3, ctx); EG(ret, err);\
-	ret = fp_init(&name##4, ctx); EG(ret, err);\
-	fp_t name##_ptr[] = { &name##0, &name##1, &name##2, &name##3, &name##4 };
+	fp_t name##_ptr[] = { &name##0, &name##1, &name##2, &name##3, &name##4 };\
+	ret |= fp_init(&name##0, ctx);\
+	ret |= fp_init(&name##1, ctx);\
+	ret |= fp_init(&name##2, ctx);\
+	ret |= fp_init(&name##3, ctx);\
+	ret |= fp_init(&name##4, ctx);\
 
 #define GENERIC_TEST_FP_DECL_INIT6(name, ctx) \
 	fp name##0, name##1, name##2, name##3, name##4, name##5;\
-	ret = fp_init(&name##0, ctx); EG(ret, err);\
-	ret = fp_init(&name##1, ctx); EG(ret, err);\
-	ret = fp_init(&name##2, ctx); EG(ret, err);\
-	ret = fp_init(&name##3, ctx); EG(ret, err);\
-	ret = fp_init(&name##4, ctx); EG(ret, err);\
-	ret = fp_init(&name##5, ctx); EG(ret, err);\
-	fp_t name##_ptr[] = { &name##0, &name##1, &name##2, &name##3, &name##4, &name##5 };
+	fp_t name##_ptr[] = { &name##0, &name##1, &name##2, &name##3, &name##4, &name##5 };\
+	ret |= fp_init(&name##0, ctx);\
+	ret |= fp_init(&name##1, ctx);\
+	ret |= fp_init(&name##2, ctx);\
+	ret |= fp_init(&name##3, ctx);\
+	ret |= fp_init(&name##4, ctx);\
+	ret |= fp_init(&name##5, ctx);\
 
 #define GENERIC_TEST_NN_DECL_INIT0(name, size) \
 	nn_t name##_ptr[] = {NULL};
 
 #define GENERIC_TEST_NN_DECL_INIT1(name, size) \
 	nn name##0;			       \
-	ret = nn_init(&name##0, size); EG(ret, err); \
-	nn_t name##_ptr[] = { &name##0 };
+	nn_t name##_ptr[] = { &name##0 };      \
+	ret |= nn_init(&name##0, size); \
 
 #define GENERIC_TEST_NN_DECL_INIT2(name, size)       \
 	nn name##0, name##1;			     \
-	ret = nn_init(&name##0, size); EG(ret, err); \
-	ret = nn_init(&name##1, size); EG(ret, err); \
-	nn_t name##_ptr[] = { &name##0, &name##1 };
+	nn_t name##_ptr[] = { &name##0, &name##1 };  \
+	ret |= nn_init(&name##0, size); \
+	ret |= nn_init(&name##1, size); \
 
 #define GENERIC_TEST_NN_DECL_INIT3(name, size)                  \
 	nn name##0, name##1, name##2;				\
-	ret = nn_init(&name##0, size); EG(ret, err);		\
-	ret = nn_init(&name##1, size); EG(ret, err);		\
-	ret = nn_init(&name##2, size); EG(ret, err);   		\
-	nn_t name##_ptr[] = { &name##0, &name##1, &name##2 };
+	nn_t name##_ptr[] = { &name##0, &name##1, &name##2 };	\
+	ret |= nn_init(&name##0, size);		\
+	ret |= nn_init(&name##1, size);		\
+	ret |= nn_init(&name##2, size);   	\
 
 #define GENERIC_TEST_NN_DECL_INIT4(name, size)				\
 	nn name##0, name##1, name##2, name##3;				\
-	ret = nn_init(&name##0, size); EG(ret, err);			\
-	ret = nn_init(&name##1, size); EG(ret, err);			\
-	ret = nn_init(&name##2, size); EG(ret, err);			\
-	ret = nn_init(&name##3, size); EG(ret, err);			\
-	nn_t name##_ptr[] = { &name##0, &name##1, &name##2, &name##3 };
+	nn_t name##_ptr[] = { &name##0, &name##1, &name##2, &name##3 }; \
+	ret |= nn_init(&name##0, size);			\
+	ret |= nn_init(&name##1, size);			\
+	ret |= nn_init(&name##2, size);			\
+	ret |= nn_init(&name##3, size);			\
 
 #define GENERIC_TEST_NN_DECL_INIT5(name, size)		    \
 	nn name##0, name##1, name##2, name##3, name##4;	    \
-	ret = nn_init(&name##0, size); EG(ret, err);	    \
-	ret = nn_init(&name##1, size); EG(ret, err);	    \
-	ret = nn_init(&name##2, size); EG(ret, err);	    \
-	ret = nn_init(&name##3, size); EG(ret, err);	    \
-	ret = nn_init(&name##4, size); EG(ret, err);	    \
-	nn_t name##_ptr[] = { &name##0, &name##1, &name##2, &name##3, &name##4 };
+	nn_t name##_ptr[] = { &name##0, &name##1, &name##2, &name##3, &name##4 };\
+	ret |= nn_init(&name##0, size);	    \
+	ret |= nn_init(&name##1, size);	    \
+	ret |= nn_init(&name##2, size);	    \
+	ret |= nn_init(&name##3, size);	    \
+	ret |= nn_init(&name##4, size);	    \
 
 #define GENERIC_TEST_NN_DECL_INIT6(name, size)				\
 	nn name##0, name##1, name##2, name##3, name##4, name##5;	\
-	ret = nn_init(&name##0, size);	EG(ret, err);			\
-	ret = nn_init(&name##1, size);	EG(ret, err);			\
-	ret = nn_init(&name##2, size);	EG(ret, err);			\
-	ret = nn_init(&name##3, size);	EG(ret, err);			\
-	ret = nn_init(&name##4, size);	EG(ret, err);			\
-	ret = nn_init(&name##5, size);	EG(ret, err);			\
-	nn_t name##_ptr[] = { &name##0, &name##1, &name##2, &name##3, &name##4, &name##5 };
+	nn_t name##_ptr[] = { &name##0, &name##1, &name##2, &name##3, &name##4, &name##5 };\
+	ret |= nn_init(&name##0, size);		\
+	ret |= nn_init(&name##1, size);		\
+	ret |= nn_init(&name##2, size);		\
+	ret |= nn_init(&name##3, size);		\
+	ret |= nn_init(&name##4, size);		\
+	ret |= nn_init(&name##5, size);		\
 
 #define GENERIC_TEST_FP_CLEAR0(name)
 
@@ -495,7 +495,7 @@ struct dispatch_table {
 int test_##test_name(const char ATTRIBUTE_UNUSED *op, void **params, int test_num);\
 int test_##test_name(const char ATTRIBUTE_UNUSED *op, void **params, int test_num){\
 	unsigned int i;\
-	int ret, cmp, mismatch = 0;		\
+	int ret = 0, cmp, mismatch = 0;		\
 	const char *op_string = NULL;\
 	unsigned int n_len ATTRIBUTE_UNUSED = 0;\
 	int fun_out_value = 0;\
@@ -509,6 +509,10 @@ int test_##test_name(const char ATTRIBUTE_UNUSED *op, void **params, int test_nu
 	\
 	const char operation[] = #operation_;\
 	\
+	/* Our words used as output of functions */\
+	word_t word_out[MAX_PARAMS] ATTRIBUTE_UNUSED = { 0 };\
+	int int_out[MAX_PARAMS] ATTRIBUTE_UNUSED = { 0 };\
+	\
 	assert(memcmp(operation, op, sizeof(operation)) == 0);\
 	\
 	/* Sanity check: check that the parameters passed from the file are the same as the ones declared in the test */\
@@ -519,9 +523,6 @@ int test_##test_name(const char ATTRIBUTE_UNUSED *op, void **params, int test_nu
 	\
 	PARAMETERS_SANITY_CHECK(test_num, parameters_types, parameters_io);\
 	\
-	/* Our words used as output of functions */\
-	word_t word_out[MAX_PARAMS] ATTRIBUTE_UNUSED;\
-	int int_out[MAX_PARAMS] ATTRIBUTE_UNUSED;\
 	/* If we find an fp or nn, assume its length is the common length. */\
 	for(i=0; i<sizeof(parameters_io)-1; i++){\
 		if((parameters_io[i] == 'o') && (parameters_types[i] == 'f')){\
@@ -543,6 +544,9 @@ int test_##test_name(const char ATTRIBUTE_UNUSED *op, void **params, int test_nu
 	GENERIC_TEST_NN_DECL_INIT##nn_out_num(nn_out, n_len * WORD_BYTES);\
 	assert(fp_out_num == 0 || fp_ctx_initialized != 0);\
 	GENERIC_TEST_FP_DECL_INIT##fp_out_num(fp_out, fp_ctx_param);\
+	if(ret){\
+		goto err;\
+	}\
 	\
 	CHECK_FUN_##fun_output fun_name(__VA_ARGS__);\
 	/* Check generic value return is 0 */\
@@ -896,21 +900,25 @@ int main(int argc, char *argv[])
 	int (*curr_test_fun) (const char *, void **, int);
 	unsigned long p_tmp;
 
-	ret = nn_init(&fp_ctx_modulus, 0); EG(ret, err);
-	ret = nn_init(&fp_ctx_r, 0); EG(ret, err);
-	ret = nn_init(&fp_ctx_r_square, 0); EG(ret, err);
-	ret = nn_init(&fp_ctx_mpinv, 0); EG(ret, err);
-	ret = nn_init(&fp_ctx_pshift, 0); EG(ret, err);
-	ret = nn_init(&fp_ctx_pnorm, 0); EG(ret, err);
-	ret = nn_init(&fp_ctx_prec, 0); EG(ret, err);
+	ret = nn_init(&fp_ctx_modulus, 0);
+	ret |= nn_init(&fp_ctx_r, 0);
+	ret |= nn_init(&fp_ctx_r_square, 0);
+	ret |= nn_init(&fp_ctx_mpinv, 0);
+	ret |= nn_init(&fp_ctx_pshift, 0);
+	ret |= nn_init(&fp_ctx_pnorm, 0);
+	ret |= nn_init(&fp_ctx_prec, 0);
 
 	/* First "fake" context initialization with junk value
 	 * one as prime number
 	 */
-	ret = nn_one(&fp_ctx_modulus); EG(ret, err);
-	ret = fp_ctx_init_from_p(&fp_ctx_param, &fp_ctx_modulus); EG(ret, err);
+	ret |= nn_one(&fp_ctx_modulus);
+	ret |= fp_ctx_init_from_p(&fp_ctx_param, &fp_ctx_modulus);
 	GENERIC_TEST_FP_DECL_INIT_MAX(fp_params, &fp_ctx_param)
 	GENERIC_TEST_NN_DECL_INIT_MAX(nn_params, 0)
+
+	if(ret){
+		goto err;
+	}
 
 #ifdef WITH_ASSERT_BACKTRACE
 	memset(backtrace_buffer, 0, sizeof(backtrace_buffer) - 1);
@@ -968,7 +976,7 @@ int main(int argc, char *argv[])
 			return -1;
 		}
 		*t = 0;		/* mark end of record */
-		strncpy(op, s, sizeof(op));	/* Copy opcode */
+		strncpy(op, s, sizeof(op) - 1);	/* Copy opcode */
 		s = t + 1;	/* jump to beginning of next record */
 
 		/* Pretty print the evolution of our tests */
