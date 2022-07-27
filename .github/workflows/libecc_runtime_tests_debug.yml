@@ -18,7 +18,7 @@ jobs:
         uses: actions/checkout@v2
       # Run actions
       # libecc runtime tests
-      - name: libecc runtime tests
+      - name: libecc runtime debug tests
         env:
           CC: ${{ matrix.cc }}
           BLINDING: ${{ matrix.blinding }}
@@ -29,15 +29,13 @@ jobs:
         shell: bash
         run: |
           # Test our Python libecc expanding script
-          # Python3
-          echo "y" | python3 scripts/expand_libecc.py --remove-all && PYTHON=python3 sh scripts/gen_curves_tests.sh && make clean && make && ./build/ec_self_tests vectors rand;
+          # Python2
+          echo "y" | python2 scripts/expand_libecc.py --remove-all && PYTHON=python2 sh scripts/gen_curves_tests.sh && make clean && make && ./build/ec_self_tests vectors rand;
           # Clean
-          echo "y" | python3 scripts/expand_libecc.py --remove-all && make clean;
-          # Vanilla tests
+          echo "y" | python2 scripts/expand_libecc.py --remove-all && make clean;
+          # Vanilla debug tests
           #
-          make && ./build/ec_self_tests vectors rand;
-          make 32 && ./build/ec_self_tests vectors rand;
-          make 16 && ./build/ec_self_tests vectors rand;
-          # We perform one test with the sanitizers
-          USE_SANITIZERS=1 make && ./build/ec_self_tests vectors rand;
+          make debug && ./build/ec_self_tests vectors rand;
+          make debug32 && ./build/ec_self_tests vectors rand;
+          make debug16 && ./build/ec_self_tests vectors rand;
         continue-on-error: false
