@@ -39,11 +39,11 @@ static volatile u8 global_lock_initialized = 0;
 #define OPENMP_UNLOCK() do {					  \
 	omp_unset_lock(&global_lock); 				  \
 } while(0)
-#define OPENMP_EG(ret, err) do {				  \
-	if(ret){						  \
-		ext_printf("OpenMP abort following error ...\n"); \
-		exit(-1);					  \
-	}							  \
+#define OPENMP_EG(ret, err) do {				  				\
+	if(ret){						  				\
+		ext_printf("OpenMP abort following error ...  %s:%d\n", __FILE__, __LINE__); 	\
+		exit(-1);					  				\
+	}							  				\
 } while(0)
 #else
 #define OPENMP_LOCK()
