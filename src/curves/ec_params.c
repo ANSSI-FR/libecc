@@ -113,7 +113,7 @@ int import_params(ec_params *out_params, const ec_str_params *in_str_params)
 		(u16)(tmp_cofactor.wlen * WORD_BYTES)); EG(ret, err);
 	ret = nn_copy(&(out_params->ec_gen_cofactor), &tmp_cofactor); EG(ret, err);
 
-	/* Now we can store the number of points on the curve */
+	/* Now we can store the number of points on the curve (curve order) */
 	ret = nn_init_from_buf(&tmp_curve_order,
 			 PARAM_BUF_PTR(in_str_params->curve_order),
 			 PARAM_BUF_LEN(in_str_params->curve_order)); EG(ret, err);
