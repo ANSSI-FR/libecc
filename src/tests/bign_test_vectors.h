@@ -1,0 +1,119 @@
+/*
+ *  Copyright (C) 2022 - This file is part of libecc project
+ *
+ *  Authors:
+ *      Arnaud EBALARD <arnaud.ebalard@ssi.gouv.fr>
+ *      Ryad BENADJILA <ryadbenadjila@gmail.com>
+ *
+ *  This software is licensed under a dual BSD and GPL v2 license.
+ *  See LICENSE file at the root folder of the project.
+ */
+#ifndef __BIGN_TEST_VECTORS_H__
+#define __BIGN_TEST_VECTORS_H__
+
+/************************************************/
+static const u8 bign_1_test_vectors_priv_key[] = {
+	0x69, 0xe2, 0x73, 0xc2, 0x5f, 0x23, 0x79, 0x0c, 0x9e, 0x42, 0x32, 0x07, 0xed, 0x1f, 0x28, 0x34, 0x18, 0xf2, 0x74, 0x9c, 0x32, 0xf0, 0x33, 0x45, 0x67, 0x39, 0x73, 0x4b, 0xb8, 0xb5, 0x66, 0x1f,
+ };
+static const u8 bign_1_test_vectors_expected_sig[] = {
+	0xE3, 0x6B, 0x7F, 0x03, 0x77, 0xAE, 0x4C, 0x52, 0x40, 0x27, 0xC3, 0x87, 0xFA, 0xDF, 0x1B, 0x20, 0xCE, 0x72, 0xF1, 0x53, 0x0B, 0x71, 0xF2, 0xB5, 0xFD, 0x3A, 0x8C, 0x58, 0x4F, 0xE2, 0xE1, 0xAE, 0xD2, 0x00, 0x82, 0xE3, 0x0C, 0x8A, 0xF6, 0x50, 0x11, 0xF4, 0xFB, 0x54, 0x64, 0x9D, 0xFD, 0x3D,
+ };
+static int bign_1_nn_random_belt_hash_test_vector(nn_t out, nn_src_t q)
+{
+        int ret, cmp;
+
+        /*
+         * Fixed ephemeral private key for bign signature
+         * test vectors from STB 34.101.45-2013
+         */
+        const u8 k_buf[] = {
+		0xd2, 0xb7, 0x08, 0xa3, 0x7a, 0xa7, 0x33, 0x5c, 0xe1, 0x1c, 0x46, 0x3c, 0x48, 0xec, 0xd6, 0x3e, 0x2c, 0x74, 0xfa, 0xe0, 0xe7, 0x3d, 0xf2, 0x21, 0xad, 0x11, 0x58, 0xcd, 0xb2, 0x74, 0x0e, 0x4c,
+        };
+
+        ret = nn_init_from_buf(out, k_buf, sizeof(k_buf)); EG(ret, err);
+        ret = nn_cmp(out, q, &cmp); EG(ret, err);
+
+        ret = (cmp >= 0) ? -1 : 0;
+
+err:
+        return ret;
+}
+static const u8 bign_1_test_vectors_adata[] = {
+	0x00, 0x0b, 0x00, 0x00,
+	0x06, 0x09, 0x2A, 0x70, 0x00, 0x02, 0x00, 0x22, 0x65, 0x1F, 0x51,
+};
+
+static const ec_test_case bign_1_test_case = {
+        .name = "BIGN-BELT-HASH/bign256v1 1",
+        .ec_str_p = &bign256v1_str_params,
+        .priv_key = bign_1_test_vectors_priv_key,
+        .priv_key_len = sizeof(bign_1_test_vectors_priv_key),
+        .nn_random = bign_1_nn_random_belt_hash_test_vector,
+        .hash_type = BELT_HASH,
+        .msg = "\xB1\x94\xBA\xC8\x0A\x08\xF5\x3B\x36\x6D\x00\x8E\x58",
+        .msglen = 13,
+        .sig_type = BIGN,
+        .exp_sig = bign_1_test_vectors_expected_sig,
+        .exp_siglen = sizeof(bign_1_test_vectors_expected_sig),
+	.adata = bign_1_test_vectors_adata,
+	.adata_len = sizeof(bign_1_test_vectors_adata)
+};
+
+/********************************************************************/
+static const u8 bign_2_test_vectors_priv_key[] = {
+	0x69, 0xe2, 0x73, 0xc2, 0x5f, 0x23, 0x79, 0x0c, 0x9e, 0x42, 0x32, 0x07, 0xed, 0x1f, 0x28, 0x34, 0x18, 0xf2, 0x74, 0x9c, 0x32, 0xf0, 0x33, 0x45, 0x67, 0x39, 0x73, 0x4b, 0xb8, 0xb5, 0x66, 0x1f,
+ };
+static const u8 bign_2_test_vectors_expected_sig[] = {
+	0x47, 0xA6, 0x3C, 0x8B, 0x9C, 0x93, 0x6E, 0x94, 0xB5, 0xFA, 0xB3, 0xD9, 0xCB, 0xD7, 0x83, 0x66,
+	0x29, 0x0F, 0x32, 0x10, 0xE1, 0x63, 0xEE, 0xC8, 0xDB, 0x4E, 0x92, 0x1E, 0x84, 0x79, 0xD4, 0x13, 0x8F, 0x11, 0x2C, 0xC2, 0x3E, 0x6D, 0xCE, 0x65, 0xEC, 0x5F, 0xF2, 0x1D, 0xF4, 0x23, 0x1C, 0x28,
+ };
+static int bign_2_nn_random_belt_hash_test_vector(nn_t out, nn_src_t q)
+{
+        int ret, cmp;
+
+        /*
+         * Fixed ephemeral private key for bign signature
+         * test vectors from STB 34.101.45-2013
+	 * NOTE: the ephemeral private key has been recomputed using the private key as
+	 * it is not explicitly provided by the example.
+         */
+        const u8 k_buf[] = {
+		0xec, 0xe9, 0xbc, 0x3b, 0xd9, 0x90, 0x03, 0x0f, 0x4f, 0x28, 0x39, 0x0d, 0xdd, 0x51, 0x22, 0x57, 0x15, 0x44, 0x7f, 0x63, 0x9f, 0x40, 0x19, 0x6f, 0xe4, 0x39, 0x08, 0xbe, 0x98, 0x82, 0x4e, 0x0a,
+        };
+
+        ret = nn_init_from_buf(out, k_buf, sizeof(k_buf)); EG(ret, err);
+        ret = nn_cmp(out, q, &cmp); EG(ret, err);
+
+        ret = (cmp >= 0) ? -1 : 0;
+
+err:
+        return ret;
+}
+static const u8 bign_2_test_vectors_adata[] = {
+	0x00, 0x0b, 0x00, 0x00,
+	0x06, 0x09, 0x2A, 0x70, 0x00, 0x02, 0x00, 0x22, 0x65, 0x1F, 0x51,
+};
+
+static const ec_test_case bign_2_test_case = {
+        .name = "BIGN-BELT-HASH/bign256v1 2",
+        .ec_str_p = &bign256v1_str_params,
+        .priv_key = bign_2_test_vectors_priv_key,
+        .priv_key_len = sizeof(bign_2_test_vectors_priv_key),
+        .nn_random = bign_2_nn_random_belt_hash_test_vector,
+        .hash_type = BELT_HASH,
+        .msg = "\xB1\x94\xBA\xC8\x0A\x08\xF5\x3B\x36\x6D\x00\x8E\x58\x4A\x5D\xE4\x85\x04\xFA\x9D\x1B\xB6\xC7\xAC\x25\x2E\x72\xC2\x02\xFD\xCE\x0D\x5B\xE3\xD6\x12\x17\xB9\x61\x81\xFE\x67\x86\xAD\x71\x6B\x89\x0B",
+        .msglen = 48,
+        .sig_type = BIGN,
+        .exp_sig = bign_2_test_vectors_expected_sig,
+        .exp_siglen = sizeof(bign_2_test_vectors_expected_sig),
+	.adata = bign_2_test_vectors_adata,
+	.adata_len = sizeof(bign_2_test_vectors_adata)
+};
+
+
+/************************************************/
+#define BIGN_ALL_TESTS() \
+        &bign_1_test_case, \
+	&bign_2_test_case,
+
+#endif /* __BIGN_TEST_VECTORS_H__ */

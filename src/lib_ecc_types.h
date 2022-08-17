@@ -67,6 +67,12 @@ typedef enum {
 #ifdef WITH_X448
 	X448 = 17,
 #endif
+#ifdef WITH_SIG_BIGN
+	BIGN = 18,
+#endif
+#ifdef WITH_SIG_DBIGN
+	DBIGN = 19,
+#endif
 } ec_alg_type;
 
 /* Hash algorithm types */
@@ -116,6 +122,9 @@ typedef enum {
 #endif
 #ifdef WITH_HASH_RIPEMD160
 	RIPEMD160 = 15,
+#endif
+#ifdef WITH_HASH_BELT_HASH
+	BELT_HASH = 16,
 #endif
 } hash_alg_type;
 
@@ -244,6 +253,15 @@ typedef enum {
 #endif
 #ifdef WITH_CURVE_BRAINPOOLP512T1
 	BRAINPOOLP512T1 = 41,
+#endif
+#ifdef WITH_CURVE_BIGN256V1
+	BIGN256V1 = 42,
+#endif
+#ifdef WITH_CURVE_BIGN384V1
+	BIGN384V1 = 43,
+#endif
+#ifdef WITH_CURVE_BIGN512V1
+	BIGN512V1 = 44,
 #endif
 /* ADD curves type here */
 /* XXX: Do not remove the comment above, as it is

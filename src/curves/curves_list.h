@@ -62,6 +62,9 @@
 #include "known/ec_params_brainpoolp320t1.h"
 #include "known/ec_params_brainpoolp384t1.h"
 #include "known/ec_params_brainpoolp512t1.h"
+#include "known/ec_params_bign256v1.h"
+#include "known/ec_params_bign384v1.h"
+#include "known/ec_params_bign512v1.h"
 /* ADD curves header here */
 /* XXX: Do not remove the comment above, as it is
  * used by external tools as a placeholder to add or
@@ -221,6 +224,15 @@ static const ec_mapping ec_maps[] = {
 #ifdef WITH_CURVE_BRAINPOOLP512T1
 	{.type = BRAINPOOLP512T1,.params = &brainpoolp512t1_str_params},
 #endif /* WITH_CURVE_BRAINPOOLP512T1 */
+#ifdef WITH_CURVE_BIGN256V1
+	{.type = BIGN256V1,.params = &bign256v1_str_params},
+#endif /* WITH_CURVE_BIGN256V1 */
+#ifdef WITH_CURVE_BIGN384V1
+	{.type = BIGN384V1,.params = &bign384v1_str_params},
+#endif /* WITH_CURVE_BIGN384V1 */
+#ifdef WITH_CURVE_BIGN512V1
+	{.type = BIGN512V1,.params = &bign512v1_str_params},
+#endif /* WITH_CURVE_BIGN512V1 */
 /* ADD curves mapping here */
 /* XXX: Do not remove the comment above, as it is
  * used by external tools as a placeholder to add or

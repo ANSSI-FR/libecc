@@ -39,11 +39,11 @@ static volatile u8 global_lock_initialized = 0;
 #define OPENMP_UNLOCK() do {					  \
 	omp_unset_lock(&global_lock); 				  \
 } while(0)
-#define OPENMP_EG(ret, err) do {				  \
-	if(ret){						  \
-		ext_printf("OpenMP abort following error ...\n"); \
-		exit(-1);					  \
-	}							  \
+#define OPENMP_EG(ret, err) do {				  				\
+	if(ret){						  				\
+		ext_printf("OpenMP abort following error ...  %s:%d\n", __FILE__, __LINE__); 	\
+		exit(-1);					  				\
+	}							  				\
 } while(0)
 #else
 #define OPENMP_LOCK()
@@ -1059,7 +1059,6 @@ err:
 
 ATTRIBUTE_WARN_UNUSED_RET int perform_known_test_vectors_test(const char *sig, const char *hash, const char *curve)
 {
-	const ec_test_case *cur_test;
 	unsigned int i;
 	int ret = 0;
 	int check;
@@ -1070,6 +1069,7 @@ ATTRIBUTE_WARN_UNUSED_RET int perform_known_test_vectors_test(const char *sig, c
         #pragma omp for schedule(static, 1) nowait
 #endif
 	for (i = 0; i < EC_FIXED_VECTOR_NUM_TESTS; i++) {
+		const ec_test_case *cur_test;
 		cur_test = ec_fixed_vector_tests[i];
 		if(cur_test == NULL){
 			continue;
@@ -1152,12 +1152,12 @@ ATTRIBUTE_WARN_UNUSED_RET int perform_known_test_vectors_test(const char *sig, c
 #if defined(WITH_ECCCDH) || defined(WITH_X25519) || defined(WITH_X448)
 	/* Now take care of ECDH */
 	if((sig == NULL) && (hash == NULL)){
-		const ecdh_test_case *ecdh_cur_test;
 #ifdef WITH_OPENMP_SELF_TESTS
 	        #pragma omp parallel
         	#pragma omp for schedule(static, 1) nowait
 #endif
 		for (i = 0; i < ECDH_FIXED_VECTOR_NUM_TESTS; i++) {
+			const ecdh_test_case *ecdh_cur_test;
 			ecdh_cur_test = ecdh_fixed_vector_tests[i];
 			if(ecdh_cur_test == NULL){
 				continue;
@@ -1204,11 +1204,15 @@ ATTRIBUTE_WARN_UNUSED_RET static int rand_sig_verif_test_one(const ec_sig_mappin
 	int ret, check;
 	u32 len;
 
-#if defined(WITH_SIG_EDDSA25519) || defined(WITH_SIG_SM2)
+#if defined(WITH_SIG_EDDSA25519) || defined(WITH_SIG_SM2) || defined(WITH_SIG_BIGN) || defined(WITH_SIG_DBIGN)
 	u8 rand_adata[255];
 	ret = local_memset(rand_adata, 0, sizeof(rand_adata)); EG(ret, err);
 	/* The case of EDDSA25519CTX and SM2 needs a non NULL context (ancillary data).
 	 * Create a random string of size <= 255 for this.
+	 */
+	/*
+	 * In the case of BIGN and DBIGN, the ancillary data have a structure containing the OID as well
+	 * as an optional generation token.
 	 */
 #endif
 	ret = local_memset(test_name, 0, sizeof(test_name)); EG(ret, err);
@@ -1263,8 +1267,39 @@ ATTRIBUTE_WARN_UNUSED_RET static int rand_sig_verif_test_one(const ec_sig_mappin
 	else
 #endif
 	{
-		t.adata = NULL;
-		t.adata_len = 0;
+#if defined(WITH_SIG_BIGN) || defined(WITH_SIG_DBIGN)
+#if defined(WITH_SIG_BIGN) && !defined(WITH_SIG_DBIGN)
+		if(sig->type == BIGN)
+#endif
+#if !defined(WITH_SIG_BIGN) && defined(WITH_SIG_DBIGN)
+		if(sig->type == DBIGN)
+#endif
+#if defined(WITH_SIG_BIGN) && defined(WITH_SIG_DBIGN)
+		if((sig->type == BIGN) || (sig->type == DBIGN))
+#endif
+		{
+			u8 oid_len = 0;
+			u8 t_len = 0;
+			ret = get_random((u8 *)rand_adata, sizeof(rand_adata)); EG(ret, err);
+
+			ret = get_random((u8 *)&oid_len, sizeof(oid_len)); EG(ret, err);
+			ret = get_random((u8 *)&t_len, sizeof(oid_len)); EG(ret, err);
+
+			oid_len = (u8)(oid_len % (sizeof(rand_adata) - 4));
+			t_len = (u8)(t_len % (sizeof(rand_adata) - 4 - oid_len));
+			rand_adata[0] = (u8)(oid_len >> 8);
+			rand_adata[1] = (u8)(oid_len & 0xff);
+			rand_adata[2] = (u8)(t_len >> 8);
+			rand_adata[3] = (u8)(t_len & 0xff);
+			t.adata = rand_adata;
+			t.adata_len = (u8)(oid_len + t_len + 4);
+		}
+		else
+#endif
+		{
+			t.adata = NULL;
+			t.adata_len = 0;
+		}
 	}
 
 	/* Execute the test */
@@ -1536,11 +1571,15 @@ ATTRIBUTE_WARN_UNUSED_RET static int perf_test_one(const ec_sig_mapping *sig, co
 	ec_test_case t;
 	int ret;
 	u32 len;
-#if defined(WITH_SIG_EDDSA25519) || defined(WITH_SIG_SM2)
+#if defined(WITH_SIG_EDDSA25519) || defined(WITH_SIG_SM2) || defined(WITH_SIG_BIGN) || defined(WITH_SIG_DBIGN)
 	u8 rand_adata[255];
 	ret = local_memset(rand_adata, 0, sizeof(rand_adata)); EG(ret, err);
 	/* The case of EDDSA25519CTX and SM2 needs a non NULL context (ancillary data).
 	 * Create a random string of size <= 255 for this.
+	 */
+	/*
+	 * In the case of BIGN and DBIGN, the ancillary data have a structure containing the OID as well
+	 * as an optional generation token.
 	 */
 #endif
 	MUST_HAVE((sig != NULL), ret, err);
@@ -1595,8 +1634,39 @@ ATTRIBUTE_WARN_UNUSED_RET static int perf_test_one(const ec_sig_mapping *sig, co
 	else
 #endif
 	{
-		t.adata = NULL;
-		t.adata_len = 0;
+#if defined(WITH_SIG_BIGN) || defined(WITH_SIG_DBIGN)
+#if defined(WITH_SIG_BIGN) && !defined(WITH_SIG_DBIGN)
+		if(sig->type == BIGN)
+#endif
+#if !defined(WITH_SIG_BIGN) && defined(WITH_SIG_DBIGN)
+		if(sig->type == DBIGN)
+#endif
+#if defined(WITH_SIG_BIGN) && defined(WITH_SIG_DBIGN)
+		if((sig->type == BIGN) || (sig->type == DBIGN))
+#endif
+		{
+			u8 oid_len = 0;
+			u8 t_len = 0;
+			ret = get_random((u8 *)rand_adata, sizeof(rand_adata)); EG(ret, err);
+
+			ret = get_random((u8 *)&oid_len, sizeof(oid_len)); EG(ret, err);
+			ret = get_random((u8 *)&t_len, sizeof(oid_len)); EG(ret, err);
+
+			oid_len = (u8)(oid_len % (sizeof(rand_adata) - 4));
+			t_len = (u8)(t_len % (sizeof(rand_adata) - 4 - oid_len));
+			rand_adata[0] = (u8)(oid_len >> 8);
+			rand_adata[1] = (u8)(oid_len & 0xff);
+			rand_adata[2] = (u8)(t_len >> 8);
+			rand_adata[3] = (u8)(t_len & 0xff);
+			t.adata = rand_adata;
+			t.adata_len = (u8)(oid_len + t_len + 4);
+		}
+		else
+#endif
+		{
+			t.adata = NULL;
+			t.adata_len = 0;
+		}
 	}
 
 	/* Sign and verify some random data during some time */

@@ -357,3 +357,17 @@ ATTRIBUTE_WARN_UNUSED_RET int _ripemd160_final(hash_context * hctx, unsigned cha
 	return ripemd160_final((ripemd160_context*)hctx, output);
 }
 #endif
+#ifdef WITH_HASH_BELT_HASH
+ATTRIBUTE_WARN_UNUSED_RET int _belt_hash_init(hash_context * hctx)
+{
+	return belt_hash_init((belt_hash_context*)hctx);
+}
+ATTRIBUTE_WARN_UNUSED_RET int _belt_hash_update(hash_context * hctx, const unsigned char *chunk, u32 chunklen)
+{
+	return belt_hash_update((belt_hash_context*)hctx, chunk, chunklen);
+}
+ATTRIBUTE_WARN_UNUSED_RET int _belt_hash_final(hash_context * hctx, unsigned char *output)
+{
+	return belt_hash_final((belt_hash_context*)hctx, output);
+}
+#endif

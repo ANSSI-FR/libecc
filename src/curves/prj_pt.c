@@ -1732,8 +1732,14 @@ err:
 
 int prj_pt_mul_blind(prj_pt_t out, nn_src_t m, prj_pt_src_t in)
 {
-	/* Blind the scalar m with (b*q) */
-	/* First compute the order x cofactor */
+	/* Blind the scalar m with (b*q) where q is the curve order.
+	 * NOTE: the curve order and the "generator" order are
+	 * usually the same (i.e. cofactor = 1) for the classical
+	 * prime fields curves. However some exceptions exist
+	 * (e.g. Wei25519 and Wei448), and in this case it is
+	 * curcial to use the curve order for a generic blinding
+	 * working on any point on the curve.
+	 */
 	nn b;
 	nn_src_t q;
 	int ret;

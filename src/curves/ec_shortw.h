@@ -31,7 +31,7 @@ typedef struct {
 	fp b_monty;
 	fp b3_monty;
 #endif
-	nn order; /* generator order */
+	nn order; /* curve order */
 	word_t magic;
 } ec_shortw_crv;
 
