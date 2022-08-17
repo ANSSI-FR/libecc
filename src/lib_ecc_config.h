@@ -76,6 +76,9 @@
 #define WITH_CURVE_BRAINPOOLP320T1
 #define WITH_CURVE_BRAINPOOLP384T1
 #define WITH_CURVE_BRAINPOOLP512T1
+#define WITH_CURVE_BIGN256V1
+#define WITH_CURVE_BIGN384V1
+#define WITH_CURVE_BIGN512V1
 /* ADD curves define here */
 /* XXX: Do not remove the comment above, as it is
  * used by external tools as a placeholder to add or
@@ -98,6 +101,7 @@
 #define WITH_HASH_STREEBOG256
 #define WITH_HASH_STREEBOG512
 #define WITH_HASH_RIPEMD160
+#define WITH_HASH_BELT_HASH
 #define WITH_HMAC
 
 /* Supported sig/verif schemes */
@@ -112,6 +116,8 @@
 #define WITH_SIG_EDDSA25519
 #define WITH_SIG_EDDSA448
 #define WITH_SIG_DECDSA
+#define WITH_SIG_BIGN
+#define WITH_SIG_DBIGN
 
 /* Supported ECDH schemes */
 #define WITH_ECCCDH

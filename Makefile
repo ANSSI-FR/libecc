@@ -63,10 +63,10 @@ FP_SRC = $(wildcard src/fp/fp*.c)
 CURVES_SRC = $(wildcard src/curves/*.c)
 
 # Hash module
-HASH_SRC = $(wildcard src/hash/sha*.c) src/hash/hash_algs.c src/hash/sm3.c src/hash/streebog.c src/hash/ripemd160.c src/hash/hmac.c
+HASH_SRC = $(wildcard src/hash/sha*.c) src/hash/hash_algs.c src/hash/sm3.c src/hash/streebog.c src/hash/ripemd160.c src/hash/belt-hash.c src/hash/hmac.c
 
 # Key/Signature/Verification/ECDH module
-SIG_SRC = $(wildcard src/sig/*dsa.c) src/sig/ecdsa_common.c src/sig/ecsdsa_common.c src/sig/sig_algs.c src/sig/sm2.c
+SIG_SRC = $(wildcard src/sig/*dsa.c) src/sig/ecdsa_common.c src/sig/ecsdsa_common.c src/sig/sig_algs.c src/sig/sm2.c src/sig/bign_common.c src/sig/bign.c src/sig/dbign.c
 ECDH_SRC = $(wildcard src/ecdh/*.c)
 KEY_SRC = src/sig/ec_key.c
 

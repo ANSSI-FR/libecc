@@ -29,6 +29,8 @@
 #include "sm2.h"
 #include "eddsa.h"
 #include "decdsa.h"
+#include "bign.h"
+#include "dbign.h"
 /* Includes for fuzzing */
 #ifdef USE_CRYPTOFUZZ
 #include "fuzzing_ecdsa.h"
@@ -134,6 +136,9 @@ typedef union {
 #if defined(WITH_SIG_EDDSA25519) || defined(WITH_SIG_EDDSA448)	/* EDDSA25519, EDDSA448	 */
 	eddsa_sign_data eddsa;
 #endif
+#if defined(WITH_SIG_BIGN) || defined(WITH_SIG_DBIGN)	/* BIGN and DBIGN */
+	bign_sign_data bign;
+#endif
 } sig_sign_data;
 
 /*
@@ -186,6 +191,9 @@ typedef union {
 #endif
 #if defined(WITH_SIG_EDDSA25519) || defined(WITH_SIG_EDDSA448)	/* EDDSA25519, EDDSA448	 */
 	eddsa_verify_data eddsa;
+#endif
+#if defined(WITH_SIG_BIGN) || defined(WITH_SIG_DBIGN)	/* BIGN and DBIGN */
+	bign_verify_data bign;
 #endif
 } sig_verify_data;
 
@@ -516,6 +524,46 @@ static const ec_sig_mapping ec_sig_maps[] = {
 #define MAX_SIG_ALG_NAME_LEN 7
 #endif /* MAX_SIG_ALG_NAME_LEN */
 #endif /* WITH_SIG_DECDSA */
+#ifdef WITH_SIG_BIGN
+	{.type = BIGN,
+	 .name = "BIGN",
+	 .siglen = bign_siglen,
+	 .gen_priv_key = generic_gen_priv_key,
+	 .init_pub_key = bign_init_pub_key,
+	 .sign_init = _bign_sign_init,
+	 .sign_update = _bign_sign_update,
+	 .sign_finalize = _bign_sign_finalize,
+	 .sign = generic_ec_sign,
+	 .verify_init = _bign_verify_init,
+	 .verify_update = _bign_verify_update,
+	 .verify_finalize = _bign_verify_finalize,
+	 .verify = generic_ec_verify,
+	 },
+#if (MAX_SIG_ALG_NAME_LEN < 5)
+#undef MAX_SIG_ALG_NAME_LEN
+#define MAX_SIG_ALG_NAME_LEN 5
+#endif /* MAX_SIG_ALG_NAME_LEN */
+#endif /* WITH_SIG_BIGN */
+#ifdef WITH_SIG_DBIGN
+	{.type = DBIGN,
+	 .name = "DBIGN",
+	 .siglen = dbign_siglen,
+	 .gen_priv_key = generic_gen_priv_key,
+	 .init_pub_key = dbign_init_pub_key,
+	 .sign_init = _dbign_sign_init,
+	 .sign_update = _dbign_sign_update,
+	 .sign_finalize = _dbign_sign_finalize,
+	 .sign = generic_ec_sign,
+	 .verify_init = _dbign_verify_init,
+	 .verify_update = _dbign_verify_update,
+	 .verify_finalize = _dbign_verify_finalize,
+	 .verify = generic_ec_verify,
+	 },
+#if (MAX_SIG_ALG_NAME_LEN < 6)
+#undef MAX_SIG_ALG_NAME_LEN
+#define MAX_SIG_ALG_NAME_LEN 6
+#endif /* MAX_SIG_ALG_NAME_LEN */
+#endif /* WITH_SIG_DBIGN */
 	{.type = UNKNOWN_ALG,	/* Needs to be kept last */
 	 .name = "UNKNOWN",
 	 .siglen = 0,

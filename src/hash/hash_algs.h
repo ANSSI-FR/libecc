@@ -34,6 +34,7 @@
 #include "streebog256.h"
 #include "streebog512.h"
 #include "ripemd160.h"
+#include "belt-hash.h"
 #include "../utils/utils.h"
 
 #if (MAX_DIGEST_SIZE == 0)
@@ -89,6 +90,9 @@ typedef union {
 #endif
 #ifdef RIPEMD160_BLOCK_SIZE
 	ripemd160_context ripemd160;
+#endif
+#ifdef BELT_HASH_BLOCK_SIZE
+	belt_hash_context belt_hash;
 #endif
 } hash_context;
 
@@ -177,6 +181,11 @@ ATTRIBUTE_WARN_UNUSED_RET int _streebog512_final(hash_context * hctx, unsigned c
 ATTRIBUTE_WARN_UNUSED_RET int _ripemd160_init(hash_context * hctx);
 ATTRIBUTE_WARN_UNUSED_RET int _ripemd160_update(hash_context * hctx, const unsigned char *chunk, u32 chunklen);
 ATTRIBUTE_WARN_UNUSED_RET int _ripemd160_final(hash_context * hctx, unsigned char *output);
+#endif
+#ifdef WITH_HASH_BELT_HASH
+ATTRIBUTE_WARN_UNUSED_RET int _belt_hash_init(hash_context * hctx);
+ATTRIBUTE_WARN_UNUSED_RET int _belt_hash_update(hash_context * hctx, const unsigned char *chunk, u32 chunklen);
+ATTRIBUTE_WARN_UNUSED_RET int _belt_hash_final(hash_context * hctx, unsigned char *output);
 #endif
 
 /*
@@ -421,6 +430,20 @@ static const hash_mapping hash_maps[] = {
 #define MAX_HASH_ALG_NAME_LEN 9
 #endif /* MAX_HASH_ALG_NAME_LEN */
 #endif /* WITH_HASH_RIPEMD160 */
+#ifdef WITH_HASH_BELT_HASH
+	{.type = BELT_HASH,	/* BELT_HASH */
+	 .name = "BELT_HASH",
+	 .digest_size = BELT_HASH_DIGEST_SIZE,
+	 .block_size = BELT_HASH_BLOCK_SIZE,
+	 .hfunc_init = _belt_hash_init,
+	 .hfunc_update = _belt_hash_update,
+	 .hfunc_finalize = _belt_hash_final,
+	 .hfunc_scattered = belt_hash_scattered},
+#if (MAX_HASH_ALG_NAME_LEN < 9)
+#undef MAX_HASH_ALG_NAME_LEN
+#define MAX_HASH_ALG_NAME_LEN 9
+#endif /* MAX_HASH_ALG_NAME_LEN */
+#endif /* WITH_HASH_BELT_HASH */
 	{.type = UNKNOWN_HASH_ALG,	/* Needs to be kept last */
 	 .name = "UNKNOWN",
 	 .digest_size = 0,

@@ -4862,6 +4862,21 @@ static const ec_test_case sm2_nn_random_sm2p256v1_test_case = {
 
 #endif /* WITH_SIG_DECDSA */
 
+#if defined(WITH_SIG_BIGN) && defined(WITH_CURVE_BIGN256V1)
+
+/* NOTE: tests taken from STB 34.101.45-2013 */
+#include "bign_test_vectors.h"
+
+#endif
+
+#if defined(WITH_SIG_DBIGN) && defined(WITH_CURVE_BIGN256V1)
+
+/* NOTE: tests taken from STB 34.101.45-2013 */
+#include "dbign_test_vectors.h"
+
+#endif
+
+
 /* ADD curve test vectors header here */
 /* XXX: Do not remove the comment above, as it is
  * used by external tools as a placeholder to add or
@@ -4872,7 +4887,7 @@ static const ec_test_case sm2_nn_random_sm2p256v1_test_case = {
  * when no test case is defined
  */
 static const ec_test_case dummy_test_case = {
-	.name = "Dummy",
+	.name = "Dummy SIGN",
 	.ec_str_p = NULL,
 	.priv_key = NULL,
 	.priv_key_len = 0,
@@ -5205,6 +5220,12 @@ static const ec_test_case *ec_fixed_vector_tests[] = {
 #ifdef DECDSA_SHA512_SECP521R1_SELF_TEST_1
 	&decdsa_rfc6979_SECP521R1_SHA512_1_test_case,
 #endif /* DECDSA_SHA512_SECP521R1_SELF_TEST_1 */
+#if defined(WITH_SIG_BIGN) && defined(WITH_CURVE_BIGN256V1)
+	BIGN_ALL_TESTS()
+#endif
+#if defined(WITH_SIG_DBIGN) && defined(WITH_CURVE_BIGN256V1)
+	DBIGN_ALL_TESTS()
+#endif
 
 	/* Dummy empty test case to avoid empty array
 	 * when no test case is defined */
@@ -5225,7 +5246,7 @@ static const ec_test_case *ec_fixed_vector_tests[] = {
  * when no test case is defined
  */
 static const ecdh_test_case ecdh_dummy_test_case = {
-	.name = "Dummy",
+	.name = "Dummy ECDH",
 	.ecdh_type = UNKNOWN_ALG,
 	.ec_str_p = NULL,
 	.our_priv_key = NULL,
@@ -5254,7 +5275,7 @@ static const ecdh_test_case ecdh_dummy_test_case = {
 #endif /* WITH_X25519 */
 
 #ifdef WITH_X448
-/* NOTE: tests takes from RFC7748 */
+/* NOTE: tests taken from RFC7748 */
 #include "x448_test_vectors.h"
 #endif /* WITH_X448 */
 

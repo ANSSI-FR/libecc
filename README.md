@@ -25,14 +25,16 @@ cryptography (ECC). The API supports signature algorithms specified
 in the [ISO 14888-3:2018](https://www.iso.org/standard/76382.html)
 standard, with the following specific curves and hash functions:
 
-  * **Signatures**: ECDSA, ECKCDSA, ECGDSA, ECRDSA, EC{,O}SDSA, ECFSDSA, SM2.
+  * **Signatures**: ECDSA, ECKCDSA, ECGDSA, ECRDSA, EC{,O}SDSA, ECFSDSA, SM2, BIGN (as standardized
+in [STB 34.101.45-2013](https://github.com/bcrypto/bign)).
   * **Curves**: SECP{192,224,256,384,521}R1, BRAINPOOLP{192,224,256,384,512}R1,
   FRP256V1, GOST{256,512}, SM2P256V1. The library can be easily expanded with
   user defined curves using a standalone helper script.
   * **Hash functions**: SHA-2 and SHA-3 hash functions (224, 256, 384, 512), SM3, RIPEMD-160,
 GOST 34.11-2012 as described in [RFC 6986](https://datatracker.ietf.org/doc/html/rfc6986)
 (also known as [Streebog](https://tc26.ru/en/events/research-projects-competition/streebog-competition.html)),
-SHAKE256 in its restricted version with 114 bytes output (mainly for Ed448).
+SHAKE256 in its restricted version with 114 bytes output (mainly for Ed448), and BELT-HASH (as standardized in
+[STB 34.101.31-2011](https://github.com/bcrypto/belt)).
 **HMAC** based on any of these hash functions is also included.
 
 ECDSA comes in two variants: the classical non-deterministic one, and the **deterministic** ECDSA
@@ -43,6 +45,8 @@ bits can lead to devastating attacks exploiting the [Hidden Number Problem](http
 On the downside, the deterministic version of ECDSA is susceptible to [fault attacks](https://eprint.iacr.org/2017/1014.pdf).
 Hence, one will have to **carefully select** the suitable version to use depending on the usage and
 attack context (i.e. which of side-channel attacks or fault attacks are easier to perform).
+The same applies to BIGN that comes in two flavours as standardized in [STB 34.101.45-2013](https://github.com/bcrypto/bign):
+non-deterministic and deterministic (following an iterative generatin process using the BELT hash function and block cipher).
 
 The library also supports EdDSA (Ed25519 and Ed448) as defined in [RFC 8032](https://datatracker.ietf.org/doc/html/rfc8032) with
 all their variants (with context, pre-hashed).
@@ -58,7 +62,7 @@ while having the great benefit of keeping the library core mathematical foundati
 and keep the defense-in-depth (regarding software security and side-channels) focused on
 a rather limited part: see the discussions below on libecc efforts with regards to security.
 
-Please note that as for deterministic ECDSA, EdDSA signatures are trivially susceptible to
+Please note that as for deterministic ECDSA and BIGN, EdDSA signatures are trivially susceptible to
 [fault attacks](https://eprint.iacr.org/2017/1014.pdf) without having a non-deterministic
 variant. Hence, when using EdDSA one will have to either ensure that the usage context naturally prevents
 such attacks, that the platform implements countermeasures (e.g. using secure MCUs, etc.) or that
