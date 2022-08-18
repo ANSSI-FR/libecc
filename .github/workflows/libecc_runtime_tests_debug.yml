@@ -17,7 +17,7 @@ jobs:
       - name: checkout repository
         uses: actions/checkout@v2
       # Run actions
-      # libecc runtime tests
+      # libecc runtime debug tests
       - name: libecc runtime debug tests
         env:
           CC: ${{ matrix.cc }}
