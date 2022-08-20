@@ -61,15 +61,29 @@ ATTRIBUTE_WARN_UNUSED_RET static inline int perform_rsa_tests(const rsa_test **t
 		u32 modbits = t->modbits;
 		rsa_pub_key pub;
 		rsa_priv_key priv;
+		rsa_priv_key priv_pq;
 
 		/* Import the keys */
 		ret = rsa_import_pub_key(&pub, t->n, (u16)t->nlen, t->e, (u16)t->elen); EG(ret, err1);
-		if(t->p == NULL){
-			ret = rsa_import_simple_priv_key(&priv, t->n, (u16)t->nlen, t->d, (u16)t->dlen); EG(ret, err1);
+		if(t->dP == NULL){
+			const rsa_test *t_ = NULL;
+			MUST_HAVE((num_tests > 1) && (i < (num_tests - 1)), ret, err);
+			/* NOTE: we use the "next" CRT test to extract p and q */
+			t_ = tests[i + 1];
+			MUST_HAVE((t_->dP != NULL), ret, err);
+			/* Import the RSA_SIMPLE private key with only d and n */
+			ret = rsa_import_simple_priv_key(&priv, t->n, (u16)t->nlen, t->d, (u16)t->dlen, NULL, 0, NULL, 0); EG(ret, err1);
+			/* Import the RSA_SIMPLE_PQ with d, n, p and q */
+			ret = rsa_import_simple_priv_key(&priv_pq, t->n, (u16)t->nlen, t->d, (u16)t->dlen, t_->p, (u16)t_->plen, t_->q, (u16)t_->qlen); EG(ret, err1);
 		}
 		else{
+			/* Import the RSA_CRT CRT key */
 			ret = rsa_import_crt_priv_key(&priv, t->p, (u16)t->plen, t->q, (u16)t->qlen, t->dP, (u16)t->dPlen, t->dQ, (u16)t->dQlen, t->qInv, (u16)t->qInvlen, NULL, NULL, 0); EG(ret, err1);
 		}
+#ifdef USE_SIG_BLINDING
+		/* We using exponent blinding, only RSA_SIMPLE_PQ are usable. We hence overwrite the key */
+		ret = local_memcpy(&priv, &priv_pq, sizeof(rsa_priv_key)); EG(ret, err);
+#endif
 		/* Perform our operation */
 		switch(t->type){
 			case RSA_PKCS1_v1_5_ENC:{
@@ -86,6 +100,13 @@ ATTRIBUTE_WARN_UNUSED_RET static inline int perform_rsa_tests(const rsa_test **t
 				/* Try to decrypt */
 				clen = sizeof(cipher);
 				ret = rsaes_pkcs1_v1_5_decrypt(&priv, t->res, t->reslen, cipher, &clen, modbits); EG(ret, err1);
+				/* Check the result */
+				MUST_HAVE((clen == t->mlen), ret, err1);
+				ret = are_equal(t->m, cipher, t->mlen, &cmp); EG(ret, err1);
+				MUST_HAVE(cmp, ret, err1);
+				/* Try to decrypt with the hardened version */
+				clen = sizeof(cipher);
+				ret = rsaes_pkcs1_v1_5_decrypt_hardened(&priv, &pub, t->res, t->reslen, cipher, &clen, modbits); EG(ret, err1);
 				/* Check the result */
 				MUST_HAVE((clen == t->mlen), ret, err1);
 				ret = are_equal(t->m, cipher, t->mlen, &cmp); EG(ret, err1);
@@ -110,6 +131,13 @@ ATTRIBUTE_WARN_UNUSED_RET static inline int perform_rsa_tests(const rsa_test **t
 				MUST_HAVE((clen == t->mlen), ret, err1);
 				ret = are_equal(t->m, cipher, t->mlen, &cmp); EG(ret, err1);
 				MUST_HAVE(cmp, ret, err1);
+				/* Try to decrypt with the hardened version */
+				clen = sizeof(cipher);
+				ret = rsaes_oaep_decrypt_hardened(&priv, &pub, t->res, t->reslen, cipher, &clen, modbits, NULL, 0, t->hash, t->hash); EG(ret, err1);
+				/* Check the result */
+				MUST_HAVE((clen == t->mlen), ret, err1);
+				ret = are_equal(t->m, cipher, t->mlen, &cmp); EG(ret, err1);
+				MUST_HAVE(cmp, ret, err1);
 				break;
 			}
 			case RSA_PKCS1_v1_5_SIG:{
@@ -118,6 +146,12 @@ ATTRIBUTE_WARN_UNUSED_RET static inline int perform_rsa_tests(const rsa_test **t
 				ret = rsassa_pkcs1_v1_5_verify(&pub, t->m, t->mlen, t->res, t->reslen, modbits, t->hash); EG(ret, err1);
 				/* Try to sign */
 				ret = rsassa_pkcs1_v1_5_sign(&priv, t->m, t->mlen, sig, &siglen, modbits, t->hash); EG(ret, err1);
+				/* Check the result */
+				MUST_HAVE((siglen == t->reslen), ret, err1);
+				ret = are_equal(t->res, sig, t->reslen, &cmp); EG(ret, err1);
+				MUST_HAVE(cmp, ret, err1);
+				/* Try to sign with the hardened version */
+				ret = rsassa_pkcs1_v1_5_sign_hardened(&priv, &pub, t->m, t->mlen, sig, &siglen, modbits, t->hash); EG(ret, err1);
 				/* Check the result */
 				MUST_HAVE((siglen == t->reslen), ret, err1);
 				ret = are_equal(t->res, sig, t->reslen, &cmp); EG(ret, err1);
@@ -139,6 +173,12 @@ ATTRIBUTE_WARN_UNUSED_RET static inline int perform_rsa_tests(const rsa_test **t
 					u8 sig[NN_USABLE_MAX_BYTE_LEN];
 					u16 siglen = sizeof(sig);
 					ret = rsassa_pss_sign(&priv, t->m, t->mlen, sig, &siglen, modbits, t->hash, t->hash, t->saltlen, t->salt); EG(ret, err1);
+					/* Check the result */
+					MUST_HAVE((siglen == t->reslen), ret, err1);
+					ret = are_equal(t->res, sig, t->reslen, &cmp); EG(ret, err1);
+					MUST_HAVE(cmp, ret, err1);
+					/* Try to sign with the hardened version */
+					ret = rsassa_pss_sign_hardened(&priv, &pub, t->m, t->mlen, sig, &siglen, modbits, t->hash, t->hash, t->saltlen, t->salt); EG(ret, err1);
 					/* Check the result */
 					MUST_HAVE((siglen == t->reslen), ret, err1);
 					ret = are_equal(t->res, sig, t->reslen, &cmp); EG(ret, err1);
