@@ -30,7 +30,7 @@ jobs:
         run: |
           # Compile and compile the tests
           #
-          EXTRA_CFLAGS="-DUSER_NN_BIT_LEN=4096" make && cd src/examples/ && EXTRA_CFLAGS="-DUSER_NN_BIT_LEN=4096" make && ./sig/rsa/rsa && ./sig/dsa/dsa && ./sig/kcdsa/kcdsa && ./sig/sdsa/sdsa && ./sig/gostr34_10_94/gostr34_10_94 && ./sss/sss && ./basic/curve_basic_examples && ./basic/curve_ecdh && make clean && cd -;
-          make 32 && cd src/examples/ && make && ./sss/sss && ./basic/curve_basic_examples && ./basic/curve_ecdh && make clean && cd -;
-          make 16 && cd src/examples/ && make && ./sss/sss && ./basic/curve_basic_examples && ./basic/curve_ecdh && make clean && cd -;
+          EXTRA_CFLAGS="-DUSER_NN_BIT_LEN=4096" make && cd src/examples/ && EXTRA_CFLAGS="-DUSER_NN_BIT_LEN=4096" make && ./sig/rsa/rsa && ./sig/dsa/dsa && ./sig/kcdsa/kcdsa && ./sig/sdsa/sdsa && ./sig/gostr34_10_94/gostr34_10_94 && ./sss/sss && ./basic/curve_basic_examples && ./basic/curve_ecdh && make clean && cd - && make clean;
+          make 32 && cd src/examples/ && make 32 && ./sss/sss && ./basic/curve_basic_examples && ./basic/curve_ecdh && make clean && cd - && make clean;
+          make 16 && cd src/examples/ && make 16 && ./sss/sss && ./basic/curve_basic_examples && ./basic/curve_ecdh && make clean && cd - && make clean;
         continue-on-error: false
