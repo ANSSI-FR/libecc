@@ -39,13 +39,31 @@
  * !! DISCLAIMER !!
  * ================
  * Although some efforts have been put on providing a clean code and although many of
- * the underlying arithmetic primitives are constant time, no particular effort has
- * been deployed to prevent advanced side channels (e.g. to protect the private keys
- * against cache based side-channels and so on). Padding oracles (Bleichenbacher,
- * Manger) in RSA PKCS#1 v1.5 and RSA-OAEP decryption primitives are taken into
- * account, although no guarantee can be made on this (and mostly: these oracles
- * also heavily depend on what the upper layer callers do). Fault injection
- * (e.g. Bellcore attack and so on) are not taken into account.
+ * the underlying arithmetic primitives are constant time, only basic efforts have
+ * been deployed to prevent advanced side channels (e.g. to protect the private values
+ * against elaborate microarchitectural side-channels and so on). The modular exponentation
+ * uses a Montgomery Ladder, and message blinding is performed to mitigate basic SCA.
+ * Please note that the modular exponentation is NOT constant time wrt the MSB of
+ * the private exponent, which should be OK in the general case as this leak is less
+ * critical than for DSA and ECDSA nonces in scalar multiplication (raising HNP issues
+ * in these last cases).
+ * Optionally, when BLINDING=1 is activated, exponent blinding is used by adding a
+ * "small" (128 bits) multiple of the "order" (this is left as optional because of
+ * the big impacts on performance), somehow limiting the modular exponentiation MSB
+ * issue at the expense of performance.
+ *
+ * Padding oracles (Bleichenbacher, Manger) in RSA PKCS#1 v1.5 and RSA-OAEP decryption
+ * primitives are taken into account, although no absolute guarantee can be made on this
+ * (and mostly: these oracles also heavily depend on what the upper layer callers do).
+ *
+ * Fault injection attacks "a la Bellcore" are protected using a sanity check that
+ * the exponentiation to the public exponent provides the same input as the operation
+ * using the private exponent.
+ *
+ * !!NOTE: only the *_hardened* suffixed APIs are protected, the non suffixed ones are
+ * *NOT* protected. This is mainly due to the fact that the protections use the public
+ * key while the RFC APIs handling private operations only take the private key as
+ * input. Hence, please *USE* the *_hardened* APIs if unsure about your usage context!
  *
  * Also, as for all other libecc primitives, beware of randomness sources. By default,
  * the library uses the OS random sources (e.g. "/dev/urandom"), but the user
@@ -80,16 +98,28 @@ err:
 }
 
 int rsa_import_simple_priv_key(rsa_priv_key *priv,
-                               const u8 *n, u16 nlen, const u8 *d, u16 dlen)
+                               const u8 *n, u16 nlen, const u8 *d, u16 dlen,
+			       const u8 *p, u16 plen, const u8 *q, u16 qlen)
 {
 	int ret;
 
 	MUST_HAVE((priv != NULL), ret, err);
 
-	priv->type = RSA_SIMPLE;
+	MUST_HAVE(((p != NULL) && (q != NULL)) || ((p == NULL) && (q == NULL)), ret, err);
+
 	/* Import our big numbers */
-	ret = nn_init_from_buf(&(priv->key.s.n), n, nlen); EG(ret, err);
-	ret = nn_init_from_buf(&(priv->key.s.d), d, dlen);
+	if((p == NULL) || (q == NULL)){
+		priv->type = RSA_SIMPLE;
+		ret = nn_init_from_buf(&(priv->key.s.n), n, nlen); EG(ret, err);
+		ret = nn_init_from_buf(&(priv->key.s.d), d, dlen); EG(ret, err);
+	}
+	else{
+		priv->type = RSA_SIMPLE_PQ;
+		ret = nn_init_from_buf(&(priv->key.s_pq.n), n, nlen); EG(ret, err);
+		ret = nn_init_from_buf(&(priv->key.s_pq.d), d, dlen); EG(ret, err);
+		ret = nn_init_from_buf(&(priv->key.s_pq.p), p, plen); EG(ret, err);
+		ret = nn_init_from_buf(&(priv->key.s_pq.q), q, qlen); EG(ret, err);
+	}
 
 err:
 	if(ret && (priv != NULL)){
@@ -199,6 +229,49 @@ err:
 	return ret;
 }
 
+#ifdef USE_SIG_BLINDING
+#define RSA_EXPONENT_BLINDING_SIZE 128
+/*
+ * Blind an exponent with a "small" multiple (of size "bits") of the input mod or (mod-1).
+ * We use a relatively small multiple mainly because of potential big performance impacts on
+ * modular exponentiation.
+ */
+ATTRIBUTE_WARN_UNUSED_RET static int _rsa_blind_exponent(nn_src_t e, nn_src_t mod, nn_t out, bitcnt_t bits, u8 dec)
+{
+	int ret, check;
+	nn b;
+	b.magic = WORD(0);
+
+	ret = nn_init(&b, 0); EG(ret, err);
+	ret = nn_init(out, 0); EG(ret, err);
+
+	ret = nn_one(out); EG(ret, err);
+	ret = nn_lshift(out, out, bits); EG(ret, err);
+	ret = nn_iszero(out, &check); EG(ret, err);
+	/* Check for overflow */
+	MUST_HAVE(!check, ret, err);
+
+	/* Get a random value of "bits" count */
+	ret = nn_get_random_mod(&b, out); EG(ret, err);
+
+	if(dec){
+		ret = nn_copy(out, mod); EG(ret, err);
+		ret = nn_dec(out, out); EG(ret, err);
+		ret = nn_mul(&b, &b, out); EG(ret, err);
+	}
+	else{
+		ret = nn_mul(&b, &b, mod); EG(ret, err);
+	}
+
+	ret = nn_add(out, e, &b);
+
+err:
+	nn_uninit(&b);
+
+	return ret;
+}
+#endif
+
 /* The raw RSADP function as defined in RFC 8017 section 5.1.2
  *     Input: an RSA private key 'priv' and a big int ciphertext 'c'
  *     Output: a big int clear message 'm'
@@ -218,7 +291,6 @@ ATTRIBUTE_WARN_UNUSED_RET static int rsadp_crt_coeffs(const rsa_priv_key *priv, 
 	ret = nn_init(&m_i, 0); EG(ret, err);
 	ret = nn_init(&h, 0); EG(ret, err);
 	ret = nn_init(&R, 0); EG(ret, err);
-
 	/* NOTE: this is an internal function, sanity checks on priv and u have
 	 * been performed by the callers.
 	 */
@@ -238,7 +310,12 @@ ATTRIBUTE_WARN_UNUSED_RET static int rsadp_crt_coeffs(const rsa_priv_key *priv, 
 		ret = nn_check_initialized(t_i); EG(ret, err);
 
 		/* m_i = c^(d_i) mod r_i */
+#ifdef USE_SIG_BLINDING
+		ret = _rsa_blind_exponent(d_i, r_i, &h, (bitcnt_t)RSA_EXPONENT_BLINDING_SIZE, 1); EG(ret, err);
+		ret = nn_mod_pow(&m_i, c, &h, r_i); EG(ret, err);
+#else
 		ret = nn_mod_pow(&m_i, c, d_i, r_i); EG(ret, err);
+#endif
 		/* R = R * r_(i-1) */
 		ret = nn_mul(&R, &R, r_i_1); EG(ret, err);
 		/*  h = (m_i - m) * t_i mod r_i */
@@ -267,13 +344,14 @@ ATTRIBUTE_WARN_UNUSED_RET static int rsadp_crt(const rsa_priv_key *priv, nn_src_
 {
 	int ret;
 	nn_src_t p, q, dP, dQ, qInv;
-	nn m_1, m_2, h;
+	nn m_1, m_2, h, msb_fixed;
 	u8 u;
 	m_1.magic = m_2.magic = h.magic = WORD(0);
 
 	ret = nn_init(&m_1, 0); EG(ret, err);
 	ret = nn_init(&m_2, 0); EG(ret, err);
 	ret = nn_init(&h, 0); EG(ret, err);
+	ret = nn_init(&msb_fixed, 0); EG(ret, err);
 
 	/* Make things more readable */
 	p    = &(priv->key.crt.p);
@@ -291,9 +369,19 @@ ATTRIBUTE_WARN_UNUSED_RET static int rsadp_crt(const rsa_priv_key *priv, nn_src_
 	ret = nn_check_initialized(qInv); EG(ret, err);
 
 	/* m_1 = c^dP mod p */
+#ifdef USE_SIG_BLINDING
+	ret = _rsa_blind_exponent(dP, p, &h, (bitcnt_t)RSA_EXPONENT_BLINDING_SIZE, 1); EG(ret, err);
+	ret = nn_mod_pow(&m_1, c, &h, p); EG(ret, err);
+#else
 	ret = nn_mod_pow(&m_1, c, dP, p); EG(ret, err);
+#endif
 	/* m_2 = c^dQ mod q */
+#ifdef USE_SIG_BLINDING
+	ret = _rsa_blind_exponent(dQ, q, &h, (bitcnt_t)RSA_EXPONENT_BLINDING_SIZE, 1); EG(ret, err);
+	ret = nn_mod_pow(&m_2, c, &h, q); EG(ret, err);
+#else
 	ret = nn_mod_pow(&m_2, c, dQ, q); EG(ret, err);
+#endif
 	/* h = (m_1 - m_2) * qInv mod p */
 	ret = nn_mod(&h, &m_2, p); EG(ret, err);
 	ret = nn_mod_sub(&h, &m_1, &h, p); EG(ret, err);
@@ -320,29 +408,83 @@ err:
 	return ret;
 }
 
-int rsadp(const rsa_priv_key *priv, nn_src_t c, nn_t m)
+ATTRIBUTE_WARN_UNUSED_RET static int rsadp_nocrt(const rsa_priv_key *priv, nn_src_t c, nn_t m)
 {
 	int ret, cmp;
+	nn_src_t n, d, p, q;
+#ifdef USE_SIG_BLINDING
+	nn b1, b2;
+	b1.magic = b2.magic = WORD(0);
+#endif
+	/* Make things more readable */
+	if(priv->type == RSA_SIMPLE){
+		n = &(priv->key.s.n);
+		d = &(priv->key.s.d);
+	}
+	else if(priv->type == RSA_SIMPLE_PQ){
+		n = &(priv->key.s_pq.n);
+		d = &(priv->key.s_pq.d);
+	}
+	else{
+		ret = -1;
+		goto err;
+	}
+	/* Sanity checks */
+	ret = nn_check_initialized(n); EG(ret, err);
+	ret = nn_check_initialized(d); EG(ret, err);
+	/* Check that c is indeed in [0, n-1], trigger an error if not */
+	MUST_HAVE((!nn_cmp(c, n, &cmp)) && (cmp < 0), ret, err);
+
+	/* Compute m = c^d mod n */
+#ifdef USE_SIG_BLINDING
+	/* When we are asked to use exponent blinding, we MUST have a RSA_SIMPLE_PQ
+	 * type key in order to be able to compute our Phi(n) = (p-1)(q-1) and perform
+	 * the blinding.
+	 */
+	if(priv->type == RSA_SIMPLE_PQ){
+		p = &(priv->key.s_pq.p);
+		q = &(priv->key.s_pq.q);
+		ret = nn_init(&b1, 0); EG(ret, err);
+		ret = nn_init(&b2, 0); EG(ret, err);
+		ret = nn_dec(&b1, p); EG(ret, err);
+		ret = nn_dec(&b2, q); EG(ret, err);
+		ret = nn_mul(&b1, &b1, &b2); EG(ret, err);
+		ret = _rsa_blind_exponent(d, &b1, &b2, (bitcnt_t)RSA_EXPONENT_BLINDING_SIZE, 0); EG(ret, err);
+		ret = nn_mod_pow(m, c, &b2, n); EG(ret, err);
+	}
+	else{
+		ret = -1;
+		goto err;
+	}
+#else
+	FORCE_USED_VAR(p);
+	FORCE_USED_VAR(q);
+	ret = nn_mod_pow(m, c, d, n);
+#endif
+
+err:
+#ifdef USE_SIG_BLINDING
+	nn_uninit(&b1);
+	nn_uninit(&b2);
+#endif
+	PTR_NULLIFY(n);
+	PTR_NULLIFY(d);
+	PTR_NULLIFY(p);
+	PTR_NULLIFY(q);
+
+	return ret;
+}
+
+int rsadp(const rsa_priv_key *priv, nn_src_t c, nn_t m)
+{
+	int ret;
 
 	/* Sanity checks */
 	MUST_HAVE((priv != NULL), ret, err);
 
 	/* Do we have a simple or a CRT key? */
-	if(priv->type == RSA_SIMPLE){
-		nn_src_t n, d;
-		/* Make things more readable */
-		n = &(priv->key.s.n);
-		d = &(priv->key.s.d);
-		/* Sanity checks */
-		ret = nn_check_initialized(n); EG(ret, err);
-		ret = nn_check_initialized(d); EG(ret, err);
-		/* Check that c is indeed in [0, n-1], trigger an error if not */
-		MUST_HAVE((!nn_cmp(c, n, &cmp)) && (cmp < 0), ret, err1);
-		/* Compute m = c^d mod n */
-		ret = nn_mod_pow(m, c, d, n); EG(ret, err1);
-err1:
-		PTR_NULLIFY(n);
-		PTR_NULLIFY(d);
+	if((priv->type == RSA_SIMPLE) || (priv->type == RSA_SIMPLE_PQ)){
+		ret = rsadp_nocrt(priv, c, m); EG(ret, err);
 	}
 	else if(priv->type == RSA_CRT){
 		ret = rsadp_crt(priv, c, m); EG(ret, err);
@@ -356,6 +498,63 @@ err:
 	return ret;
 }
 
+/*
+ * The "hardened" version of rsadp that uses message blinding as well
+ * as output check for Bellcore style fault attacks.
+ *
+ */
+int rsadp_hardened(const rsa_priv_key *priv, const rsa_pub_key *pub, nn_src_t c, nn_t m)
+{
+	int ret, check;
+	nn_src_t n, e;
+	nn b, binv;
+	b.magic = binv.magic = WORD(0);
+
+	/* Make things more readable */
+	n = &(pub->n);
+	e = &(pub->e);
+
+	/* Sanity checks */
+	MUST_HAVE((priv != NULL) && (pub != NULL), ret, err);
+
+	/* Blind the message: get a random value for b prime with n
+	 * and compute its modular inverse.
+	 */
+	ret = nn_init(&b, 0); EG(ret, err);
+	ret = nn_init(&binv, 0); EG(ret, err);
+	ret = -1;
+	while(ret){
+		ret = nn_get_random_mod(&b, n); EG(ret, err);
+		ret = nn_modinv(&binv, &b, n);
+	}
+	/* Exponentiate the blinder to the public value */
+	ret = _nn_mod_pow_insecure(m, &b, e, n); EG(ret, err);
+	/* Perform message blinding */
+	ret = nn_mod_mul(&b, m, c, n); EG(ret, err);
+
+	/* Perform rsadp on the blinded message */
+	ret = rsadp(priv, &b, m); EG(ret, err);
+
+	/* Unblind the result */
+	ret = nn_mod_mul(m, m, &binv, n);
+
+	/* Now perform the public operation to check the result.
+	 * This is useful against some fault attacks (Bellcore style).
+	 */
+	ret = rsaep(pub, m, &b); EG(ret, err);
+	ret = nn_cmp(c, &b, &check); EG(ret, err);
+	MUST_HAVE((check == 0), ret, err);
+
+err:
+	nn_uninit(&b);
+	nn_uninit(&binv);
+
+	PTR_NULLIFY(n);
+	PTR_NULLIFY(e);
+
+	return ret;
+}
+
 /* The raw RSASP1 function as defined in RFC 8017 section 5.2.1
  *     Input: an RSA private key 'priv' and a big int message 'm'
  *     Output: a big int signature 's'
@@ -366,6 +565,15 @@ int rsasp1(const rsa_priv_key *priv, nn_src_t m, nn_t s)
 	return rsadp(priv, m, s);
 }
 
+/*
+ * The "hardened" version of rsasp1 that uses message blinding as well
+ * as optional exponent blinding.
+ *
+ */
+int rsasp1_hardened(const rsa_priv_key *priv, const rsa_pub_key *pub, nn_src_t m, nn_t s)
+{
+	return rsadp_hardened(priv, pub, m, s);
+}
 
 
 /* The raw RSAVP1 function as defined in RFC 8017 section 5.2.2
@@ -966,7 +1174,7 @@ err:
 /* The RSAES-PKCS1-V1_5-DECRYPT algorithm as described in RFC 8017 section 7.2.2
  *
  */
-int rsaes_pkcs1_v1_5_decrypt(const rsa_priv_key *priv, const u8 *c, u16 clen,
+ATTRIBUTE_WARN_UNUSED_RET static int _rsaes_pkcs1_v1_5_decrypt(const rsa_priv_key *priv, const rsa_pub_key *pub, const u8 *c, u16 clen,
                              u8 *m, u16 *mlen, u32 modbits)
 {
 	int ret;
@@ -989,7 +1197,12 @@ int rsaes_pkcs1_v1_5_decrypt(const rsa_priv_key *priv, const u8 *c, u16 clen,
 	/*   c = OS2IP (C) */
 	ret = rsa_os2ip(&c_, c, clen); EG(ret, err);
 	/*   m = RSADP ((n, d), c) */
-	ret = rsadp(priv, &c_, &m_); EG(ret, err);
+	if(pub != NULL){
+		ret = rsadp_hardened(priv, pub, &c_, &m_); EG(ret, err);
+	}
+	else{
+		ret = rsadp(priv, &c_, &m_); EG(ret, err);
+	}
 	/*   EM = I2OSP (m, k) */
 	MUST_HAVE((k < (u32)((u32)0x1 << 16)), ret, err);
 	ret = rsa_i2osp(&m_, em, (u16)k); EG(ret, err);
@@ -1034,6 +1247,24 @@ err:
 	nn_uninit(&c_);
 
 	return ret;
+}
+
+/*
+ * Basic version without much SCA/faults protections.
+ */
+int rsaes_pkcs1_v1_5_decrypt(const rsa_priv_key *priv, const u8 *c, u16 clen,
+                             u8 *m, u16 *mlen, u32 modbits)
+{
+	return _rsaes_pkcs1_v1_5_decrypt(priv, NULL, c, clen, m, mlen, modbits);
+}
+
+/*
+ * Hardened version with some SCA/faults protections.
+ */
+int rsaes_pkcs1_v1_5_decrypt_hardened(const rsa_priv_key *priv, const rsa_pub_key *pub, const u8 *c, u16 clen,
+                             u8 *m, u16 *mlen, u32 modbits)
+{
+	return _rsaes_pkcs1_v1_5_decrypt(priv, pub, c, clen, m, mlen, modbits);
 }
 
 /* The RSAES-OAEP-ENCRYPT algorithm as described in RFC 8017 section 7.1.1
@@ -1158,7 +1389,7 @@ err:
 /* The RSAES-OAEP-DECRYPT algorithm as described in RFC 8017 section 7.1.2
  *
  */
-int rsaes_oaep_decrypt(const rsa_priv_key *priv, const u8 *c, u16 clen,
+ATTRIBUTE_WARN_UNUSED_RET static int _rsaes_oaep_decrypt(const rsa_priv_key *priv, const rsa_pub_key *pub, const u8 *c, u16 clen,
                        u8 *m, u16 *mlen, u32 modbits,
                        const u8 *label, u16 label_len, gen_hash_alg_type gen_hash_type,
 		       gen_hash_alg_type mgf_hash_type)
@@ -1202,7 +1433,12 @@ int rsaes_oaep_decrypt(const rsa_priv_key *priv, const u8 *c, u16 clen,
 	/*   c = OS2IP (C) */
 	ret = rsa_os2ip(&c_, c, clen); EG(ret, err);
 	/*   m = RSADP ((n, d), c) */
-	ret = rsadp(priv, &c_, &m_); EG(ret, err);
+	if(pub != NULL){
+		ret = rsadp_hardened(priv, pub, &c_, &m_); EG(ret, err);
+	}
+	else{
+		ret = rsadp(priv, &c_, &m_); EG(ret, err);
+	}
 	/*   EM = I2OSP (m, k) */
 	MUST_HAVE((k < (u32)((u32)0x1 << 16)), ret, err);
 	ret = rsa_i2osp(&m_, em, (u16)k); EG(ret, err);
@@ -1285,14 +1521,34 @@ err:
 	return ret;
 }
 
+/*
+ * Basic version without much SCA/faults protections.
+ */
+int rsaes_oaep_decrypt(const rsa_priv_key *priv, const u8 *c, u16 clen,
+                       u8 *m, u16 *mlen, u32 modbits,
+                       const u8 *label, u16 label_len, gen_hash_alg_type gen_hash_type,
+		       gen_hash_alg_type mgf_hash_type)
+{
+	return _rsaes_oaep_decrypt(priv, NULL, c, clen, m, mlen, modbits, label, label_len, gen_hash_type, mgf_hash_type);
+}
 
+/*
+ * Hardened version with some SCA/faults protections.
+ */
+int rsaes_oaep_decrypt_hardened(const rsa_priv_key *priv, const rsa_pub_key *pub, const u8 *c, u16 clen,
+                       u8 *m, u16 *mlen, u32 modbits,
+                       const u8 *label, u16 label_len, gen_hash_alg_type gen_hash_type,
+		       gen_hash_alg_type mgf_hash_type)
+{
+	return _rsaes_oaep_decrypt(priv, pub, c, clen, m, mlen, modbits, label, label_len, gen_hash_type, mgf_hash_type);
+}
 
 /****************************************************************/
 /******** Signature schemes *************************************/
 /* The RSASSA-PKCS1-V1_5-SIGN signature algorithm as described in RFC 8017 section 8.2.1
  *
  */
-int rsassa_pkcs1_v1_5_sign(const rsa_priv_key *priv, const u8 *m, u16 mlen,
+ATTRIBUTE_WARN_UNUSED_RET static int _rsassa_pkcs1_v1_5_sign(const rsa_priv_key *priv, const rsa_pub_key *pub, const u8 *m, u16 mlen,
                            u8 *s, u16 *slen, u32 modbits, gen_hash_alg_type gen_hash_type)
 {
 	int ret;
@@ -1317,7 +1573,12 @@ int rsassa_pkcs1_v1_5_sign(const rsa_priv_key *priv, const u8 *m, u16 mlen,
 	/* m = OS2IP (EM) */
 	ret = rsa_os2ip(&m_, em, (u16)k); EG(ret, err);
 	/* s = RSASP1 (K, m) */
-	ret = rsasp1(priv, &m_, &s_); EG(ret, err);
+	if(pub != NULL){
+		ret = rsasp1_hardened(priv, pub, &m_, &s_); EG(ret, err);
+	}
+	else{
+		ret = rsasp1(priv, &m_, &s_); EG(ret, err);
+	}
 	/* S = I2OSP (s, k) */
 	ret = rsa_i2osp(&s_, s, (u16)k);
 	(*slen) = (u16)k;
@@ -1331,6 +1592,24 @@ err:
 	}
 
 	return ret;
+}
+
+/*
+ * Basic version without much SCA/faults protections.
+ */
+int rsassa_pkcs1_v1_5_sign(const rsa_priv_key *priv, const u8 *m, u16 mlen,
+                           u8 *s, u16 *slen, u32 modbits, gen_hash_alg_type gen_hash_type)
+{
+	return _rsassa_pkcs1_v1_5_sign(priv, NULL, m, mlen, s, slen, modbits, gen_hash_type);
+}
+
+/*
+ * Hardened version with some SCA/faults protections.
+ */
+int rsassa_pkcs1_v1_5_sign_hardened(const rsa_priv_key *priv, const rsa_pub_key *pub, const u8 *m, u16 mlen,
+                           u8 *s, u16 *slen, u32 modbits, gen_hash_alg_type gen_hash_type)
+{
+	return _rsassa_pkcs1_v1_5_sign(priv, pub, m, mlen, s, slen, modbits, gen_hash_type);
 }
 
 /* The RSASSA-PKCS1-V1_5-VERIFY verification algorithm as described in RFC 8017 section 8.2.2
@@ -1389,7 +1668,7 @@ err:
 /* The RSASSA-PSS-SIGN signature algorithm as described in RFC 8017 section 8.1.1
  *
  */
-int rsassa_pss_sign(const rsa_priv_key *priv, const u8 *m, u16 mlen,
+ATTRIBUTE_WARN_UNUSED_RET static int _rsassa_pss_sign(const rsa_priv_key *priv, const rsa_pub_key *pub, const u8 *m, u16 mlen,
                     u8 *s, u16 *slen, u32 modbits,
 		    gen_hash_alg_type gen_hash_type, gen_hash_alg_type mgf_hash_type,
                     u16 saltlen, const u8 *forced_salt)
@@ -1421,7 +1700,12 @@ int rsassa_pss_sign(const rsa_priv_key *priv, const u8 *m, u16 mlen,
 	/* m = OS2IP (EM) */
 	ret = rsa_os2ip(&m_, em, (u16)emsize); EG(ret, err);
 	/* s = RSASP1 (K, m) */
-	ret = rsasp1(priv, &m_, &s_); EG(ret, err);
+	if(pub != NULL){
+		ret = rsasp1_hardened(priv, pub, &m_, &s_); EG(ret, err);
+	}
+	else{
+		ret = rsasp1(priv, &m_, &s_); EG(ret, err);
+	}
 	/* S = I2OSP (s, k) */
 	MUST_HAVE((k < ((u32)0x1 << 16)), ret, err);
 	ret = rsa_i2osp(&s_, s, (u16)k);
@@ -1437,6 +1721,29 @@ err:
 
 	return ret;
 }
+
+/*
+ * Basic version without much SCA/faults protections.
+ */
+int rsassa_pss_sign(const rsa_priv_key *priv, const u8 *m, u16 mlen,
+                    u8 *s, u16 *slen, u32 modbits,
+		    gen_hash_alg_type gen_hash_type, gen_hash_alg_type mgf_hash_type,
+                    u16 saltlen, const u8 *forced_salt)
+{
+	return _rsassa_pss_sign(priv, NULL, m, mlen, s, slen, modbits, gen_hash_type, mgf_hash_type, saltlen, forced_salt);
+}
+
+/*
+ * Hardened version with some SCA/faults protections.
+ */
+int rsassa_pss_sign_hardened(const rsa_priv_key *priv, const rsa_pub_key *pub, const u8 *m, u16 mlen,
+                    u8 *s, u16 *slen, u32 modbits,
+		    gen_hash_alg_type gen_hash_type, gen_hash_alg_type mgf_hash_type,
+                    u16 saltlen, const u8 *forced_salt)
+{
+	return _rsassa_pss_sign(priv, pub, m, mlen, s, slen, modbits, gen_hash_type, mgf_hash_type, saltlen, forced_salt);
+}
+
 
 /* The RSASSA-PSS-VERIFY verification algorithm as described in RFC 8017 section 8.1.2
  *

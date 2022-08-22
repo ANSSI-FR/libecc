@@ -670,6 +670,7 @@ int main(int argc, char *argv[])
 	ret = sss_generate(shares, K, N, &secret, SSS_FALSE);
 	if(ret){
 		ext_printf("  [X] Error: sss_generate error\n");
+		goto err;
 	}
 	else{
 		buf_print("  secret", (u8*)&secret, SSS_SECRET_SIZE); EG(ret, err);
@@ -697,6 +698,7 @@ int main(int argc, char *argv[])
 	ret = sss_combine(shares_, K, &secret);
 	if (ret) {
 		ext_printf("  [X] Error: sss_combine error\n");
+		goto err;
 	} else {
 		buf_print("  secret", (u8*)&secret, SSS_SECRET_SIZE);
 	}
@@ -709,6 +711,7 @@ int main(int argc, char *argv[])
 	ret = sss_combine(shares_, K + 1, &secret);
 	if (ret) {
 		ext_printf("  [X] Error: sss_combine error\n");
+		goto err;
 	} else {
 		buf_print("  secret", (u8*)&secret, SSS_SECRET_SIZE);
 	}
@@ -730,6 +733,7 @@ int main(int argc, char *argv[])
 	ret = sss_regenerate(shares, K, MAX_N, &secret); EG(ret, err);
 	if (ret) {
 		ext_printf("  [X] Error: sss_regenerate error\n");
+		goto err;
 	} else {
 		buf_print("  secret", (u8*)&secret, SSS_SECRET_SIZE);
 	}
@@ -744,6 +748,7 @@ int main(int argc, char *argv[])
 	ret = sss_combine(shares_, K, &secret);
 	if (ret) {
 		ext_printf("  [X] Error: sss_combine error\n");
+		goto err;
 	} else {
 		buf_print("  secret", (u8*)&secret, SSS_SECRET_SIZE);
 	}
@@ -758,6 +763,8 @@ int main(int argc, char *argv[])
 	} else {
 		buf_print("  secret", (u8*)&secret, SSS_SECRET_SIZE);
 	}
+
+	ret = 0;
 
 err:
 	return ret;

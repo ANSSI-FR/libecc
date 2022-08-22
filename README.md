@@ -1,4 +1,10 @@
-[![Build Status](https://travis-ci.com/rb-anssi/libecc.svg?branch=master)](https://travis-ci.com/ANSSI-FR/libecc)
+[![compilation](https://github.com/ANSSI-FR/libecc/actions/workflows/libecc_compilation_tests.yml/badge.svg?branch=master)](https://github.com/ANSSI-FR/libecc/actions/workflows/libecc_compilation_tests.yml)
+[![runtime](https://github.com/ANSSI-FR/libecc/actions/workflows/libecc_runtime_tests.yml/badge.svg?branch=master)](https://github.com/ANSSI-FR/libecc/actions/workflows/libecc_runtime_tests.yml)
+[![runtime debug](https://github.com/ANSSI-FR/libecc/actions/workflows/libecc_runtime_tests_debug.yml/badge.svg?branch=master)](https://github.com/ANSSI-FR/libecc/actions/workflows/libecc_runtime_tests_debug.yml)
+[![crossarch](https://github.com/ANSSI-FR/libecc/actions/workflows/libecc_crossarch_tests.yml/badge.svg?branch=master)](https://github.com/ANSSI-FR/libecc/actions/workflows/libecc_crossarch_tests.yml)
+[![python](https://github.com/ANSSI-FR/libecc/actions/workflows/libecc_python_tests.yml/badge.svg?branch=master)](https://github.com/ANSSI-FR/libecc/actions/workflows/libecc_python_tests.yml)
+[![examples](https://github.com/ANSSI-FR/libecc/actions/workflows/libecc_examples.yml/badge.svg?branch=master)](https://github.com/ANSSI-FR/libecc/actions/workflows/libecc_examples.yml)
+
 
 # libecc project
 
@@ -23,12 +29,17 @@ See [LICENSE](LICENSE) file at the root folder of the project.
 This software implements a library for elliptic curves based
 cryptography (ECC). The API supports signature algorithms specified
 in the [ISO 14888-3:2018](https://www.iso.org/standard/76382.html)
-standard, with the following specific curves and hash functions:
+standard and some other signature algorithms as well as ECDH primitives, with the following specific curves and hash functions:
 
-  * **Signatures**: ECDSA, ECKCDSA, ECGDSA, ECRDSA, EC{,O}SDSA, ECFSDSA, SM2, BIGN (as standardized
-in [STB 34.101.45-2013](https://github.com/bcrypto/bign)).
-  * **Curves**: SECP{192,224,256,384,521}R1, BRAINPOOLP{192,224,256,384,512}R1,
-  FRP256V1, GOST{256,512}, SM2P256V1. The library can be easily expanded with
+  * **Signatures**:
+    * Core ISO 14888-3:2018 algorithms: ECDSA, ECKCDSA, ECGDSA, ECRDSA, EC{,O}SDSA, ECFSDSA, SM2.
+    * EdDSA (25519 and 448 as specified in [RFC 8032](https://datatracker.ietf.org/doc/html/rfc8032)).
+    * BIGN (as standardized in [STB 34.101.45-2013](https://github.com/bcrypto/bign)).
+  * **ECDH**:
+    * ECC-CDH (Elliptic Curve Cryptography Cofactor Diffie-Hellman) as described in [section 5.7.1.2 of the NIST SP 800-56A Rev. 3](https://csrc.nist.gov/publications/detail/sp/800-56a/rev-3/final) standard.
+    * X25519 and X448 as specified in [RFC7748](https://datatracker.ietf.org/doc/html/rfc7748) (with some specificities, see the details below).
+  * **Curves**: SECP{192,224,256,384,521}R1, SECP{192,224,256}K1, BRAINPOOLP{192,224,256,320,384,512}{R1,T1},
+  FRP256V1, GOST{256,512}, GOSTR3410-2001-CryptoPro{A,B,C,XchA,XchB,Test}-ParamSet, GOSTR3410-2012-{256,512}-ParamSet{A,B,C}, GOSTR3410-2012-256-ParamSetD, GOSTR3410-2012-512-ParamSetTest, SM2P256V1, SM2P{192,256}Test, WEI{25519,448}, BIGN{256,384,512}V1. The library can be easily expanded with
   user defined curves using a standalone helper script.
   * **Hash functions**: SHA-2 and SHA-3 hash functions (224, 256, 384, 512), SM3, RIPEMD-160,
 GOST 34.11-2012 as described in [RFC 6986](https://datatracker.ietf.org/doc/html/rfc6986)
@@ -46,7 +57,7 @@ On the downside, the deterministic version of ECDSA is susceptible to [fault att
 Hence, one will have to **carefully select** the suitable version to use depending on the usage and
 attack context (i.e. which of side-channel attacks or fault attacks are easier to perform).
 The same applies to BIGN that comes in two flavours as standardized in [STB 34.101.45-2013](https://github.com/bcrypto/bign):
-non-deterministic and deterministic (following an iterative generatin process using the BELT hash function and block cipher).
+non-deterministic and deterministic (following an iterative generation process using the BELT hash function and its underlying block cipher).
 
 The library also supports EdDSA (Ed25519 and Ed448) as defined in [RFC 8032](https://datatracker.ietf.org/doc/html/rfc8032) with
 all their variants (with context, pre-hashed).
@@ -68,6 +79,10 @@ variant. Hence, when using EdDSA one will have to either ensure that the usage c
 such attacks, that the platform implements countermeasures (e.g. using secure MCUs, etc.) or that
 other means allow to detect/mitigate such attacks (e.g. on the compilation toolchain side).
 
+Please refer to [this CFRG thread](https://mailarchive.ietf.org/arch/browse/cfrg/?gbt=1&index=5l3XCLHLCVfOmnkcv4mo2-pEV94)
+for more insight on why deterministic versus non-deterministic EC signature schemes is still an open debate
+and how the usage context and **attack model** is **crucial** when choosing to use one or the other.
+
 Regarding the specific case of ECRDSA (the Russian standard), libecc implements by default the
 [RFC 7091](https://datatracker.ietf.org/doc/html/rfc7091) and [draft-deremin-rfc4491-bis](https://datatracker.ietf.org/doc/html/draft-deremin-rfc4491-bis)
 versions to comply with the standard test vectors (provided in the form of X.509 certificates).
@@ -82,7 +97,7 @@ a compilation toggle that will force this mode `USE_ISO14888_3_ECRDSA=1`:
 	$ USE_ISO14888_3_ECRDSA=1 make
 </pre>
 
-ECDH (Elliptic Curve Diffie-Hellman) variants are also implemented in the
+**ECDH (Elliptic Curve Diffie-Hellman)** variants are also implemented in the
 library. Classical ECDH over Weierstrass curves is implemented in the form
 of ECC-CDH (Elliptic Curve Cryptography Cofactor Diffie-Hellman) as described
 in [section 5.7.1.2 of the NIST SP 800-56A Rev. 3](https://csrc.nist.gov/publications/detail/sp/800-56a/rev-3/final) standard. Montgomery curves

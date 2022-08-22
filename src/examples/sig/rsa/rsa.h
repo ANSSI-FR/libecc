@@ -38,6 +38,8 @@ typedef struct {
 /* RSA private key, composed of:
  *       n       the RSA modulus, a positive integer
  *       d       the RSA private exponent, a positive integer
+ *	 p	 (OPTIONAL) the first factor, a positive integer
+ *	 q	 (OPTIONAL) the secod factor, a positive integer
  *
  * OR when using CRT:
  *       p      the first factor, a positive integer
@@ -51,8 +53,9 @@ typedef struct {
  * u is the number of (r_i, d_i, t_i) triplets.
  */
 typedef enum {
-        RSA_SIMPLE = 0,
-        RSA_CRT    = 1,
+	RSA_SIMPLE    = 0,
+	RSA_SIMPLE_PQ = 1,
+	RSA_CRT       = 2,
 } rsa_priv_key_type;
 
 /*** RSA "simple" private key ***/
@@ -60,6 +63,14 @@ typedef struct {
 	nn n;
 	nn d;
 } rsa_priv_key_simple;
+
+/*** RSA "simple" private key with optional p and q ***/
+typedef struct {
+	nn n;
+	nn d;
+	nn p;
+	nn q;
+} rsa_priv_key_simple_pq;
 
 /*** RSA CRT private key *******/
 typedef struct {
@@ -85,6 +96,7 @@ typedef struct {
 	rsa_priv_key_type type;
 	union {
 		rsa_priv_key_simple s;
+		rsa_priv_key_simple_pq s_pq;
 		rsa_priv_key_crt crt;
 	} key;
 } rsa_priv_key;
@@ -95,7 +107,8 @@ ATTRIBUTE_WARN_UNUSED_RET int rsa_os2ip(nn_t x, const u8 *buf, u16 buflen);
 ATTRIBUTE_WARN_UNUSED_RET int rsa_import_pub_key(rsa_pub_key *pub, const u8 *n,
 						 u16 nlen, const u8 *e, u16 elen);
 ATTRIBUTE_WARN_UNUSED_RET int rsa_import_simple_priv_key(rsa_priv_key *priv,
-						 const u8 *n, u16 nlen, const u8 *d, u16 dlen);
+						 const u8 *n, u16 nlen, const u8 *d,
+					         u16 dlen, const u8 *p, u16 plen, const u8 *q, u16 qlen);
 ATTRIBUTE_WARN_UNUSED_RET int rsa_import_crt_priv_key(rsa_priv_key *priv,
 						      const u8 *p, u16 plen,
 						      const u8 *q, u16 qlen,
@@ -106,7 +119,10 @@ ATTRIBUTE_WARN_UNUSED_RET int rsa_import_crt_priv_key(rsa_priv_key *priv,
 
 ATTRIBUTE_WARN_UNUSED_RET int rsaep(const rsa_pub_key *pub, nn_src_t m, nn_t c);
 ATTRIBUTE_WARN_UNUSED_RET int rsadp(const rsa_priv_key *priv, nn_src_t c, nn_t m);
+ATTRIBUTE_WARN_UNUSED_RET int rsadp_hardened(const rsa_priv_key *priv, const rsa_pub_key *pub, nn_src_t c, nn_t m);
+
 ATTRIBUTE_WARN_UNUSED_RET int rsasp1(const rsa_priv_key *priv, nn_src_t m, nn_t s);
+ATTRIBUTE_WARN_UNUSED_RET int rsasp1_hardened(const rsa_priv_key *priv, const rsa_pub_key *pub, nn_src_t m, nn_t s);
 ATTRIBUTE_WARN_UNUSED_RET int rsavp1(const rsa_pub_key *pub, nn_src_t s, nn_t m);
 
 ATTRIBUTE_WARN_UNUSED_RET int emsa_pkcs1_v1_5_encode(const u8 *m, u16 mlen, u8 *em, u16 emlen,
@@ -125,6 +141,8 @@ ATTRIBUTE_WARN_UNUSED_RET int rsaes_pkcs1_v1_5_encrypt(const rsa_pub_key *pub, c
 						       const u8 *forced_seed, u16 seedlen);
 ATTRIBUTE_WARN_UNUSED_RET int rsaes_pkcs1_v1_5_decrypt(const rsa_priv_key *priv, const u8 *c, u16 clen,
 						       u8 *m, u16 *mlen, u32 modbits);
+ATTRIBUTE_WARN_UNUSED_RET int rsaes_pkcs1_v1_5_decrypt_hardened(const rsa_priv_key *priv, const rsa_pub_key *pub, const u8 *c, u16 clen,
+                                                       u8 *m, u16 *mlen, u32 modbits);
 
 ATTRIBUTE_WARN_UNUSED_RET int rsaes_oaep_encrypt(const rsa_pub_key *pub, const u8 *m, u16 mlen,
 						 u8 *c, u16 *clen, u32 modbits, const u8 *label, u16 label_len,
@@ -133,13 +151,22 @@ ATTRIBUTE_WARN_UNUSED_RET int rsaes_oaep_encrypt(const rsa_pub_key *pub, const u
 ATTRIBUTE_WARN_UNUSED_RET int rsaes_oaep_decrypt(const rsa_priv_key *priv, const u8 *c, u16 clen,
 						 u8 *m, u16 *mlen, u32 modbits, const u8 *label, u16 label_len,
 						 gen_hash_alg_type rsa_hash_type, gen_hash_alg_type mgf_hash_type);
+ATTRIBUTE_WARN_UNUSED_RET int rsaes_oaep_decrypt_hardened(const rsa_priv_key *priv, const rsa_pub_key *pub, const u8 *c, u16 clen,
+						 u8 *m, u16 *mlen, u32 modbits, const u8 *label, u16 label_len,
+						 gen_hash_alg_type rsa_hash_type, gen_hash_alg_type mgf_hash_type);
 
 ATTRIBUTE_WARN_UNUSED_RET int rsassa_pkcs1_v1_5_sign(const rsa_priv_key *priv, const u8 *m, u16 mlen,
 						     u8 *s, u16 *slen, u32 modbits, gen_hash_alg_type rsa_hash_type);
+ATTRIBUTE_WARN_UNUSED_RET int rsassa_pkcs1_v1_5_sign_hardened(const rsa_priv_key *priv, const rsa_pub_key *pub, const u8 *m, u16 mlen,
+                                                     u8 *s, u16 *slen, u32 modbits, gen_hash_alg_type rsa_hash_type);
 ATTRIBUTE_WARN_UNUSED_RET int rsassa_pkcs1_v1_5_verify(const rsa_pub_key *pub, const u8 *m, u16 mlen,
 						       const u8 *s, u16 slen, u32 modbits, gen_hash_alg_type rsa_hash_type);
 
 ATTRIBUTE_WARN_UNUSED_RET int rsassa_pss_sign(const rsa_priv_key *priv, const u8 *m, u16 mlen,
+					      u8 *s, u16 *slen, u32 modbits,
+					      gen_hash_alg_type rsa_hash_type, gen_hash_alg_type mgf_hash_type,
+					      u16 saltlen, const u8 *forced_salt);
+ATTRIBUTE_WARN_UNUSED_RET int rsassa_pss_sign_hardened(const rsa_priv_key *priv, const rsa_pub_key *pub, const u8 *m, u16 mlen,
 					      u8 *s, u16 *slen, u32 modbits,
 					      gen_hash_alg_type rsa_hash_type, gen_hash_alg_type mgf_hash_type,
 					      u16 saltlen, const u8 *forced_salt);

@@ -4,7 +4,7 @@ name: libecc
 on: push
 
 jobs:
-  runtime_tests:
+  runtime_tests_debug:
     runs-on: ubuntu-latest
     strategy:
       #max-parallel: 10
@@ -17,7 +17,7 @@ jobs:
       - name: checkout repository
         uses: actions/checkout@v2
       # Run actions
-      # libecc runtime tests
+      # libecc runtime debug tests
       - name: libecc runtime debug tests
         env:
           CC: ${{ matrix.cc }}
@@ -28,11 +28,6 @@ jobs:
           OPENMP_SELF_TESTS: 1
         shell: bash
         run: |
-          # Test our Python libecc expanding script
-          # Python2
-          echo "y" | python2 scripts/expand_libecc.py --remove-all && PYTHON=python2 sh scripts/gen_curves_tests.sh && make clean && make && ./build/ec_self_tests vectors rand;
-          # Clean
-          echo "y" | python2 scripts/expand_libecc.py --remove-all && make clean;
           # Vanilla debug tests
           #
           make debug && ./build/ec_self_tests vectors rand;

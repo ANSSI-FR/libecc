@@ -28,16 +28,9 @@ jobs:
           OPENMP_SELF_TESTS: 1
         shell: bash
         run: |
-          # Test our Python libecc expanding script
-          # Python3
-          echo "y" | python3 scripts/expand_libecc.py --remove-all && PYTHON=python3 sh scripts/gen_curves_tests.sh && make clean && make && ./build/ec_self_tests vectors rand;
-          # Clean
-          echo "y" | python3 scripts/expand_libecc.py --remove-all && make clean;
           # Vanilla tests
           #
           make && ./build/ec_self_tests vectors rand;
           make 32 && ./build/ec_self_tests vectors rand;
           make 16 && ./build/ec_self_tests vectors rand;
-          # We perform one test with the sanitizers
-          USE_SANITIZERS=1 make && ./build/ec_self_tests vectors rand;
         continue-on-error: false
