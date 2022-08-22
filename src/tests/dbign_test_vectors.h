@@ -70,10 +70,42 @@ static const ec_test_case dbign_2_test_case = {
 	.adata_len = sizeof(dbign_2_test_vectors_adata)
 };
 
+/********************************************************************/
+static const u8 dbign_3_test_vectors_priv_key[] = {
+	0xb3, 0x8a, 0x57, 0x70, 0xaa, 0xe8, 0x97, 0x73, 0x1a, 0xe3, 0x69, 0xaa, 0x48, 0x91, 0xf3, 0x14, 0xd4, 0xae, 0x76, 0x94, 0x29, 0xf3, 0xde, 0x94, 0xeb, 0x9b, 0x36, 0xdf, 0x79, 0x89, 0x62, 0x79,
+ };
+
+static const u8 dbign_3_test_vectors_expected_sig[] = {
+	0x3d, 0xcf, 0xf8, 0x86, 0x87, 0xa9, 0x8a, 0xbb, 0x01, 0xce, 0x2d, 0xe8, 0x3e, 0x3a, 0x65, 0xeb,
+	0x69, 0xd1, 0x6a, 0x47, 0x50, 0x87, 0x50, 0xfb, 0x6f, 0x18, 0x64, 0x2c, 0x1b, 0x48, 0xb4, 0xaf, 0xff, 0xcd, 0x59, 0xcf, 0xd9, 0x98, 0x6f, 0xe9, 0xf2, 0xbb, 0xea, 0x99, 0xb9, 0x65, 0xb0, 0x1b,
+ };
+static const u8 dbign_3_test_vectors_adata[] = {
+	0x00, 0x0b, 0x00, 0x00,
+	0x06, 0x09, 0x2A, 0x70, 0x00, 0x02, 0x00, 0x22, 0x65, 0x1F, 0x51,
+};
+
+static const ec_test_case dbign_3_test_case = {
+        .name = "DBIGN-BELT-HASH/dbign256v1 3",
+        .ec_str_p = &bign256v1_str_params,
+        .priv_key = dbign_3_test_vectors_priv_key,
+        .priv_key_len = sizeof(dbign_3_test_vectors_priv_key),
+        .nn_random = NULL,
+        .hash_type = BELT_HASH,
+        .msg = "\xB1\x94\xBA\xC8\x0A\x08\xF5\x3B\x36\x6D\x00\x8E\x58\x4A\x5D\xE4\x85\x04\xFA\x9D\x1B\xB6\xC7\xAC\x25\x2E\x72\xC2\x02\xFD\xCE\x0D\x5B\xE3\xD6\x12\x17\xB9\x61\x81\xFE\x67\x86\xAD\x71\x6B\x89\x0B",
+        .msglen = 48,
+        .sig_type = DBIGN,
+        .exp_sig = dbign_3_test_vectors_expected_sig,
+        .exp_siglen = sizeof(dbign_3_test_vectors_expected_sig),
+	.adata = dbign_3_test_vectors_adata,
+	.adata_len = sizeof(dbign_3_test_vectors_adata)
+};
+
+
 
 /************************************************/
 #define DBIGN_ALL_TESTS() \
         &dbign_1_test_case, \
-	&dbign_2_test_case,
+        &dbign_2_test_case, \
+	&dbign_3_test_case,
 
 #endif /* __DBIGN_TEST_VECTORS_H__ */

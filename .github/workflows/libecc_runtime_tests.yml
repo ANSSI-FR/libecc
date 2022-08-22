@@ -33,6 +33,4 @@ jobs:
           make && ./build/ec_self_tests vectors rand;
           make 32 && ./build/ec_self_tests vectors rand;
           make 16 && ./build/ec_self_tests vectors rand;
-          # We perform one test with the sanitizers
-          USE_SANITIZERS=1 make && ./build/ec_self_tests vectors rand;
         continue-on-error: false

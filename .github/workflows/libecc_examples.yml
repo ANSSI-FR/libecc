@@ -1,0 +1,38 @@
+name: libecc
+
+# Run this workflow every time a new commit pushed to your repository
+on: push
+
+jobs:
+  runtime_tests_debug:
+    runs-on: ubuntu-latest
+    strategy:
+      #max-parallel: 10
+      matrix:
+        cc: [gcc, clang]
+        blinding: [0, 1]
+        cryptofuzz: [1]
+    steps:
+      # Checkout repository
+      - name: checkout repository
+        uses: actions/checkout@v2
+      # Run actions
+      # libecc runtime debug tests
+      - name: libecc runtime debug tests
+        env:
+          CC: ${{ matrix.cc }}
+          BLINDING: ${{ matrix.blinding }}
+          CRYPTOFUZZ: ${{ matrix.cryptofuzz }}
+          ASSERT_PRINT: 1
+          # We want to parallelize self tests
+          OPENMP_SELF_TESTS: 1
+          # We want to use 4096 bits NN for the examples
+          EXTRA_CFLAGS: "-DUSER_NN_BIT_LEN=4096"
+        shell: bash
+        run: |
+          # Compile and compile the tests
+          #
+          make && cd src/examples/ && make && ./sig/rsa/rsa && ./sig/dsa/dsa && ./sig/kcdsa/kcdsa && ./sig/sdsa/sdsa && ./sig/gostr34_10_94/gostr34_10_94 && ./sss/sss && ./basic/curve_basic_examples && ./basic/curve_ecdh && make clean && cd -;
+          make 32 && cd src/examples/ && make && ./sig/rsa/rsa && ./sig/dsa/dsa && ./sig/kcdsa/kcdsa && ./sig/sdsa/sdsa && ./sig/gostr34_10_94/gostr34_10_94 && ./sss/sss && ./basic/curve_basic_examples && ./basic/curve_ecdh && make clean && cd -;
+          make 16 && cd src/examples/ && make && ./sig/rsa/rsa && ./sig/dsa/dsa && ./sig/kcdsa/kcdsa && ./sig/sdsa/sdsa && ./sig/gostr34_10_94/gostr34_10_94 && ./sss/sss && ./basic/curve_basic_examples && ./basic/curve_ecdh && make clean && cd -;
+        continue-on-error: false

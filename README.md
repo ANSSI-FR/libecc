@@ -1,4 +1,4 @@
-[![compilation](https://github.com/ANSSI-FR/libecc/actions/workflows/libecc_compilation_tests.yml/badge.svg)](https://github.com/ANSSI-FR/libecc/actions/workflows/libecc_compilation_tests.yml)
+[![compilation](https://github.com/ANSSI-FR/libecc/actions/workflows/libecc_compilation_tests.yml/badge.svg?branch=master)](https://github.com/ANSSI-FR/libecc/actions/workflows/libecc_compilation_tests.yml)
 [![runtime](https://github.com/ANSSI-FR/libecc/actions/workflows/libecc_runtime_tests.yml/badge.svg?branch=master)](https://github.com/ANSSI-FR/libecc/actions/workflows/libecc_runtime_tests.yml)
 [![runtime debug](https://github.com/ANSSI-FR/libecc/actions/workflows/libecc_runtime_tests_debug.yml/badge.svg?branch=master)](https://github.com/ANSSI-FR/libecc/actions/workflows/libecc_runtime_tests_debug.yml)
 [![crossarch](https://github.com/ANSSI-FR/libecc/actions/workflows/libecc_crossarch_tests.yml/badge.svg?branch=master)](https://github.com/ANSSI-FR/libecc/actions/workflows/libecc_crossarch_tests.yml)
@@ -28,10 +28,15 @@ See [LICENSE](LICENSE) file at the root folder of the project.
 This software implements a library for elliptic curves based
 cryptography (ECC). The API supports signature algorithms specified
 in the [ISO 14888-3:2018](https://www.iso.org/standard/76382.html)
-standard, with the following specific curves and hash functions:
+standard and some other signature algorithms as well as ECDH primitives, with the following specific curves and hash functions:
 
-  * **Signatures**: ECDSA, ECKCDSA, ECGDSA, ECRDSA, EC{,O}SDSA, ECFSDSA, SM2, BIGN (as standardized
-in [STB 34.101.45-2013](https://github.com/bcrypto/bign)).
+  * **Signatures**:
+    * Core ISO 14888-3:2018 algorithms: ECDSA, ECKCDSA, ECGDSA, ECRDSA, EC{,O}SDSA, ECFSDSA, SM2.
+    * EdDSA (25519 and 448 as specified in [RFC 8032](https://datatracker.ietf.org/doc/html/rfc8032)).
+    * BIGN (as standardized in [STB 34.101.45-2013](https://github.com/bcrypto/bign)).
+  * **ECDH**:
+    * ECC-CDH (Elliptic Curve Cryptography Cofactor Diffie-Hellman) as described in [section 5.7.1.2 of the NIST SP 800-56A Rev. 3](https://csrc.nist.gov/publications/detail/sp/800-56a/rev-3/final) standard.
+    * X25519 and X448 as specified in [RFC7748](https://datatracker.ietf.org/doc/html/rfc7748) (with some specificities, see the details below).
   * **Curves**: SECP{192,224,256,384,521}R1, SECP{192,224,256}K1, BRAINPOOLP{192,224,256,320,384,512}{R1,T1},
   FRP256V1, GOST{256,512}, GOSTR3410-2001-CryptoPro{A,B,C,XchA,XchB,Test}-ParamSet, GOSTR3410-2012-{256,512}-ParamSet{A,B,C}, GOSTR3410-2012-256-ParamSetD, GOSTR3410-2012-512-ParamSetTest, SM2P256V1, SM2P{192,256}Test, WEI{25519,448}, BIGN{256,384,512}V1. The library can be easily expanded with
   user defined curves using a standalone helper script.
@@ -91,7 +96,7 @@ a compilation toggle that will force this mode `USE_ISO14888_3_ECRDSA=1`:
 	$ USE_ISO14888_3_ECRDSA=1 make
 </pre>
 
-ECDH (Elliptic Curve Diffie-Hellman) variants are also implemented in the
+**ECDH (Elliptic Curve Diffie-Hellman)** variants are also implemented in the
 library. Classical ECDH over Weierstrass curves is implemented in the form
 of ECC-CDH (Elliptic Curve Cryptography Cofactor Diffie-Hellman) as described
 in [section 5.7.1.2 of the NIST SP 800-56A Rev. 3](https://csrc.nist.gov/publications/detail/sp/800-56a/rev-3/final) standard. Montgomery curves
