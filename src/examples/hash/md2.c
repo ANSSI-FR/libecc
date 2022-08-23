@@ -83,6 +83,9 @@ ATTRIBUTE_WARN_UNUSED_RET int md2_init(md2_context *ctx)
 
 	MUST_HAVE((ctx != NULL), ret, err);
 
+        /* Sanity check on size */
+	MUST_HAVE((MD2_DIGEST_SIZE <= MAX_DIGEST_SIZE), ret, err);
+
 	ctx->md2_total = 0;
 	/* Zeroize the state */
 	ret = local_memset(ctx->md2_state, 0, sizeof(ctx->md2_state)); EG(ret, err);
