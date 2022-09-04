@@ -126,6 +126,18 @@ typedef enum {
 #ifdef WITH_HASH_BELT_HASH
 	BELT_HASH = 16,
 #endif
+#ifdef WITH_HASH_BASH224
+	BASH224 = 17,
+#endif
+#ifdef WITH_HASH_BASH256
+	BASH256 = 18,
+#endif
+#ifdef WITH_HASH_BASH384
+	BASH384 = 19,
+#endif
+#ifdef WITH_HASH_BASH512
+	BASH512 = 20,
+#endif
 } hash_alg_type;
 
 /* All curves we support */

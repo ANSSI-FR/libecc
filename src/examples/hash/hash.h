@@ -54,6 +54,11 @@ typedef enum {
 	HASH_STREEBOG512 = STREEBOG512,
 	HASH_SHAKE256 = SHAKE256,
 	HASH_RIPEMD160 = RIPEMD160,
+	HASH_BELT_HASH = BELT_HASH,
+	HASH_BASH224 = BASH224,
+	HASH_BASH256 = BASH256,
+	HASH_BASH384 = BASH384,
+	HASH_BASH512 = BASH512,
 	/* Deprecated hash algorithms not supported by libecc
 	 * (for security reasons).
 	 * XXX: NOTE: These algorithms are here as a playground e.g.

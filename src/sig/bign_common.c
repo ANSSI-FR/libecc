@@ -197,7 +197,9 @@ err:
  * you want to use the deterministic version or not.
  *
  */
-ATTRIBUTE_WARN_UNUSED_RET static int __bign_determinitic_nonce(nn_t k, nn_src_t q, bitcnt_t q_bit_len, nn_src_t x, const u8 *adata, u16 adata_len, const u8 *h, u8 hlen)
+ATTRIBUTE_WARN_UNUSED_RET static int __bign_determinitic_nonce(nn_t k, nn_src_t q, bitcnt_t q_bit_len,
+							       nn_src_t x, const u8 *adata, u16 adata_len,
+							       const u8 *h, u8 hlen)
 {
 	int ret, cmp, iszero;
 	u8 theta[BELT_HASH_DIGEST_SIZE];
@@ -308,6 +310,8 @@ ATTRIBUTE_WARN_UNUSED_RET static int __bign_determinitic_nonce(nn_t k, nn_src_t 
 			break;
 		}
 		i += (u32)1;
+		/* If we have wrapped (meaning i > 2^32), we exit with failure */
+		MUST_HAVE((i != 0), ret, err);
 	}
 
 	ret = 0;

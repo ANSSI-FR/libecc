@@ -35,6 +35,10 @@
 #include "streebog512.h"
 #include "ripemd160.h"
 #include "belt-hash.h"
+#include "bash224.h"
+#include "bash256.h"
+#include "bash384.h"
+#include "bash512.h"
 #include "../utils/utils.h"
 
 #if (MAX_DIGEST_SIZE == 0)
@@ -93,6 +97,18 @@ typedef union {
 #endif
 #ifdef BELT_HASH_BLOCK_SIZE
 	belt_hash_context belt_hash;
+#endif
+#ifdef BASH224_HASH_BLOCK_SIZE
+	bash224_context bash224;
+#endif
+#ifdef BASH256_HASH_BLOCK_SIZE
+	bash256_context bash256;
+#endif
+#ifdef BASH384_HASH_BLOCK_SIZE
+	bash384_context bash384;
+#endif
+#ifdef BASH512_HASH_BLOCK_SIZE
+	bash512_context bash512;
 #endif
 } hash_context;
 
@@ -186,6 +202,26 @@ ATTRIBUTE_WARN_UNUSED_RET int _ripemd160_final(hash_context * hctx, unsigned cha
 ATTRIBUTE_WARN_UNUSED_RET int _belt_hash_init(hash_context * hctx);
 ATTRIBUTE_WARN_UNUSED_RET int _belt_hash_update(hash_context * hctx, const unsigned char *chunk, u32 chunklen);
 ATTRIBUTE_WARN_UNUSED_RET int _belt_hash_final(hash_context * hctx, unsigned char *output);
+#endif
+#ifdef WITH_HASH_BASH224
+ATTRIBUTE_WARN_UNUSED_RET int _bash224_init(hash_context * hctx);
+ATTRIBUTE_WARN_UNUSED_RET int _bash224_update(hash_context * hctx, const unsigned char *chunk, u32 chunklen);
+ATTRIBUTE_WARN_UNUSED_RET int _bash224_final(hash_context * hctx, unsigned char *output);
+#endif
+#ifdef WITH_HASH_BASH256
+ATTRIBUTE_WARN_UNUSED_RET int _bash256_init(hash_context * hctx);
+ATTRIBUTE_WARN_UNUSED_RET int _bash256_update(hash_context * hctx, const unsigned char *chunk, u32 chunklen);
+ATTRIBUTE_WARN_UNUSED_RET int _bash256_final(hash_context * hctx, unsigned char *output);
+#endif
+#ifdef WITH_HASH_BASH384
+ATTRIBUTE_WARN_UNUSED_RET int _bash384_init(hash_context * hctx);
+ATTRIBUTE_WARN_UNUSED_RET int _bash384_update(hash_context * hctx, const unsigned char *chunk, u32 chunklen);
+ATTRIBUTE_WARN_UNUSED_RET int _bash384_final(hash_context * hctx, unsigned char *output);
+#endif
+#ifdef WITH_HASH_BASH512
+ATTRIBUTE_WARN_UNUSED_RET int _bash512_init(hash_context * hctx);
+ATTRIBUTE_WARN_UNUSED_RET int _bash512_update(hash_context * hctx, const unsigned char *chunk, u32 chunklen);
+ATTRIBUTE_WARN_UNUSED_RET int _bash512_final(hash_context * hctx, unsigned char *output);
 #endif
 
 /*
@@ -444,6 +480,62 @@ static const hash_mapping hash_maps[] = {
 #define MAX_HASH_ALG_NAME_LEN 9
 #endif /* MAX_HASH_ALG_NAME_LEN */
 #endif /* WITH_HASH_BELT_HASH */
+#ifdef WITH_HASH_BASH224
+	{.type = BASH224,	/* BASH224 */
+	 .name = "BASH224",
+	 .digest_size = BASH224_DIGEST_SIZE,
+	 .block_size = BASH224_BLOCK_SIZE,
+	 .hfunc_init = _bash224_init,
+	 .hfunc_update = _bash224_update,
+	 .hfunc_finalize = _bash224_final,
+	 .hfunc_scattered = bash224_scattered},
+#if (MAX_HASH_ALG_NAME_LEN < 8)
+#undef MAX_HASH_ALG_NAME_LEN
+#define MAX_HASH_ALG_NAME_LEN 8
+#endif /* MAX_HASH_ALG_NAME_LEN */
+#endif /* WITH_HASH_BASH224 */
+#ifdef WITH_HASH_BASH256
+	{.type = BASH256,	/* BASH256 */
+	 .name = "BASH256",
+	 .digest_size = BASH256_DIGEST_SIZE,
+	 .block_size = BASH256_BLOCK_SIZE,
+	 .hfunc_init = _bash256_init,
+	 .hfunc_update = _bash256_update,
+	 .hfunc_finalize = _bash256_final,
+	 .hfunc_scattered = bash256_scattered},
+#if (MAX_HASH_ALG_NAME_LEN < 8)
+#undef MAX_HASH_ALG_NAME_LEN
+#define MAX_HASH_ALG_NAME_LEN 8
+#endif /* MAX_HASH_ALG_NAME_LEN */
+#endif /* WITH_HASH_BASH256 */
+#ifdef WITH_HASH_BASH384
+	{.type = BASH384,	/* BASH384 */
+	 .name = "BASH384",
+	 .digest_size = BASH384_DIGEST_SIZE,
+	 .block_size = BASH384_BLOCK_SIZE,
+	 .hfunc_init = _bash384_init,
+	 .hfunc_update = _bash384_update,
+	 .hfunc_finalize = _bash384_final,
+	 .hfunc_scattered = bash384_scattered},
+#if (MAX_HASH_ALG_NAME_LEN < 8)
+#undef MAX_HASH_ALG_NAME_LEN
+#define MAX_HASH_ALG_NAME_LEN 8
+#endif /* MAX_HASH_ALG_NAME_LEN */
+#endif /* WITH_HASH_BASH384 */
+#ifdef WITH_HASH_BASH512
+	{.type = BASH512,	/* BASH512 */
+	 .name = "BASH512",
+	 .digest_size = BASH512_DIGEST_SIZE,
+	 .block_size = BASH512_BLOCK_SIZE,
+	 .hfunc_init = _bash512_init,
+	 .hfunc_update = _bash512_update,
+	 .hfunc_finalize = _bash512_final,
+	 .hfunc_scattered = bash512_scattered},
+#if (MAX_HASH_ALG_NAME_LEN < 8)
+#undef MAX_HASH_ALG_NAME_LEN
+#define MAX_HASH_ALG_NAME_LEN 8
+#endif /* MAX_HASH_ALG_NAME_LEN */
+#endif /* WITH_HASH_BASH512 */
 	{.type = UNKNOWN_HASH_ALG,	/* Needs to be kept last */
 	 .name = "UNKNOWN",
 	 .digest_size = 0,
