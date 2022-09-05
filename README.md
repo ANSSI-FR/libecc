@@ -44,8 +44,9 @@ standard and some other signature algorithms as well as ECDH primitives, with th
   * **Hash functions**: SHA-2 and SHA-3 hash functions (224, 256, 384, 512), SM3, RIPEMD-160,
 GOST 34.11-2012 as described in [RFC 6986](https://datatracker.ietf.org/doc/html/rfc6986)
 (also known as [Streebog](https://tc26.ru/en/events/research-projects-competition/streebog-competition.html)),
-SHAKE256 in its restricted version with 114 bytes output (mainly for Ed448), and BELT-HASH (as standardized in
-[STB 34.101.31-2011](https://github.com/bcrypto/belt)).
+SHAKE256 in its restricted version with 114 bytes output (mainly for Ed448), BELT-HASH (as standardized in
+[STB 34.101.31-2011](https://github.com/bcrypto/belt)), and BASH-{224,256,384,512} (as standardized in
+[STB 34.101.77-2020](http://apmi.bsu.by/assets/files/std/bash-spec24.pdf)).
 **HMAC** based on any of these hash functions is also included.
 
 ECDSA comes in two variants: the classical non-deterministic one, and the **deterministic** ECDSA

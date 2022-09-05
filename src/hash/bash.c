@@ -16,7 +16,7 @@
 
 /*
  * This is an implementation of the BASH hash functions family (for sizes 224, 256, 384 and 512)
- * following the standard STD 34.101.77-2020 (http://apmi.bsu.by/assets/files/std/bash-spec24.pdf).
+ * following the standard STB 34.101.77-2020 (http://apmi.bsu.by/assets/files/std/bash-spec24.pdf).
  * An english version of the specifications exist here: https://eprint.iacr.org/2016/587.pdf
  */
 
