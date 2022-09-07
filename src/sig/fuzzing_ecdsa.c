@@ -352,7 +352,7 @@ int ecdsa_verify_raw(struct ec_verify_context *ctx, const u8 *input, u8 inputlen
 	 */
 	ret = nn_init_from_buf(&e, hash, hsize); EG(ret, err);
 	ret = local_memset(hash, 0, hsize); EG(ret, err);
-	dbg_nn_print("h initial import as nn", &tmp);
+	dbg_nn_print("h initial import as nn", &e);
 	if (rshift) {
 		ret = nn_rshift_fixedlen(&e, &e, rshift); EG(ret, err);
 	}

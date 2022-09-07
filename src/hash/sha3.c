@@ -13,6 +13,9 @@
  *  This software is licensed under a dual BSD and GPL v2 license.
  *  See LICENSE file at the root folder of the project.
  */
+#include "../lib_ecc_config.h"
+
+#if defined(WITH_HASH_SHA3_224) || defined(WITH_HASH_SHA3_256) || defined(WITH_HASH_SHA3_384) || defined(WITH_HASH_SHA3_512)
 #include "../utils/utils.h"
 #include "sha3.h"
 
@@ -104,3 +107,10 @@ int _sha3_finalize(sha3_context *ctx, u8 *output)
 err:
 	return ret;
 }
+
+#else
+/*
+ * Dummy definition to avoid the empty translation unit ISO C warning
+ */
+typedef int dummy;
+#endif

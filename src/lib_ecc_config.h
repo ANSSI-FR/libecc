@@ -102,6 +102,10 @@
 #define WITH_HASH_STREEBOG512
 #define WITH_HASH_RIPEMD160
 #define WITH_HASH_BELT_HASH
+#define WITH_HASH_BASH224
+#define WITH_HASH_BASH256
+#define WITH_HASH_BASH384
+#define WITH_HASH_BASH512
 #define WITH_HMAC
 
 /* Supported sig/verif schemes */

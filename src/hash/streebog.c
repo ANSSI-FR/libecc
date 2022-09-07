@@ -32,7 +32,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int streebog_init(streebog_context *ctx, u8 dig
 	int ret;
 
 	/* Sanity check */
-	MUST_HAVE((digest_size == 32) || (digest_size == 64), ret, err);
+	MUST_HAVE((digest_size == STREEBOG256_DIGEST_SIZE) || (digest_size == STREEBOG512_DIGEST_SIZE), ret, err);
 
 	MUST_HAVE((ctx != NULL), ret, err);
 

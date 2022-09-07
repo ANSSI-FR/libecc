@@ -375,6 +375,9 @@ ATTRIBUTE_WARN_UNUSED_RET int gostr34_11_94_init(gostr34_11_94_context *ctx)
 
 	MUST_HAVE((ctx != NULL), ret, err);
 
+	/* Sanity check on size */
+	MUST_HAVE((GOSTR34_11_94_DIGEST_SIZE <= MAX_DIGEST_SIZE), ret, err);
+
 	ctx->gostr34_11_94_total = 0;
 	ctx->gostr34_11_94_state[0] = 0;
 	ctx->gostr34_11_94_state[1] = 0;

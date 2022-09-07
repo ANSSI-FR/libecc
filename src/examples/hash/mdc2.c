@@ -90,6 +90,9 @@ ATTRIBUTE_WARN_UNUSED_RET int mdc2_init(mdc2_context *ctx)
 
 	MUST_HAVE((ctx != NULL), ret, err);
 
+        /* Sanity check on size */
+	MUST_HAVE((MDC2_DIGEST_SIZE <= MAX_DIGEST_SIZE), ret, err);
+
 	ctx->mdc2_total = 0;
 	/* Initialize A1 */
 	ret = local_memset(&(ctx->mdc2_state[0]), 0x52, 8); EG(ret, err);

@@ -371,3 +371,59 @@ ATTRIBUTE_WARN_UNUSED_RET int _belt_hash_final(hash_context * hctx, unsigned cha
 	return belt_hash_final((belt_hash_context*)hctx, output);
 }
 #endif
+#ifdef WITH_HASH_BASH224
+ATTRIBUTE_WARN_UNUSED_RET int _bash224_init(hash_context * hctx)
+{
+	return bash224_init((bash224_context*)hctx);
+}
+ATTRIBUTE_WARN_UNUSED_RET int _bash224_update(hash_context * hctx, const unsigned char *chunk, u32 chunklen)
+{
+	return bash224_update((bash224_context*)hctx, chunk, chunklen);
+}
+ATTRIBUTE_WARN_UNUSED_RET int _bash224_final(hash_context * hctx, unsigned char *output)
+{
+	return bash224_final((bash224_context*)hctx, output);
+}
+#endif
+#ifdef WITH_HASH_BASH256
+ATTRIBUTE_WARN_UNUSED_RET int _bash256_init(hash_context * hctx)
+{
+	return bash256_init((bash256_context*)hctx);
+}
+ATTRIBUTE_WARN_UNUSED_RET int _bash256_update(hash_context * hctx, const unsigned char *chunk, u32 chunklen)
+{
+	return bash256_update((bash256_context*)hctx, chunk, chunklen);
+}
+ATTRIBUTE_WARN_UNUSED_RET int _bash256_final(hash_context * hctx, unsigned char *output)
+{
+	return bash256_final((bash256_context*)hctx, output);
+}
+#endif
+#ifdef WITH_HASH_BASH384
+ATTRIBUTE_WARN_UNUSED_RET int _bash384_init(hash_context * hctx)
+{
+	return bash384_init((bash384_context*)hctx);
+}
+ATTRIBUTE_WARN_UNUSED_RET int _bash384_update(hash_context * hctx, const unsigned char *chunk, u32 chunklen)
+{
+	return bash384_update((bash384_context*)hctx, chunk, chunklen);
+}
+ATTRIBUTE_WARN_UNUSED_RET int _bash384_final(hash_context * hctx, unsigned char *output)
+{
+	return bash384_final((bash384_context*)hctx, output);
+}
+#endif
+#ifdef WITH_HASH_BASH512
+ATTRIBUTE_WARN_UNUSED_RET int _bash512_init(hash_context * hctx)
+{
+	return bash512_init((bash512_context*)hctx);
+}
+ATTRIBUTE_WARN_UNUSED_RET int _bash512_update(hash_context * hctx, const unsigned char *chunk, u32 chunklen)
+{
+	return bash512_update((bash512_context*)hctx, chunk, chunklen);
+}
+ATTRIBUTE_WARN_UNUSED_RET int _bash512_final(hash_context * hctx, unsigned char *output)
+{
+	return bash512_final((bash512_context*)hctx, output);
+}
+#endif

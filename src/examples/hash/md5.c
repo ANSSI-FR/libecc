@@ -100,6 +100,9 @@ ATTRIBUTE_WARN_UNUSED_RET int md5_init(md5_context *ctx)
 
 	MUST_HAVE((ctx != NULL), ret, err);
 
+        /* Sanity check on size */
+	MUST_HAVE((MD5_DIGEST_SIZE <= MAX_DIGEST_SIZE), ret, err);
+
 	ctx->md5_total = 0;
 	ctx->md5_state[0] = 0x67452301;
 	ctx->md5_state[1] = 0xEFCDAB89;
