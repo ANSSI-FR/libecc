@@ -141,7 +141,6 @@ ATTRIBUTE_WARN_UNUSED_RET static int get_libecc_hash(gen_hash_alg_type gen_hash_
 		}
 
 		default:{
-			ret = -1;
 			htype = UNKNOWN_HASH_ALG;
 			break;
 		}
@@ -151,6 +150,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int get_libecc_hash(gen_hash_alg_type gen_hash_
 		ret = get_hash_by_type(htype, hm); EG(ret, err);
 		ret = get_hash_sizes(htype, hlen, block_size); EG(ret, err);
 		MUST_HAVE(((*hlen) <= MAX_DIGEST_SIZE), ret, err);
+		ret = 0;
 	}
 	else{
 		ret = -1;

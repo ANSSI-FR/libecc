@@ -536,7 +536,7 @@ int rsadp_hardened(const rsa_priv_key *priv, const rsa_pub_key *pub, nn_src_t c,
 	ret = rsadp(priv, &b, m); EG(ret, err);
 
 	/* Unblind the result */
-	ret = nn_mod_mul(m, m, &binv, n);
+	ret = nn_mod_mul(m, m, &binv, n); EG(ret, err);
 
 	/* Now perform the public operation to check the result.
 	 * This is useful against some fault attacks (Bellcore style).
@@ -1088,7 +1088,7 @@ int emsa_pkcs1_v1_5_encode(const u8 *m, u16 mlen, u8 *em, u16 emlen,
 	/* Copy T at the end of em */
 	digestinfo_len = emlen;
 	ret = rsa_digestinfo_from_hash(gen_hash_type, &em[emlen - tlen], &digestinfo_len); EG(ret, err);
-	ret = local_memcpy(&em[emlen - tlen + digestinfo_len], digest, digest_size);
+	ret = local_memcpy(&em[emlen - tlen + digestinfo_len], digest, digest_size); EG(ret, err);
 
 	/*
 	 * Format 0x00 || 0x01 || PS || 0x00 before
@@ -1145,10 +1145,10 @@ int rsaes_pkcs1_v1_5_encrypt(const rsa_pub_key *pub, const u8 *m, u16 mlen,
 		for(i = 0; i < seedlen; i++){
 			MUST_HAVE((forced_seed[i] != 0), ret, err);
 		}
-		ret = local_memcpy(&em[2], forced_seed, seedlen);
+		ret = local_memcpy(&em[2], forced_seed, seedlen); EG(ret, err);
 	}
 	em[k - mlen - 1] = 0x00;
-	ret = local_memcpy(&em[k - mlen], m, mlen);
+	ret = local_memcpy(&em[k - mlen], m, mlen); EG(ret, err);
 
 	/* RSA encryption */
 	/*   m = OS2IP (EM) */

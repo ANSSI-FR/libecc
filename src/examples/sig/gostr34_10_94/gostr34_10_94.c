@@ -324,9 +324,9 @@ int gostr34_10_94_verify(const gostr34_10_94_pub_key *pub, const u8 *msg, u32 ms
 	}
 
 	/* Initialize internal variables */
-	ret = nn_init(&v, 0);
-	ret = nn_init(&u1, 0);
-	ret = nn_init(&u2, 0);
+	ret = nn_init(&v, 0); EG(ret, err);
+	ret = nn_init(&u1, 0); EG(ret, err);
+	ret = nn_init(&u2, 0); EG(ret, err);
 
 	/* Compute v = z ** (q-2) mod (q) in s */
 	ret = nn_dec(&u1, q); EG(ret, err); /* use u1 as temp here */
