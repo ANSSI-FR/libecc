@@ -109,6 +109,36 @@ ATTRIBUTE_WARN_UNUSED_RET static int get_libecc_hash(gen_hash_alg_type gen_hash_
 #endif
 			break;
 		}
+		case HASH_BELT_HASH:{
+#ifdef WITH_HASH_BELT_HASH
+			htype = BELT_HASH;
+#endif
+			break;
+		}
+		case HASH_BASH224:{
+#ifdef WITH_HASH_BASH224
+			htype = BASH224;
+#endif
+			break;
+		}
+		case HASH_BASH256:{
+#ifdef WITH_HASH_BASH256
+			htype = BASH256;
+#endif
+			break;
+		}
+		case HASH_BASH384:{
+#ifdef WITH_HASH_BASH384
+			htype = BASH384;
+#endif
+			break;
+		}
+		case HASH_BASH512:{
+#ifdef WITH_HASH_BASH512
+			htype = BASH512;
+#endif
+			break;
+		}
 
 		default:{
 			ret = -1;
