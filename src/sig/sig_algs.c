@@ -672,6 +672,25 @@ err:
 	return ret;
 }
 
+int ec_verify_batch(const u8 **s, const u8 *s_len, const ec_pub_key **pub_keys,
+              const u8 **m, const u32 *m_len, u32 num, ec_alg_type sig_type,
+              hash_alg_type hash_type, const u8 **adata, const u16 *adata_len)
+{
+
+	const ec_sig_mapping *sm;
+	int ret;
+
+	ret = get_sig_by_type(sig_type, &sm); EG(ret, err);
+
+	MUST_HAVE((sm != NULL) && (sm->verify_batch != NULL), ret, err);
+
+	ret = sm->verify_batch(s, s_len, pub_keys, m, m_len, num, sig_type,
+			 hash_type, adata, adata_len);
+
+err:
+	return ret;
+}
+
 /*
  * Import a signature with structured data containing information about the EC
  * algorithm type as well as the hash function used to produce the signature.
@@ -825,6 +844,27 @@ int unsupported_verify_finalize(struct ec_verify_context * ctx)
 	return -1;
 }
 
+/* Unsupported batch verification */
+int unsupported_verify_batch(const u8 **s, const u8 *s_len, const ec_pub_key **pub_keys,
+              const u8 **m, const u32 *m_len, u32 num, ec_alg_type sig_type,
+              hash_alg_type hash_type, const u8 **adata, const u16 *adata_len)
+{
+	/* Quirk to avoid unused variables */
+	FORCE_USED_VAR(s);
+	FORCE_USED_VAR(pub_keys);
+	FORCE_USED_VAR(m);
+	FORCE_USED_VAR(num);
+	FORCE_USED_VAR(sig_type);
+	FORCE_USED_VAR(hash_type);
+	FORCE_USED_VAR(adata);
+	FORCE_USED_VAR(s_len);
+	FORCE_USED_VAR(m_len);
+	FORCE_USED_VAR(adata_len);
+
+	/* Return an error in any case here */
+	return -1;
+}
+
 /* This function returns 1 in 'check' if the init/update/finalize mode
  * is supported by the signature algorithm, 0 otherwise.
  *
@@ -873,6 +913,33 @@ int is_verify_streaming_mode_supported(ec_alg_type sig_type, int *check)
 	if ((sig->verify_init == unsupported_verify_init) ||
 	    (sig->verify_update == unsupported_verify_update) ||
 	    (sig->verify_finalize == unsupported_verify_finalize)) {
+		(*check) = 0;
+	}
+	else{
+		(*check) = 1;
+	}
+
+err:
+	return ret;
+}
+
+/* This function returns 1 in 'check' if the batch verification mode
+ * is supported by the verification algorithm, 0 otherwise.
+ *
+ * Return value is 0 on success, -1 on error. 'check' is only meaningful on
+ * success.
+ */
+int is_verify_batch_mode_supported(ec_alg_type sig_type, int *check)
+{
+	int ret;
+	const ec_sig_mapping *sig;
+
+	MUST_HAVE((check != NULL), ret, err);
+
+	ret = get_sig_by_type(sig_type, &sig); EG(ret, err);
+	MUST_HAVE((sig != NULL), ret, err);
+
+	if (sig->verify_batch == unsupported_verify_batch) {
 		(*check) = 0;
 	}
 	else{

@@ -487,7 +487,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int eddsa_decode_point(aff_pt_edwards_t out, ec
 		 * Edwards448 so we use the dedicated d.
 		 */
 		ret = fp_init_from_buf(&tmp, edwards_curve->a.ctx,
-          		(const u8*)d_edwards448_buff, sizeof(d_edwards448_buff)); EG(ret, err);
+				(const u8*)d_edwards448_buff, sizeof(d_edwards448_buff)); EG(ret, err);
 		ret = ec_edwards_crv_init(&edwards_curve_edwards448, &(edwards_curve->a), &tmp, &(edwards_curve->order)); EG(ret, err);
 		/* Compute x from y using the dedicated primitive */
 		ret = aff_pt_edwards_x_from_y(&sqrt1, &sqrt2, &y, &edwards_curve_edwards448); EG(ret, err); /* Error or no square root found, this should not happen! */
@@ -2057,6 +2057,7 @@ int _eddsa_verify_init(struct ec_verify_context *ctx, const u8 *sig, u8 siglen)
 	PTR_NULLIFY(alpha_edwards);
 	PTR_NULLIFY(gen_cofactor);
 	PTR_NULLIFY(pub_key_y);
+
 	aff_pt_edwards_uninit(&A);
 	aff_pt_edwards_uninit(&R);
 	prj_pt_uninit(&_Tmp);
@@ -2233,7 +2234,7 @@ int _eddsa_verify_finalize(struct ec_verify_context *ctx)
 	ret = prj_pt_iszero(&_Tmp2, &iszero); EG(ret, err);
 	MUST_HAVE(iszero, ret, err);
 
- err:
+err:
 	/*
 	 * We can now clear data part of the context. This will clear
 	 * magic and avoid further reuse of the whole context.
@@ -2252,12 +2253,302 @@ int _eddsa_verify_finalize(struct ec_verify_context *ctx)
 	VAR_ZEROIFY(hsize);
 	VAR_ZEROIFY(use_message_pre_hash);
 	VAR_ZEROIFY(use_message_pre_hash_hsize);
+
 	nn_uninit(&h);
 	prj_pt_uninit(&_Tmp1);
 	prj_pt_uninit(&_Tmp2);
 
 	return ret;
 }
+
+/* Batch verification function:
+ * This function takes multiple signatures/messages/public keys, and
+ * checks in an optimized way all the signatures.
+ *
+ * This returns 0 if *all* the signatures are correct, and -1 if at least
+ * one signature is not correct.
+ */
+int eddsa_verify_batch(const u8 **s, const u8 *s_len, const ec_pub_key **pub_keys,
+	               const u8 **m, const u32 *m_len, u32 num, ec_alg_type sig_type,
+	               hash_alg_type hash_type, const u8 **adata, const u16 *adata_len)
+{
+	nn_src_t q;
+	ec_edwards_crv crv_edwards;
+	aff_pt_edwards R, A;
+	prj_pt_src_t G;
+	prj_pt _Tmp, _R_sum, _A_sum;
+	nn S, S_sum, z, h;
+	u8 hash[MAX_DIGEST_SIZE];
+	int ret, iszero, cmp;
+	u16 hsize;
+	const ec_pub_key *pub_key, *pub_key0;
+	ec_shortw_crv_src_t shortw_curve;
+	fp_src_t alpha_montgomery;
+	fp_src_t gamma_montgomery;
+	fp_src_t alpha_edwards;
+	nn_src_t gen_cofactor;
+	prj_pt_src_t pub_key_y;
+	hash_context h_ctx;
+	hash_context h_ctx_pre_hash;
+	u8 use_message_pre_hash = 0;
+	u16 use_message_pre_hash_hsize = 0;
+	const hash_mapping *hm;
+	ec_alg_type key_type = UNKNOWN_ALG;
+	u32 i;
+
+	R.magic = S.magic = S_sum.magic = crv_edwards.magic = WORD(0);
+	_Tmp.magic = _R_sum.magic = _A_sum.magic = WORD(0);
+	z.magic = h.magic = WORD(0);
+
+	/* First, some sanity checks */
+	MUST_HAVE((s != NULL) && (pub_keys != NULL) && (m != NULL) && (adata != NULL), ret, err);
+	/* We need at least one element in our batch data bags */
+	MUST_HAVE((num > 0), ret, err);
+
+
+	/* Zero init our local data */
+	ret = local_memset(&crv_edwards, 0, sizeof(ec_edwards_crv)); EG(ret, err);
+	ret = local_memset(hash, 0, sizeof(hash)); EG(ret, err);
+	ret = local_memset(&A, 0, sizeof(aff_pt_edwards)); EG(ret, err);
+	ret = local_memset(&R, 0, sizeof(aff_pt_edwards)); EG(ret, err);
+	ret = local_memset(&_R_sum, 0, sizeof(prj_pt)); EG(ret, err);
+	ret = local_memset(&_A_sum, 0, sizeof(prj_pt)); EG(ret, err);
+	ret = local_memset(&_Tmp, 0, sizeof(prj_pt)); EG(ret, err);
+
+	pub_key0 = pub_keys[0];
+	MUST_HAVE((pub_key0 != NULL), ret, err);
+
+	/* Get our hash mapping */
+	ret = get_hash_by_type(hash_type, &hm); EG(ret, err);
+	hsize = hm->digest_size;
+	MUST_HAVE((hm != NULL), ret, err);
+
+	/* Do we use the raw message or its PH(M) hashed version? */
+#if defined(WITH_SIG_EDDSA25519)
+	if(sig_type == EDDSA25519PH){
+		use_message_pre_hash = 1;
+		use_message_pre_hash_hsize = hsize;
+	}
+#endif
+#if defined(WITH_SIG_EDDSA448)
+	if(sig_type == EDDSA448PH){
+		use_message_pre_hash = 1;
+		/* NOTE: as per RFC8032, EDDSA448PH uses
+		 * SHAKE256 with 64 bytes output.
+		 */
+		use_message_pre_hash_hsize = 64;
+	}
+#endif
+
+	/* Do some sanity checks on input params */
+	for(i = 0; i < num; i++){
+		u8 siglen;
+		const u8 *sig = NULL;
+
+		ret = eddsa_pub_key_sanity_check(pub_keys[i]); EG(ret, err);
+
+		/* Make things more readable */
+		pub_key = pub_keys[i];
+
+		/* Sanity check that all our public keys have the same parameters */
+		MUST_HAVE((pub_key->params) == (pub_key0->params), ret, err);
+
+		q = &(pub_key->params->ec_fp.p);
+		shortw_curve = &(pub_key->params->ec_curve);
+		alpha_montgomery = &(pub_key->params->ec_alpha_montgomery);
+		gamma_montgomery = &(pub_key->params->ec_gamma_montgomery);
+		alpha_edwards = &(pub_key->params->ec_alpha_edwards);
+		gen_cofactor = &(pub_key->params->ec_gen_cofactor);
+		pub_key_y = &(pub_key->y);
+		key_type = pub_key->key_type;
+		G = &(pub_key->params->ec_gen);
+
+		/* Check the key type versus the algorithm */
+		MUST_HAVE((key_type == sig_type), ret, err);
+
+		if(i == 0){
+			/* Initialize our sums to zero/point at infinity */
+			ret = nn_init(&S_sum, 0); EG(ret, err);
+			ret = prj_pt_init(&_R_sum, shortw_curve); EG(ret, err);
+			ret = prj_pt_zero(&_R_sum); EG(ret, err);
+			ret = prj_pt_init(&_A_sum, shortw_curve); EG(ret, err);
+			ret = prj_pt_zero(&_A_sum); EG(ret, err);
+			ret = nn_init(&z, 0); EG(ret, err);
+			ret = nn_init(&h, 0); EG(ret, err);
+		}
+
+gen_z_again:
+		/* Get a random z for randomizing the linear combination */
+		ret = nn_get_random_len(&z, (hsize / 4)); EG(ret, err);
+		ret = nn_iszero(&z, &iszero); EG(ret, err);
+		if(iszero){
+			goto gen_z_again;
+		}
+
+		/* Sanity check on hash types */
+		MUST_HAVE((hash_type == get_eddsa_hash_type(key_type)), ret, err);
+
+		/* Check given signature length is the expected one */
+		siglen = s_len[i];
+		sig = s[i];
+		MUST_HAVE((siglen == EDDSA_SIGLEN(hsize)), ret, err);
+		MUST_HAVE((siglen == (EDDSA_R_LEN(hsize) + EDDSA_S_LEN(hsize))), ret, err);
+
+		/* Initialize the hash context */
+		/* Since we call a callback, sanity check our mapping */
+		ret = hash_mapping_callbacks_sanity_check(hm); EG(ret, err);
+		ret = hm->hfunc_init(&h_ctx); EG(ret, err);
+		ret = hm->hfunc_init(&h_ctx_pre_hash); EG(ret, err);
+#if defined(WITH_SIG_EDDSA25519)
+		if(key_type == EDDSA25519CTX){
+			/* As per RFC8032, for EDDSA25519CTX the context SHOULD NOT be empty */
+			MUST_HAVE((adata[i] != NULL), ret, err);
+			ret = dom2(0, adata[i], adata_len[i], hm, &h_ctx); EG(ret, err);
+		}
+		if(key_type == EDDSA25519PH){
+			ret = dom2(1, adata[i], adata_len[i], hm, &h_ctx); EG(ret, err);
+		}
+#endif
+#if defined(WITH_SIG_EDDSA448)
+		if(key_type == EDDSA448){
+			ret = dom4(0, adata[i], adata_len[i], hm, &h_ctx); EG(ret, err);
+		}
+		if(key_type == EDDSA448PH){
+			ret = dom4(1, adata[i], adata_len[i], hm, &h_ctx); EG(ret, err);
+		}
+#endif
+		/* Import R and S values from signature buffer */
+		/*******************************/
+		/* Import R as an Edwards point */
+		ret = curve_shortw_to_edwards(shortw_curve, &crv_edwards, alpha_montgomery,
+					gamma_montgomery, alpha_edwards); EG(ret, err);
+		/* NOTE: non canonical R are checked and rejected here */
+		ret = eddsa_decode_point(&R, &crv_edwards, alpha_edwards, &sig[0],
+				      EDDSA_R_LEN(hsize), key_type); EG(ret, err);
+		dbg_ec_edwards_point_print("R", &R);
+		/* Transfer our public point R to Weierstrass */
+		ret = aff_pt_edwards_to_prj_pt_shortw(&R, shortw_curve, &_Tmp, alpha_edwards); EG(ret, err);
+		/* Update the hash with the encoded R */
+		ret = hm->hfunc_update(&h_ctx, &sig[0], EDDSA_R_LEN(hsize)); EG(ret, err);
+		/* Multiply by z.
+		 */
+		ret = prj_pt_mul(&_Tmp, &z, &_Tmp); EG(ret, err);
+		/* Add to the sum */
+		ret = prj_pt_add(&_R_sum, &_R_sum, &_Tmp); EG(ret, err);
+
+		/*******************************/
+		/* Import S as an integer */
+		ret = eddsa_decode_integer(&S, &sig[EDDSA_R_LEN(hsize)], EDDSA_S_LEN(hsize)); EG(ret, err);
+		/* Reject S if it is not reduced modulo q */
+		ret = nn_cmp(&S, q, &cmp); EG(ret, err);
+		MUST_HAVE((cmp < 0), ret, err);
+		dbg_nn_print("S", &S);
+
+		/* Add z S to the sum */
+		ret = nn_mul(&S, &S, &z); EG(ret, err);
+		ret = nn_mod(&S, &S, q); EG(ret, err);
+		ret = nn_mod_add(&S_sum, &S_sum, &S, q); EG(ret, err);
+
+		/*******************************/
+		/* Encode the public key
+		 * NOTE: since we deal with a public key transfered to Weierstrass,
+		 * encoding checking has been handled elsewhere.
+		 */
+		/* Reject the signature if the public key is one of small order points.
+		 * We multiply by the cofactor: since this is a public verification,
+		 * we use a basic double and add algorithm.
+		 */
+		ret = _prj_pt_unprotected_mult(&_Tmp, gen_cofactor, pub_key_y); EG(ret, err);
+		/* Reject the signature if we have point at infinity here as this means
+		 * that the public key is of small order.
+		 */
+		ret = prj_pt_iszero(&_Tmp, &iszero); EG(ret, err);
+		MUST_HAVE((!iszero), ret, err);
+
+		/* Transfer the public key to Edwards */
+		ret = prj_pt_shortw_to_aff_pt_edwards(pub_key_y, &crv_edwards, &A, alpha_edwards); EG(ret, err);
+		dbg_ec_edwards_point_print("A", &A);
+		MUST_HAVE((EDDSA_R_LEN(hsize) <= sizeof(hash)), ret, err);
+		/* NOTE: we use the hash buffer as a temporary buffer */
+		ret = eddsa_encode_point(&A, alpha_edwards, hash, EDDSA_R_LEN(hsize), key_type); EG(ret, err);
+
+		/* Update the hash with the encoded public key */
+		ret = hm->hfunc_update(&h_ctx, hash, EDDSA_R_LEN(hsize)); EG(ret, err);
+		/* Finish our computation of h = H(R || A || M) */
+		/* Update the hash with the message or its hash for the PH versions */
+		if(use_message_pre_hash == 1){
+			ret = hm->hfunc_update(&h_ctx_pre_hash, m[i], m_len[i]); EG(ret, err);
+			ret = hm->hfunc_finalize(&h_ctx_pre_hash, hash); EG(ret, err);
+			MUST_HAVE((use_message_pre_hash_hsize <= hsize), ret, err);
+			ret = hm->hfunc_update(&h_ctx, hash, use_message_pre_hash_hsize); EG(ret, err);
+		}
+		else{
+			ret = hm->hfunc_update(&h_ctx, m[i], m_len[i]); EG(ret, err);
+		}
+		ret = hm->hfunc_finalize(&h_ctx, hash); EG(ret, err);
+		dbg_buf_print("hash = H(R || A || PH(M))", hash, hsize);
+
+		/* Import our hash as a NN and reduce it modulo q */
+		ret = eddsa_decode_integer(&h, hash, hsize); EG(ret, err);
+		ret = nn_mod(&h, &h, q); EG(ret, err);
+		dbg_nn_print("h = ", &h);
+
+		/* Multiply by (z * h) mod q.
+		 * NOTE: we use unprotected scalar multiplication since this is a
+		 * public operation.
+		 */
+		ret = nn_mul(&z, &z, &h); EG(ret, err);
+		ret = nn_mod(&z, &z, q); EG(ret, err);
+		ret = prj_pt_mul(&_Tmp, &z, &_Tmp); EG(ret, err);
+		/* Add to the sum */
+		ret = prj_pt_add(&_A_sum, &_A_sum, &_Tmp); EG(ret, err);
+	}
+
+	/* Multiply the S sum by the cofactor */
+	ret = nn_mul(&S_sum, &S_sum, gen_cofactor); EG(ret, err);
+	ret = nn_mod(&S_sum, &S_sum, q); EG(ret, err);
+	/* Negate it. NOTE: -x mod q is (q - x) mod q, i.e. (q - x) when x is reduced */
+	ret = nn_sub(&S_sum, q, &S_sum); EG(ret, err);
+	/* Multiply this by the generator */
+	ret = prj_pt_mul(&_Tmp, &S_sum, G); EG(ret, err);
+
+	/* Multiply the R sum by the cofactor */
+	ret = _prj_pt_unprotected_mult(&_R_sum, gen_cofactor, &_R_sum); EG(ret, err);
+
+	/* Now add the three sums */
+	ret = prj_pt_add(&_Tmp, &_Tmp, &_A_sum);
+	ret = prj_pt_add(&_Tmp, &_Tmp, &_R_sum);
+
+	/* Reject the signature if we do not have point at infinity here */
+	ret = prj_pt_iszero(&_Tmp, &iszero); EG(ret, err);
+	MUST_HAVE(iszero, ret, err);
+
+err:
+	PTR_NULLIFY(q);
+	PTR_NULLIFY(pub_key);
+	PTR_NULLIFY(pub_key0);
+	PTR_NULLIFY(shortw_curve);
+	PTR_NULLIFY(alpha_montgomery);
+	PTR_NULLIFY(gamma_montgomery);
+	PTR_NULLIFY(alpha_edwards);
+	PTR_NULLIFY(gen_cofactor);
+	PTR_NULLIFY(pub_key_y);
+	PTR_NULLIFY(G);
+
+	aff_pt_edwards_uninit(&A);
+	aff_pt_edwards_uninit(&R);
+	prj_pt_uninit(&_R_sum);
+	prj_pt_uninit(&_A_sum);
+	prj_pt_uninit(&_Tmp);
+	nn_uninit(&S);
+	nn_uninit(&S_sum);
+	nn_uninit(&z);
+	nn_uninit(&h);
+
+	return ret;
+
+}
+
 
 #else /* !(defined(WITH_SIG_EDDSA25519) || defined(WITH_SIG_EDDSA448)) */
 

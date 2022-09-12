@@ -74,6 +74,10 @@ typedef struct {
 	ATTRIBUTE_WARN_UNUSED_RET int (*verify) (const u8 *sig, u8 siglen, const ec_pub_key *pub_key,
 	      const u8 *m, u32 mlen, ec_alg_type sig_type,
 	      hash_alg_type hash_type, const u8 *adata, u16 adata_len);
+	ATTRIBUTE_WARN_UNUSED_RET int (*verify_batch) (const u8 **s, const u8 *s_len, const ec_pub_key **pub_keys,
+              const u8 **m, const u32 *m_len, u32 num, ec_alg_type sig_type,
+              hash_alg_type hash_type, const u8 **adata, const u16 *adata_len);
+
 } ec_sig_mapping;
 
 /* Sanity check to ensure our sig mapping does not contain
@@ -88,7 +92,8 @@ ATTRIBUTE_WARN_UNUSED_RET static inline int sig_mapping_sanity_check(const ec_si
 		    (sm->sign_init != NULL) && (sm->sign_update != NULL) &&
 		    (sm->sign_finalize != NULL) && (sm->sign != NULL) &&
 		    (sm->verify_init != NULL) && (sm->verify_update != NULL) &&
-		    (sm->verify_finalize != NULL) && (sm->verify != NULL)),
+		    (sm->verify_finalize != NULL) && (sm->verify != NULL) &&
+		    (sm->verify_batch != NULL)),
 		   ret, err);
 
 	ret = 0;
@@ -232,6 +237,7 @@ ATTRIBUTE_WARN_UNUSED_RET int generic_ec_sign(u8 *sig, u8 siglen, const ec_key_p
 ATTRIBUTE_WARN_UNUSED_RET int generic_ec_verify(const u8 *sig, u8 siglen, const ec_pub_key *pub_key,
 	      const u8 *m, u32 mlen, ec_alg_type sig_type,
 	      hash_alg_type hash_type, const u8 *adata, u16 adata_len);
+
 /* Generic init / update / finalize functions returning an error and telling that they are
  * unsupported.
  */
@@ -253,6 +259,12 @@ ATTRIBUTE_WARN_UNUSED_RET int is_verify_streaming_mode_supported(ec_alg_type sig
 
 ATTRIBUTE_WARN_UNUSED_RET int is_sign_deterministic(ec_alg_type sig_type, int *check);
 
+ATTRIBUTE_WARN_UNUSED_RET int is_verify_batch_mode_supported(ec_alg_type sig_type, int *check);
+
+ATTRIBUTE_WARN_UNUSED_RET int unsupported_verify_batch(const u8 **s, const u8 *s_len, const ec_pub_key **pub_keys,
+              const u8 **m, const u32 *m_len, u32 num, ec_alg_type sig_type,
+              hash_alg_type hash_type, const u8 **adata, const u16 *adata_len);
+
 /*
  * Each signature algorithm supported by the library and implemented
  * in ec{,ck,s,fs,g,r}dsa.{c,h} is referenced below.
@@ -273,6 +285,7 @@ static const ec_sig_mapping ec_sig_maps[] = {
 	 .verify_update = _ecdsa_verify_update,
 	 .verify_finalize = _ecdsa_verify_finalize,
 	 .verify = generic_ec_verify,
+	 .verify_batch = unsupported_verify_batch,
 	 },
 #if (MAX_SIG_ALG_NAME_LEN < 6)
 #undef MAX_SIG_ALG_NAME_LEN
@@ -293,6 +306,7 @@ static const ec_sig_mapping ec_sig_maps[] = {
 	 .verify_update = _eckcdsa_verify_update,
 	 .verify_finalize = _eckcdsa_verify_finalize,
 	 .verify = generic_ec_verify,
+	 .verify_batch = unsupported_verify_batch,
 	 },
 #if (MAX_SIG_ALG_NAME_LEN < 8)
 #undef MAX_SIG_ALG_NAME_LEN
@@ -313,6 +327,7 @@ static const ec_sig_mapping ec_sig_maps[] = {
 	 .verify_update = _ecsdsa_verify_update,
 	 .verify_finalize = _ecsdsa_verify_finalize,
 	 .verify = generic_ec_verify,
+	 .verify_batch = unsupported_verify_batch,
 	 },
 #if (MAX_SIG_ALG_NAME_LEN < 7)
 #undef MAX_SIG_ALG_NAME_LEN
@@ -333,6 +348,7 @@ static const ec_sig_mapping ec_sig_maps[] = {
 	 .verify_update = _ecosdsa_verify_update,
 	 .verify_finalize = _ecosdsa_verify_finalize,
 	 .verify = generic_ec_verify,
+	 .verify_batch = unsupported_verify_batch,
 	 },
 #if (MAX_SIG_ALG_NAME_LEN < 8)
 #undef MAX_SIG_ALG_NAME_LEN
@@ -353,6 +369,7 @@ static const ec_sig_mapping ec_sig_maps[] = {
 	 .verify_update = _ecfsdsa_verify_update,
 	 .verify_finalize = _ecfsdsa_verify_finalize,
 	 .verify = generic_ec_verify,
+	 .verify_batch = unsupported_verify_batch,
 	 },
 #if (MAX_SIG_ALG_NAME_LEN < 8)
 #undef MAX_SIG_ALG_NAME_LEN
@@ -373,6 +390,7 @@ static const ec_sig_mapping ec_sig_maps[] = {
 	 .verify_update = _ecgdsa_verify_update,
 	 .verify_finalize = _ecgdsa_verify_finalize,
 	 .verify = generic_ec_verify,
+	 .verify_batch = unsupported_verify_batch,
 	 },
 #if (MAX_SIG_ALG_NAME_LEN < 7)
 #undef MAX_SIG_ALG_NAME_LEN
@@ -393,6 +411,7 @@ static const ec_sig_mapping ec_sig_maps[] = {
 	 .verify_update = _ecrdsa_verify_update,
 	 .verify_finalize = _ecrdsa_verify_finalize,
 	 .verify = generic_ec_verify,
+	 .verify_batch = unsupported_verify_batch,
 	 },
 #if (MAX_SIG_ALG_NAME_LEN < 7)
 #undef MAX_SIG_ALG_NAME_LEN
@@ -413,6 +432,7 @@ static const ec_sig_mapping ec_sig_maps[] = {
 	 .verify_update = _sm2_verify_update,
 	 .verify_finalize = _sm2_verify_finalize,
 	 .verify = generic_ec_verify,
+	 .verify_batch = unsupported_verify_batch,
 	 },
 #if (MAX_SIG_ALG_NAME_LEN < 4)
 #undef MAX_SIG_ALG_NAME_LEN
@@ -434,6 +454,7 @@ static const ec_sig_mapping ec_sig_maps[] = {
 	 .verify_update = _eddsa_verify_update,
 	 .verify_finalize = _eddsa_verify_finalize,
 	 .verify = generic_ec_verify,
+	 .verify_batch = eddsa_verify_batch,
 	 },
 	{.type = EDDSA25519CTX,
 	 .name = "EDDSA25519CTX",
@@ -449,6 +470,7 @@ static const ec_sig_mapping ec_sig_maps[] = {
 	 .verify_update = _eddsa_verify_update,
 	 .verify_finalize = _eddsa_verify_finalize,
 	 .verify = generic_ec_verify,
+	 .verify_batch = eddsa_verify_batch,
 	 },
 	{.type = EDDSA25519PH,
 	 .name = "EDDSA25519PH",
@@ -463,6 +485,7 @@ static const ec_sig_mapping ec_sig_maps[] = {
 	 .verify_update = _eddsa_verify_update,
 	 .verify_finalize = _eddsa_verify_finalize,
 	 .verify = generic_ec_verify,
+	 .verify_batch = eddsa_verify_batch,
 	 },
 #if (MAX_SIG_ALG_NAME_LEN < 14)
 #undef MAX_SIG_ALG_NAME_LEN
@@ -484,6 +507,7 @@ static const ec_sig_mapping ec_sig_maps[] = {
 	 .verify_update = _eddsa_verify_update,
 	 .verify_finalize = _eddsa_verify_finalize,
 	 .verify = generic_ec_verify,
+	 .verify_batch = eddsa_verify_batch,
 	 },
 	{.type = EDDSA448PH,
 	 .name = "EDDSA448PH",
@@ -498,6 +522,7 @@ static const ec_sig_mapping ec_sig_maps[] = {
 	 .verify_update = _eddsa_verify_update,
 	 .verify_finalize = _eddsa_verify_finalize,
 	 .verify = generic_ec_verify,
+	 .verify_batch = eddsa_verify_batch,
 	 },
 #if (MAX_SIG_ALG_NAME_LEN < 11)
 #undef MAX_SIG_ALG_NAME_LEN
@@ -518,6 +543,7 @@ static const ec_sig_mapping ec_sig_maps[] = {
 	 .verify_update = _decdsa_verify_update,
 	 .verify_finalize = _decdsa_verify_finalize,
 	 .verify = generic_ec_verify,
+	 .verify_batch = unsupported_verify_batch,
 	 },
 #if (MAX_SIG_ALG_NAME_LEN < 7)
 #undef MAX_SIG_ALG_NAME_LEN
@@ -538,6 +564,7 @@ static const ec_sig_mapping ec_sig_maps[] = {
 	 .verify_update = _bign_verify_update,
 	 .verify_finalize = _bign_verify_finalize,
 	 .verify = generic_ec_verify,
+	 .verify_batch = unsupported_verify_batch,
 	 },
 #if (MAX_SIG_ALG_NAME_LEN < 5)
 #undef MAX_SIG_ALG_NAME_LEN
@@ -558,6 +585,7 @@ static const ec_sig_mapping ec_sig_maps[] = {
 	 .verify_update = _dbign_verify_update,
 	 .verify_finalize = _dbign_verify_finalize,
 	 .verify = generic_ec_verify,
+	 .verify_batch = unsupported_verify_batch,
 	 },
 #if (MAX_SIG_ALG_NAME_LEN < 6)
 #undef MAX_SIG_ALG_NAME_LEN
@@ -577,6 +605,7 @@ static const ec_sig_mapping ec_sig_maps[] = {
 	 .verify_update = NULL,
 	 .verify_finalize = NULL,
 	 .verify = NULL,
+	 .verify_batch = NULL,
 	 },
 };
 

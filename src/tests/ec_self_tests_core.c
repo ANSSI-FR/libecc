@@ -34,16 +34,16 @@ static volatile u8 global_lock_initialized = 0;
 		omp_init_lock(&global_lock);			  \
 		global_lock_initialized = 1;			  \
 	}							  \
-	omp_set_lock(&global_lock); 				  \
+	omp_set_lock(&global_lock);				  \
 } while(0)
 #define OPENMP_UNLOCK() do {					  \
-	omp_unset_lock(&global_lock); 				  \
+	omp_unset_lock(&global_lock);				  \
 } while(0)
-#define OPENMP_EG(ret, err) do {				  				\
-	if(ret){						  				\
-		ext_printf("OpenMP abort following error ...  %s:%d\n", __FILE__, __LINE__); 	\
-		exit(-1);					  				\
-	}							  				\
+#define OPENMP_EG(ret, err) do {								\
+	if(ret){										\
+		ext_printf("OpenMP abort following error ...  %s:%d\n", __FILE__, __LINE__);	\
+		exit(-1);									\
+	}											\
 } while(0)
 #else
 #define OPENMP_LOCK()
@@ -218,6 +218,9 @@ ATTRIBUTE_WARN_UNUSED_RET static int random_split_ec_verify(const u8 *sig, u8 si
 #ifndef MAX_MSG_LEN
 #define MAX_MSG_LEN 8192
 #endif
+#ifndef MAX_BATCH_SIG_SIZE
+#define MAX_BATCH_SIG_SIZE 20
+#endif
 
 /*
  * ECC generic self tests (sign/verify on random values
@@ -336,15 +339,15 @@ ATTRIBUTE_WARN_UNUSED_RET static int ec_import_export_test(const ec_test_case *c
 		if(check){
 			ret = is_sign_streaming_mode_supported(c->sig_type, &check); EG(ret, err);
 			if(check){
-				ret = generic_ec_verify(sig_tmp2, siglen, &(kp.pub_key), msg, msglen,
+				ret = ec_verify(sig_tmp2, siglen, &(kp.pub_key), msg, msglen,
 					c->sig_type, c->hash_type, c->adata, c->adata_len);
 			}
 			else{
-				ret = generic_ec_verify(sig, siglen, &(kp.pub_key), msg, msglen,
+				ret = ec_verify(sig, siglen, &(kp.pub_key), msg, msglen,
 					c->sig_type, c->hash_type, c->adata, c->adata_len);
 			}
 			if (ret) {
-				ext_printf("Error when verifying signature generic_ec_verify\n");
+				ext_printf("Error when verifying signature ec_verify\n");
 				goto err;
 			}
 			ret = is_sign_streaming_mode_supported(c->sig_type, &check); EG(ret, err);
@@ -358,6 +361,22 @@ ATTRIBUTE_WARN_UNUSED_RET static int ec_import_export_test(const ec_test_case *c
 			}
 			if (ret) {
 				ext_printf("Error when verifying signature random_split_ec_verify\n");
+				goto err;
+			}
+		}
+		/* Also test the "single" signature batch verification */
+		ret = is_verify_batch_mode_supported(c->sig_type, &check); EG(ret, err);
+		if(check){
+			const u8 *signatures[] = { sig };
+			const u8 signatures_len[] = { siglen };
+			const u8 *messages[] = { msg };
+			const u32 messages_len[] = { msglen };
+			const ec_pub_key *pub_keys[] = { &(kp.pub_key) };
+			const u8 *adatas[] = { c->adata };
+			const u16 adatas_len[] = { c->adata_len };
+			ret = ec_verify_batch(signatures, signatures_len, pub_keys, messages, messages_len, 1, c->sig_type, c->hash_type, adatas, adatas_len);
+			if(ret){
+				ext_printf("Error when verifying signature ec_verify_batch\n");
 				goto err;
 			}
 		}
@@ -488,6 +507,87 @@ pubkey_recovery_warning:
 #endif
 	}
 
+	/* Perform test specific to batch verification */
+	ret = is_verify_batch_mode_supported(c->sig_type, &check); EG(ret, err);
+	if(check){
+		u16 msglen;
+		u8 siglen;
+		ec_key_pair keypairs[MAX_BATCH_SIG_SIZE];
+		const ec_pub_key *pubkeys[MAX_BATCH_SIG_SIZE];
+		u8 msg[MAX_BATCH_SIG_SIZE * MAX_MSG_LEN];
+		const u8 *messages[MAX_BATCH_SIG_SIZE];
+		u32 messages_len[MAX_BATCH_SIG_SIZE];
+		u8 sig[MAX_BATCH_SIG_SIZE * EC_MAX_SIGLEN];
+		const u8 *signatures[MAX_BATCH_SIG_SIZE];
+		u8 signatures_len[MAX_BATCH_SIG_SIZE];
+		const u8 *adata[MAX_BATCH_SIG_SIZE];
+		u16 adata_len[MAX_BATCH_SIG_SIZE];
+		u8 check_type = 0;
+		u32 num_batch, i, current;
+
+		FORCE_USED_VAR(check_type);
+
+gen_num_batch:
+		ret = get_random((u8 *)&num_batch, sizeof(num_batch));
+		if(ret){
+			ext_printf("Error when getting random\n");
+			goto err;
+		}
+		num_batch = num_batch % MAX_BATCH_SIG_SIZE;
+		if(num_batch == 0){
+			goto gen_num_batch;
+		}
+
+		ret = ec_get_sig_len(&params, c->sig_type, c->hash_type,
+				     (u8 *)&siglen);
+		if (ret) {
+			ext_printf("Error computing effective sig size\n");
+			goto err;
+		}
+
+		/* Generate random messages to sign */
+		current = 0;
+		for(i = 0; i < num_batch; i++){
+			/* Generate, import/export a key pair */
+			ret = ec_gen_import_export_kp(&keypairs[i], &params, c);
+			pubkeys[i] = &(keypairs[i].pub_key);
+			if (ret) {
+				ext_printf("Error at key pair generation/import/export\n");
+				goto err;
+			}
+			ret = get_random((u8 *)&msglen, sizeof(msglen));
+			if (ret) {
+				ext_printf("Error when getting random\n");
+				goto err;
+			}
+			msglen = msglen % MAX_MSG_LEN;
+			messages_len[i] = msglen;
+			messages[i] = &msg[current];
+			ret = get_random(&msg[current], msglen);
+			if (ret) {
+				ext_printf("Error when getting random\n");
+				goto err;
+			}
+			current += msglen;
+
+			signatures[i] = &sig[i * siglen];
+			signatures_len[i] = siglen;
+			adata_len[i] = c->adata_len;
+			adata[i] = c->adata;
+			ret = _ec_sign(&sig[i * siglen], siglen, &keypairs[i], messages[i], messages_len[i],
+				       c->nn_random, c->sig_type, c->hash_type, c->adata, c->adata_len);
+			if (ret) {
+				ext_printf("Error when signing\n");
+				goto err;
+			}
+		}
+		ret = ec_verify_batch(signatures, signatures_len, pubkeys, messages, messages_len, num_batch, c->sig_type, c->hash_type, adata, adata_len);
+		if(ret){
+			ext_printf("Error when verifying signature ec_verify_batch\n");
+			goto err;
+		}
+	}
+
 	ret = 0;
 
  err:
@@ -556,7 +656,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int ec_test_verify(u8 *sig, u8 siglen, const ec
 	}
 	ret = is_verify_streaming_mode_supported(c->sig_type, &check); EG(ret, err);
 	if(check){
-		ret = generic_ec_verify(sig, siglen, pub_key, (const u8 *)(c->msg), c->msglen,
+		ret = ec_verify(sig, siglen, pub_key, (const u8 *)(c->msg), c->msglen,
 				 c->sig_type, c->hash_type, c->adata, c->adata_len);
 		if(ret){
 			ret = -1;
@@ -565,6 +665,22 @@ ATTRIBUTE_WARN_UNUSED_RET static int ec_test_verify(u8 *sig, u8 siglen, const ec
 		/* Now test the random split version */
 		ret = random_split_ec_verify(sig, siglen, pub_key, (const u8 *)(c->msg), c->msglen,
 				 c->sig_type, c->hash_type, c->adata, c->adata_len);
+		if(ret){
+			ret = -1;
+			goto err;
+		}
+	}
+	/* Also test the "single" signature batch verification */
+	ret = is_verify_batch_mode_supported(c->sig_type, &check); EG(ret, err);
+	if(check){
+		const u8 *signatures[] = { sig };
+		const u8 signatures_len[] = { siglen };
+		const u8 *messages[] = { (const u8*)c->msg };
+		const u32 messages_len[] = { c->msglen };
+		const ec_pub_key *pub_keys[] = { pub_key };
+		const u8 *adatas[] = { c->adata };
+		const u16 adatas_len[] = { c->adata_len };
+		ret = ec_verify_batch(signatures, signatures_len, pub_keys, messages, messages_len, 1, c->sig_type, c->hash_type, adatas, adatas_len);
 		if(ret){
 			ret = -1;
 			goto err;
@@ -1154,7 +1270,7 @@ ATTRIBUTE_WARN_UNUSED_RET int perform_known_test_vectors_test(const char *sig, c
 	if((sig == NULL) && (hash == NULL)){
 #ifdef WITH_OPENMP_SELF_TESTS
 	        #pragma omp parallel
-        	#pragma omp for schedule(static, 1) nowait
+		#pragma omp for schedule(static, 1) nowait
 #endif
 		for (i = 0; i < ECDH_FIXED_VECTOR_NUM_TESTS; i++) {
 			const ecdh_test_case *ecdh_cur_test;

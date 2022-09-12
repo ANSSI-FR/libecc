@@ -87,6 +87,10 @@ ATTRIBUTE_WARN_UNUSED_RET int ec_verify(const u8 *sig, u8 siglen, const ec_pub_k
 	      ec_alg_type sig_type, hash_alg_type hash_type,
 	      const u8 *adata, u16 adata_len);
 
+int ec_verify_batch(const u8 **s, const u8 *s_len, const ec_pub_key **pub_keys,
+              const u8 **m, const u32 *m_len, u32 num, ec_alg_type sig_type,
+              hash_alg_type hash_type, const u8 **adata, const u16 *adata_len);
+
 /* Generic signature import and export functions */
 
 ATTRIBUTE_WARN_UNUSED_RET int ec_structured_sig_import_from_buf(u8 *sig, u32 siglen,
