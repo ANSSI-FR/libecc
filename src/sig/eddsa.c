@@ -2272,10 +2272,10 @@ int eddsa_verify_batch(const u8 **s, const u8 *s_len, const ec_pub_key **pub_key
 	               const u8 **m, const u32 *m_len, u32 num, ec_alg_type sig_type,
 	               hash_alg_type hash_type, const u8 **adata, const u16 *adata_len)
 {
-	nn_src_t q;
+	nn_src_t q = NULL;
 	ec_edwards_crv crv_edwards;
 	aff_pt_edwards R, A;
-	prj_pt_src_t G;
+	prj_pt_src_t G = NULL;
 	prj_pt _Tmp, _R_sum, _A_sum;
 	nn S, S_sum, z, h;
 	u8 hash[MAX_DIGEST_SIZE];
@@ -2286,7 +2286,7 @@ int eddsa_verify_batch(const u8 **s, const u8 *s_len, const ec_pub_key **pub_key
 	fp_src_t alpha_montgomery;
 	fp_src_t gamma_montgomery;
 	fp_src_t alpha_edwards;
-	nn_src_t gen_cofactor;
+	nn_src_t gen_cofactor = NULL;
 	prj_pt_src_t pub_key_y;
 	hash_context h_ctx;
 	hash_context h_ctx_pre_hash;
@@ -2340,7 +2340,6 @@ int eddsa_verify_batch(const u8 **s, const u8 *s_len, const ec_pub_key **pub_key
 	}
 #endif
 
-	/* Do some sanity checks on input params */
 	for(i = 0; i < num; i++){
 		u8 siglen;
 		const u8 *sig = NULL;
@@ -2503,6 +2502,9 @@ gen_z_again:
 		/* Add to the sum */
 		ret = prj_pt_add(&_A_sum, &_A_sum, &_Tmp); EG(ret, err);
 	}
+
+	/* Sanity check */
+	MUST_HAVE((gen_cofactor != NULL) && (q != NULL) && (G != NULL), ret, err);
 
 	/* Multiply the S sum by the cofactor */
 	ret = nn_mul(&S_sum, &S_sum, gen_cofactor); EG(ret, err);

@@ -102,8 +102,8 @@ int bign_get_oid_from_adata(const u8 *adata, u16 adata_len, const u8 **oid_ptr, 
 	MUST_HAVE((adata != NULL) && (oid_ptr != NULL) && (oid_len != NULL), ret, err);
 	MUST_HAVE((adata_len >= 4), ret, err);
 
-	(*oid_len) = (u16)((u16)adata[0] << 8) | adata[1];
-	t_len = (u16)((u16)adata[2] << 8) | adata[3];
+	(*oid_len) = (u16)(((u16)adata[0] << 8) | adata[1]);
+	t_len = (u16)(((u16)adata[2] << 8) | adata[3]);
 	/* Check overflow */
 	MUST_HAVE(((*oid_len) + t_len) >= (t_len), ret, err);
 	MUST_HAVE(((*oid_len) + t_len) <= (adata_len - 4), ret, err);
@@ -128,8 +128,8 @@ int bign_get_t_from_adata(const u8 *adata, u16 adata_len, const u8 **t_ptr, u16 
 	MUST_HAVE((adata != NULL) && (t_ptr != NULL) && (t_len != NULL), ret, err);
 	MUST_HAVE((adata_len >= 4), ret, err);
 
-	oid_len = (u16)((u16)adata[0] << 8) | adata[1];
-	(*t_len) = (u16)((u16)adata[2] << 8) | adata[3];
+	oid_len = (u16)(((u16)adata[0] << 8) | adata[1]);
+	(*t_len) = (u16)(((u16)adata[2] << 8) | adata[3]);
 	/* Check overflow */
 	MUST_HAVE((oid_len + (*t_len)) >= (oid_len), ret, err);
 	MUST_HAVE((oid_len + (*t_len)) <= (adata_len - 4), ret, err);
