@@ -1949,7 +1949,7 @@ int _eddsa_verify_init(struct ec_verify_context *ctx, const u8 *sig, u8 siglen)
 	MUST_HAVE((ctx->h != NULL) && (ctx->h->digest_size <= MAX_DIGEST_SIZE) && (ctx->h->block_size <= MAX_BLOCK_SIZE), ret, err);
 
 	/* Make things more readable */
-	q = &(ctx->pub_key->params->ec_fp.p);
+	q = &(ctx->pub_key->params->ec_gen_order);
 	_R = &(ctx->verify_data.eddsa._R);
 	S = &(ctx->verify_data.eddsa.S);
 	hsize = ctx->h->digest_size;
@@ -2267,6 +2267,11 @@ err:
  *
  * This returns 0 if *all* the signatures are correct, and -1 if at least
  * one signature is not correct.
+ *
+ * NOTE: XXX: for now this is a straightforward implementation without optimization,
+ * meaning that the batch verification cost is the same as individual verifications in a row.
+ * Optimizations such as Bos-Coster or Pippenger methods are future work.
+ *
  */
 int eddsa_verify_batch(const u8 **s, const u8 *s_len, const ec_pub_key **pub_keys,
 	               const u8 **m, const u32 *m_len, u32 num, ec_alg_type sig_type,
@@ -2352,7 +2357,7 @@ int eddsa_verify_batch(const u8 **s, const u8 *s_len, const ec_pub_key **pub_key
 		/* Sanity check that all our public keys have the same parameters */
 		MUST_HAVE((pub_key->params) == (pub_key0->params), ret, err);
 
-		q = &(pub_key->params->ec_fp.p);
+		q = &(pub_key->params->ec_gen_order);
 		shortw_curve = &(pub_key->params->ec_curve);
 		alpha_montgomery = &(pub_key->params->ec_alpha_montgomery);
 		gamma_montgomery = &(pub_key->params->ec_gamma_montgomery);
@@ -2431,7 +2436,7 @@ gen_z_again:
 		ret = hm->hfunc_update(&h_ctx, &sig[0], EDDSA_R_LEN(hsize)); EG(ret, err);
 		/* Multiply by z.
 		 */
-		ret = prj_pt_mul(&_Tmp, &z, &_Tmp); EG(ret, err);
+		ret = _prj_pt_unprotected_mult(&_Tmp, &z, &_Tmp); EG(ret, err);
 		/* Add to the sum */
 		ret = prj_pt_add(&_R_sum, &_R_sum, &_Tmp); EG(ret, err);
 
@@ -2498,7 +2503,7 @@ gen_z_again:
 		 */
 		ret = nn_mul(&z, &z, &h); EG(ret, err);
 		ret = nn_mod(&z, &z, q); EG(ret, err);
-		ret = prj_pt_mul(&_Tmp, &z, &_Tmp); EG(ret, err);
+		ret = _prj_pt_unprotected_mult(&_Tmp, &z, &_Tmp); EG(ret, err);
 		/* Add to the sum */
 		ret = prj_pt_add(&_A_sum, &_A_sum, &_Tmp); EG(ret, err);
 	}
@@ -2512,7 +2517,7 @@ gen_z_again:
 	/* Negate it. NOTE: -x mod q is (q - x) mod q, i.e. (q - x) when x is reduced */
 	ret = nn_sub(&S_sum, q, &S_sum); EG(ret, err);
 	/* Multiply this by the generator */
-	ret = prj_pt_mul(&_Tmp, &S_sum, G); EG(ret, err);
+	ret = _prj_pt_unprotected_mult(&_Tmp, &S_sum, G); EG(ret, err);
 
 	/* Multiply the R sum by the cofactor */
 	ret = _prj_pt_unprotected_mult(&_R_sum, gen_cofactor, &_R_sum); EG(ret, err);
