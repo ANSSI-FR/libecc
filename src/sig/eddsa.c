@@ -2496,6 +2496,16 @@ gen_z_again:
 		ret = eddsa_decode_integer(&h, hash, hsize); EG(ret, err);
 		ret = nn_mod(&h, &h, q); EG(ret, err);
 		dbg_nn_print("h = ", &h);
+#if defined(WITH_SIG_EDDSA448)
+	if((key_type == EDDSA448) || (key_type == EDDSA448PH)){
+		/* When dealing with EDDSA448, because of our 4-isogeny between Edwars448 and Ed448
+		 * mapping base point to four times base point, we actually multiply our public key by 4 here
+		 * to be inline with the other computations (the public key stored in Weierstrass )
+		 */
+		ret = nn_lshift(&h, &h, 2); EG(ret, err);
+		ret = nn_mod(&h, &h, q); EG(ret, err);
+	}
+#endif
 
 		/* Multiply by (z * h) mod q.
 		 * NOTE: we use unprotected scalar multiplication since this is a
