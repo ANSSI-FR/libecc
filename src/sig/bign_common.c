@@ -209,6 +209,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int __bign_determinitic_nonce(nn_t k, nn_src_t 
 	u8 q_len, l;
 	unsigned int j, z, n;
 	u32 i;
+	u16 r_bar_len;
 
 	belt_hash_context belt_hash_ctx;
 	const u8 *oid_ptr = NULL;
@@ -295,11 +296,28 @@ ATTRIBUTE_WARN_UNUSED_RET static int __bign_determinitic_nonce(nn_t k, nn_src_t 
 		ret = local_memcpy(&r[(n - 1) * BELT_BLOCK_LEN], s, BELT_BLOCK_LEN); EG(ret, err);
 
 		/* Import r_bar as a big number in little endian
-		 * (truncate our import to 2*l, the size of q)
+		 * (truncate our import to the bitlength size of q)
 		 */
-		ret = local_memcpy(&r_bar[0], &r[0], (u16)(2*l)); EG(ret, err);
-		ret = _reverse_endianness(&r_bar[0], (u16)(2*l)); EG(ret, err);
-		ret = nn_init_from_buf(k, &r_bar[0], (u16)(2*l)); EG(ret, err);
+		if(q_len < (n * BELT_BLOCK_LEN)){
+			r_bar_len = q_len;
+			ret = local_memcpy(&r_bar[0], &r[0], r_bar_len); EG(ret, err);
+			/* Handle the useless bits between q_bit_len and (8 * q_len) */
+			if((q_bit_len % 8) != 0){
+				r_bar[r_bar_len - 1] &= (u8)((0x1 << (q_bit_len % 8)) - 1);
+			}
+		}
+		else{
+			/* In this case, q_len is bigger than the size of r, we need to adapt:
+			 * we truncate to the size of r.
+			 * NOTE: we of course lose security, but this is the explicit choice
+			 * of the user using a "small" hash function with a "big" order.
+			 */
+			MUST_HAVE((n * BELT_BLOCK_LEN) <= 0xffff, ret, err);
+			r_bar_len = (u16)(n * BELT_BLOCK_LEN);
+			ret = local_memcpy(&r_bar[0], &r[0], r_bar_len); EG(ret, err);
+		}
+		ret = _reverse_endianness(&r_bar[0], r_bar_len); EG(ret, err);
+		ret = nn_init_from_buf(k, &r_bar[0], r_bar_len); EG(ret, err);
 
 		/* Compare it to q */
 		ret = nn_cmp(k, q, &cmp); EG(ret, err);
