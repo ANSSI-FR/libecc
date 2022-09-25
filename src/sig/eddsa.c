@@ -45,6 +45,7 @@
 #include "../fp/fp_sqrt.h"
 
 #include "sig_algs_internal.h"
+#include "sig_algs.h"
 #include "ec_key.h"
 #include "../utils/utils.h"
 #ifdef VERBOSE_INNER_VALUES
@@ -2058,6 +2059,7 @@ int _eddsa_verify_init(struct ec_verify_context *ctx, const u8 *sig, u8 siglen)
 	PTR_NULLIFY(gen_cofactor);
 	PTR_NULLIFY(pub_key_y);
 
+	ec_edwards_crv_uninit(&crv_edwards);
 	aff_pt_edwards_uninit(&A);
 	aff_pt_edwards_uninit(&R);
 	prj_pt_uninit(&_Tmp);
@@ -2232,7 +2234,7 @@ int _eddsa_verify_finalize(struct ec_verify_context *ctx)
 
 	/* Reject the signature if we do not have point at infinity here */
 	ret = prj_pt_iszero(&_Tmp2, &iszero); EG(ret, err);
-	MUST_HAVE(iszero, ret, err);
+	ret = iszero ? 0 : -1;
 
 err:
 	/*
@@ -2263,19 +2265,19 @@ err:
 
 /* Batch verification function:
  * This function takes multiple signatures/messages/public keys, and
- * checks in an optimized way all the signatures.
+ * checks all the signatures.
  *
  * This returns 0 if *all* the signatures are correct, and -1 if at least
  * one signature is not correct.
  *
- * NOTE: XXX: for now this is a straightforward implementation without optimization,
- * meaning that the batch verification cost is the same as individual verifications in a row.
- * Optimizations such as Bos-Coster or Pippenger methods are future work.
+ * NOTE: the "no_memory" version is not optimized and straightforwardly
+ * checks for the signature using naive sums. See below for an optimized
+ * Bos-Coster version (but requiring additional memory to work).
  *
  */
-int eddsa_verify_batch(const u8 **s, const u8 *s_len, const ec_pub_key **pub_keys,
-	               const u8 **m, const u32 *m_len, u32 num, ec_alg_type sig_type,
-	               hash_alg_type hash_type, const u8 **adata, const u16 *adata_len)
+ATTRIBUTE_WARN_UNUSED_RET static int _eddsa_verify_batch_no_memory(const u8 **s, const u8 *s_len, const ec_pub_key **pub_keys,
+					 const u8 **m, const u32 *m_len, u32 num, ec_alg_type sig_type,
+		                         hash_alg_type hash_type, const u8 **adata, const u16 *adata_len)
 {
 	nn_src_t q = NULL;
 	ec_edwards_crv crv_edwards;
@@ -2497,14 +2499,14 @@ gen_z_again:
 		ret = nn_mod(&h, &h, q); EG(ret, err);
 		dbg_nn_print("h = ", &h);
 #if defined(WITH_SIG_EDDSA448)
-	if((key_type == EDDSA448) || (key_type == EDDSA448PH)){
-		/* When dealing with EDDSA448, because of our 4-isogeny between Edwars448 and Ed448
-		 * mapping base point to four times base point, we actually multiply our public key by 4 here
-		 * to be inline with the other computations (the public key stored in Weierstrass )
-		 */
-		ret = nn_lshift(&h, &h, 2); EG(ret, err);
-		ret = nn_mod(&h, &h, q); EG(ret, err);
-	}
+		if((key_type == EDDSA448) || (key_type == EDDSA448PH)){
+			/* When dealing with EDDSA448, because of our 4-isogeny between Edwars448 and Ed448
+			 * mapping base point to four times base point, we actually multiply our public key by 4 here
+			 * to be inline with the other computations (the public key stored in Weierstrass )
+			 */
+			ret = nn_lshift(&h, &h, 2); EG(ret, err);
+			ret = nn_mod(&h, &h, q); EG(ret, err);
+		}
 #endif
 
 		/* Multiply by (z * h) mod q.
@@ -2525,7 +2527,7 @@ gen_z_again:
 	ret = nn_mul(&S_sum, &S_sum, gen_cofactor); EG(ret, err);
 	ret = nn_mod(&S_sum, &S_sum, q); EG(ret, err);
 	/* Negate it. NOTE: -x mod q is (q - x) mod q, i.e. (q - x) when x is reduced */
-	ret = nn_sub(&S_sum, q, &S_sum); EG(ret, err);
+	ret = nn_mod_neg(&S_sum, &S_sum, q); EG(ret, err);
 	/* Multiply this by the generator */
 	ret = _prj_pt_unprotected_mult(&_Tmp, &S_sum, G); EG(ret, err);
 
@@ -2538,7 +2540,7 @@ gen_z_again:
 
 	/* Reject the signature if we do not have point at infinity here */
 	ret = prj_pt_iszero(&_Tmp, &iszero); EG(ret, err);
-	MUST_HAVE(iszero, ret, err);
+	ret = iszero ? 0 : -1;
 
 err:
 	PTR_NULLIFY(q);
@@ -2552,6 +2554,7 @@ err:
 	PTR_NULLIFY(pub_key_y);
 	PTR_NULLIFY(G);
 
+	ec_edwards_crv_uninit(&crv_edwards);
 	aff_pt_edwards_uninit(&A);
 	aff_pt_edwards_uninit(&R);
 	prj_pt_uninit(&_R_sum);
@@ -2566,6 +2569,359 @@ err:
 
 }
 
+/*
+ * The following batch verification uses the Bos-Coster algorithm, presented e.g. in
+ * https://ed25519.cr.yp.to/ed25519-20110705.pdf
+ *
+ * The Bos-Coster algorithm allows to optimize a sum of scalar multiplications using
+ * addition chains.
+ *
+ */
+ATTRIBUTE_WARN_UNUSED_RET static int _eddsa_verify_batch(const u8 **s, const u8 *s_len, const ec_pub_key **pub_keys,
+			       const u8 **m, const u32 *m_len, u32 num, ec_alg_type sig_type,
+                               hash_alg_type hash_type, const u8 **adata, const u16 *adata_len,
+                               verify_batch_scratch_pad *scratch_pad_area, u32 *scratch_pad_area_len)
+{
+	nn_src_t q = NULL;
+	ec_edwards_crv crv_edwards;
+	aff_pt_edwards R, A;
+	prj_pt_src_t G = NULL;
+	nn S, z;
+	u8 hash[MAX_DIGEST_SIZE];
+	int ret, iszero, cmp;
+	u16 hsize;
+	const ec_pub_key *pub_key, *pub_key0;
+	ec_shortw_crv_src_t shortw_curve;
+	fp_src_t alpha_montgomery;
+	fp_src_t gamma_montgomery;
+	fp_src_t alpha_edwards;
+	nn_src_t gen_cofactor = NULL;
+	prj_pt_src_t pub_key_y;
+	hash_context h_ctx;
+	hash_context h_ctx_pre_hash;
+	u8 use_message_pre_hash = 0;
+	u16 use_message_pre_hash_hsize = 0;
+	const hash_mapping *hm;
+	ec_alg_type key_type = UNKNOWN_ALG;
+	/* NN numbers and points pointers */
+	verify_batch_scratch_pad *elements = scratch_pad_area;
+	u32 i;
+	u64 expected_len;
+	bitcnt_t q_bit_len = 0;
+
+	S.magic = z.magic = crv_edwards.magic = WORD(0);
+
+	/* First, some sanity checks */
+	MUST_HAVE((s != NULL) && (pub_keys != NULL) && (m != NULL) && (adata != NULL), ret, err);
+	MUST_HAVE((scratch_pad_area_len != NULL), ret, err);
+	MUST_HAVE(((2 * num) >= num), ret, err);
+	MUST_HAVE(((2 * num) + 1) >= num, ret, err);
+
+	/* In oder to apply the algorithm, we must have at least two
+	 * elements to verify. If this is not the case, we fallback to
+	 * the regular "no memory" version.
+	 */
+	if(num <= 1){
+		if(scratch_pad_area == NULL){
+			/* We do not require any memory in this case */
+			(*scratch_pad_area_len) = 0;
+			ret = 0;
+			goto err;
+		}
+		else{
+	                ret = _eddsa_verify_batch_no_memory(s, s_len, pub_keys, m, m_len, num, sig_type,
+		                                            hash_type, adata, adata_len);
+			goto err;
+		}
+	}
+
+	expected_len = ((2 * num) + 1) * sizeof(verify_batch_scratch_pad);
+	MUST_HAVE((expected_len < 0xffffffff), ret, err);
+
+	if(scratch_pad_area == NULL){
+		/* Return the needed size: we need to keep track of (2 * num) + 1 NN numbers
+		 * and (2 * num) + 1 projective points, plus (2 * num) + 1 indices
+		 */
+		(*scratch_pad_area_len) = (u32)expected_len;
+		ret = 0;
+		goto err;
+	}
+	else{
+		MUST_HAVE((*scratch_pad_area_len) >= expected_len, ret, err);
+	}
+
+	/********************************************/
+	/****** Initialize elements *****************/
+	/* Zero init our local data */
+	ret = local_memset(&crv_edwards, 0, sizeof(ec_edwards_crv)); EG(ret, err);
+	ret = local_memset(hash, 0, sizeof(hash)); EG(ret, err);
+	ret = local_memset(&A, 0, sizeof(aff_pt_edwards)); EG(ret, err);
+	ret = local_memset(&R, 0, sizeof(aff_pt_edwards)); EG(ret, err);
+
+	pub_key0 = pub_keys[0];
+	MUST_HAVE((pub_key0 != NULL), ret, err);
+
+	/* Get our hash mapping */
+	ret = get_hash_by_type(hash_type, &hm); EG(ret, err);
+	hsize = hm->digest_size;
+	MUST_HAVE((hm != NULL), ret, err);
+
+	/* Do we use the raw message or its PH(M) hashed version? */
+#if defined(WITH_SIG_EDDSA25519)
+	if(sig_type == EDDSA25519PH){
+		use_message_pre_hash = 1;
+		use_message_pre_hash_hsize = hsize;
+	}
+#endif
+#if defined(WITH_SIG_EDDSA448)
+	if(sig_type == EDDSA448PH){
+		use_message_pre_hash = 1;
+		/* NOTE: as per RFC8032, EDDSA448PH uses
+		 * SHAKE256 with 64 bytes output.
+		 */
+		use_message_pre_hash_hsize = 64;
+	}
+#endif
+
+	/* Compute our original numbers and points */
+	MUST_HAVE((num >= 1), ret, err);
+	for(i = 0; i < num; i++){
+		u8 siglen;
+		const u8 *sig = NULL;
+
+		ret = eddsa_pub_key_sanity_check(pub_keys[i]); EG(ret, err);
+
+		/* Make things more readable */
+		pub_key = pub_keys[i];
+
+		/* Sanity check that all our public keys have the same parameters */
+		MUST_HAVE((pub_key->params) == (pub_key0->params), ret, err);
+
+		q = &(pub_key->params->ec_gen_order);
+		shortw_curve = &(pub_key->params->ec_curve);
+		alpha_montgomery = &(pub_key->params->ec_alpha_montgomery);
+		gamma_montgomery = &(pub_key->params->ec_gamma_montgomery);
+		alpha_edwards = &(pub_key->params->ec_alpha_edwards);
+		gen_cofactor = &(pub_key->params->ec_gen_cofactor);
+		pub_key_y = &(pub_key->y);
+		key_type = pub_key->key_type;
+		G = &(pub_key->params->ec_gen);
+		q_bit_len = pub_key->params->ec_gen_order_bitlen;
+
+		/* Check the key type versus the algorithm */
+		MUST_HAVE((key_type == sig_type), ret, err);
+
+		if(i == 0){
+			/* Initialize our numbers */
+			ret = nn_init(&z, 0); EG(ret, err);
+			ret = nn_init(&S, 0); EG(ret, err);
+			ret = nn_init(&elements[(2 * num)].number, 0); EG(ret, err);
+			ret = _prj_pt_unprotected_mult(&elements[(2 * num)].point, gen_cofactor, G); EG(ret, err);
+		}
+
+gen_z_again:
+		/* Get a random z for randomizing the linear combination */
+		ret = nn_get_random_len(&z, (hsize / 4)); EG(ret, err);
+		ret = nn_iszero(&z, &iszero); EG(ret, err);
+		if(iszero){
+			goto gen_z_again;
+		}
+
+		/* Sanity check on hash types */
+		MUST_HAVE((hash_type == get_eddsa_hash_type(key_type)), ret, err);
+
+		/* Check given signature length is the expected one */
+		siglen = s_len[i];
+		sig = s[i];
+		MUST_HAVE((siglen == EDDSA_SIGLEN(hsize)), ret, err);
+		MUST_HAVE((siglen == (EDDSA_R_LEN(hsize) + EDDSA_S_LEN(hsize))), ret, err);
+
+		/* Initialize the hash context */
+		/* Since we call a callback, sanity check our mapping */
+		ret = hash_mapping_callbacks_sanity_check(hm); EG(ret, err);
+		ret = hm->hfunc_init(&h_ctx); EG(ret, err);
+		ret = hm->hfunc_init(&h_ctx_pre_hash); EG(ret, err);
+#if defined(WITH_SIG_EDDSA25519)
+		if(key_type == EDDSA25519CTX){
+			/* As per RFC8032, for EDDSA25519CTX the context SHOULD NOT be empty */
+			MUST_HAVE((adata[i] != NULL), ret, err);
+			ret = dom2(0, adata[i], adata_len[i], hm, &h_ctx); EG(ret, err);
+		}
+		if(key_type == EDDSA25519PH){
+			ret = dom2(1, adata[i], adata_len[i], hm, &h_ctx); EG(ret, err);
+		}
+#endif
+#if defined(WITH_SIG_EDDSA448)
+		if(key_type == EDDSA448){
+			ret = dom4(0, adata[i], adata_len[i], hm, &h_ctx); EG(ret, err);
+		}
+		if(key_type == EDDSA448PH){
+			ret = dom4(1, adata[i], adata_len[i], hm, &h_ctx); EG(ret, err);
+		}
+#endif
+		/* Import R and S values from signature buffer */
+		/*******************************/
+		/* Import R as an Edwards point */
+		ret = curve_shortw_to_edwards(shortw_curve, &crv_edwards, alpha_montgomery,
+					gamma_montgomery, alpha_edwards); EG(ret, err);
+		/* NOTE: non canonical R are checked and rejected here */
+		ret = eddsa_decode_point(&R, &crv_edwards, alpha_edwards, &sig[0],
+				      EDDSA_R_LEN(hsize), key_type); EG(ret, err);
+		dbg_ec_edwards_point_print("R", &R);
+		/* Transfer our public point R to Weierstrass */
+		ret = aff_pt_edwards_to_prj_pt_shortw(&R, shortw_curve, &elements[i].point, alpha_edwards); EG(ret, err);
+		/* Update the hash with the encoded R */
+		ret = hm->hfunc_update(&h_ctx, &sig[0], EDDSA_R_LEN(hsize)); EG(ret, err);
+		/* Store 8 * z in our number to be multiplied with R */
+		ret = nn_init(&elements[i].number, 0); EG(ret, err);
+		ret = nn_mul(&elements[i].number, gen_cofactor, &z); EG(ret, err);
+		ret = nn_mod(&elements[i].number, &elements[i].number, q); EG(ret, err);
+
+		/*******************************/
+		/* Import S as an integer */
+		ret = eddsa_decode_integer(&S, &sig[EDDSA_R_LEN(hsize)], EDDSA_S_LEN(hsize)); EG(ret, err);
+		/* Reject S if it is not reduced modulo q */
+		ret = nn_cmp(&S, q, &cmp); EG(ret, err);
+		MUST_HAVE((cmp < 0), ret, err);
+		dbg_nn_print("S", &S);
+
+		/* Add (- z S) to the sum */
+		ret = nn_mul(&S, &S, &z); EG(ret, err);
+		ret = nn_mod(&S, &S, q); EG(ret, err);
+		ret = nn_mod_neg(&S, &S, q); EG(ret, err); /* Negate S */
+		ret = nn_mod_add(&elements[(2 * num)].number, &elements[(2 * num)].number, &S, q); EG(ret, err);
+
+		/*******************************/
+		/* Encode the public key
+		 * NOTE: since we deal with a public key transfered to Weierstrass,
+		 * encoding checking has been handled elsewhere.
+		 */
+		/* Reject the signature if the public key is one of small order points.
+		 * We multiply by the cofactor: since this is a public verification,
+		 * we use a basic double and add algorithm.
+		 */
+		ret = _prj_pt_unprotected_mult(&elements[num + i].point, gen_cofactor, pub_key_y); EG(ret, err);
+		/* Reject the signature if we have point at infinity here as this means
+		 * that the public key is of small order.
+		 */
+		ret = prj_pt_iszero(&elements[num + i].point, &iszero); EG(ret, err);
+		MUST_HAVE((!iszero), ret, err);
+
+		/* Transfer the public key to Edwards */
+		ret = prj_pt_shortw_to_aff_pt_edwards(pub_key_y, &crv_edwards, &A, alpha_edwards); EG(ret, err);
+		dbg_ec_edwards_point_print("A", &A);
+		MUST_HAVE((EDDSA_R_LEN(hsize) <= sizeof(hash)), ret, err);
+		/* NOTE: we use the hash buffer as a temporary buffer */
+		ret = eddsa_encode_point(&A, alpha_edwards, hash, EDDSA_R_LEN(hsize), key_type); EG(ret, err);
+
+		/* Update the hash with the encoded public key */
+		ret = hm->hfunc_update(&h_ctx, hash, EDDSA_R_LEN(hsize)); EG(ret, err);
+		/* Finish our computation of h = H(R || A || M) */
+		/* Update the hash with the message or its hash for the PH versions */
+		if(use_message_pre_hash == 1){
+			ret = hm->hfunc_update(&h_ctx_pre_hash, m[i], m_len[i]); EG(ret, err);
+			ret = hm->hfunc_finalize(&h_ctx_pre_hash, hash); EG(ret, err);
+			MUST_HAVE((use_message_pre_hash_hsize <= hsize), ret, err);
+			ret = hm->hfunc_update(&h_ctx, hash, use_message_pre_hash_hsize); EG(ret, err);
+		}
+		else{
+			ret = hm->hfunc_update(&h_ctx, m[i], m_len[i]); EG(ret, err);
+		}
+		ret = hm->hfunc_finalize(&h_ctx, hash); EG(ret, err);
+		dbg_buf_print("hash = H(R || A || PH(M))", hash, hsize);
+
+		/* Import our hash as a NN and reduce it modulo q */
+		ret = eddsa_decode_integer(&elements[num + i].number, hash, hsize); EG(ret, err);
+		ret = nn_mod(&elements[num + i].number, &elements[num + i].number, q); EG(ret, err);
+		dbg_nn_print("h = ", &elements[num + i].number);
+#if defined(WITH_SIG_EDDSA448)
+		if((key_type == EDDSA448) || (key_type == EDDSA448PH)){
+			/* When dealing with EDDSA448, because of our 4-isogeny between Edwars448 and Ed448
+			 * mapping base point to four times base point, we actually multiply our public key by 4 here
+			 * to be inline with the other computations (the public key stored in Weierstrass )
+			 */
+			ret = nn_lshift(&elements[num + i].number, &elements[num + i].number, 2); EG(ret, err);
+			ret = nn_mod(&elements[num + i].number, &elements[num + i].number, q); EG(ret, err);
+		}
+#endif
+		/* Compute by (z * h) mod q.
+		 */
+		ret = nn_mul(&elements[num + i].number, &elements[num + i].number, &z); EG(ret, err);
+		ret = nn_mod(&elements[num + i].number, &elements[num + i].number, q); EG(ret, err);
+	}
+
+	/* Sanity check */
+	MUST_HAVE((gen_cofactor != NULL) && (q != NULL) && (G != NULL) && (q_bit_len != 0), ret, err);
+
+	/********************************************/
+	/****** Bos-Coster algorithm ****************/
+	ret = ec_verify_bos_coster(elements, (2 * num) + 1, q_bit_len);
+        if(ret){
+                if(ret == -2){
+                        /* In case of Bos-Coster time out, we fall back to the
+                         * slower regular batch verification.
+                         */
+                        ret = _eddsa_verify_batch_no_memory(s, s_len, pub_keys, m, m_len, num, sig_type,
+                                                            hash_type, adata, adata_len); EG(ret, err);
+                }
+                goto err;
+        }
+
+	/* The first element should contain the sum: it should
+	 * be equal to zero. Reject the signature if this is not
+	 * the case.
+	 */
+	ret = prj_pt_iszero(&elements[elements[0].index].point, &iszero); EG(ret, err);
+	ret = iszero ? 0 : -1;
+
+err:
+	PTR_NULLIFY(q);
+	PTR_NULLIFY(pub_key);
+	PTR_NULLIFY(pub_key0);
+	PTR_NULLIFY(shortw_curve);
+	PTR_NULLIFY(alpha_montgomery);
+	PTR_NULLIFY(gamma_montgomery);
+	PTR_NULLIFY(alpha_edwards);
+	PTR_NULLIFY(gen_cofactor);
+	PTR_NULLIFY(pub_key_y);
+	PTR_NULLIFY(G);
+	PTR_NULLIFY(elements);
+
+	/* Unitialize all our scratch_pad_area */
+	if((scratch_pad_area != NULL) && (scratch_pad_area_len != NULL)){
+		IGNORE_RET_VAL(local_memset((u8*)scratch_pad_area, 0, (*scratch_pad_area_len)));
+	}
+
+	ec_edwards_crv_uninit(&crv_edwards);
+	aff_pt_edwards_uninit(&A);
+	aff_pt_edwards_uninit(&R);
+	nn_uninit(&S);
+	nn_uninit(&z);
+
+	return ret;
+}
+
+int eddsa_verify_batch(const u8 **s, const u8 *s_len, const ec_pub_key **pub_keys,
+                       const u8 **m, const u32 *m_len, u32 num, ec_alg_type sig_type,
+                       hash_alg_type hash_type, const u8 **adata, const u16 *adata_len,
+                       verify_batch_scratch_pad *scratch_pad_area, u32 *scratch_pad_area_len)
+{
+        int ret;
+
+        if(scratch_pad_area != NULL){
+                MUST_HAVE((scratch_pad_area_len != NULL), ret, err);
+                ret = _eddsa_verify_batch(s, s_len, pub_keys, m, m_len, num, sig_type,
+                                          hash_type, adata, adata_len,
+                                          scratch_pad_area, scratch_pad_area_len); EG(ret, err);
+        }
+        else{
+                ret = _eddsa_verify_batch_no_memory(s, s_len, pub_keys, m, m_len, num, sig_type,
+                                                    hash_type, adata, adata_len); EG(ret, err);
+        }
+
+err:
+        return ret;
+}
 
 #else /* !(defined(WITH_SIG_EDDSA25519) || defined(WITH_SIG_EDDSA448)) */
 

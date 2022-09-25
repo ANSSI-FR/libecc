@@ -127,7 +127,8 @@ ATTRIBUTE_WARN_UNUSED_RET int eddsa_import_key_pair_from_priv_key_buf(ec_key_pai
 /* Batch verification function */
 ATTRIBUTE_WARN_UNUSED_RET int eddsa_verify_batch(const u8 **s, const u8 *s_len, const ec_pub_key **pub_keys,
               const u8 **m, const u32 *m_len, u32 num, ec_alg_type sig_type,
-              hash_alg_type hash_type, const u8 **adata, const u16 *adata_len);
+              hash_alg_type hash_type, const u8 **adata, const u16 *adata_len,
+	      verify_batch_scratch_pad *scratch_pad_area, u32 *scratch_pad_area_len);
 
 #endif /* __EDDSA_H__ */
 #endif /* defined(WITH_SIG_EDDSA25519) || defined(WITH_SIG_EDDSA448) */

@@ -455,3 +455,34 @@ int nn_mod_dec(nn_t out, nn_src_t in1, nn_src_t p)
 err:
 	return ret;
 }
+
+/*
+ * Compute out = -in mod p. The function returns 0 on success, -1 on error.
+ * Because we only support positive integers, we compute
+ * out = p - in (except when value is 0).
+ *
+ * We suppose that in is already reduced modulo p.
+ *
+ */
+int nn_mod_neg(nn_t out, nn_src_t in, nn_src_t p)
+{
+	int ret, cmp, iszero;
+
+	FORCE_USED_VAR(cmp);
+
+	ret = nn_check_initialized(in); EG(ret, err);
+	ret = nn_check_initialized(p); EG(ret, err);
+
+	SHOULD_HAVE((!nn_cmp(in, p, &cmp)) && (cmp < 0), ret, err);  /* a SHOULD_HAVE; Documented above */
+
+	ret = nn_iszero(in, &iszero); EG(ret, err);
+	if (iszero) {
+		ret = nn_init(out, 0); EG(ret, err);
+		ret = nn_zero(out); EG(ret, err);
+	} else {
+		ret = nn_sub(out, p, in); EG(ret, err);
+	}
+
+err:
+	return ret;
+}

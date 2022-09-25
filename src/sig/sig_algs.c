@@ -674,7 +674,8 @@ err:
 
 int ec_verify_batch(const u8 **s, const u8 *s_len, const ec_pub_key **pub_keys,
               const u8 **m, const u32 *m_len, u32 num, ec_alg_type sig_type,
-              hash_alg_type hash_type, const u8 **adata, const u16 *adata_len)
+              hash_alg_type hash_type, const u8 **adata, const u16 *adata_len,
+	      verify_batch_scratch_pad *scratch_pad_area, u32 *scratch_pad_area_len)
 {
 
 	const ec_sig_mapping *sm;
@@ -685,7 +686,8 @@ int ec_verify_batch(const u8 **s, const u8 *s_len, const ec_pub_key **pub_keys,
 	MUST_HAVE((sm != NULL) && (sm->verify_batch != NULL), ret, err);
 
 	ret = sm->verify_batch(s, s_len, pub_keys, m, m_len, num, sig_type,
-			 hash_type, adata, adata_len);
+			 hash_type, adata, adata_len,
+			 scratch_pad_area, scratch_pad_area_len);
 
 err:
 	return ret;
@@ -847,7 +849,8 @@ int unsupported_verify_finalize(struct ec_verify_context * ctx)
 /* Unsupported batch verification */
 int unsupported_verify_batch(const u8 **s, const u8 *s_len, const ec_pub_key **pub_keys,
               const u8 **m, const u32 *m_len, u32 num, ec_alg_type sig_type,
-              hash_alg_type hash_type, const u8 **adata, const u16 *adata_len)
+              hash_alg_type hash_type, const u8 **adata, const u16 *adata_len,
+	      verify_batch_scratch_pad *scratch_pad_area, u32 *scratch_pad_area_len)
 {
 	/* Quirk to avoid unused variables */
 	FORCE_USED_VAR(s);
@@ -860,6 +863,8 @@ int unsupported_verify_batch(const u8 **s, const u8 *s_len, const ec_pub_key **p
 	FORCE_USED_VAR(s_len);
 	FORCE_USED_VAR(m_len);
 	FORCE_USED_VAR(adata_len);
+	FORCE_USED_VAR(scratch_pad_area);
+	FORCE_USED_VAR(scratch_pad_area_len);
 
 	/* Return an error in any case here */
 	return -1;
@@ -993,6 +998,115 @@ int is_sign_deterministic(ec_alg_type sig_type, int *check)
 		break;
 	}
 
+err:
+	return ret;
+}
+
+
+/*
+ * Bubble sort the table of numbers and the table of projective points
+ * accordingly in ascending order. We only work on index numbers in the table
+ * to avoid useless copies.
+ */
+ATTRIBUTE_WARN_UNUSED_RET static int _bubble_sort(verify_batch_scratch_pad *elements, u32 num)
+{
+        u32 i, j;
+        int ret, swapped;
+
+        MUST_HAVE((elements != NULL), ret, err);
+        MUST_HAVE((num >= 1), ret, err);
+        for(i = 0; i < (num - 1); i++){
+		swapped = 0;
+                for(j = 0; j < (num - i - 1); j++){
+                        int check;
+			u32 indexj, indexj_next;
+			indexj      = elements[j].index;
+			indexj_next = elements[j + 1].index;
+                        ret = nn_cmp(&elements[indexj].number, &elements[indexj_next].number, &check); EG(ret, err);
+                        if(check < 0){
+                                /* Swap the two elements */
+                                elements[j].index   = indexj_next;
+                                elements[j + 1].index = indexj;
+				swapped = 1;
+                        }
+                }
+		/* If no swap occured in the inner loop, get out */
+		if(!swapped){
+			break;
+		}
+        }
+
+        ret = 0;
+err:
+        return ret;
+}
+
+/*
+ * Bos-Coster algorithm, presented e.g. in https://ed25519.cr.yp.to/ed25519-20110705.pdf
+ *
+ * The Bos-Coster algorithm allows to optimize a sum of multi-scalar multiplications using
+ * addition chains. This is used for example in batch signature verification of schemes
+ * that support it.
+ *
+ */
+int ec_verify_bos_coster(verify_batch_scratch_pad *elements, u32 num, bitcnt_t bits)
+{
+	int ret, check;
+	u32 i, index0, index1, max_bos_coster_iterations;
+
+	MUST_HAVE((elements != NULL), ret, err);
+	MUST_HAVE((num > 1), ret, err);
+
+	/* We fix our maximum attempts here.
+	 *
+	 * NOTE: this avoids "denial of service" when
+	 * providing scalars with too big discrepancies, as
+	 * the Bos-Coster algorithm supposes uniformly randomized
+	 * numbers ...
+	 * If we are provided with scalars with too big differences,
+	 * we end up looping for a very long time. In this case, we
+	 * rather quit with a specific error.
+	 *
+	 * The limit hereafter is fixed using the mean asymptotic complexity
+	 * of the algorithm in the nominal case (multiplied by the bit size
+	 * of num to be lax).
+	 */
+	MUST_HAVE((num * bits) >= num, ret, err);
+	MUST_HAVE((num * bits) >= bits, ret, err);
+	max_bos_coster_iterations = (num * bits);
+
+        /********************************************/
+        /****** Bos-Coster algorithm ****************/
+        for(i = 0; i < num; i++){
+                elements[i].index = i;
+        }
+	i = 0;
+        do {
+		/* Sort the elements in descending order */
+		ret = _bubble_sort(elements, num); EG(ret, err);
+                /* Perform the addition */
+		index0 = elements[0].index;
+		index1 = elements[1].index;
+		ret = prj_pt_add(&elements[index1].point, &elements[index0].point,
+				 &elements[index1].point); EG(ret, err);
+                /* Check the two first integers */
+		ret = nn_cmp(&elements[index0].number, &elements[index1].number, &check);
+                /* Subtract the two first numbers */
+                ret = nn_sub(&elements[index0].number, &elements[index0].number,
+                             &elements[index1].number); EG(ret, err);
+		i++;
+		if(i > max_bos_coster_iterations){
+			/* Give up with specific error code */
+			ret = -2;
+			goto err;
+		}
+	} while(check > 0);
+
+	index0 = elements[0].index;
+	/* Proceed with the last scalar multiplication */
+	ret = _prj_pt_unprotected_mult(&elements[index0].point, &elements[index0].number, &elements[index0].point);
+
+	/* The result is in point [0] of elements */
 err:
 	return ret;
 }

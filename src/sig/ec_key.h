@@ -213,4 +213,12 @@ ATTRIBUTE_WARN_UNUSED_RET int ec_structured_key_pair_import_from_buf(ec_key_pair
 
 ATTRIBUTE_WARN_UNUSED_RET int generic_gen_priv_key(ec_priv_key *priv_key);
 
+
+/* Type used for batch verification */
+typedef struct {
+        nn number;
+        prj_pt point;
+	u32 index;
+} verify_batch_scratch_pad;
+
 #endif /* __EC_KEY_H__ */

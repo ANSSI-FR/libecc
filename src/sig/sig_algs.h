@@ -89,7 +89,8 @@ ATTRIBUTE_WARN_UNUSED_RET int ec_verify(const u8 *sig, u8 siglen, const ec_pub_k
 
 int ec_verify_batch(const u8 **s, const u8 *s_len, const ec_pub_key **pub_keys,
               const u8 **m, const u32 *m_len, u32 num, ec_alg_type sig_type,
-              hash_alg_type hash_type, const u8 **adata, const u16 *adata_len);
+              hash_alg_type hash_type, const u8 **adata, const u16 *adata_len,
+	      verify_batch_scratch_pad *scratch_pad_area, u32 *scratch_pad_area_len);
 
 /* Generic signature import and export functions */
 
@@ -105,5 +106,8 @@ ATTRIBUTE_WARN_UNUSED_RET int ec_structured_sig_export_to_buf(const u8 *sig, u32
 				    hash_alg_type hash_type,
 				    const u8
 				    curve_name[MAX_CURVE_NAME_LEN]);
+
+ATTRIBUTE_WARN_UNUSED_RET int ec_verify_bos_coster(verify_batch_scratch_pad *elements,
+				                   u32 num, bitcnt_t bits);
 
 #endif /* __SIG_ALGS_H__ */

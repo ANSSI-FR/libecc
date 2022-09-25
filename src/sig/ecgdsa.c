@@ -269,13 +269,7 @@ int _ecgdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	 * e = q - (h mod q) (except when h is 0).
 	 */
 	ret = nn_mod(&tmp, &tmp, q); EG(ret, err);
-	ret = nn_iszero(&tmp, &iszero); EG(ret, err);
-	if (iszero) {
-		ret = nn_init(&e, 0); EG(ret, err);
-		ret = nn_zero(&e); EG(ret, err);
-	} else {
-		ret = nn_sub(&e, q, &tmp); EG(ret, err);
-	}
+	ret = nn_mod_neg(&e, &tmp, q); EG(ret, err);
 
  restart:
 	/* 3. Get a random value k in ]0,q[ */

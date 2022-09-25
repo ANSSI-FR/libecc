@@ -83,5 +83,12 @@ ATTRIBUTE_WARN_UNUSED_RET int _ecfsdsa_verify_update(struct ec_verify_context *c
 
 ATTRIBUTE_WARN_UNUSED_RET int _ecfsdsa_verify_finalize(struct ec_verify_context *ctx);
 
+/* Batch verification function */
+ATTRIBUTE_WARN_UNUSED_RET int ecfsdsa_verify_batch(const u8 **s, const u8 *s_len, const ec_pub_key **pub_keys,
+              const u8 **m, const u32 *m_len, u32 num, ec_alg_type sig_type,
+              hash_alg_type hash_type, const u8 **adata, const u16 *adata_len,
+              verify_batch_scratch_pad *scratch_pad_area, u32 *scratch_pad_area_len);
+
+
 #endif /* __ECFSDSA_H__ */
 #endif /* WITH_SIG_ECFSDSA */

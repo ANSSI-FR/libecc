@@ -567,12 +567,7 @@ int _ecrdsa_verify_finalize(struct ec_verify_context *ctx)
 	 * a variable.
 	 */
 	ret = nn_mod_mul(&e, &e, r, q); EG(ret, err);
-	ret = nn_iszero(&e, &iszero); EG(ret, err);
-	if (iszero) {
-		ret = nn_zero(&v); EG(ret, err);
-	} else {
-		ret = nn_sub(&v, q, &e); EG(ret, err);
-	}
+	ret = nn_mod_neg(&v, &e, q); EG(ret, err);
 
 	/* 6. Compute W' = uG + vY = (W'_x, W'_y) */
 	ret = prj_pt_mul(&uG, &u, G); EG(ret, err);

@@ -73,6 +73,9 @@ typedef enum {
 #ifdef WITH_SIG_DBIGN
 	DBIGN = 19,
 #endif
+#ifdef WITH_SIG_BIP0340
+	BIP0340 = 20,
+#endif
 } ec_alg_type;
 
 /* Hash algorithm types */

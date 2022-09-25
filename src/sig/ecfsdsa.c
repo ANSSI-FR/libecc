@@ -21,6 +21,7 @@
 #include "../nn/nn_logical.h"
 
 #include "sig_algs_internal.h"
+#include "sig_algs.h"
 #include "ec_key.h"
 #ifdef VERBOSE_INNER_VALUES
 #define EC_SIG_ALG "ECFSDSA"
@@ -332,9 +333,9 @@ int _ecfsdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 #endif /* USE_SIG_BLINDING */
 #ifdef USE_SIG_BLINDING
 	/* Unblind s */
-        /* NOTE: we use Fermat's little theorem inversion for
-         * constant time here. This is possible since q is prime.
-         */
+	/* NOTE: we use Fermat's little theorem inversion for
+	 * constant time here. This is possible since q is prime.
+	 */
 	ret = nn_modinv_fermat(&binv, &b, q); EG(ret, err);
 	ret = nn_mod_mul(&s, &s, &binv, q); EG(ret, err);
 #endif /* USE_SIG_BLINDING */
@@ -544,7 +545,7 @@ int _ecfsdsa_verify_finalize(struct ec_verify_context *ctx)
 	u8 e_buf[MAX_DIGEST_SIZE];
 	u8 hsize, p_len;
 	const u8 *r;
-	int ret, iszero, check;
+	int ret, check;
 
 	tmp.magic = e.magic = WORD(0);
 	sG.magic = eY.magic = WORD(0);
@@ -590,12 +591,7 @@ int _ecfsdsa_verify_finalize(struct ec_verify_context *ctx)
 	ret = local_memset(e_buf, 0, hsize); EG(ret, err);
 	ret = nn_mod(&tmp, &tmp, q); EG(ret, err);
 
-	ret = nn_iszero(&tmp, &iszero); EG(ret, err);
-	if (iszero) {
-		ret = nn_zero(&e); EG(ret, err);
-	} else {
-		ret = nn_sub(&e, q, &tmp); EG(ret, err);
-	}
+	ret = nn_mod_neg(&e, &tmp, q); EG(ret, err);
 
 	/* 5. compute W' = (W'_x,W'_y) = sG + tY, where Y is the public key */
 	ret = prj_pt_mul(&sG, s, G); EG(ret, err);
@@ -643,6 +639,444 @@ err:
 
 	return ret;
 }
+
+/*
+ * NOTE: among all the EC-SDSA ISO14888-3 variants, only EC-FSDSA supports
+ * batch verification as it is the only one allowing the recovery of the
+ * underlying signature point from the signature value (other variants make
+ * use of a hash of (parts) of this point.
+ */
+/* Batch verification function:
+ * This function takes multiple signatures/messages/public keys, and
+ * checks in an optimized way all the signatures.
+ *
+ * This returns 0 if *all* the signatures are correct, and -1 if at least
+ * one signature is not correct.
+ *
+ */
+static int _ecfsdsa_verify_batch_no_memory(const u8 **s, const u8 *s_len, const ec_pub_key **pub_keys,
+					   const u8 **m, const u32 *m_len, u32 num, ec_alg_type sig_type,
+					   hash_alg_type hash_type, const u8 **adata, const u16 *adata_len)
+{
+	nn_src_t q = NULL;
+	prj_pt_src_t G = NULL;
+	prj_pt_t W = NULL, Y = NULL;
+	prj_pt Tmp, W_sum, Y_sum;
+	nn S, S_sum, e, a;
+	u8 hash[MAX_DIGEST_SIZE];
+	const ec_pub_key *pub_key, *pub_key0;
+	int ret, iszero, cmp;
+	prj_pt_src_t pub_key_y;
+	hash_context h_ctx;
+	const hash_mapping *hm;
+	ec_shortw_crv_src_t shortw_curve;
+	ec_alg_type key_type = UNKNOWN_ALG;
+	bitcnt_t p_bit_len, q_bit_len;
+	u8 p_len, q_len;
+	u16 hsize;
+	u32 i;
+
+	Tmp.magic = W_sum.magic = Y_sum.magic = WORD(0);
+	S.magic = S_sum.magic = e.magic = a.magic = WORD(0);
+
+	FORCE_USED_VAR(adata_len);
+	FORCE_USED_VAR(adata);
+
+	/* First, some sanity checks */
+	MUST_HAVE((s != NULL) && (pub_keys != NULL) && (m != NULL), ret, err);
+	/* We need at least one element in our batch data bags */
+	MUST_HAVE((num > 0), ret, err);
+
+	/* Zeroize buffers */
+	ret = local_memset(hash, 0, sizeof(hash)); EG(ret, err);
+
+	pub_key0 = pub_keys[0];
+	MUST_HAVE((pub_key0 != NULL), ret, err);
+
+	/* Get our hash mapping */
+	ret = get_hash_by_type(hash_type, &hm); EG(ret, err);
+	hsize = hm->digest_size;
+	MUST_HAVE((hm != NULL), ret, err);
+
+	for(i = 0; i < num; i++){
+		u8 siglen;
+		const u8 *sig = NULL;
+
+		ret = pub_key_check_initialized_and_type(pub_keys[i], ECFSDSA); EG(ret, err);
+
+		/* Make things more readable */
+		pub_key = pub_keys[i];
+
+		/* Sanity check that all our public keys have the same parameters */
+		MUST_HAVE((pub_key->params) == (pub_key0->params), ret, err);
+
+		q = &(pub_key->params->ec_gen_order);
+		shortw_curve = &(pub_key->params->ec_curve);
+		pub_key_y = &(pub_key->y);
+		key_type = pub_key->key_type;
+		G = &(pub_key->params->ec_gen);
+		p_bit_len = pub_key->params->ec_fp.p_bitlen;
+		q_bit_len = pub_key->params->ec_gen_order_bitlen;
+		p_len = (u8)BYTECEIL(p_bit_len);
+		q_len = (u8)BYTECEIL(q_bit_len);
+
+		/* Check given signature length is the expected one */
+		siglen = s_len[i];
+		sig = s[i];
+		MUST_HAVE((siglen == ECFSDSA_SIGLEN(p_bit_len, q_bit_len)), ret, err);
+		MUST_HAVE((siglen == (ECFSDSA_R_LEN(p_bit_len) + ECFSDSA_S_LEN(q_bit_len))), ret, err);
+
+		/* Check the key type versus the algorithm */
+		MUST_HAVE((key_type == sig_type), ret, err);
+
+		if(i == 0){
+			/* Initialize our sums to zero/point at infinity */
+			ret = nn_init(&S_sum, 0); EG(ret, err);
+			ret = prj_pt_init(&W_sum, shortw_curve); EG(ret, err);
+			ret = prj_pt_zero(&W_sum); EG(ret, err);
+			ret = prj_pt_init(&Y_sum, shortw_curve); EG(ret, err);
+			ret = prj_pt_zero(&Y_sum); EG(ret, err);
+			ret = prj_pt_init(&Tmp, shortw_curve); EG(ret, err);
+			ret = nn_init(&e, 0); EG(ret, err);
+			ret = nn_init(&a, 0); EG(ret, err);
+		}
+
+		/* Get a pseudo-random scalar a for randomizing the linear combination */
+		ret = nn_get_random_mod(&a, q); EG(ret, err);
+
+		/***************************************************/
+		/* Extract s */
+		ret = nn_init_from_buf(&S, &sig[2 * p_len], q_len); EG(ret, err);
+		ret = nn_cmp(&S, q, &cmp); EG(ret, err);
+		MUST_HAVE((cmp < 0), ret, err);
+
+		dbg_nn_print("s", &S);
+
+		/***************************************************/
+		/* Add S to the sum */
+		/* Multiply S by a */
+		ret = nn_mod_mul(&S, &a, &S, q); EG(ret, err);
+		ret = nn_mod_add(&S_sum, &S_sum,
+				 &S, q); EG(ret, err);
+
+		/***************************************************/
+		/* Compute Y and add it to Y_sum */
+		Y = &Tmp;
+		/* Copy the public key point to work on the unique
+		 * affine representative.
+		 */
+		ret = prj_pt_copy(Y, pub_key_y); EG(ret, err);
+		ret = prj_pt_unique(Y, Y); EG(ret, err);
+		dbg_ec_point_print("Y", Y);
+
+		/* Compute e */
+		ret = hm->hfunc_init(&h_ctx); EG(ret, err);
+		ret = hm->hfunc_update(&h_ctx, &sig[0], (u32)(2 * p_len)); EG(ret, err);
+		ret = hm->hfunc_update(&h_ctx, m[i], m_len[i]); EG(ret, err);
+		ret = hm->hfunc_finalize(&h_ctx, hash); EG(ret, err);
+
+		ret = nn_init_from_buf(&e, hash, hsize); EG(ret, err);
+		ret = nn_mod(&e, &e, q); EG(ret, err);
+		ret = nn_mod_neg(&e, &e, q); EG(ret, err);
+
+		dbg_nn_print("e", &e);
+
+		/* Multiply e by 'a' */
+		ret = nn_mod_mul(&e, &e, &a, q); EG(ret, err);
+
+		ret = _prj_pt_unprotected_mult(Y, &e, Y); EG(ret, err);
+		dbg_ec_point_print("eY", Y);
+		/* Add to the sum */
+		ret = prj_pt_add(&Y_sum, &Y_sum, Y); EG(ret, err);
+
+		/***************************************************/
+		W = &Tmp;
+		/* Compute W from rx and ry */
+		ret = prj_pt_import_from_aff_buf(W, &sig[0], (u16)(2 * p_len), shortw_curve); EG(ret, err);
+
+		/* Now multiply W by -a */
+		ret = nn_mod_neg(&a, &a, q); EG(ret, err);
+		ret = _prj_pt_unprotected_mult(W, &a, W); EG(ret, err);
+
+		/* Add to the sum */
+		ret = prj_pt_add(&W_sum, &W_sum, W); EG(ret, err);
+		dbg_ec_point_print("aW", W);
+	}
+	/* Sanity check */
+	MUST_HAVE((q != NULL) && (G != NULL), ret, err);
+
+	/* Compute S_sum * G */
+	ret = _prj_pt_unprotected_mult(&Tmp, &S_sum, G); EG(ret, err);
+	/* Add P_sum and R_sum */
+	ret = prj_pt_add(&Tmp, &Tmp, &W_sum); EG(ret, err);
+	ret = prj_pt_add(&Tmp, &Tmp, &Y_sum); EG(ret, err);
+	/* The result should be point at infinity */
+	ret = prj_pt_iszero(&Tmp, &iszero); EG(ret, err);
+	ret = (iszero == 1) ? 0 : -1;
+
+err:
+	PTR_NULLIFY(q);
+	PTR_NULLIFY(pub_key);
+	PTR_NULLIFY(pub_key0);
+	PTR_NULLIFY(shortw_curve);
+	PTR_NULLIFY(pub_key_y);
+	PTR_NULLIFY(G);
+	PTR_NULLIFY(W);
+	PTR_NULLIFY(Y);
+
+	prj_pt_uninit(&W_sum);
+	prj_pt_uninit(&Y_sum);
+	prj_pt_uninit(&Tmp);
+	nn_uninit(&S);
+	nn_uninit(&S_sum);
+	nn_uninit(&e);
+	nn_uninit(&a);
+
+	return ret;
+}
+
+
+static int _ecfsdsa_verify_batch(const u8 **s, const u8 *s_len, const ec_pub_key **pub_keys,
+				 const u8 **m, const u32 *m_len, u32 num, ec_alg_type sig_type,
+				 hash_alg_type hash_type, const u8 **adata, const u16 *adata_len,
+				 verify_batch_scratch_pad *scratch_pad_area, u32 *scratch_pad_area_len)
+{
+	nn_src_t q = NULL;
+	prj_pt_src_t G = NULL;
+	prj_pt_t W = NULL, Y = NULL;
+	nn S, a;
+	nn_t e = NULL;
+	u8 hash[MAX_DIGEST_SIZE];
+	const ec_pub_key *pub_key, *pub_key0;
+	int ret, iszero, cmp;
+	prj_pt_src_t pub_key_y;
+	hash_context h_ctx;
+	const hash_mapping *hm;
+	ec_shortw_crv_src_t shortw_curve;
+	ec_alg_type key_type = UNKNOWN_ALG;
+	bitcnt_t p_bit_len, q_bit_len = 0;
+	u8 p_len, q_len;
+	u16 hsize;
+	u32 i;
+	/* NN numbers and points pointers */
+	verify_batch_scratch_pad *elements = scratch_pad_area;
+	u64 expected_len;
+
+	S.magic = a.magic = WORD(0);
+
+	FORCE_USED_VAR(adata_len);
+	FORCE_USED_VAR(adata);
+
+	/* First, some sanity checks */
+	MUST_HAVE((s != NULL) && (pub_keys != NULL) && (m != NULL), ret, err);
+
+	MUST_HAVE((scratch_pad_area_len != NULL), ret, err);
+	MUST_HAVE(((2 * num) >= num), ret, err);
+	MUST_HAVE(((2 * num) + 1) >= num, ret, err);
+
+	/* Zeroize buffers */
+	ret = local_memset(hash, 0, sizeof(hash)); EG(ret, err);
+
+	/* In oder to apply the algorithm, we must have at least two
+	 * elements to verify. If this is not the case, we fallback to
+	 * the regular "no memory" version.
+	 */
+	if(num <= 1){
+		if(scratch_pad_area == NULL){
+			/* We do not require any memory in this case */
+			(*scratch_pad_area_len) = 0;
+			ret = 0;
+			goto err;
+		}
+		else{
+			ret = _ecfsdsa_verify_batch_no_memory(s, s_len, pub_keys, m, m_len, num, sig_type,
+							      hash_type, adata, adata_len);
+			goto err;
+		}
+	}
+
+	expected_len = ((2 * num) + 1) * sizeof(verify_batch_scratch_pad);
+	MUST_HAVE((expected_len < 0xffffffff), ret, err);
+
+	if(scratch_pad_area == NULL){
+		/* Return the needed size: we need to keep track of (2 * num) + 1 NN numbers
+		 * and (2 * num) + 1 projective points, plus (2 * num) + 1 indices
+		 */
+		(*scratch_pad_area_len) = (u32)expected_len;
+		ret = 0;
+		goto err;
+	}
+	else{
+		MUST_HAVE((*scratch_pad_area_len) >= expected_len, ret, err);
+	}
+
+	pub_key0 = pub_keys[0];
+	MUST_HAVE((pub_key0 != NULL), ret, err);
+
+	/* Get our hash mapping */
+	ret = get_hash_by_type(hash_type, &hm); EG(ret, err);
+	hsize = hm->digest_size;
+	MUST_HAVE((hm != NULL), ret, err);
+
+	for(i = 0; i < num; i++){
+		u8 siglen;
+		const u8 *sig = NULL;
+
+		ret = pub_key_check_initialized_and_type(pub_keys[i], ECFSDSA); EG(ret, err);
+
+		/* Make things more readable */
+		pub_key = pub_keys[i];
+
+		/* Sanity check that all our public keys have the same parameters */
+		MUST_HAVE((pub_key->params) == (pub_key0->params), ret, err);
+
+		q = &(pub_key->params->ec_gen_order);
+		shortw_curve = &(pub_key->params->ec_curve);
+		pub_key_y = &(pub_key->y);
+		key_type = pub_key->key_type;
+		G = &(pub_key->params->ec_gen);
+		p_bit_len = pub_key->params->ec_fp.p_bitlen;
+		q_bit_len = pub_key->params->ec_gen_order_bitlen;
+		p_len = (u8)BYTECEIL(p_bit_len);
+		q_len = (u8)BYTECEIL(q_bit_len);
+
+		/* Check given signature length is the expected one */
+		siglen = s_len[i];
+		sig = s[i];
+		MUST_HAVE((siglen == ECFSDSA_SIGLEN(p_bit_len, q_bit_len)), ret, err);
+		MUST_HAVE((siglen == (ECFSDSA_R_LEN(p_bit_len) + ECFSDSA_S_LEN(q_bit_len))), ret, err);
+
+		/* Check the key type versus the algorithm */
+		MUST_HAVE((key_type == sig_type), ret, err);
+
+		if(i == 0){
+			/* Initialize our sums to zero/point at infinity */
+			ret = nn_init(&a, 0); EG(ret, err);
+			ret = nn_init(&elements[(2 * num)].number, 0); EG(ret, err);
+			ret = prj_pt_copy(&elements[(2 * num)].point, G); EG(ret, err);
+		}
+
+		/* Get a pseudo-random scalar a for randomizing the linear combination */
+		ret = nn_get_random_mod(&a, q); EG(ret, err);
+
+		/***************************************************/
+		/* Extract s */
+		ret = nn_init_from_buf(&S, &sig[2 * p_len], q_len); EG(ret, err);
+		ret = nn_cmp(&S, q, &cmp); EG(ret, err);
+		MUST_HAVE((cmp < 0), ret, err);
+
+		dbg_nn_print("s", &S);
+
+		/***************************************************/
+		/* Add S to the sum */
+		/* Multiply S by a */
+		ret = nn_mod_mul(&S, &a, &S, q); EG(ret, err);
+		ret = nn_mod_add(&elements[(2 * num)].number, &elements[(2 * num)].number,
+				 &S, q); EG(ret, err);
+
+		/***************************************************/
+		/* Compute Y */
+		Y = &elements[num + i].point;
+		/* Copy the public key point to work on the unique
+		 * affine representative.
+		 */
+		ret = prj_pt_copy(Y, pub_key_y); EG(ret, err);
+		ret = prj_pt_unique(Y, Y); EG(ret, err);
+		dbg_ec_point_print("Y", Y);
+
+		/* Compute e */
+		e = &elements[num + i].number;
+		ret = nn_init(e, 0); EG(ret, err);
+		ret = hm->hfunc_init(&h_ctx); EG(ret, err);
+		ret = hm->hfunc_update(&h_ctx, &sig[0], (u32)(2 * p_len)); EG(ret, err);
+		ret = hm->hfunc_update(&h_ctx, m[i], m_len[i]); EG(ret, err);
+		ret = hm->hfunc_finalize(&h_ctx, hash); EG(ret, err);
+
+		ret = nn_init_from_buf(e, hash, hsize); EG(ret, err);
+		ret = nn_mod(e, e, q); EG(ret, err);
+		ret = nn_mod_neg(e, e, q); EG(ret, err);
+
+		dbg_nn_print("e", e);
+
+		/* Multiply e by 'a' */
+		ret = nn_mod_mul(e, e, &a, q); EG(ret, err);
+
+		/***************************************************/
+		W = &elements[i].point;
+		/* Compute W from rx and ry */
+		ret = prj_pt_import_from_aff_buf(W, &sig[0], (u16)(2 * p_len), shortw_curve); EG(ret, err);
+		ret = nn_init(&elements[i].number, 0); EG(ret, err);
+		ret = nn_copy(&elements[i].number, &a); EG(ret, err);
+		ret = nn_mod_neg(&elements[i].number, &elements[i].number, q); EG(ret, err);
+		dbg_ec_point_print("W", W);
+	}
+
+	/* Sanity check */
+	MUST_HAVE((q != NULL) && (G != NULL) && (q_bit_len != 0), ret, err);
+
+	/********************************************/
+	/****** Bos-Coster algorithm ****************/
+	ret = ec_verify_bos_coster(elements, (2 * num) + 1, q_bit_len);
+	if(ret){
+		if(ret == -2){
+			/* In case of Bos-Coster time out, we fall back to the
+			 * slower regular batch verification.
+			 */
+			ret = _ecfsdsa_verify_batch_no_memory(s, s_len, pub_keys, m, m_len, num, sig_type,
+							      hash_type, adata, adata_len); EG(ret, err);
+		}
+		goto err;
+	}
+
+
+	/* The first element should contain the sum: it should
+	 * be equal to zero. Reject the signature if this is not
+	 * the case.
+	 */
+	ret = prj_pt_iszero(&elements[elements[0].index].point, &iszero); EG(ret, err);
+	ret = iszero ? 0 : -1;
+
+err:
+	PTR_NULLIFY(q);
+	PTR_NULLIFY(e);
+	PTR_NULLIFY(pub_key);
+	PTR_NULLIFY(pub_key0);
+	PTR_NULLIFY(shortw_curve);
+	PTR_NULLIFY(pub_key_y);
+	PTR_NULLIFY(G);
+	PTR_NULLIFY(W);
+	PTR_NULLIFY(Y);
+
+	nn_uninit(&S);
+	nn_uninit(&a);
+
+	return ret;
+}
+
+
+int ecfsdsa_verify_batch(const u8 **s, const u8 *s_len, const ec_pub_key **pub_keys,
+			 const u8 **m, const u32 *m_len, u32 num, ec_alg_type sig_type,
+			 hash_alg_type hash_type, const u8 **adata, const u16 *adata_len,
+			 verify_batch_scratch_pad *scratch_pad_area, u32 *scratch_pad_area_len)
+{
+	int ret;
+
+	if(scratch_pad_area != NULL){
+		MUST_HAVE((scratch_pad_area_len != NULL), ret, err);
+		ret = _ecfsdsa_verify_batch(s, s_len, pub_keys, m, m_len, num, sig_type,
+					    hash_type, adata, adata_len,
+					    scratch_pad_area, scratch_pad_area_len); EG(ret, err);
+
+	}
+	else{
+		ret = _ecfsdsa_verify_batch_no_memory(s, s_len, pub_keys, m, m_len, num, sig_type,
+						      hash_type, adata, adata_len); EG(ret, err);
+	}
+
+err:
+	return ret;
+}
+
 
 #else /* WITH_SIG_ECFSDSA */
 

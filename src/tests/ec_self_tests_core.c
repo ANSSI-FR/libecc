@@ -374,9 +374,10 @@ ATTRIBUTE_WARN_UNUSED_RET static int ec_import_export_test(const ec_test_case *c
 			const ec_pub_key *pub_keys[] = { &(kp.pub_key) };
 			const u8 *adatas[] = { c->adata };
 			const u16 adatas_len[] = { c->adata_len };
-			ret = ec_verify_batch(signatures, signatures_len, pub_keys, messages, messages_len, 1, c->sig_type, c->hash_type, adatas, adatas_len);
+			ret = ec_verify_batch(signatures, signatures_len, pub_keys, messages, messages_len,
+					1, c->sig_type, c->hash_type, adatas, adatas_len, NULL, NULL);
 			if(ret){
-				ext_printf("Error when verifying signature ec_verify_batch\n");
+				ext_printf("Error when verifying signature ec_verify_batch with batch 1\n");
 				goto err;
 			}
 		}
@@ -533,7 +534,7 @@ gen_num_batch:
 			ext_printf("Error when getting random\n");
 			goto err;
 		}
-		num_batch = num_batch % MAX_BATCH_SIG_SIZE;
+		num_batch = (num_batch % MAX_BATCH_SIG_SIZE);
 		if(num_batch == 0){
 			goto gen_num_batch;
 		}
@@ -581,10 +582,33 @@ gen_num_batch:
 				goto err;
 			}
 		}
-		ret = ec_verify_batch(signatures, signatures_len, pubkeys, messages, messages_len, num_batch, c->sig_type, c->hash_type, adata, adata_len);
+		/* Test */
+		ret = ec_verify_batch(signatures, signatures_len, pubkeys, messages, messages_len,
+				num_batch, c->sig_type, c->hash_type, adata, adata_len, NULL, NULL);
 		if(ret){
-			ext_printf("Error when verifying signature ec_verify_batch\n");
+			ext_printf("Error when verifying signature ec_verify_batch no memory for batch size %d\n", num_batch);
 			goto err;
+		}
+		{
+			u32 scratch_pad_area_len = 0;
+			/* We need 2 * n + 1 scratch pad storage, compute this with max */
+			verify_batch_scratch_pad scratch_pad_area[(2 * MAX_BATCH_SIG_SIZE) + 1];
+
+			ret = ec_verify_batch(signatures, signatures_len, pubkeys, messages, messages_len,
+					num_batch, c->sig_type, c->hash_type, adata, adata_len, NULL, &scratch_pad_area_len);
+			if(ret){
+				ext_printf("Error when getting scratch_pad_area length for ec_verify_batch optimized  for batch size %d\n", num_batch);
+				goto err;
+			}
+			MUST_HAVE((scratch_pad_area_len <= sizeof(scratch_pad_area)), ret, err);
+
+			scratch_pad_area_len = sizeof(scratch_pad_area);
+			ret = ec_verify_batch(signatures, signatures_len, pubkeys, messages, messages_len,
+					num_batch, c->sig_type, c->hash_type, adata, adata_len, scratch_pad_area, &scratch_pad_area_len);
+			if(ret){
+				ext_printf("Error when verifying signature ec_verify_batch optimized for batch size %d\n", num_batch);
+				goto err;
+			}
 		}
 	}
 
@@ -680,7 +704,8 @@ ATTRIBUTE_WARN_UNUSED_RET static int ec_test_verify(u8 *sig, u8 siglen, const ec
 		const ec_pub_key *pub_keys[] = { pub_key };
 		const u8 *adatas[] = { c->adata };
 		const u16 adatas_len[] = { c->adata_len };
-		ret = ec_verify_batch(signatures, signatures_len, pub_keys, messages, messages_len, 1, c->sig_type, c->hash_type, adatas, adatas_len);
+		ret = ec_verify_batch(signatures, signatures_len, pub_keys, messages, messages_len,
+				1, c->sig_type, c->hash_type, adatas, adatas_len, NULL, NULL);
 		if(ret){
 			ret = -1;
 			goto err;
@@ -1177,7 +1202,6 @@ ATTRIBUTE_WARN_UNUSED_RET int perform_known_test_vectors_test(const char *sig, c
 {
 	unsigned int i;
 	int ret = 0;
-	int check;
 
 	ext_printf("======= Known test vectors test =================\n");
 #ifdef WITH_OPENMP_SELF_TESTS
@@ -1185,6 +1209,7 @@ ATTRIBUTE_WARN_UNUSED_RET int perform_known_test_vectors_test(const char *sig, c
         #pragma omp for schedule(static, 1) nowait
 #endif
 	for (i = 0; i < EC_FIXED_VECTOR_NUM_TESTS; i++) {
+		int check;
 		const ec_test_case *cur_test;
 		cur_test = ec_fixed_vector_tests[i];
 		if(cur_test == NULL){
@@ -1273,6 +1298,7 @@ ATTRIBUTE_WARN_UNUSED_RET int perform_known_test_vectors_test(const char *sig, c
 		#pragma omp for schedule(static, 1) nowait
 #endif
 		for (i = 0; i < ECDH_FIXED_VECTOR_NUM_TESTS; i++) {
+			int check;
 			const ecdh_test_case *ecdh_cur_test;
 			ecdh_cur_test = ecdh_fixed_vector_tests[i];
 			if(ecdh_cur_test == NULL){
@@ -1537,7 +1563,8 @@ err:
 	return ret;
 }
 
-#define PERF_NUM_OP	300
+#define PERF_NUM_OP		300
+#define PERF_BATCH_VERIFICATION 16
 
 /*
  * ECC generic performance test: Returns the number of signatures
@@ -1545,15 +1572,18 @@ err:
  */
 ATTRIBUTE_WARN_UNUSED_RET static int ec_performance_test(const ec_test_case *c,
 			       unsigned int *n_perf_sign,
-			       unsigned int *n_perf_verif)
+			       unsigned int *n_perf_verif,
+			       unsigned int *n_perf_batch_verif,
+			       unsigned char *batch_verify_ok)
 {
 	ec_key_pair kp;
 	ec_params params;
-	int ret;
+	int ret, check;
 
 	MUST_HAVE(c != NULL, ret, err);
 	MUST_HAVE(n_perf_sign != NULL, ret, err);
 	MUST_HAVE(n_perf_verif != NULL, ret, err);
+	MUST_HAVE((n_perf_batch_verif != NULL) && (batch_verify_ok != NULL), ret, err);
 
 	ret = local_memset(&kp, 0, sizeof(kp)); EG(ret, err);
 
@@ -1579,8 +1609,8 @@ ATTRIBUTE_WARN_UNUSED_RET static int ec_performance_test(const ec_test_case *c,
 		u16 msglen;
 		u8 hash_digest_size, hash_block_size;
 		/* Time related variables */
-		u64 time1, time2, cumulated_time_sign, cumulated_time_verify;
-		int i;
+		u64 time1, time2, cumulated_time_sign, cumulated_time_verify, cumulated_time_batch_verify;
+		unsigned int i;
 
 		ret = local_memset(sig, 0, sizeof(sig)); EG(ret, err);
 		ret = local_memset(msg, 0, sizeof(msg)); EG(ret, err);
@@ -1602,7 +1632,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int ec_performance_test(const ec_test_case *c,
 			ext_printf("Error when getting hash size\n");
 			goto err;
 		}
-		cumulated_time_sign = cumulated_time_verify = 0;
+		cumulated_time_sign = cumulated_time_verify = cumulated_time_batch_verify = 0;
 		for (i = 0; i < PERF_NUM_OP; i++) {
 			/* Generate a random message to sign */
 			ret = get_random((u8 *)&msglen, sizeof(msglen));
@@ -1662,12 +1692,72 @@ ATTRIBUTE_WARN_UNUSED_RET static int ec_performance_test(const ec_test_case *c,
 				goto err;
 			}
 			cumulated_time_verify += (time2 - time1);
+
+			/***** Batch verification **********/
+			ret = is_verify_batch_mode_supported(c->sig_type, &check); EG(ret, err);
+			if(check){
+				unsigned int j;
+				const u8 *signatures[PERF_BATCH_VERIFICATION];
+				u8 signatures_len[PERF_BATCH_VERIFICATION];
+				const u8 *messages[PERF_BATCH_VERIFICATION];
+				u32 messages_len[PERF_BATCH_VERIFICATION];
+				const ec_pub_key *pub_keys[PERF_BATCH_VERIFICATION];
+				const u8 *adatas[PERF_BATCH_VERIFICATION];
+				u16 adatas_len[PERF_BATCH_VERIFICATION];
+				/* We need 2 * n + 1 scratch pad storage, compute this with max */
+				verify_batch_scratch_pad scratch_pad_area[(2 * PERF_BATCH_VERIFICATION) + 1];
+				u32 scratch_pad_area_len = sizeof(scratch_pad_area);
+
+				for(j = 0; j < PERF_BATCH_VERIFICATION; j++){
+					signatures[j] = sig;
+					signatures_len[j] = siglen;
+					messages[j] = msg;
+					messages_len[j] = msglen;
+					pub_keys[j] = &(kp.pub_key);
+					adatas[j] = c->adata;
+					adatas_len[j] = c->adata_len;
+				}
+				ret = get_ms_time(&time1);
+				if (ret) {
+					ext_printf("Error when getting time\n");
+					goto err;
+				}
+				ret = ec_verify_batch(signatures, signatures_len, pub_keys, messages, messages_len,
+						PERF_BATCH_VERIFICATION, c->sig_type, c->hash_type, adatas, adatas_len, scratch_pad_area, &scratch_pad_area_len);
+				if(ret){
+					ext_printf("Error when verifying signature ec_verify_batch with batch %d\n", PERF_BATCH_VERIFICATION);
+					goto err;
+				}
+				ret = get_ms_time(&time2);
+				if (ret) {
+					ext_printf("Error when getting time\n");
+					goto err;
+				}
+				if (time2 < time1) {
+					ext_printf("Error: time error (time2 < time1)\n");
+					goto err;
+				}
+				cumulated_time_batch_verify += (time2 - time1);
+				(*batch_verify_ok) = 1;
+			}
+			else{
+				(*batch_verify_ok) = 0;
+			}
 		}
+
 		if (n_perf_sign != NULL) {
 			(*n_perf_sign) = (unsigned int)((PERF_NUM_OP * 1000ULL) / cumulated_time_sign);
 		}
 		if (n_perf_verif != NULL) {
 			(*n_perf_verif) = (unsigned int)((PERF_NUM_OP * 1000ULL) / cumulated_time_verify);
+		}
+		if (n_perf_batch_verif != NULL) {
+			if((*batch_verify_ok) == 1){
+				(*n_perf_batch_verif) = (unsigned int)((PERF_NUM_OP * PERF_BATCH_VERIFICATION * 1000ULL) / cumulated_time_batch_verify);
+			}
+			else{
+				(*n_perf_batch_verif) = 0;
+			}
 		}
 	}
 	ret = 0;
@@ -1682,7 +1772,8 @@ ATTRIBUTE_WARN_UNUSED_RET static int perf_test_one(const ec_sig_mapping *sig, co
 	char test_name[MAX_CURVE_NAME_LEN + MAX_HASH_ALG_NAME_LEN +
 		       MAX_SIG_ALG_NAME_LEN + 2];
 	const unsigned int tn_size = sizeof(test_name) - 1; /* w/o trailing 0 */
-	unsigned int n_perf_sign = 0, n_perf_verif = 0;
+	unsigned int n_perf_sign = 0, n_perf_verif = 0, n_perf_batch_verif = 0;
+	unsigned char batch_verify_ok = 0;
 	const char *crv_name;
 	ec_test_case t;
 	int ret;
@@ -1786,12 +1877,21 @@ ATTRIBUTE_WARN_UNUSED_RET static int perf_test_one(const ec_sig_mapping *sig, co
 	}
 
 	/* Sign and verify some random data during some time */
-	ret = ec_performance_test(&t, &n_perf_sign, &n_perf_verif);
+	ret = ec_performance_test(&t, &n_perf_sign, &n_perf_verif, &n_perf_batch_verif, &batch_verify_ok);
 	OPENMP_LOCK();
-	ext_printf("[%s] %30s perf: %d sign/s and %d verif/s\n",
-		   ret ? "-" : "+", t.name, n_perf_sign, n_perf_verif);
-	if ((n_perf_sign == 0) || (n_perf_verif == 0)) {
-		ext_printf("\t(0 is less than one sig/verif per sec)\n");
+	if(batch_verify_ok == 1){
+		ext_printf("[%s] %30s perf: %d sign/s and %d verif/s, %d batch verif/s (for %d batch)\n",
+			   ret ? "-" : "+", t.name, n_perf_sign, n_perf_verif, n_perf_batch_verif, PERF_BATCH_VERIFICATION);
+		if ((n_perf_sign == 0) || (n_perf_verif == 0) || (n_perf_batch_verif == 0)) {
+			ext_printf("\t(0 is less than one sig/verif per sec)\n");
+		}
+	}
+	else{
+		ext_printf("[%s] %30s perf: %d sign/s and %d verif/s\n",
+			   ret ? "-" : "+", t.name, n_perf_sign, n_perf_verif);
+		if ((n_perf_sign == 0) || (n_perf_verif == 0)) {
+			ext_printf("\t(0 is less than one sig/verif per sec)\n");
+		}
 	}
 	OPENMP_UNLOCK();
 

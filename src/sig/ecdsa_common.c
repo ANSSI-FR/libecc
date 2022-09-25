@@ -984,8 +984,8 @@ restart:
 	ret = nn_modinv(&r, &r, q); EG(ret, err);
 	/* u */
 	ret = nn_mod_mul(&u, &e, &r, q); EG(ret, err);
-	/* NOTE: -x mod q is (q - x) mod q, i.e. (q - x) when x is reduced */
-	ret = nn_sub(&u, q, &u); EG(ret, err);
+	/* NOTE: -x mod q is (q - x) mod q, i.e. (q - x) when x is reduced, except for 0 */
+	ret = nn_mod_neg(&u, &u, q); EG(ret, err);
 	/* v */
 	ret = nn_mod_mul(&v, &s, &r, q); EG(ret, err);
 

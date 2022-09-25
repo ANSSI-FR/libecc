@@ -29,6 +29,7 @@ ATTRIBUTE_WARN_UNUSED_RET int nn_mod_add(nn_t out, nn_src_t in1, nn_src_t in2, n
 ATTRIBUTE_WARN_UNUSED_RET int nn_mod_inc(nn_t out, nn_src_t in1, nn_src_t p);
 ATTRIBUTE_WARN_UNUSED_RET int nn_mod_sub(nn_t out, nn_src_t in1, nn_src_t in2, nn_src_t p);
 ATTRIBUTE_WARN_UNUSED_RET int nn_mod_dec(nn_t out, nn_src_t in1, nn_src_t p);
+ATTRIBUTE_WARN_UNUSED_RET int nn_mod_neg(nn_t out, nn_src_t in, nn_src_t p);
 */
 
 #endif /* __NN_ADD_H__ */

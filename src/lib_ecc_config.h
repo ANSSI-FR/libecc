@@ -122,6 +122,7 @@
 #define WITH_SIG_DECDSA
 #define WITH_SIG_BIGN
 #define WITH_SIG_DBIGN
+#define WITH_SIG_BIP0340
 
 /* Supported ECDH schemes */
 #define WITH_ECCCDH

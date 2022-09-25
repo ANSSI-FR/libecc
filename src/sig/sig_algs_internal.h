@@ -31,6 +31,7 @@
 #include "decdsa.h"
 #include "bign.h"
 #include "dbign.h"
+#include "bip0340.h"
 /* Includes for fuzzing */
 #ifdef USE_CRYPTOFUZZ
 #include "fuzzing_ecdsa.h"
@@ -76,7 +77,8 @@ typedef struct {
 	      hash_alg_type hash_type, const u8 *adata, u16 adata_len);
 	ATTRIBUTE_WARN_UNUSED_RET int (*verify_batch) (const u8 **s, const u8 *s_len, const ec_pub_key **pub_keys,
               const u8 **m, const u32 *m_len, u32 num, ec_alg_type sig_type,
-              hash_alg_type hash_type, const u8 **adata, const u16 *adata_len);
+              hash_alg_type hash_type, const u8 **adata, const u16 *adata_len,
+	      verify_batch_scratch_pad *scratch_pad_area, u32 *scratch_pad_area_len);
 
 } ec_sig_mapping;
 
@@ -200,6 +202,9 @@ typedef union {
 #if defined(WITH_SIG_BIGN) || defined(WITH_SIG_DBIGN)	/* BIGN and DBIGN */
 	bign_verify_data bign;
 #endif
+#if defined(WITH_SIG_BIP0340)
+	bip0340_verify_data bip0340;
+#endif
 } sig_verify_data;
 
 /*
@@ -263,7 +268,8 @@ ATTRIBUTE_WARN_UNUSED_RET int is_verify_batch_mode_supported(ec_alg_type sig_typ
 
 ATTRIBUTE_WARN_UNUSED_RET int unsupported_verify_batch(const u8 **s, const u8 *s_len, const ec_pub_key **pub_keys,
               const u8 **m, const u32 *m_len, u32 num, ec_alg_type sig_type,
-              hash_alg_type hash_type, const u8 **adata, const u16 *adata_len);
+              hash_alg_type hash_type, const u8 **adata, const u16 *adata_len,
+	      verify_batch_scratch_pad *scratch_pad_area, u32 *scratch_pad_area_len);
 
 /*
  * Each signature algorithm supported by the library and implemented
@@ -369,7 +375,7 @@ static const ec_sig_mapping ec_sig_maps[] = {
 	 .verify_update = _ecfsdsa_verify_update,
 	 .verify_finalize = _ecfsdsa_verify_finalize,
 	 .verify = generic_ec_verify,
-	 .verify_batch = unsupported_verify_batch,
+	 .verify_batch = ecfsdsa_verify_batch,
 	 },
 #if (MAX_SIG_ALG_NAME_LEN < 8)
 #undef MAX_SIG_ALG_NAME_LEN
@@ -592,6 +598,27 @@ static const ec_sig_mapping ec_sig_maps[] = {
 #define MAX_SIG_ALG_NAME_LEN 6
 #endif /* MAX_SIG_ALG_NAME_LEN */
 #endif /* WITH_SIG_DBIGN */
+#ifdef WITH_SIG_BIP0340
+	{.type = BIP0340,
+	 .name = "BIP0340",
+	 .siglen = bip0340_siglen,
+	 .gen_priv_key = generic_gen_priv_key,
+	 .init_pub_key = bip0340_init_pub_key,
+	 .sign_init = unsupported_sign_init,
+	 .sign_update = unsupported_sign_update,
+	 .sign_finalize = unsupported_sign_finalize,
+	 .sign = _bip0340_sign,
+	 .verify_init = _bip0340_verify_init,
+	 .verify_update = _bip0340_verify_update,
+	 .verify_finalize = _bip0340_verify_finalize,
+	 .verify = generic_ec_verify,
+	 .verify_batch = bip0340_verify_batch,
+	 },
+#if (MAX_SIG_ALG_NAME_LEN < 8)
+#undef MAX_SIG_ALG_NAME_LEN
+#define MAX_SIG_ALG_NAME_LEN 8
+#endif /* MAX_SIG_ALG_NAME_LEN */
+#endif /* WITH_SIG_BIP0340 */
 	{.type = UNKNOWN_ALG,	/* Needs to be kept last */
 	 .name = "UNKNOWN",
 	 .siglen = 0,
