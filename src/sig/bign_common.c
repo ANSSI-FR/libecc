@@ -278,11 +278,11 @@ ATTRIBUTE_WARN_UNUSED_RET static int __bign_determinitic_nonce(nn_t k, nn_src_t 
 		/* Put the xor of all n-1 elements in s */
 		for(j = 0; j < (n - 1); j++){
 			for(z = 0; z < BELT_BLOCK_LEN; z++){
-				s[z] ^= r[(BELT_BLOCK_LEN*j) + z];
+				s[z] ^= r[(BELT_BLOCK_LEN * j) + z];
 			}
 		}
 		/* Move elements left for the first n-2 elements */
-		ret = local_memcpy(&r[0], &r[1], (n - 2) * BELT_BLOCK_LEN); EG(ret, err);
+		ret = local_memcpy(&r[0], &r[BELT_BLOCK_LEN], (n - 2) * BELT_BLOCK_LEN); EG(ret, err);
 
 		/* r_n-1 = belt-block(s, theta) ^ r_n ^ <i>128 */
 		ret = local_memset(i_block, 0, sizeof(i_block)); EG(ret, err);
