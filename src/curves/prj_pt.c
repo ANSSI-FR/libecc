@@ -145,14 +145,14 @@ int prj_pt_is_on_curve(prj_pt_src_t in,  int *on_curve)
 {
 	int ret, iszero, _on_curve;
 
- 	fp X, Y;
+	fp X, Y;
 	fp_src_t dummy_Z;
- 	X.magic = Y.magic = WORD(0);
+	X.magic = Y.magic = WORD(0);
 
 	ret = prj_pt_check_initialized(in); EG(ret, err);
 	MUST_HAVE((on_curve != NULL), ret, err);
 
- 	ret = fp_init(&X, in->X.ctx); EG(ret, err);
+	ret = fp_init(&X, in->X.ctx); EG(ret, err);
 	ret = fp_init(&Y, in->X.ctx); EG(ret, err);
 
 	/* NOTE: use Y as a temporary dummy random variable for
@@ -169,12 +169,12 @@ int prj_pt_is_on_curve(prj_pt_src_t in,  int *on_curve)
 	 */
 	dummy_Z = iszero ? ((fp_src_t)&Y) : &(in->Z);
 
- 	ret = fp_inv(&X, dummy_Z); EG(ret, err);
+	ret = fp_inv(&X, dummy_Z); EG(ret, err);
 
- 	ret = fp_mul(&Y, &(in->Y), &X); EG(ret, err);
+	ret = fp_mul(&Y, &(in->Y), &X); EG(ret, err);
 	ret = fp_mul(&X, &(in->X), &X); EG(ret, err);
 
- 	/* Now check if we satisfy the curve equation */
+	/* Now check if we satisfy the curve equation */
 	ret = is_on_shortw_curve(&X, &Y, in->crv, &_on_curve);
 
 	if(!ret){
@@ -1783,7 +1783,7 @@ err:
  * XXX: WARNING: this function must only be used on public points!
  *
  */
-int _prj_pt_unprotected_mult(prj_pt_t out, nn_src_t scalar, prj_pt_src_t public_in)
+static int __prj_pt_unprotected_mult(prj_pt_t out, nn_src_t scalar, prj_pt_src_t public_in)
 {
         u8 expbit;
         bitcnt_t explen;
@@ -1791,6 +1791,9 @@ int _prj_pt_unprotected_mult(prj_pt_t out, nn_src_t scalar, prj_pt_src_t public_
 
         ret = prj_pt_check_initialized(public_in); EG(ret, err);
         ret = nn_check_initialized(scalar); EG(ret, err);
+
+	/* This function does not support aliasing */
+	MUST_HAVE((out != public_in), ret, err);
 
 	/* Check that the input is on the curve */
 	MUST_HAVE((!prj_pt_is_on_curve(public_in, &on_curve)) && on_curve, ret, err);
@@ -1806,7 +1809,8 @@ int _prj_pt_unprotected_mult(prj_pt_t out, nn_src_t scalar, prj_pt_src_t public_
         /* Sanity check */
         MUST_HAVE((explen > 0), ret, err);
         explen = (bitcnt_t)(explen - 1);
-        ret = prj_pt_copy(out, public_in); EG(ret, err);
+	ret = prj_pt_copy(out, public_in); EG(ret, err);
+
         while (explen > 0) {
                 explen = (bitcnt_t)(explen - 1);
                 ret = nn_getbit(scalar, explen, &expbit); EG(ret, err);
@@ -1826,6 +1830,27 @@ err:
         return ret;
 }
 
+/* Aliased version of __prj_pt_unprotected_mult */
+int _prj_pt_unprotected_mult(prj_pt_t out, nn_src_t scalar, prj_pt_src_t public_in)
+{
+	int ret;
+
+	if(out == public_in){
+                prj_pt A;
+                A.magic = WORD(0);
+
+                ret = prj_pt_copy(&A, public_in); EG(ret, err1);
+		ret = __prj_pt_unprotected_mult(out, scalar, &A);
+err1:
+		prj_pt_uninit(&A);
+		goto err;
+	}
+	else{
+		ret = __prj_pt_unprotected_mult(out, scalar, public_in);
+	}
+err:
+	return ret;
+}
 /*
  * Check if an integer is (a multiple of) a projective point order.
  *

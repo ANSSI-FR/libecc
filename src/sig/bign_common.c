@@ -102,8 +102,8 @@ int bign_get_oid_from_adata(const u8 *adata, u16 adata_len, const u8 **oid_ptr, 
 	MUST_HAVE((adata != NULL) && (oid_ptr != NULL) && (oid_len != NULL), ret, err);
 	MUST_HAVE((adata_len >= 4), ret, err);
 
-	(*oid_len) = (u16)((u16)adata[0] << 8) | adata[1];
-	t_len = (u16)((u16)adata[2] << 8) | adata[3];
+	(*oid_len) = (u16)(((u16)adata[0] << 8) | adata[1]);
+	t_len = (u16)(((u16)adata[2] << 8) | adata[3]);
 	/* Check overflow */
 	MUST_HAVE(((*oid_len) + t_len) >= (t_len), ret, err);
 	MUST_HAVE(((*oid_len) + t_len) <= (adata_len - 4), ret, err);
@@ -128,8 +128,8 @@ int bign_get_t_from_adata(const u8 *adata, u16 adata_len, const u8 **t_ptr, u16 
 	MUST_HAVE((adata != NULL) && (t_ptr != NULL) && (t_len != NULL), ret, err);
 	MUST_HAVE((adata_len >= 4), ret, err);
 
-	oid_len = (u16)((u16)adata[0] << 8) | adata[1];
-	(*t_len) = (u16)((u16)adata[2] << 8) | adata[3];
+	oid_len = (u16)(((u16)adata[0] << 8) | adata[1]);
+	(*t_len) = (u16)(((u16)adata[2] << 8) | adata[3]);
 	/* Check overflow */
 	MUST_HAVE((oid_len + (*t_len)) >= (oid_len), ret, err);
 	MUST_HAVE((oid_len + (*t_len)) <= (adata_len - 4), ret, err);
@@ -209,6 +209,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int __bign_determinitic_nonce(nn_t k, nn_src_t 
 	u8 q_len, l;
 	unsigned int j, z, n;
 	u32 i;
+	u16 r_bar_len;
 
 	belt_hash_context belt_hash_ctx;
 	const u8 *oid_ptr = NULL;
@@ -277,11 +278,11 @@ ATTRIBUTE_WARN_UNUSED_RET static int __bign_determinitic_nonce(nn_t k, nn_src_t 
 		/* Put the xor of all n-1 elements in s */
 		for(j = 0; j < (n - 1); j++){
 			for(z = 0; z < BELT_BLOCK_LEN; z++){
-				s[z] ^= r[(BELT_BLOCK_LEN*j) + z];
+				s[z] ^= r[(BELT_BLOCK_LEN * j) + z];
 			}
 		}
 		/* Move elements left for the first n-2 elements */
-		ret = local_memcpy(&r[0], &r[1], (n - 2) * BELT_BLOCK_LEN); EG(ret, err);
+		ret = local_memcpy(&r[0], &r[BELT_BLOCK_LEN], (n - 2) * BELT_BLOCK_LEN); EG(ret, err);
 
 		/* r_n-1 = belt-block(s, theta) ^ r_n ^ <i>128 */
 		ret = local_memset(i_block, 0, sizeof(i_block)); EG(ret, err);
@@ -295,11 +296,28 @@ ATTRIBUTE_WARN_UNUSED_RET static int __bign_determinitic_nonce(nn_t k, nn_src_t 
 		ret = local_memcpy(&r[(n - 1) * BELT_BLOCK_LEN], s, BELT_BLOCK_LEN); EG(ret, err);
 
 		/* Import r_bar as a big number in little endian
-		 * (truncate our import to 2*l, the size of q)
+		 * (truncate our import to the bitlength size of q)
 		 */
-		ret = local_memcpy(&r_bar[0], &r[0], (u16)(2*l)); EG(ret, err);
-		ret = _reverse_endianness(&r_bar[0], (u16)(2*l)); EG(ret, err);
-		ret = nn_init_from_buf(k, &r_bar[0], (u16)(2*l)); EG(ret, err);
+		if(q_len < (n * BELT_BLOCK_LEN)){
+			r_bar_len = q_len;
+			ret = local_memcpy(&r_bar[0], &r[0], r_bar_len); EG(ret, err);
+			/* Handle the useless bits between q_bit_len and (8 * q_len) */
+			if((q_bit_len % 8) != 0){
+				r_bar[r_bar_len - 1] &= (u8)((0x1 << (q_bit_len % 8)) - 1);
+			}
+		}
+		else{
+			/* In this case, q_len is bigger than the size of r, we need to adapt:
+			 * we truncate to the size of r.
+			 * NOTE: we of course lose security, but this is the explicit choice
+			 * of the user using a "small" hash function with a "big" order.
+			 */
+			MUST_HAVE((n * BELT_BLOCK_LEN) <= 0xffff, ret, err);
+			r_bar_len = (u16)(n * BELT_BLOCK_LEN);
+			ret = local_memcpy(&r_bar[0], &r[0], r_bar_len); EG(ret, err);
+		}
+		ret = _reverse_endianness(&r_bar[0], r_bar_len); EG(ret, err);
+		ret = nn_init_from_buf(k, &r_bar[0], r_bar_len); EG(ret, err);
 
 		/* Compare it to q */
 		ret = nn_cmp(k, q, &cmp); EG(ret, err);

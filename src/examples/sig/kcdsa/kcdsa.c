@@ -416,8 +416,8 @@ int kcdsa_verify(const kcdsa_pub_key *pub, const u8 *msg, u32 msglen,
 	MUST_HAVE((cmp < 0), ret, err);
 
 	/* Initialize internal variables */
-	ret = nn_init(&u, 0);
-	ret = nn_init(&pi, 0);
+	ret = nn_init(&u, 0); EG(ret, err);
+	ret = nn_init(&pi, 0); EG(ret, err);
 
 	/* Compute v */
 	if(hlen <= (u16)BYTECEIL(beta)){

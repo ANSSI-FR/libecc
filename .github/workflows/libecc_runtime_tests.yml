@@ -10,7 +10,7 @@ jobs:
       #max-parallel: 10
       matrix:
         cc: [gcc, clang]
-        blinding: [0, 1]
+        blinding: [1]
         cryptofuzz: [1]
     steps:
       # Checkout repository

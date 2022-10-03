@@ -485,12 +485,7 @@ int __ecsdsa_verify_init(struct ec_verify_context *ctx,
 	 */
 	ret = nn_init_from_buf(&r, sig, r_len); EG(ret, err);
 	ret = nn_mod(&rmodq, &r, q); EG(ret, err);
-	ret = nn_iszero(&rmodq, &iszero); EG(ret, err);
-	if (iszero) {
-		ret = nn_zero(&e); EG(ret, err);
-	} else {
-		ret = nn_sub(&e, q, &rmodq); EG(ret, err);
-	}
+	ret = nn_mod_neg(&e, &rmodq, q); EG(ret, err);
 
 	/* 3. If e == 0, reject the signature. */
 	ret = nn_iszero(&e, &iszero); EG(ret, err);

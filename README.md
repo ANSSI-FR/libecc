@@ -1,6 +1,5 @@
 [![compilation](https://github.com/ANSSI-FR/libecc/actions/workflows/libecc_compilation_tests.yml/badge.svg?branch=master)](https://github.com/ANSSI-FR/libecc/actions/workflows/libecc_compilation_tests.yml)
 [![runtime](https://github.com/ANSSI-FR/libecc/actions/workflows/libecc_runtime_tests.yml/badge.svg?branch=master)](https://github.com/ANSSI-FR/libecc/actions/workflows/libecc_runtime_tests.yml)
-[![runtime debug](https://github.com/ANSSI-FR/libecc/actions/workflows/libecc_runtime_tests_debug.yml/badge.svg?branch=master)](https://github.com/ANSSI-FR/libecc/actions/workflows/libecc_runtime_tests_debug.yml)
 [![crossarch](https://github.com/ANSSI-FR/libecc/actions/workflows/libecc_crossarch_tests.yml/badge.svg?branch=master)](https://github.com/ANSSI-FR/libecc/actions/workflows/libecc_crossarch_tests.yml)
 [![python](https://github.com/ANSSI-FR/libecc/actions/workflows/libecc_python_tests.yml/badge.svg?branch=master)](https://github.com/ANSSI-FR/libecc/actions/workflows/libecc_python_tests.yml)
 [![examples](https://github.com/ANSSI-FR/libecc/actions/workflows/libecc_examples.yml/badge.svg?branch=master)](https://github.com/ANSSI-FR/libecc/actions/workflows/libecc_examples.yml)
@@ -34,7 +33,11 @@ standard and some other signature algorithms as well as ECDH primitives, with th
   * **Signatures**:
     * Core ISO 14888-3:2018 algorithms: ECDSA, ECKCDSA, ECGDSA, ECRDSA, EC{,O}SDSA, ECFSDSA, SM2.
     * EdDSA (25519 and 448 as specified in [RFC 8032](https://datatracker.ietf.org/doc/html/rfc8032)).
-    * BIGN (as standardized in [STB 34.101.45-2013](https://github.com/bcrypto/bign)).
+    * BIGN (as standardized in [STB 34.101.45-2013](https://github.com/bcrypto/bign)). We allow a more lax usage of
+    BIGN than in the standard as we allow any curve and any hash function.
+    * BIP0340, also known as the "Schnorr" Bitcoin proposal, as specified in [bip-0340](https://github.com/bitcoin/bips/blob/master/bip-0340.mediawiki).
+    We allow a more lax usage of BIP0340 than the standard as we allow any curve and any hash function (the standard mandates SECP256K1 with SHA-256).
+
   * **ECDH**:
     * ECC-CDH (Elliptic Curve Cryptography Cofactor Diffie-Hellman) as described in [section 5.7.1.2 of the NIST SP 800-56A Rev. 3](https://csrc.nist.gov/publications/detail/sp/800-56a/rev-3/final) standard.
     * X25519 and X448 as specified in [RFC7748](https://datatracker.ietf.org/doc/html/rfc7748) (with some specificities, see the details below).
@@ -83,6 +86,19 @@ other means allow to detect/mitigate such attacks (e.g. on the compilation toolc
 Please refer to [this CFRG thread](https://mailarchive.ietf.org/arch/browse/cfrg/?gbt=1&index=5l3XCLHLCVfOmnkcv4mo2-pEV94)
 for more insight on why deterministic versus non-deterministic EC signature schemes is still an open debate
 and how the usage context and **attack model** is **crucial** when choosing to use one or the other.
+
+
+**Batch verification** is implemented for the signature algorithms that support it - the signature schemes
+that preserve some "reversible" projective point coordinate information in the signature value.
+This is the case for some "Schnorr" based schemes, namely ECFSDSA ("full Schnorr" from ISO14888-3), EdDSA and BIP0340.
+Batch verification allows (thanks to the Bos-Coster algorithm) to bring speedups between 2 to 6.5 times
+the regular verification for batches of at least 10 signatures, which is not negligible depending on the usage.
+Beware that for the specific case of BIP0340, results might depend on the underlying prime of the curve, since
+the batch verification makes heavy use of square root residues and the Tonelli-Shanks algorithm complexity
+is sensitive to the prime "form" (e.g. is equal to 1 modulo 4, etc.). Finally, beware that the speedup of
+batch verification comes at an increased memory cost: the Bos-Coster algorithm requires a scratchpad memory space
+that increases linearly with the number of signatures to be checked.
+
 
 Regarding the specific case of ECRDSA (the Russian standard), libecc implements by default the
 [RFC 7091](https://datatracker.ietf.org/doc/html/rfc7091) and [draft-deremin-rfc4491-bis](https://datatracker.ietf.org/doc/html/draft-deremin-rfc4491-bis)

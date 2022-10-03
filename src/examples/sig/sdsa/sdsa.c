@@ -318,14 +318,14 @@ int sdsa_verify(const sdsa_pub_key *pub, const u8 *msg, u32 msglen,
 	ret = nn_mod(&r, &r, q); EG(ret, err);
 
 	/* Initialize internal variables */
-	ret = nn_init(&u, 0);
-	ret = nn_init(&pi, 0);
+	ret = nn_init(&u, 0); EG(ret, err);
+	ret = nn_init(&pi, 0); EG(ret, err);
 
 	/* NOTE: no need to use a secure exponentiation here as we only
 	 * manipulate public data.
 	 */
 	/* Compute (y ** -r) mod (p) */
-	ret = nn_sub(&r, q, &r); /* compute -r = (q - r) mod q */
+	ret = nn_sub(&r, q, &r); EG(ret, err); /* compute -r = (q - r) mod q */
 	ret = _nn_mod_pow_insecure(&u, y, &r, p); EG(ret, err);
 	/* Compute (g ** s) mod (p) */
 	ret = _nn_mod_pow_insecure(&pi, g, &s, p); EG(ret, err);

@@ -128,13 +128,7 @@ int ecgdsa_sign_raw(struct ec_sign_context *ctx, const u8 *input, u8 inputlen, u
 	 * e = q - (h mod q) (except when h is 0).
 	 */
 	ret = nn_mod(&tmp2, &tmp, q); EG(ret, err);
-	ret = nn_iszero(&tmp2, &iszero); EG(ret, err);
-	if (iszero) {
-		ret = nn_init(&e, 0); EG(ret, err);
-		ret = nn_zero(&e); EG(ret, err);
-	} else {
-		ret = nn_sub(&e, q, &tmp2); EG(ret, err);
-	}
+	ret = nn_mod_neg(&e, &tmp2, q); EG(ret, err);
 
 /*
      NOTE: the restart label is removed in CRYPTOFUZZ mode as

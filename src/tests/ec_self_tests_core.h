@@ -4876,6 +4876,14 @@ static const ec_test_case sm2_nn_random_sm2p256v1_test_case = {
 
 #endif
 
+#if defined(WITH_SIG_BIP0340) && defined(WITH_HASH_SHA256) && defined(WITH_CURVE_SECP256K1)
+
+/* NOTE: tests taken from:
+ * https://github.com/bitcoin/bips/blob/master/bip-0340/test-vectors.csv
+ */
+#include "bip0340_test_vectors.h"
+
+#endif
 
 /* ADD curve test vectors header here */
 /* XXX: Do not remove the comment above, as it is
@@ -5225,6 +5233,9 @@ static const ec_test_case *ec_fixed_vector_tests[] = {
 #endif
 #if defined(WITH_SIG_DBIGN) && defined(WITH_CURVE_BIGN256V1)
 	DBIGN_ALL_TESTS()
+#endif
+#if defined(WITH_SIG_BIP0340) && defined(WITH_HASH_SHA256) && defined(WITH_CURVE_SECP256K1)
+	BIP0340_ALL_TESTS()
 #endif
 
 	/* Dummy empty test case to avoid empty array

@@ -448,10 +448,8 @@ int _eckcdsa_sign_finalize(struct ec_sign_context *ctx, u8 *sig, u8 siglen)
 	 * This is equivalent to computing s = x(k + (q - e)) mod q.
 	 * This second version avoids checking if k < e before the
 	 * subtraction, because e has already been reduced mod q
-	 * (i.e. is guaranteed to be lower than q) and we can then
-	 * safely call nn_sub().
 	 */
-	ret = nn_sub(&tmp, q, &e); EG(ret, err);
+	ret = nn_mod_neg(&tmp, &e, q); EG(ret, err);
 	ret = nn_mod_add(&tmp, &k, &tmp, q); EG(ret, err);
 	ret = nn_mod_mul(&s, x, &tmp, q); EG(ret, err);
 #ifdef USE_SIG_BLINDING

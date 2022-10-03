@@ -368,12 +368,7 @@ int ecrdsa_verify_raw(struct ec_verify_context *ctx, const u8 *input, u8 inputle
 	 */
 	ret = nn_mul(&tmp, &e, r); EG(ret, err); /* tmp = er */
 	ret = nn_mod(&tmp, &tmp, q); EG(ret, err); /* tmp = er mod q */
-	ret = nn_iszero(&tmp, &iszero); EG(ret, err);
-	if (iszero) {
-		ret = nn_zero(&v); EG(ret, err);
-	} else {
-		ret = nn_sub(&v, q, &tmp); EG(ret, err);
-	}
+	ret = nn_mod_neg(&v, &tmp, q); EG(ret, err); /* negate tmp */
 
 	/* 6. Compute W' = uG + vY = (W'_x, W'_y) */
 	ret = prj_pt_mul(&uG, &u, G); EG(ret, err);

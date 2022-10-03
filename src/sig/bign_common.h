@@ -31,7 +31,7 @@
 #error "BIGN and DBIGN need BELT-HASH, please activate it!"
 #endif
 
-#define BIGN_S0_LEN(q_bit_len)	(BYTECEIL(q_bit_len / 2))
+#define BIGN_S0_LEN(q_bit_len)	(BYTECEIL(q_bit_len) / 2)
 #define BIGN_S1_LEN(q_bit_len)  (BYTECEIL(q_bit_len))
 #define BIGN_SIGLEN(q_bit_len) (BIGN_S0_LEN(q_bit_len) + \
 				 BIGN_S1_LEN(q_bit_len))
