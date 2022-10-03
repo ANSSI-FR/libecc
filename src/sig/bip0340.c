@@ -11,6 +11,11 @@
 #include "../lib_ecc_config.h"
 #if defined(WITH_SIG_BIP0340)
 
+/* BIP0340 needs SHA-256: check it */
+#if !defined(WITH_HASH_SHA256)
+#error "Error: BIP0340 needs SHA-256 to be defined! Please define it in libecc config file"
+#endif
+
 #include "../nn/nn_rand.h"
 #include "../nn/nn_mul.h"
 #include "../nn/nn_logical.h"
@@ -33,9 +38,9 @@
  */
 
 /* The "hash" function static prefixes */
-#define BIP340_AUX	 "BIP0340/aux"
-#define BIP340_NONCE	 "BIP0340/nonce"
-#define BIP340_CHALLENGE "BIP0340/challenge"
+#define BIP0340_AUX	 "BIP0340/aux"
+#define BIP0340_NONCE	 "BIP0340/nonce"
+#define BIP0340_CHALLENGE "BIP0340/challenge"
 
 ATTRIBUTE_WARN_UNUSED_RET static int _bip0340_hash(const u8 *tag, u32 tag_len,
 						   const u8 *m, u32 m_len,
@@ -253,7 +258,7 @@ int _bip0340_sign(u8 *sig, u8 siglen, const ec_key_pair *key_pair,
 	ret = nn_export_to_buf(&sig[0], q_len, &k); EG(ret, err);
 
 	/* Compute the seed for the nonce computation */
-	ret = _bip0340_hash((const u8*)BIP340_AUX, sizeof(BIP340_AUX) - 1,
+	ret = _bip0340_hash((const u8*)BIP0340_AUX, sizeof(BIP0340_AUX) - 1,
 		      &sig[0], q_len, hm, &h_ctx); EG(ret, err);
 	ret = hm->hfunc_finalize(&h_ctx, buff); EG(ret, err);
 
@@ -263,14 +268,14 @@ int _bip0340_sign(u8 *sig, u8 siglen, const ec_key_pair *key_pair,
 		for(i = 0; i < hm->digest_size; i++){
 			sig[i] ^= buff[i];
 		}
-		ret = _bip0340_hash((const u8*)BIP340_NONCE, sizeof(BIP340_NONCE) - 1,
+		ret = _bip0340_hash((const u8*)BIP0340_NONCE, sizeof(BIP0340_NONCE) - 1,
 				    &sig[0], q_len, hm, &h_ctx); EG(ret, err);
 	}
 	else{
 		for(i = 0; i < q_len; i++){
 			buff[i] ^= sig[i];
 		}
-		ret = _bip0340_hash((const u8*)BIP340_NONCE, sizeof(BIP340_NONCE) - 1,
+		ret = _bip0340_hash((const u8*)BIP0340_NONCE, sizeof(BIP0340_NONCE) - 1,
 				    &buff[0], hm->digest_size, hm, &h_ctx); EG(ret, err);
 	}
 	ret = fp_export_to_buf(&sig[0], p_len, &(Y.X)); EG(ret, err);
@@ -305,7 +310,7 @@ int _bip0340_sign(u8 *sig, u8 siglen, const ec_key_pair *key_pair,
 	/* Compute e */
 	/* We export our r here */
 	ret = fp_export_to_buf(&sig[0], p_len, &(kG.X)); EG(ret, err);
-	ret = _bip0340_hash((const u8*)BIP340_CHALLENGE, sizeof(BIP340_CHALLENGE) - 1,
+	ret = _bip0340_hash((const u8*)BIP0340_CHALLENGE, sizeof(BIP0340_CHALLENGE) - 1,
 			    &sig[0], p_len, hm, &h_ctx); EG(ret, err);
 	/* Export our public key */
 	ret = fp_export_to_buf(&sig[0], p_len, &(Y.X)); EG(ret, err);
@@ -429,7 +434,7 @@ int _bip0340_verify_init(struct ec_verify_context *ctx,
 	dbg_nn_print("s", s);
 
 	/* Initialize our hash context */
-	ret = _bip0340_hash((const u8*)BIP340_CHALLENGE, sizeof(BIP340_CHALLENGE) - 1,
+	ret = _bip0340_hash((const u8*)BIP0340_CHALLENGE, sizeof(BIP0340_CHALLENGE) - 1,
 			    &sig[0], p_len, ctx->h,
 			    &(ctx->verify_data.bip0340.h_ctx)); EG(ret, err);
 	ret = fp_export_to_buf(&Pubx[0], p_len, &(Y.X)); EG(ret, err);
@@ -581,6 +586,217 @@ err:
 	return ret;
 }
 
+/*
+ * Helper to compute the seed to generate batch verification randomizing scalars.
+ *
+ */
+/****************************************************/
+/*
+ * 32-bit integer manipulation macros (big endian)
+ */
+#ifndef GET_UINT32_LE
+#define GET_UINT32_LE(n, b, i)                          \
+do {                                                    \
+        (n) =     ( ((u32) (b)[(i) + 3]) << 24 )        \
+                | ( ((u32) (b)[(i) + 2]) << 16 )        \
+                | ( ((u32) (b)[(i) + 1]) <<  8 )        \
+                | ( ((u32) (b)[(i)    ])       );       \
+} while( 0 )
+#endif
+
+#ifndef PUT_UINT32_LE
+#define PUT_UINT32_LE(n, b, i)				\
+do {							\
+        (b)[(i) + 3] = (u8) ( (n) >> 24 );		\
+        (b)[(i) + 2] = (u8) ( (n) >> 16 );		\
+        (b)[(i) + 1] = (u8) ( (n) >>  8 );		\
+        (b)[(i)    ] = (u8) ( (n)       );		\
+} while( 0 )
+#endif
+
+#ifndef PUT_UINT32_BE
+#define PUT_UINT32_BE(n, b, i)				\
+do {							\
+        (b)[(i)    ] = (u8) ( (n) >> 24 );		\
+        (b)[(i) + 1] = (u8) ( (n) >> 16 );		\
+        (b)[(i) + 2] = (u8) ( (n) >>  8 );		\
+        (b)[(i) + 3] = (u8) ( (n)       );		\
+} while( 0 )
+#endif
+
+#define _CHACHA20_ROTL_(x, y) (((x) << (y)) | ((x) >> ((sizeof(u32) * 8) - (y))))
+#define CHACA20_ROTL(x, y) ((((y) < (sizeof(u32) * 8)) && ((y) > 0)) ? (_CHACHA20_ROTL_(x, y)) : (x))
+
+#define CHACHA20_QROUND(a, b, c, d) do {			\
+	(a) += (b);						\
+	(d) ^= (a);						\
+	(d) = CHACA20_ROTL((d), 16);				\
+	(c) += (d);						\
+	(b) ^= (c);						\
+	(b) = CHACA20_ROTL((b), 12);				\
+	(a) += (b);						\
+	(d) ^= (a);						\
+	(d) = CHACA20_ROTL((d), 8);				\
+	(c) += (d);						\
+	(b) ^= (c);						\
+	(b) = CHACA20_ROTL((b), 7);				\
+} while(0)
+
+#define CHACHA20_INNER_BLOCK(s) do {				\
+	CHACHA20_QROUND(s[0], s[4], s[ 8], s[12]);		\
+	CHACHA20_QROUND(s[1], s[5], s[ 9], s[13]);		\
+	CHACHA20_QROUND(s[2], s[6], s[10], s[14]);		\
+	CHACHA20_QROUND(s[3], s[7], s[11], s[15]);		\
+	CHACHA20_QROUND(s[0], s[5], s[10], s[15]);		\
+	CHACHA20_QROUND(s[1], s[6], s[11], s[12]);		\
+	CHACHA20_QROUND(s[2], s[7], s[ 8], s[13]);		\
+	CHACHA20_QROUND(s[3], s[4], s[ 9], s[14]);		\
+} while(0)
+
+#define CHACHA20_MAX_ASKED_LEN 64
+
+ATTRIBUTE_WARN_UNUSED_RET static int _bip0340_chacha20_block(const u8 key[32], const u8 nonce[12], u32 block_counter, u8 *stream, u32 stream_len){
+	int ret;
+	u32 state[16];
+	u32 initial_state[16];
+	unsigned int i;
+
+	MUST_HAVE((stream != NULL), ret, err);
+	MUST_HAVE((stream_len <= CHACHA20_MAX_ASKED_LEN), ret, err);
+
+	/* Initial state */
+	state[0] = 0x61707865;
+	state[1] = 0x3320646e;
+	state[2] = 0x79622d32;
+	state[3] = 0x6b206574;
+
+	for(i = 4; i < 12; i++){
+		GET_UINT32_LE(state[i], key, (4 * (i - 4)));
+	}
+	state[12] = block_counter;
+	for(i = 13; i < 16; i++){
+		GET_UINT32_LE(state[i], nonce, (4 * (i - 13)));
+	}
+
+	/* Core loop */
+	ret = local_memcpy(initial_state, state, sizeof(state)); EG(ret, err);
+	for(i = 0; i < 10; i++){
+		CHACHA20_INNER_BLOCK(state);
+	}
+	/* Serialize and output the block */
+	for(i = 0; i < 16; i++){
+		u32 tmp = (u32)(state[i] + initial_state[i]);
+		PUT_UINT32_LE(tmp, (u8*)(&state[i]), 0);
+	}
+	ret = local_memcpy(stream, &state[0], stream_len);
+
+err:
+	return ret;
+}
+
+ATTRIBUTE_WARN_UNUSED_RET static int _bip0340_compute_batch_csprng_one_scalar(const u8 *seed, u32 seedlen,
+									      u8 *scalar, u32 scalar_len, u32 num)
+{
+	int ret;
+	u8 nonce[12];
+
+	/* Sanity check for ChaCha20 */
+	MUST_HAVE((seedlen == SHA256_DIGEST_SIZE) && (scalar_len <= CHACHA20_MAX_ASKED_LEN), ret, err);
+
+	/* NOTE: nothing in the BIP340 specification fixes the nonce for
+	 * ChaCha20. We simply use 0 here for the nonce. */
+	ret = local_memset(nonce, 0, sizeof(nonce)); EG(ret, err);
+
+	/* Use our CSPRNG based on ChaCha20 to generate the scalars */
+	ret = _bip0340_chacha20_block(seed, nonce, num, scalar, scalar_len);
+
+err:
+	return ret;
+}
+
+ATTRIBUTE_WARN_UNUSED_RET static int _bip0340_compute_batch_csprng_scalars(const u8 *seed, u32 seedlen,
+									   u8 *scalar, u32 scalar_len,
+									   u32 *num, nn_src_t q,
+									   bitcnt_t q_bit_len, u8 q_len,
+									   nn_t a)
+{
+	int ret, iszero, cmp;
+	u32 size, remain;
+
+	MUST_HAVE((seed != NULL) && (scalar != NULL) && (num != NULL) && (a != NULL), ret, err);
+	MUST_HAVE((scalar_len >= q_len), ret, err);
+
+gen_scalar_again:
+	size = remain = 0;
+	while(size < q_len){
+		MUST_HAVE((*num) < 0xffffffff, ret, err);
+		remain = ((q_len - size) < CHACHA20_MAX_ASKED_LEN) ? (q_len - size): CHACHA20_MAX_ASKED_LEN;
+		ret = _bip0340_compute_batch_csprng_one_scalar(seed, seedlen,
+							       &scalar[size], remain,
+							       (*num)); EG(ret, err);
+		(*num)++;
+		size += remain;
+	}
+	if((q_bit_len % 8) != 0){
+		/* Handle the cutoff when q_bit_len is not a byte multiple */
+		scalar[0] &= (u8)((0x1 << (q_bit_len % 8)) - 1);
+	}
+	/* Import the scalar */
+	ret = nn_init_from_buf(a, scalar, q_len); EG(ret, err);
+	/* Check if the scalar is between 1 and q-1 */
+	ret = nn_iszero(a, &iszero); EG(ret, err);
+	ret = nn_cmp(a, q, &cmp); EG(ret, err);
+	if((iszero) || (cmp >= 0)){
+		goto gen_scalar_again;
+	}
+
+	ret = 0;
+err:
+	return ret;
+}
+
+ATTRIBUTE_WARN_UNUSED_RET static int _bip0340_compute_batch_csprng_seed(const u8 **s, const u8 *s_len,
+								        const ec_pub_key **pub_keys,
+								        const u8 **m, const u32 *m_len, u32 num,
+								        u8 p_len, u8 *seed, u32 seedlen)
+{
+	int ret;
+	u32 i;
+	hash_context h_ctx;
+	u8 Pubx[NN_MAX_BYTE_LEN];
+	const hash_mapping *hm;
+
+	/* NOTE: sanity checks on inputs are performed by the upper layer */
+
+	ret = local_memset(Pubx, 0, sizeof(Pubx)); EG(ret, err);
+
+        /* Get our hash mapping for SHA-256 as we need a fixed 256-bit key
+	 * for keying our ChaCha20 CSPRNG
+	 */
+        ret = get_hash_by_type(SHA256, &hm); EG(ret, err);
+        MUST_HAVE((hm != NULL), ret, err);
+
+	MUST_HAVE((seedlen == hm->digest_size), ret, err);
+
+	/* As per specification, seed = seed_hash(pk1..pku || m1..mu || sig1..sigu), instantiated
+	 * with SHA-256 */
+	ret = hm->hfunc_init(&h_ctx); EG(ret, err);
+	for(i = 0; i < num; i++){
+		ret = fp_export_to_buf(&Pubx[0], p_len, &(pub_keys[i]->y.X)); EG(ret, err);
+		ret = hm->hfunc_update(&h_ctx, &Pubx[0], p_len); EG(ret, err);
+	}
+	for(i = 0; i < num; i++){
+		ret = hm->hfunc_update(&h_ctx, m[i], m_len[i]); EG(ret, err);
+	}
+	for(i = 0; i < num; i++){
+		ret = hm->hfunc_update(&h_ctx, s[i], s_len[i]); EG(ret, err);
+	}
+	ret = hm->hfunc_finalize(&h_ctx, seed);
+
+err:
+	return ret;
+}
+
 /* Batch verification function:
  * This function takes multiple signatures/messages/public keys, and
  * checks in an optimized way all the signatures.
@@ -612,6 +828,9 @@ static int _bip0340_verify_batch_no_memory(const u8 **s, const u8 *s_len, const 
 	u8 p_len, q_len;
 	u16 hsize;
 	u32 i;
+	u8 chacha20_seed[SHA256_DIGEST_SIZE];
+	u8 chacha20_scalar[BYTECEIL(CURVES_MAX_Q_BIT_LEN)];
+	u32 chacha20_scalar_counter = 1;
 
 	Tmp.magic = R_sum.magic = P_sum.magic = WORD(0);
 	S.magic = S_sum.magic = e.magic = a.magic = WORD(0);
@@ -628,6 +847,8 @@ static int _bip0340_verify_batch_no_memory(const u8 **s, const u8 *s_len, const 
 	/* Zeroize buffers */
 	ret = local_memset(hash, 0, sizeof(hash)); EG(ret, err);
 	ret = local_memset(Pubx, 0, sizeof(Pubx)); EG(ret, err);
+	ret = local_memset(chacha20_seed, 0,sizeof(chacha20_seed)); EG(ret, err);
+	ret = local_memset(chacha20_scalar, 0,sizeof(chacha20_scalar)); EG(ret, err);
 
         pub_key0 = pub_keys[0];
         MUST_HAVE((pub_key0 != NULL), ret, err);
@@ -678,11 +899,17 @@ static int _bip0340_verify_batch_no_memory(const u8 **s, const u8 *s_len, const 
 			ret = prj_pt_init(&Tmp, shortw_curve); EG(ret, err);
                         ret = nn_init(&e, 0); EG(ret, err);
 			ret = nn_init(&a, 0); EG(ret, err);
-                }
-
-		if(i != 0){
+			/* Compute the ChaCha20 seed */
+			ret = _bip0340_compute_batch_csprng_seed(s, s_len, pub_keys, m, m_len, num,
+								 p_len, chacha20_seed,
+								 sizeof(chacha20_seed)); EG(ret, err);
+		}
+		else{
 			/* Get a pseudo-random scalar a for randomizing the linear combination */
-			ret = nn_get_random_mod(&a, q); EG(ret, err);
+			ret = _bip0340_compute_batch_csprng_scalars(chacha20_seed, sizeof(chacha20_seed),
+								    chacha20_scalar, sizeof(chacha20_scalar),
+								    &chacha20_scalar_counter, q,
+								    q_bit_len, q_len, &a); EG(ret, err);
 		}
 
 		/***************************************************/
@@ -739,7 +966,7 @@ static int _bip0340_verify_batch_no_memory(const u8 **s, const u8 *s_len, const 
 		}
 		dbg_ec_point_print("Y", Y);
 		/* Compute e */
-		ret = _bip0340_hash((const u8*)BIP340_CHALLENGE, sizeof(BIP340_CHALLENGE) - 1,
+		ret = _bip0340_hash((const u8*)BIP0340_CHALLENGE, sizeof(BIP0340_CHALLENGE) - 1,
 				    &sig[0], p_len, hm,
 				    &h_ctx); EG(ret, err);
 		ret = fp_export_to_buf(&Pubx[0], p_len, &(Y->X)); EG(ret, err);
@@ -824,6 +1051,9 @@ static int _bip0340_verify_batch(const u8 **s, const u8 *s_len, const ec_pub_key
         /* NN numbers and points pointers */
         verify_batch_scratch_pad *elements = scratch_pad_area;
         u64 expected_len;
+	u8 chacha20_seed[SHA256_DIGEST_SIZE];
+	u8 chacha20_scalar[BYTECEIL(CURVES_MAX_Q_BIT_LEN)];
+	u32 chacha20_scalar_counter = 1;
 
 	S.magic = a.magic = WORD(0);
 	rx.magic = WORD(0);
@@ -841,6 +1071,8 @@ static int _bip0340_verify_batch(const u8 **s, const u8 *s_len, const ec_pub_key
 	/* Zeroize buffers */
 	ret = local_memset(hash, 0, sizeof(hash)); EG(ret, err);
 	ret = local_memset(Pubx, 0, sizeof(Pubx)); EG(ret, err);
+	ret = local_memset(chacha20_seed, 0,sizeof(chacha20_seed)); EG(ret, err);
+	ret = local_memset(chacha20_scalar, 0,sizeof(chacha20_scalar)); EG(ret, err);
 
         /* In oder to apply the algorithm, we must have at least two
          * elements to verify. If this is not the case, we fallback to
@@ -919,15 +1151,17 @@ static int _bip0340_verify_batch(const u8 **s, const u8 *s_len, const ec_pub_key
 			ret = nn_init(&a, 0); EG(ret, err);
 			ret = nn_init(&elements[(2 * num)].number, 0); EG(ret, err);
 			ret = prj_pt_copy(&elements[(2 * num)].point, G); EG(ret, err);
-                }
-		if(i != 0){
+			/* Compute the ChaCha20 seed */
+			ret = _bip0340_compute_batch_csprng_seed(s, s_len, pub_keys, m, m_len, num,
+								 p_len, chacha20_seed,
+								 sizeof(chacha20_seed)); EG(ret, err);
+		}
+		else{
 			/* Get a pseudo-random scalar a for randomizing the linear combination */
-			/* XXX: TODO: implement the CSPRNG to get the scalars. For now, these
-			 * are randomly chosen using our underlying random source.
-			 * In order to stricly comply to bip-0340 specifications, we must have
-			 * a CSPRNG generator here.
-			 */
-			ret = nn_get_random_mod(&a, q); EG(ret, err);
+			ret = _bip0340_compute_batch_csprng_scalars(chacha20_seed, sizeof(chacha20_seed),
+								    chacha20_scalar, sizeof(chacha20_scalar),
+								    &chacha20_scalar_counter, q,
+								    q_bit_len, q_len, &a); EG(ret, err);
 		}
 
 		/***************************************************/
@@ -993,7 +1227,7 @@ static int _bip0340_verify_batch(const u8 **s, const u8 *s_len, const ec_pub_key
 		/* Store the coefficient */
 		e = &elements[num + i].number;
 		ret = nn_init(e, 0); EG(ret, err);
-		ret = _bip0340_hash((const u8*)BIP340_CHALLENGE, sizeof(BIP340_CHALLENGE) - 1,
+		ret = _bip0340_hash((const u8*)BIP0340_CHALLENGE, sizeof(BIP0340_CHALLENGE) - 1,
 				    &sig[0], p_len, hm,
 				    &h_ctx); EG(ret, err);
 		ret = fp_export_to_buf(&Pubx[0], p_len, &(Y->X)); EG(ret, err);
