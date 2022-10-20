@@ -1820,7 +1820,7 @@ err:
 	return ret;
 }
 
-/* The RSA signature algorithm using ISO/IEC 9796-2 padding scheme.
+/* The RSA signature algorithm using ISO/IEC 9796-2 padding scheme 1.
  * This is a signature with recovery.
  *
  * XXX: beware that this scheme is here for completeness, but is considered fragile
@@ -1929,7 +1929,7 @@ int rsa_iso9796_2_sign_recover_hardened(const rsa_priv_key *priv, const rsa_pub_
 	return _rsa_iso9796_2_sign_recover(priv, pub, m, mlen, m1len, m2len, s, slen, modbits, gen_hash_type);
 }
 
-/* The RSA verification algorithm using ISO/IEC 9796-2 padding scheme.
+/* The RSA verification algorithm using ISO/IEC 9796-2 padding scheme 1.
  * This is a verification with recovery.
  *
  * XXX: beware that this scheme is here for completeness, but is considered fragile
