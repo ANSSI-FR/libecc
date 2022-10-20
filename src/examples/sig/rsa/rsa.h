@@ -101,8 +101,8 @@ typedef struct {
 	} key;
 } rsa_priv_key;
 
-ATTRIBUTE_WARN_UNUSED_RET int rsa_i2osp(nn_src_t x, u8 *buf, u16 buflen);
-ATTRIBUTE_WARN_UNUSED_RET int rsa_os2ip(nn_t x, const u8 *buf, u16 buflen);
+ATTRIBUTE_WARN_UNUSED_RET int rsa_i2osp(nn_src_t x, u8 *buf, u32 buflen);
+ATTRIBUTE_WARN_UNUSED_RET int rsa_os2ip(nn_t x, const u8 *buf, u32 buflen);
 
 ATTRIBUTE_WARN_UNUSED_RET int rsa_import_pub_key(rsa_pub_key *pub, const u8 *n,
 						 u16 nlen, const u8 *e, u16 elen);
@@ -125,54 +125,63 @@ ATTRIBUTE_WARN_UNUSED_RET int rsasp1(const rsa_priv_key *priv, nn_src_t m, nn_t 
 ATTRIBUTE_WARN_UNUSED_RET int rsasp1_hardened(const rsa_priv_key *priv, const rsa_pub_key *pub, nn_src_t m, nn_t s);
 ATTRIBUTE_WARN_UNUSED_RET int rsavp1(const rsa_pub_key *pub, nn_src_t s, nn_t m);
 
-ATTRIBUTE_WARN_UNUSED_RET int emsa_pkcs1_v1_5_encode(const u8 *m, u16 mlen, u8 *em, u16 emlen,
+ATTRIBUTE_WARN_UNUSED_RET int emsa_pkcs1_v1_5_encode(const u8 *m, u32 mlen, u8 *em, u16 emlen,
 						     gen_hash_alg_type rsa_hash_type);
-ATTRIBUTE_WARN_UNUSED_RET int emsa_pss_encode(const u8 *m, u16 mlen, u8 *em, u32 embits,
+ATTRIBUTE_WARN_UNUSED_RET int emsa_pss_encode(const u8 *m, u32 mlen, u8 *em, u32 embits,
 					      u16 *eminlen,
 					      gen_hash_alg_type rsa_hash_type, gen_hash_alg_type mgf_hash_type,
-					      u16 slen, const u8 *forced_salt);
-ATTRIBUTE_WARN_UNUSED_RET int emsa_pss_verify(const u8 *m, u16 mlen, const u8 *em,
+					      u32 saltlen, const u8 *forced_salt);
+ATTRIBUTE_WARN_UNUSED_RET int emsa_pss_verify(const u8 *m, u32 mlen, const u8 *em,
 					      u32 embits, u16 emlen,
 					      gen_hash_alg_type rsa_hash_type, gen_hash_alg_type mgf_hash_type,
-					      u16 slen);
+					      u32 slen);
 
-ATTRIBUTE_WARN_UNUSED_RET int rsaes_pkcs1_v1_5_encrypt(const rsa_pub_key *pub, const u8 *m, u16 mlen,
-						       u8 *c, u16 *clen, u32 modbits,
-						       const u8 *forced_seed, u16 seedlen);
-ATTRIBUTE_WARN_UNUSED_RET int rsaes_pkcs1_v1_5_decrypt(const rsa_priv_key *priv, const u8 *c, u16 clen,
-						       u8 *m, u16 *mlen, u32 modbits);
-ATTRIBUTE_WARN_UNUSED_RET int rsaes_pkcs1_v1_5_decrypt_hardened(const rsa_priv_key *priv, const rsa_pub_key *pub, const u8 *c, u16 clen,
-                                                       u8 *m, u16 *mlen, u32 modbits);
+ATTRIBUTE_WARN_UNUSED_RET int rsaes_pkcs1_v1_5_encrypt(const rsa_pub_key *pub, const u8 *m, u32 mlen,
+						       u8 *c, u32 *clen, u32 modbits,
+						       const u8 *forced_seed, u32 seedlen);
+ATTRIBUTE_WARN_UNUSED_RET int rsaes_pkcs1_v1_5_decrypt(const rsa_priv_key *priv, const u8 *c, u32 clen,
+						       u8 *m, u32 *mlen, u32 modbits);
+ATTRIBUTE_WARN_UNUSED_RET int rsaes_pkcs1_v1_5_decrypt_hardened(const rsa_priv_key *priv, const rsa_pub_key *pub, const u8 *c, u32 clen,
+                                                       u8 *m, u32 *mlen, u32 modbits);
 
-ATTRIBUTE_WARN_UNUSED_RET int rsaes_oaep_encrypt(const rsa_pub_key *pub, const u8 *m, u16 mlen,
-						 u8 *c, u16 *clen, u32 modbits, const u8 *label, u16 label_len,
+ATTRIBUTE_WARN_UNUSED_RET int rsaes_oaep_encrypt(const rsa_pub_key *pub, const u8 *m, u32 mlen,
+						 u8 *c, u32 *clen, u32 modbits, const u8 *label, u32 label_len,
 						 gen_hash_alg_type rsa_hash_type, gen_hash_alg_type mgf_hash_type,
-						 const u8 *forced_seed, u16 seedlen);
-ATTRIBUTE_WARN_UNUSED_RET int rsaes_oaep_decrypt(const rsa_priv_key *priv, const u8 *c, u16 clen,
-						 u8 *m, u16 *mlen, u32 modbits, const u8 *label, u16 label_len,
+						 const u8 *forced_seed, u32 seedlen);
+ATTRIBUTE_WARN_UNUSED_RET int rsaes_oaep_decrypt(const rsa_priv_key *priv, const u8 *c, u32 clen,
+						 u8 *m, u32 *mlen, u32 modbits, const u8 *label, u32 label_len,
 						 gen_hash_alg_type rsa_hash_type, gen_hash_alg_type mgf_hash_type);
-ATTRIBUTE_WARN_UNUSED_RET int rsaes_oaep_decrypt_hardened(const rsa_priv_key *priv, const rsa_pub_key *pub, const u8 *c, u16 clen,
-						 u8 *m, u16 *mlen, u32 modbits, const u8 *label, u16 label_len,
+ATTRIBUTE_WARN_UNUSED_RET int rsaes_oaep_decrypt_hardened(const rsa_priv_key *priv, const rsa_pub_key *pub, const u8 *c, u32 clen,
+						 u8 *m, u32 *mlen, u32 modbits, const u8 *label, u32 label_len,
 						 gen_hash_alg_type rsa_hash_type, gen_hash_alg_type mgf_hash_type);
 
-ATTRIBUTE_WARN_UNUSED_RET int rsassa_pkcs1_v1_5_sign(const rsa_priv_key *priv, const u8 *m, u16 mlen,
+ATTRIBUTE_WARN_UNUSED_RET int rsassa_pkcs1_v1_5_sign(const rsa_priv_key *priv, const u8 *m, u32 mlen,
 						     u8 *s, u16 *slen, u32 modbits, gen_hash_alg_type rsa_hash_type);
-ATTRIBUTE_WARN_UNUSED_RET int rsassa_pkcs1_v1_5_sign_hardened(const rsa_priv_key *priv, const rsa_pub_key *pub, const u8 *m, u16 mlen,
+ATTRIBUTE_WARN_UNUSED_RET int rsassa_pkcs1_v1_5_sign_hardened(const rsa_priv_key *priv, const rsa_pub_key *pub, const u8 *m, u32 mlen,
                                                      u8 *s, u16 *slen, u32 modbits, gen_hash_alg_type rsa_hash_type);
-ATTRIBUTE_WARN_UNUSED_RET int rsassa_pkcs1_v1_5_verify(const rsa_pub_key *pub, const u8 *m, u16 mlen,
+ATTRIBUTE_WARN_UNUSED_RET int rsassa_pkcs1_v1_5_verify(const rsa_pub_key *pub, const u8 *m, u32 mlen,
 						       const u8 *s, u16 slen, u32 modbits, gen_hash_alg_type rsa_hash_type);
 
-ATTRIBUTE_WARN_UNUSED_RET int rsassa_pss_sign(const rsa_priv_key *priv, const u8 *m, u16 mlen,
+ATTRIBUTE_WARN_UNUSED_RET int rsassa_pss_sign(const rsa_priv_key *priv, const u8 *m, u32 mlen,
 					      u8 *s, u16 *slen, u32 modbits,
 					      gen_hash_alg_type rsa_hash_type, gen_hash_alg_type mgf_hash_type,
-					      u16 saltlen, const u8 *forced_salt);
-ATTRIBUTE_WARN_UNUSED_RET int rsassa_pss_sign_hardened(const rsa_priv_key *priv, const rsa_pub_key *pub, const u8 *m, u16 mlen,
+					      u32 saltlen, const u8 *forced_salt);
+ATTRIBUTE_WARN_UNUSED_RET int rsassa_pss_sign_hardened(const rsa_priv_key *priv, const rsa_pub_key *pub, const u8 *m, u32 mlen,
 					      u8 *s, u16 *slen, u32 modbits,
 					      gen_hash_alg_type rsa_hash_type, gen_hash_alg_type mgf_hash_type,
-					      u16 saltlen, const u8 *forced_salt);
-ATTRIBUTE_WARN_UNUSED_RET int rsassa_pss_verify(const rsa_pub_key *pub, const u8 *m, u16 mlen,
+					      u32 saltlen, const u8 *forced_salt);
+ATTRIBUTE_WARN_UNUSED_RET int rsassa_pss_verify(const rsa_pub_key *pub, const u8 *m, u32 mlen,
 						const u8 *s, u16 slen, u32 modbits,
 						gen_hash_alg_type rsa_hash_type, gen_hash_alg_type mgf_hash_type,
-						u16 saltlen);
+						u32 saltlen);
 
+ATTRIBUTE_WARN_UNUSED_RET int rsa_iso9796_2_sign_recover(const rsa_priv_key *priv, const u8 *m, u32 mlen, u32 *m1len,                                     
+                          			         u32 *m2len, u8 *s, u16 *slen,
+			                                 u32 modbits, gen_hash_alg_type gen_hash_type);
+
+ATTRIBUTE_WARN_UNUSED_RET int rsa_iso9796_2_sign_recover_hardened(const rsa_priv_key *priv, const rsa_pub_key *pub,
+			                                          const u8 *m, u32 mlen, u32 *m1len, u32 *m2len, u8 *s, u16 *slen,
+                          			                  u32 modbits, gen_hash_alg_type gen_hash_type);
+ATTRIBUTE_WARN_UNUSED_RET int rsa_iso9796_2_verify_recover(const rsa_pub_key *pub, const u8 *m2, u32 m2len, u8 *m1, u32 *m1len,
+                         			           const u8 *s, u16 slen, u32 modbits, gen_hash_alg_type gen_hash_type);
 #endif /* __RSA_H__ */
