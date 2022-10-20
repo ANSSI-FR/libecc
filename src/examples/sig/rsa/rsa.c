@@ -621,6 +621,15 @@ ATTRIBUTE_WARN_UNUSED_RET static int rsa_digestinfo_from_hash(gen_hash_alg_type 
 			(*digestinfo_len) = sizeof(_digestinfo);
 			break;
 		}
+		case HASH_SHA0:{
+			const u8 _digestinfo[] = { 0x30, 0x21, 0x30, 0x09, 0x06, 0x05, 0x2b,
+						   0x0e, 0x03, 0x02, 0x12, 0x05, 0x00, 0x04,
+						   0x14 };
+			MUST_HAVE(((*digestinfo_len) >= sizeof(_digestinfo)), ret, err);
+			ret = local_memcpy(digestinfo, _digestinfo, sizeof(_digestinfo)); EG(ret, err);
+			(*digestinfo_len) = sizeof(_digestinfo);
+			break;
+		}
 		case HASH_SHA1:{
 			const u8 _digestinfo[] = { 0x30, 0x21, 0x30, 0x09, 0x06, 0x05, 0x2b,
 						   0x0e, 0x03, 0x02, 0x1a, 0x05, 0x00, 0x04,
