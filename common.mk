@@ -35,7 +35,7 @@ FORTIFY_FLAGS=-D_FORTIFY_SOURCE=2
 CLANG :=  $(shell $(CROSS_COMPILE)$(CC) -v 2>&1 | grep clang)
 ifneq ($(CLANG),)
 WARNING_CFLAGS = -Weverything -Werror \
-		 -Wno-reserved-id-macro -Wno-padded \
+		 -Wno-reserved-id-macro -Wno-reserved-identifier -Wno-padded \
 		 -Wno-packed -Wno-covered-switch-default \
 		 -Wno-used-but-marked-unused -Wno-switch-enum
 # Add warnings if we are in pedantic mode
@@ -132,8 +132,8 @@ endif
 # If the user has not overriden the CFLAGS, we add the usual gcc/clang
 # flags to produce binaries compatible with hardening technologies.
 ifndef USER_DEFINED_CFLAGS
-BIN_CFLAGS  ?= $(CFLAGS) $(FPIE_CFLAG)
-LIB_CFLAGS  ?= $(CFLAGS) $(FPIC_CFLAG) -ffreestanding
+BIN_CFLAGS  ?= $(CFLAGS) $(FPIE_CFLAG) -MMD -MP
+LIB_CFLAGS  ?= $(CFLAGS) $(FPIC_CFLAG) -MMD -MP -ffreestanding
 else
 BIN_CFLAGS  ?= $(USER_DEFINED_CFLAGS)
 LIB_CFLAGS  ?= $(USER_DEFINED_CFLAGS)

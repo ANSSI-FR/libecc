@@ -27,9 +27,12 @@ EXEC_TO_CLEAN = $(BUILD_DIR)/ec_self_tests $(BUILD_DIR)/ec_utils $(BUILD_DIR)/ec
 # all and clean, as you might expect
 all: $(LIBS) $(TESTS_EXEC)
 
+# Default object files extension
+OBJ_FILES_EXTENSION ?= .o
+
 clean:
 	@rm -f $(LIBS) $(EXEC_TO_CLEAN)
-	@find $(OBJ_DIR)/ -name '*.o' -exec rm -f '{}' \;
+	@find $(OBJ_DIR)/ -name '*.$(OBJ_FILES_EXTENSION)' -exec rm -f '{}' \;
 	@find $(OBJ_DIR)/ -name '*.d' -exec rm -f '{}' \;
 	@find $(BUILD_DIR)/ -name '*.a' -exec rm -f '{}' \;
 	@find $(BUILD_DIR)/ -name '*.so' -exec rm -f '{}' \;
@@ -80,19 +83,19 @@ TESTS_OBJECTS_UTILS_SRC = src/tests/ec_utils.c
 # --- Static Libraries ---
 
 LIBARITH_SRC = $(FP_SRC) $(NN_SRC) $(RAND_SRC) $(UTILS_ARITH_SRC)
-LIBARITH_OBJECTS = $(patsubst %,$(OBJ_DIR)/%.o,$(basename $(LIBARITH_SRC)))
+LIBARITH_OBJECTS = $(patsubst %,$(OBJ_DIR)/%.$(OBJ_FILES_EXTENSION),$(basename $(LIBARITH_SRC)))
 $(LIBARITH): $(LIBARITH_OBJECTS)
 	$(VERBOSE_MAKE)$(CROSS_COMPILE)$(AR) $(AR_FLAGS) $@ $^
 	$(VERBOSE_MAKE)$(CROSS_COMPILE)$(RANLIB) $(RANLIB_FLAGS) $@
 
 LIBEC_SRC = $(LIBARITH_SRC) $(CURVES_SRC) $(UTILS_EC_SRC)
-LIBEC_OBJECTS = $(patsubst %,$(OBJ_DIR)/%.o,$(basename $(LIBEC_SRC)))
+LIBEC_OBJECTS = $(patsubst %,$(OBJ_DIR)/%.$(OBJ_FILES_EXTENSION),$(basename $(LIBEC_SRC)))
 $(LIBEC): $(LIBEC_OBJECTS)
 	$(VERBOSE_MAKE)$(CROSS_COMPILE)$(AR) $(AR_FLAGS) $@ $^
 	$(VERBOSE_MAKE)$(CROSS_COMPILE)$(RANLIB) $(RANLIB_FLAGS) $@
 
 LIBSIGN_SRC = $(LIBEC_SRC) $(HASH_SRC) $(SIG_SRC) $(KEY_SRC) $(UTILS_SIGN_SRC) $(ECDH_SRC)
-LIBSIGN_OBJECTS = $(patsubst %,$(OBJ_DIR)/%.o,$(basename $(LIBSIGN_SRC)))
+LIBSIGN_OBJECTS = $(patsubst %,$(OBJ_DIR)/%.$(OBJ_FILES_EXTENSION),$(basename $(LIBSIGN_SRC)))
 $(LIBSIGN): $(LIBSIGN_OBJECTS)
 	$(VERBOSE_MAKE)$(CROSS_COMPILE)$(AR) $(AR_FLAGS) $@ $^
 	$(VERBOSE_MAKE)$(CROSS_COMPILE)$(RANLIB) $(RANLIB_FLAGS) $@
@@ -115,12 +118,12 @@ $(LIBSIGN_DYN): $(LIBSIGN_OBJECTS)
 # --- Executables (Static linkage with libsign object files) ---
 
 EC_SELF_TESTS_SRC = $(TESTS_OBJECTS_CORE_SRC) $(TESTS_OBJECTS_SELF_SRC) $(EXT_DEPS_SRC)
-EC_SELF_TESTS_OBJECTS = $(patsubst %,$(OBJ_DIR)/%.o,$(basename $(EC_SELF_TESTS_SRC)))
+EC_SELF_TESTS_OBJECTS = $(patsubst %,$(OBJ_DIR)/%.$(OBJ_FILES_EXTENSION),$(basename $(EC_SELF_TESTS_SRC)))
 $(BUILD_DIR)/ec_self_tests: $(EC_SELF_TESTS_OBJECTS) $(LIBSIGN_OBJECTS)
 	$(VERBOSE_MAKE)$(CROSS_COMPILE)$(CC) $(BIN_CFLAGS) $(BIN_LDFLAGS) $^ -o $@
 
 EC_UTILS_SRC = $(TESTS_OBJECTS_CORE_SRC) $(TESTS_OBJECTS_UTILS_SRC) $(EXT_DEPS_SRC)
-EC_UTILS_OBJECTS = $(patsubst %,$(OBJ_DIR)/%.o,$(basename $(EC_UTILS_SRC)))
+EC_UTILS_OBJECTS = $(patsubst %,$(OBJ_DIR)/%.$(OBJ_FILES_EXTENSION),$(basename $(EC_UTILS_SRC)))
 $(BUILD_DIR)/ec_utils: $(EC_UTILS_SRC) $(LIBSIGN_OBJECTS)
 	$(VERBOSE_MAKE)$(CROSS_COMPILE)$(CC) $(BIN_CFLAGS) $(BIN_LDFLAGS) -DWITH_STDLIB  $^ -o $@
 
@@ -145,14 +148,14 @@ SRC += $(KEY_SRC) $(TESTS_OBJECTS_CORE_SRC) $(TESTS_OBJECTS_SELF_SRC)
 SRC += $(TESTS_OBJECTS_UTILS_SRC)
 
 # All object files
-OBJS = $(patsubst %,$(OBJ_DIR)/%.o,$(basename $(SRC)))
+OBJS = $(patsubst %,$(OBJ_DIR)/%.$(OBJ_FILES_EXTENSION),$(basename $(SRC)))
 
 # General dependency rule between .o and .d files
-DEPS = $(OBJS:.o=.d)
+DEPS = $(OBJS:.$(OBJ_FILES_EXTENSION)=.d)
 
 # General rule for creating .o (and .d) file from .c
-$(OBJ_DIR)/%.o: %.c
-	$(VERBOSE_MAKE)$(CROSS_COMPILE)$(CC) -c $(LIB_CFLAGS) -MMD -MP -o $@ $<
+$(OBJ_DIR)/%.$(OBJ_FILES_EXTENSION): %.c
+	$(VERBOSE_MAKE)$(CROSS_COMPILE)$(CC) -c $(LIB_CFLAGS) -o $@ $<
 
 # Populate the directory structure to contain the .o and .d files, if necessary
 $(shell mkdir -p $(dir $(OBJS)) >/dev/null)
