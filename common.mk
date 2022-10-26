@@ -35,7 +35,7 @@ FORTIFY_FLAGS=-D_FORTIFY_SOURCE=2
 CLANG :=  $(shell $(CROSS_COMPILE)$(CC) -v 2>&1 | grep clang)
 ifneq ($(CLANG),)
 WARNING_CFLAGS = -Weverything -Werror \
-		 -Wno-reserved-id-macro -Wno-reserved-identifier -Wno-padded \
+		 -Wno-reserved-id-macro -Wno-padded \
 		 -Wno-packed -Wno-covered-switch-default \
 		 -Wno-used-but-marked-unused -Wno-switch-enum
 # Add warnings if we are in pedantic mode
