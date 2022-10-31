@@ -28,6 +28,9 @@ jobs:
           OPENMP_SELF_TESTS: 1
         shell: bash
         run: |
+          # Install OpenMP
+          sudo apt-get update;
+          sudo apt-get -y install libomp-dev;
           # Test our Python libecc expanding script
           # Python3
           echo "y" | python3 scripts/expand_libecc.py --remove-all && PYTHON=python3 sh scripts/gen_curves_tests.sh && make clean && make && ./build/ec_self_tests vectors rand;

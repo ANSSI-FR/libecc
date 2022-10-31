@@ -28,6 +28,9 @@ jobs:
           OPENMP_SELF_TESTS: 1
         shell: bash
         run: |
+          # Install OpenMP
+          sudo apt-get update;
+          sudo apt-get -y install libomp-dev;
           # Compile and compile the tests
           #
           EXTRA_CFLAGS="-DUSER_NN_BIT_LEN=4096" make && cd src/examples/ && EXTRA_CFLAGS="-DUSER_NN_BIT_LEN=4096" make && ./sig/rsa/rsa && ./sig/dsa/dsa && ./sig/kcdsa/kcdsa && ./sig/sdsa/sdsa && ./sig/gostr34_10_94/gostr34_10_94 && ./sss/sss && ./basic/curve_basic_examples && ./basic/curve_ecdh && make clean && cd - && make clean;
