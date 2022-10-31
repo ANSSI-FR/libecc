@@ -28,7 +28,7 @@ EXEC_TO_CLEAN = $(BUILD_DIR)/ec_self_tests $(BUILD_DIR)/ec_utils $(BUILD_DIR)/ec
 all: $(LIBS) $(TESTS_EXEC)
 
 # Default object files extension
-OBJ_FILES_EXTENSION ?= .o
+OBJ_FILES_EXTENSION ?= o
 
 clean:
 	@rm -f $(LIBS) $(EXEC_TO_CLEAN)
