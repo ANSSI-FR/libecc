@@ -218,7 +218,7 @@ class Point(object):
             raise Exception("Point add error: two point don't have the same curve")
         # If Q is infinity point, return ourself
         if Q.x == None:
-            return self
+            return Point(self.curve, None, None)
         # If we are the infinity point return Q
         if self.x == None:
             return Q
@@ -240,7 +240,7 @@ class Point(object):
     # Negation
     def __neg__(self):
         if (self.x == None):
-            return self
+            return Point(self.curve, None, None)
         else:
             return Point(self.curve, self.x, -self.y)
     # Subtraction
@@ -1411,7 +1411,10 @@ def is_base64(s):
     s = ''.join([s.strip() for s in s.split("\n")])
     try:
         enc = base64.b64encode(base64.b64decode(s)).strip()
-        return enc == s
+        if type(enc) is bytes:
+            return enc == s.encode('latin-1')
+        else:
+            return enc == s
     except TypeError:
         return False
 
