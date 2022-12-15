@@ -594,7 +594,7 @@ static int check_wycheproof_ecdh(void)
 			ret = -1;
 			OPENMP_EG(ret, err);
 		}
-		OPENMP_MUST_HAVE((sharedsecretsize < sizeof(sharedsecret_check)), ret, err);
+		OPENMP_MUST_HAVE((sharedsecretsize <= sizeof(sharedsecret_check)), ret, err);
 		ret = ecccdh_serialized_pub_key_size(&params, &serialized_pub_key_size);
 		if (ret) {
 			ext_printf("Error: ECDH tests error getting serialized public key size\n");
