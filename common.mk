@@ -43,7 +43,8 @@ ifeq ($(PEDANTIC),1)
 WARNING_CFLAGS += -Werror -Walloca -Wcast-qual -Wconversion -Wformat=2 -Wformat-security -Wnull-dereference -Wstack-protector -Wvla -Warray-bounds -Warray-bounds-pointer-arithmetic -Wassign-enum -Wbad-function-cast -Wconditional-uninitialized -Wconversion -Wfloat-equal -Wformat-type-confusion -Widiomatic-parentheses -Wimplicit-fallthrough -Wloop-analysis -Wpointer-arith -Wshift-sign-overflow -Wshorten-64-to-32 -Wtautological-constant-in-range-compare -Wunreachable-code-aggressive -Wthread-safety -Wthread-safety-beta -Wcomma
 endif
 # Clang version >= 13? Adapt
-CLANG_VERSION_GTE_13 := $(shell echo `$(CROSS_COMPILE)$(CC) -dumpversion | cut -f1-2 -d.` \>= 13.0 | sed -e 's/\./*100+/g' | bc)
+CLANG_VERSION_GTE_13_EXPRESSION := $(shell echo `$(CROSS_COMPILE)$(CC) -dumpversion | cut -f1-2 -d.` \>= 13.0 | sed -e 's/\./*100+/g')
+CLANG_VERSION_GTE_13 := $(shell awk "BEGIN{printf \"%d\n\", $(CLANG_VERSION_GTE_13_EXPRESSION)}")
   ifeq ($(CLANG_VERSION_GTE_13), 1)
   # We have to do this because the '_' prefix seems now reserved to builtins
   WARNING_CFLAGS += -Wno-reserved-identifier
@@ -132,8 +133,8 @@ endif
 # If the user has not overriden the CFLAGS, we add the usual gcc/clang
 # flags to produce binaries compatible with hardening technologies.
 ifndef USER_DEFINED_CFLAGS
-BIN_CFLAGS  ?= $(CFLAGS) $(FPIE_CFLAG)
-LIB_CFLAGS  ?= $(CFLAGS) $(FPIC_CFLAG) -ffreestanding
+BIN_CFLAGS  ?= $(CFLAGS) $(FPIE_CFLAG) -MMD -MP
+LIB_CFLAGS  ?= $(CFLAGS) $(FPIC_CFLAG) -MMD -MP -ffreestanding
 else
 BIN_CFLAGS  ?= $(USER_DEFINED_CFLAGS)
 LIB_CFLAGS  ?= $(USER_DEFINED_CFLAGS)
@@ -248,7 +249,8 @@ ifeq ($(USE_SANITIZERS),1)
 CFLAGS += -fsanitize=undefined -fsanitize=address -fsanitize=leak
   ifneq ($(CLANG),)
     # Clang version < 12 do not support unsigned-shift-base
-    CLANG_VERSION_GTE_12 := $(shell echo `$(CROSS_COMPILE)$(CC) -dumpversion | cut -f1-2 -d.` \>= 12.0 | sed -e 's/\./*100+/g' | bc)
+    CLANG_VERSION_GTE_12_EXPRESSION := $(shell echo `$(CROSS_COMPILE)$(CC) -dumpversion | cut -f1-2 -d.` \>= 12.0 | sed -e 's/\./*100+/g')
+    CLANG_VERSION_GTE_12 := $(shell awk "BEGIN{printf \"%d\n\", $(CLANG_VERSION_GTE_12_EXPRESSION)}")
     ifeq ($(CLANG_VERSION_GTE_12), 1)
       CFLAGS += -fsanitize=integer -fno-sanitize=unsigned-integer-overflow -fno-sanitize=unsigned-shift-base
     endif

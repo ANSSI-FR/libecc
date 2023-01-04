@@ -5,13 +5,14 @@ on: push
 
 jobs:
   runtime_tests:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     strategy:
       #max-parallel: 10
       matrix:
         cc: [gcc, clang]
         blinding: [1]
         cryptofuzz: [1]
+        wordsize: [64, 32, 16]
     steps:
       # Checkout repository
       - name: checkout repository
@@ -26,11 +27,13 @@ jobs:
           ASSERT_PRINT: 1
           # We want to parallelize self tests
           OPENMP_SELF_TESTS: 1
+          WORDSIZE: ${{ matrix.wordsize }}
         shell: bash
         run: |
+          # Install OpenMP
+          sudo apt-get update;
+          sudo apt-get -y install libomp-dev;
           # Vanilla tests
           #
-          make && ./build/ec_self_tests vectors rand;
-          make 32 && ./build/ec_self_tests vectors rand;
-          make 16 && ./build/ec_self_tests vectors rand;
+          make "${WORDSIZE}" && ./build/ec_self_tests vectors rand;
         continue-on-error: false

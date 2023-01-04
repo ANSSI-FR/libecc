@@ -216,7 +216,12 @@ ATTRIBUTE_WARN_UNUSED_RET static int random_split_ec_verify(const u8 *sig, u8 si
  * by letting the user override this value.
  */
 #ifndef MAX_MSG_LEN
+#if WORDSIZE == 16
+/* For wordsize 16 bits, avoid overflows */
+#define MAX_MSG_LEN 1024
+#else
 #define MAX_MSG_LEN 8192
+#endif
 #endif
 #ifndef MAX_BATCH_SIG_SIZE
 #define MAX_BATCH_SIG_SIZE 20
@@ -1420,8 +1425,8 @@ ATTRIBUTE_WARN_UNUSED_RET static int rand_sig_verif_test_one(const ec_sig_mappin
 		if((sig->type == BIGN) || (sig->type == DBIGN))
 #endif
 		{
-			u8 oid_len = 0;
-			u8 t_len = 0;
+			u16 oid_len = 0;
+			u16 t_len = 0;
 			ret = get_random((u8 *)rand_adata, sizeof(rand_adata)); EG(ret, err);
 
 			ret = get_random((u8 *)&oid_len, sizeof(oid_len)); EG(ret, err);
@@ -1852,8 +1857,8 @@ ATTRIBUTE_WARN_UNUSED_RET static int perf_test_one(const ec_sig_mapping *sig, co
 		if((sig->type == BIGN) || (sig->type == DBIGN))
 #endif
 		{
-			u8 oid_len = 0;
-			u8 t_len = 0;
+			u16 oid_len = 0;
+			u16 t_len = 0;
 			ret = get_random((u8 *)rand_adata, sizeof(rand_adata)); EG(ret, err);
 
 			ret = get_random((u8 *)&oid_len, sizeof(oid_len)); EG(ret, err);

@@ -43,11 +43,11 @@ typedef struct {
 	const u8 *qInv;
 	u16 qInvlen;
 	const u8 *m;
-	u16 mlen;
+	u32 mlen;
 	const u8 *res;
-	u16 reslen;
+	u32 reslen;
 	const u8 *salt;
-	u16 saltlen;
+	u32 saltlen;
 } rsa_test;
 
 
@@ -88,7 +88,7 @@ ATTRIBUTE_WARN_UNUSED_RET static inline int perform_rsa_tests(const rsa_test **t
 		switch(t->type){
 			case RSA_PKCS1_v1_5_ENC:{
 				u8 cipher[NN_USABLE_MAX_BYTE_LEN];
-				u16 clen;
+				u32 clen;
 				if(t->salt != NULL){
 					clen = sizeof(cipher);
 					ret = rsaes_pkcs1_v1_5_encrypt(&pub, t->m, t->mlen, cipher, &clen, modbits, t->salt, t->saltlen); EG(ret, err1);
@@ -115,7 +115,7 @@ ATTRIBUTE_WARN_UNUSED_RET static inline int perform_rsa_tests(const rsa_test **t
 			}
 			case RSA_OAEP_ENC:{
 				u8 cipher[NN_USABLE_MAX_BYTE_LEN];
-				u16 clen;
+				u32 clen;
 				if(t->salt != NULL){
 					clen = sizeof(cipher);
 					ret = rsaes_oaep_encrypt(&pub, t->m, t->mlen, cipher, &clen, modbits, NULL, 0, t->hash, t->hash, t->salt, t->saltlen); EG(ret, err1);
@@ -143,7 +143,8 @@ ATTRIBUTE_WARN_UNUSED_RET static inline int perform_rsa_tests(const rsa_test **t
 			case RSA_PKCS1_v1_5_SIG:{
 				u8 sig[NN_USABLE_MAX_BYTE_LEN];
 				u16 siglen = sizeof(sig);
-				ret = rsassa_pkcs1_v1_5_verify(&pub, t->m, t->mlen, t->res, t->reslen, modbits, t->hash); EG(ret, err1);
+				MUST_HAVE((t->reslen) <= 0xffff, ret, err1);
+				ret = rsassa_pkcs1_v1_5_verify(&pub, t->m, t->mlen, t->res, (u16)(t->reslen), modbits, t->hash); EG(ret, err1);
 				/* Try to sign */
 				ret = rsassa_pkcs1_v1_5_sign(&priv, t->m, t->mlen, sig, &siglen, modbits, t->hash); EG(ret, err1);
 				/* Check the result */
@@ -163,10 +164,12 @@ ATTRIBUTE_WARN_UNUSED_RET static inline int perform_rsa_tests(const rsa_test **t
 					/* In case of NULL salt, default saltlen value is the digest size */
 					u8 digestsize, blocksize;
 					ret = gen_hash_get_hash_sizes(t->hash, &digestsize, &blocksize); EG(ret, err1);
-					ret = rsassa_pss_verify(&pub, t->m, t->mlen, t->res, t->reslen, modbits, t->hash, t->hash, digestsize); EG(ret, err1);
+					MUST_HAVE((t->reslen) <= 0xffff, ret, err1);
+					ret = rsassa_pss_verify(&pub, t->m, t->mlen, t->res, (u16)(t->reslen), modbits, t->hash, t->hash, digestsize); EG(ret, err1);
 				}
 				else{
-					ret = rsassa_pss_verify(&pub, t->m, t->mlen, t->res, t->reslen, modbits, t->hash, t->hash, t->saltlen); EG(ret, err1);
+					MUST_HAVE((t->reslen) <= 0xffff, ret, err1);
+					ret = rsassa_pss_verify(&pub, t->m, t->mlen, t->res, (u16)(t->reslen), modbits, t->hash, t->hash, t->saltlen); EG(ret, err1);
 				}
 				if(t->salt != NULL){
 					/* Try to sign */
@@ -174,13 +177,14 @@ ATTRIBUTE_WARN_UNUSED_RET static inline int perform_rsa_tests(const rsa_test **t
 					u16 siglen = sizeof(sig);
 					ret = rsassa_pss_sign(&priv, t->m, t->mlen, sig, &siglen, modbits, t->hash, t->hash, t->saltlen, t->salt); EG(ret, err1);
 					/* Check the result */
-					MUST_HAVE((siglen == t->reslen), ret, err1);
+					MUST_HAVE((t->reslen) <= 0xffff, ret, err1);
+					MUST_HAVE((siglen == (u16)(t->reslen)), ret, err1);
 					ret = are_equal(t->res, sig, t->reslen, &cmp); EG(ret, err1);
 					MUST_HAVE(cmp, ret, err1);
 					/* Try to sign with the hardened version */
 					ret = rsassa_pss_sign_hardened(&priv, &pub, t->m, t->mlen, sig, &siglen, modbits, t->hash, t->hash, t->saltlen, t->salt); EG(ret, err1);
 					/* Check the result */
-					MUST_HAVE((siglen == t->reslen), ret, err1);
+					MUST_HAVE((siglen == (u16)(t->reslen)), ret, err1);
 					ret = are_equal(t->res, sig, t->reslen, &cmp); EG(ret, err1);
 					MUST_HAVE(cmp, ret, err1);
 				}
