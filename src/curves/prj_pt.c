@@ -962,7 +962,8 @@ err:
  *  - in1 and in2 are initialized
  *  - in1 and in2 are on the same curve
  *  - in1/in2 and out must not be aliased
- *  - in1 and in2 must not be equal, opposite or have identical value
+ *  - in1 and in2 must not be an "exceptional" pair, i.e. (in1-in2) is not a point
+ *  of order exactly 2
  *
  * The function will initialize 'out'. The function returns 0 on success, -1
  * on error.
@@ -971,6 +972,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int __prj_pt_add_monty_cf(prj_pt_t out,
 							   prj_pt_src_t in1,
 							   prj_pt_src_t in2)
 {
+	int cmp1, cmp2;
 	fp t0, t1, t2, t3, t4, t5;
 	int ret;
 	t0.magic = t1.magic = t2.magic = WORD(0);
@@ -1032,6 +1034,30 @@ ATTRIBUTE_WARN_UNUSED_RET static int __prj_pt_add_monty_cf(prj_pt_t out,
 	ret = fp_mul_monty(&t0, &t3, &t1); EG(ret, err);
 	ret = fp_mul_monty(&out->Z, &t5, &out->Z); EG(ret, err);
 	ret = fp_add_monty(&out->Z, &out->Z, &t0);
+
+	/* Check for "exceptional" pairs of input points with
+	 * checking if Y = Z = 0 as output (see the Bosma-Lenstra
+	 * article "Complete Systems of Two Addition Laws for
+	 * Elliptic Curves"). This should only happen on composite
+	 * order curves (i.e. not on prime order curves).
+	 *
+	 * In this case, we raise an error as the result is
+	 * not sound. This should not happen in our nominal
+	 * cases with regular signature and protocols, and if
+	 * it happens this usually means that bad points have
+	 * been injected.
+	 *
+	 * NOTE: if for some reasons you need to deal with
+	 * all the possible pairs of points including these
+	 * exceptional pairs of inputs with an order 2 difference,
+	 * you should fallback to the incomplete formulas using the
+	 * COMPLETE=0 compilation toggle. Beware that in this
+	 * case, the library will be more sensitive to
+	 * side-channel attacks.
+	 */
+	ret = fp_iszero(&(out->Z), &cmp1); EG(ret, err);
+	ret = fp_iszero(&(out->Y), &cmp2); EG(ret, err);
+	MUST_HAVE(!((cmp1) && (cmp2)), ret, err);
 
 err:
 	fp_uninit(&t0);
