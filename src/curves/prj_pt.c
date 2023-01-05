@@ -143,49 +143,48 @@ err:
  */
 int prj_pt_is_on_curve(prj_pt_src_t in,  int *on_curve)
 {
-	int ret, iszero, _on_curve;
+	int ret, cmp;
 
-	fp X, Y;
-	fp_src_t dummy_Z;
-	X.magic = Y.magic = WORD(0);
+	/* In order to check that we are on the curve, we
+	 * use the projective formula of the curve:
+	 *
+	 *   Y**2 * Z = X**3 + a * X * Z**2 + b * Z**3
+	 *
+	 */
+	fp X, Y, Z;
+	X.magic = Y.magic = Z.magic = WORD(0);
 
 	ret = prj_pt_check_initialized(in); EG(ret, err);
+	ret = ec_shortw_crv_check_initialized(in->crv); EG(ret, err);
 	MUST_HAVE((on_curve != NULL), ret, err);
 
 	ret = fp_init(&X, in->X.ctx); EG(ret, err);
 	ret = fp_init(&Y, in->X.ctx); EG(ret, err);
+	ret = fp_init(&Z, in->X.ctx); EG(ret, err);
 
-	/* NOTE: use Y as a temporary dummy random variable for
-	 * dummy operations when whe deal with the point at infinity.
-	 */
-	ret = nn_get_random_mod(&(Y.fp_val), &((in->X.ctx)->p)); EG(ret, err);
+	/* Compute X**3 + a * X * Z**2 + b * Z**3 on one side */
+	ret = fp_sqr(&X, &(in->X)); EG(ret, err);
+	ret = fp_mul(&X, &X, &(in->X)); EG(ret, err);
+	ret = fp_mul(&Z, &(in->X), &(in->crv->a)); EG(ret, err);
+	ret = fp_mul(&Y, &(in->crv->b), &(in->Z)); EG(ret, err);
+	ret = fp_add(&Z, &Z, &Y); EG(ret, err);
+	ret = fp_mul(&Z, &Z, &(in->Z)); EG(ret, err);
+	ret = fp_mul(&Z, &Z, &(in->Z)); EG(ret, err);
+	ret = fp_add(&X, &X, &Z); EG(ret, err);
 
-	ret = fp_iszero(&(in->Z), &iszero); EG(ret, err);
+	/* Compute Y**2 * Z on the other side */
+	ret = fp_sqr(&Y, &(in->Y)); EG(ret, err);
+	ret = fp_mul(&Y, &Y, &(in->Z)); EG(ret, err);
 
-	/* Go back to affine and avoid leaking the point
-	 * at infinity. Dummy operations are performed
-	 * tentatively in constant time when we have to
-	 * deal with the point at infinity.
-	 */
-	dummy_Z = iszero ? ((fp_src_t)&Y) : &(in->Z);
+	/* Compare the two values */
+	ret = fp_cmp(&X, &Y, &cmp); EG(ret, err);
 
-	ret = fp_inv(&X, dummy_Z); EG(ret, err);
-
-	ret = fp_mul(&Y, &(in->Y), &X); EG(ret, err);
-	ret = fp_mul(&X, &(in->X), &X); EG(ret, err);
-
-	/* Now check if we satisfy the curve equation */
-	ret = is_on_shortw_curve(&X, &Y, in->crv, &_on_curve);
-
-	if(!ret){
-		(*on_curve) = (iszero | _on_curve);
-	}
+	(*on_curve) = (!cmp);
 
 err:
-	PTR_NULLIFY(dummy_Z);
-
 	fp_uninit(&X);
 	fp_uninit(&Y);
+	fp_uninit(&Z);
 
 	return ret;
 }
