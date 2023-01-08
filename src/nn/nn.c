@@ -168,7 +168,8 @@ int nn_cnd_swap(int cnd, nn_t in1, nn_t in2)
 {
 	word_t mask = WORD_MASK_IFNOTZERO(cnd);
 	u8 len, i;
-	word_t t, r_mask;
+	word_t t, r;
+	volatile word_t r_mask;
 	int ret;
 
 	ret = nn_check_initialized(in1); EG(ret, err);
@@ -184,7 +185,8 @@ int nn_cnd_swap(int cnd, nn_t in1, nn_t in2)
 	 * EM Side Channel Attack on Several Constant-Time Elliptic
 	 * Curve Implementations in Mobile Platforms" by Alam et al.
 	 */
-	ret = get_unsafe_random((u8*)&r_mask, sizeof(r_mask)); EG(ret, err);
+	ret = get_unsafe_random((u8*)&r, sizeof(r)); EG(ret, err);
+	r_mask = r;
 
 	for (i = 0; i < NN_MAX_WORD_LEN; i++) {
 		word_t local_mask = WORD_MASK_IFNOTZERO((i < len));
