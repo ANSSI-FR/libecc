@@ -19,4 +19,9 @@
 
 ATTRIBUTE_WARN_UNUSED_RET int get_random(unsigned char *buf, u16 len);
 
+/* WARNING: use with care, this is useful when "fast" but somehow unsafe
+ * random must be provided.
+ */
+ATTRIBUTE_WARN_UNUSED_RET int get_unsafe_random(unsigned char *buf, u16 len);
+
 #endif /* __RAND_H__ */
