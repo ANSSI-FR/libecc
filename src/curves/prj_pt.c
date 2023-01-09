@@ -1328,7 +1328,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int _prj_pt_mul_ltr_monty_dbl_add_always(prj_pt
 	nn m_msb_fixed;
 	nn_src_t curve_order;
 	nn curve_order_square;
-	int ret, cmp;
+	int ret, ret_ops, cmp;
 	r.magic = m_msb_fixed.magic = curve_order_square.magic = WORD(0);
 	T[0].magic = T[1].magic = T[2].magic = WORD(0);
 
@@ -1367,6 +1367,11 @@ ATTRIBUTE_WARN_UNUSED_RET static int _prj_pt_mul_ltr_monty_dbl_add_always(prj_pt
 	MUST_HAVE(mlen != 0, ret, err);
 	mlen--;
 
+	/* Hide possible internal failures for double and add
+	 * operations and perform the operation in constant time.
+	 */
+	ret_ops = 0;
+
 	/* Get a random r with the same size of m_msb_fixed */
 	ret = nn_get_random_len(&r, m_msb_fixed.wlen * WORD_BYTES); EG(ret, err);
 
@@ -1403,12 +1408,12 @@ ATTRIBUTE_WARN_UNUSED_RET static int _prj_pt_mul_ltr_monty_dbl_add_always(prj_pt
 		 * addition for doubling, incurring a small performance hit
 		 * for better SCA resistance.
 		 */
-		ret = prj_pt_add(&T[rbit], &T[rbit], &T[rbit]); EG(ret, err);
+		ret_ops |= prj_pt_add(&T[rbit], &T[rbit], &T[rbit]);
 #else
-		ret = prj_pt_dbl(&T[rbit], &T[rbit]); EG(ret, err);
+		ret_ops |= prj_pt_dbl(&T[rbit], &T[rbit]);
 #endif
 		/* Add:  T[1-r[i+1]] = ECADD(T[r[i+1]],T[2]) */
-		ret = prj_pt_add(&T[1-rbit], &T[rbit], &T[2]); EG(ret, err);
+		ret_ops |= prj_pt_add(&T[1-rbit], &T[rbit], &T[2]);
 
 		/*
 		 * T[r[i]] = T[d[i] ^ r[i+1]]
@@ -1423,7 +1428,10 @@ ATTRIBUTE_WARN_UNUSED_RET static int _prj_pt_mul_ltr_monty_dbl_add_always(prj_pt
 		rbit = rbit_next;
 	}
 	/* Output: T[r[0]] */
-	ret = prj_pt_copy(out, &T[rbit]);
+	ret = prj_pt_copy(out, &T[rbit]); EG(ret, err);
+
+	/* Take into consideration our double and add errors */
+	ret |= ret_ops;
 
 err:
 	prj_pt_uninit(&T[0]);
@@ -1445,7 +1453,12 @@ err:
  */
 ATTRIBUTE_WARN_UNUSED_RET static int _prj_pt_mul_ltr_monty_dbl_add_always(prj_pt_t out, nn_src_t m, prj_pt_src_t in)
 {
-	int ret;
+	int ret, ret_ops;
+
+	/* Hide possible internal failures for double and add
+	 * operations and perform the operation in constant time.
+	 */
+	ret_ops = 0;
 
 	/* Blind the input point projective coordinates */
 	ret = _blind_projective_point(out, in); EG(ret, err);
@@ -1524,11 +1537,11 @@ err1:
 				 * addition for doubling, incurring a small performance hit
 				 * for better SCA resistance.
 				 */
-				ret = prj_pt_add(&dbl, out, out); EG(ret, err2);
+				ret_ops |= prj_pt_add(&dbl, out, out);
 #else
-				ret = prj_pt_dbl(&dbl, out); EG(ret, err2);
+				ret_ops |= prj_pt_dbl(&dbl, out);
 #endif
-				ret = prj_pt_add(out, &dbl, in); EG(ret, err2);
+				ret_ops |= prj_pt_add(out, &dbl, in);
 				/* Swap */
 				ret = nn_cnd_swap(!mbit, &(out->X.fp_val), &(dbl.X.fp_val)); EG(ret, err2);
 				ret = nn_cnd_swap(!mbit, &(out->Y.fp_val), &(dbl.Y.fp_val)); EG(ret, err2);
@@ -1543,6 +1556,9 @@ err:
 
 		PTR_NULLIFY(curve_order);
 	}
+
+	/* Take into consideration our double and add errors */
+	ret |= ret_ops;
 
 	return ret;
 }
@@ -1564,7 +1580,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int _prj_pt_mul_ltr_monty_ladder(prj_pt_t out, 
 	nn m_msb_fixed;
 	nn_src_t curve_order;
 	nn curve_order_square;
-	int ret, cmp;
+	int ret, ret_ops, cmp;
 	r.magic = m_msb_fixed.magic = curve_order_square.magic = WORD(0);
 	T[0].magic = T[1].magic = T[2].magic = WORD(0);
 
@@ -1606,6 +1622,11 @@ ATTRIBUTE_WARN_UNUSED_RET static int _prj_pt_mul_ltr_monty_ladder(prj_pt_t out, 
 	MUST_HAVE((mlen != 0), ret, err);
 	mlen--;
 
+	/* Hide possible internal failures for double and add
+	 * operations and perform the operation in constant time.
+	 */
+	ret_ops = 0;
+
 	/* Get a random r with the same size of m_msb_fixed */
 	ret = nn_get_random_len(&r, (u16)(m_msb_fixed.wlen * WORD_BYTES)); EG(ret, err);
 
@@ -1630,9 +1651,9 @@ ATTRIBUTE_WARN_UNUSED_RET static int _prj_pt_mul_ltr_monty_ladder(prj_pt_t out, 
 	 * addition for doubling, incurring a small performance hit
 	 * for better SCA resistance.
 	 */
-	ret = prj_pt_add(&T[1-rbit], &T[rbit], &T[rbit]); EG(ret, err);
+	ret_ops |= prj_pt_add(&T[1-rbit], &T[rbit], &T[rbit]);
 #else
-	ret = prj_pt_dbl(&T[1-rbit], &T[rbit]); EG(ret, err);
+	ret_ops |= prj_pt_dbl(&T[1-rbit], &T[rbit]);
 #endif
 
 	/* Main loop of the Montgomery Ladder */
@@ -1651,13 +1672,13 @@ ATTRIBUTE_WARN_UNUSED_RET static int _prj_pt_mul_ltr_monty_ladder(prj_pt_t out, 
 		 * addition for doubling, incurring a small performance hit
 		 * for better SCA resistance.
 		 */
-		ret = prj_pt_add(&T[2], &T[mbit ^ rbit], &T[mbit ^ rbit]); EG(ret, err);
+		ret_ops |= prj_pt_add(&T[2], &T[mbit ^ rbit], &T[mbit ^ rbit]);
 #else
-		ret = prj_pt_dbl(&T[2], &T[mbit ^ rbit]); EG(ret, err);
+		ret_ops |= prj_pt_dbl(&T[2], &T[mbit ^ rbit]);
 #endif
 
 		/* Add: T[1] = ECADD(T[0],T[1]) */
-		ret = prj_pt_add(&T[1], &T[0], &T[1]); EG(ret, err);
+		ret_ops |= prj_pt_add(&T[1], &T[0], &T[1]);
 
 		/* T[0] = T[2-(d[i] ^ r[i])] */
 		/*
@@ -1680,7 +1701,10 @@ ATTRIBUTE_WARN_UNUSED_RET static int _prj_pt_mul_ltr_monty_ladder(prj_pt_t out, 
 		rbit = rbit_next;
 	}
 	/* Output: T[r[0]] */
-	ret = prj_pt_copy(out, &T[rbit]);
+	ret = prj_pt_copy(out, &T[rbit]); EG(ret, err);
+
+	/* Take into consideration our double and add errors */
+	ret |= ret_ops;
 
 err:
 	prj_pt_uninit(&T[0]);
