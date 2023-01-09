@@ -121,12 +121,13 @@ def legendre_symbol(a, p):
 # Tonelli-Shanks algorithm to find square roots
 # over prime fields
 def mod_sqrt(a, p):
+    # Square root of 0 is 0
+    if a == 0:
+        return 0
     # Simple cases
     if legendre_symbol(a, p) != 1:
         # No square residue
         return None
-    elif a == 0:
-        return 0
     elif p == 2:
         return a
     elif p % 4 == 3:
