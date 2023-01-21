@@ -121,12 +121,13 @@ def legendre_symbol(a, p):
 # Tonelli-Shanks algorithm to find square roots
 # over prime fields
 def mod_sqrt(a, p):
+    # Square root of 0 is 0
+    if a == 0:
+        return 0
     # Simple cases
     if legendre_symbol(a, p) != 1:
         # No square residue
         return None
-    elif a == 0:
-        return 0
     elif p == 2:
         return a
     elif p % 4 == 3:
@@ -218,7 +219,7 @@ class Point(object):
             raise Exception("Point add error: two point don't have the same curve")
         # If Q is infinity point, return ourself
         if Q.x == None:
-            return Point(self.curve, None, None)
+            return Point(self.curve, self.x, self.y)
         # If we are the infinity point return Q
         if self.x == None:
             return Q
@@ -262,6 +263,11 @@ class Point(object):
     # Deep copy is implemented using the ~X operator
     def __invert__(self):
         return copy.deepcopy(self)
+    def __str__(self):
+        if self.x == None:
+            return "Inf"
+        else:
+            return ("(x = %s, y = %s)" % (hex(self.x), hex(self.y)))
 
 ##########################################################
 ### Private and public keys structures

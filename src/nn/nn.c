@@ -16,6 +16,8 @@
 #define NN_CONSISTENCY_CHECK
 #include "nn.h"
 
+#include "../external_deps/rand.h"
+
 /*
  * Except otherwise specified, all functions accept *initialized* nn.
  * The WORD(NN_MAX_WORD_LEN + WORDSIZE) magic is here to detect modules
@@ -166,7 +168,8 @@ int nn_cnd_swap(int cnd, nn_t in1, nn_t in2)
 {
 	word_t mask = WORD_MASK_IFNOTZERO(cnd);
 	u8 len, i;
-	word_t t;
+	word_t t, r;
+	volatile word_t r_mask;
 	int ret;
 
 	ret = nn_check_initialized(in1); EG(ret, err);
@@ -177,16 +180,24 @@ int nn_cnd_swap(int cnd, nn_t in1, nn_t in2)
 
 	len = (in1->wlen >= in2->wlen) ? in1->wlen : in2->wlen;
 
+	/* Use a random word for randomly masking the delta value hamming
+	 * weight as proposed in Algorithm 4 of "Nonce@once: A Single-Trace
+	 * EM Side Channel Attack on Several Constant-Time Elliptic
+	 * Curve Implementations in Mobile Platforms" by Alam et al.
+	 */
+	ret = get_unsafe_random((u8*)&r, sizeof(r)); EG(ret, err);
+	r_mask = r;
+
 	for (i = 0; i < NN_MAX_WORD_LEN; i++) {
 		word_t local_mask = WORD_MASK_IFNOTZERO((i < len));
-		t = (in1->val[i] ^ in2->val[i]) & mask;
-		in1->val[i] ^= (t & local_mask);
-		in2->val[i] ^= (t & local_mask);
+		t = ((in1->val[i] ^ in2->val[i]) & mask) ^ r_mask;
+		in1->val[i] ^= ((t & local_mask) ^ (r_mask & local_mask));
+		in2->val[i] ^= ((t & local_mask) ^ (r_mask & local_mask));
 	}
 
-	t = (word_t)((in1->wlen ^ in2->wlen) & mask);
-	in1->wlen ^= (u8)t;
-	in2->wlen ^= (u8)t;
+	t = (word_t)(((in1->wlen ^ in2->wlen) & mask) ^ r_mask);
+	in1->wlen ^= (u8)(t ^ r_mask);
+	in2->wlen ^= (u8)(t ^ r_mask);
 
 err:
 	return ret;

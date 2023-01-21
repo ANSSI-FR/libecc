@@ -143,49 +143,48 @@ err:
  */
 int prj_pt_is_on_curve(prj_pt_src_t in,  int *on_curve)
 {
-	int ret, iszero, _on_curve;
+	int ret, cmp;
 
-	fp X, Y;
-	fp_src_t dummy_Z;
-	X.magic = Y.magic = WORD(0);
+	/* In order to check that we are on the curve, we
+	 * use the projective formula of the curve:
+	 *
+	 *   Y**2 * Z = X**3 + a * X * Z**2 + b * Z**3
+	 *
+	 */
+	fp X, Y, Z;
+	X.magic = Y.magic = Z.magic = WORD(0);
 
 	ret = prj_pt_check_initialized(in); EG(ret, err);
+	ret = ec_shortw_crv_check_initialized(in->crv); EG(ret, err);
 	MUST_HAVE((on_curve != NULL), ret, err);
 
 	ret = fp_init(&X, in->X.ctx); EG(ret, err);
 	ret = fp_init(&Y, in->X.ctx); EG(ret, err);
+	ret = fp_init(&Z, in->X.ctx); EG(ret, err);
 
-	/* NOTE: use Y as a temporary dummy random variable for
-	 * dummy operations when whe deal with the point at infinity.
-	 */
-	ret = nn_get_random_mod(&(Y.fp_val), &((in->X.ctx)->p)); EG(ret, err);
+	/* Compute X**3 + a * X * Z**2 + b * Z**3 on one side */
+	ret = fp_sqr(&X, &(in->X)); EG(ret, err);
+	ret = fp_mul(&X, &X, &(in->X)); EG(ret, err);
+	ret = fp_mul(&Z, &(in->X), &(in->crv->a)); EG(ret, err);
+	ret = fp_mul(&Y, &(in->crv->b), &(in->Z)); EG(ret, err);
+	ret = fp_add(&Z, &Z, &Y); EG(ret, err);
+	ret = fp_mul(&Z, &Z, &(in->Z)); EG(ret, err);
+	ret = fp_mul(&Z, &Z, &(in->Z)); EG(ret, err);
+	ret = fp_add(&X, &X, &Z); EG(ret, err);
 
-	ret = fp_iszero(&(in->Z), &iszero); EG(ret, err);
+	/* Compute Y**2 * Z on the other side */
+	ret = fp_sqr(&Y, &(in->Y)); EG(ret, err);
+	ret = fp_mul(&Y, &Y, &(in->Z)); EG(ret, err);
 
-	/* Go back to affine and avoid leaking the point
-	 * at infinity. Dummy operations are performed
-	 * tentatively in constant time when we have to
-	 * deal with the point at infinity.
-	 */
-	dummy_Z = iszero ? ((fp_src_t)&Y) : &(in->Z);
+	/* Compare the two values */
+	ret = fp_cmp(&X, &Y, &cmp); EG(ret, err);
 
-	ret = fp_inv(&X, dummy_Z); EG(ret, err);
-
-	ret = fp_mul(&Y, &(in->Y), &X); EG(ret, err);
-	ret = fp_mul(&X, &(in->X), &X); EG(ret, err);
-
-	/* Now check if we satisfy the curve equation */
-	ret = is_on_shortw_curve(&X, &Y, in->crv, &_on_curve);
-
-	if(!ret){
-		(*on_curve) = (iszero | _on_curve);
-	}
+	(*on_curve) = (!cmp);
 
 err:
-	PTR_NULLIFY(dummy_Z);
-
 	fp_uninit(&X);
 	fp_uninit(&Y);
+	fp_uninit(&Z);
 
 	return ret;
 }
@@ -963,7 +962,8 @@ err:
  *  - in1 and in2 are initialized
  *  - in1 and in2 are on the same curve
  *  - in1/in2 and out must not be aliased
- *  - in1 and in2 must not be equal, opposite or have identical value
+ *  - in1 and in2 must not be an "exceptional" pair, i.e. (in1-in2) is not a point
+ *  of order exactly 2
  *
  * The function will initialize 'out'. The function returns 0 on success, -1
  * on error.
@@ -972,6 +972,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int __prj_pt_add_monty_cf(prj_pt_t out,
 							   prj_pt_src_t in1,
 							   prj_pt_src_t in2)
 {
+	int cmp1, cmp2;
 	fp t0, t1, t2, t3, t4, t5;
 	int ret;
 	t0.magic = t1.magic = t2.magic = WORD(0);
@@ -1033,6 +1034,30 @@ ATTRIBUTE_WARN_UNUSED_RET static int __prj_pt_add_monty_cf(prj_pt_t out,
 	ret = fp_mul_monty(&t0, &t3, &t1); EG(ret, err);
 	ret = fp_mul_monty(&out->Z, &t5, &out->Z); EG(ret, err);
 	ret = fp_add_monty(&out->Z, &out->Z, &t0);
+
+	/* Check for "exceptional" pairs of input points with
+	 * checking if Y = Z = 0 as output (see the Bosma-Lenstra
+	 * article "Complete Systems of Two Addition Laws for
+	 * Elliptic Curves"). This should only happen on composite
+	 * order curves (i.e. not on prime order curves).
+	 *
+	 * In this case, we raise an error as the result is
+	 * not sound. This should not happen in our nominal
+	 * cases with regular signature and protocols, and if
+	 * it happens this usually means that bad points have
+	 * been injected.
+	 *
+	 * NOTE: if for some reasons you need to deal with
+	 * all the possible pairs of points including these
+	 * exceptional pairs of inputs with an order 2 difference,
+	 * you should fallback to the incomplete formulas using the
+	 * COMPLETE=0 compilation toggle. Beware that in this
+	 * case, the library will be more sensitive to
+	 * side-channel attacks.
+	 */
+	ret = fp_iszero(&(out->Z), &cmp1); EG(ret, err);
+	ret = fp_iszero(&(out->Y), &cmp2); EG(ret, err);
+	MUST_HAVE(!((cmp1) && (cmp2)), ret, err);
 
 err:
 	fp_uninit(&t0);
@@ -1303,7 +1328,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int _prj_pt_mul_ltr_monty_dbl_add_always(prj_pt
 	nn m_msb_fixed;
 	nn_src_t curve_order;
 	nn curve_order_square;
-	int ret, cmp;
+	int ret, ret_ops, cmp;
 	r.magic = m_msb_fixed.magic = curve_order_square.magic = WORD(0);
 	T[0].magic = T[1].magic = T[2].magic = WORD(0);
 
@@ -1342,6 +1367,11 @@ ATTRIBUTE_WARN_UNUSED_RET static int _prj_pt_mul_ltr_monty_dbl_add_always(prj_pt
 	MUST_HAVE(mlen != 0, ret, err);
 	mlen--;
 
+	/* Hide possible internal failures for double and add
+	 * operations and perform the operation in constant time.
+	 */
+	ret_ops = 0;
+
 	/* Get a random r with the same size of m_msb_fixed */
 	ret = nn_get_random_len(&r, m_msb_fixed.wlen * WORD_BYTES); EG(ret, err);
 
@@ -1378,12 +1408,12 @@ ATTRIBUTE_WARN_UNUSED_RET static int _prj_pt_mul_ltr_monty_dbl_add_always(prj_pt
 		 * addition for doubling, incurring a small performance hit
 		 * for better SCA resistance.
 		 */
-		ret = prj_pt_add(&T[rbit], &T[rbit], &T[rbit]); EG(ret, err);
+		ret_ops |= prj_pt_add(&T[rbit], &T[rbit], &T[rbit]);
 #else
-		ret = prj_pt_dbl(&T[rbit], &T[rbit]); EG(ret, err);
+		ret_ops |= prj_pt_dbl(&T[rbit], &T[rbit]);
 #endif
 		/* Add:  T[1-r[i+1]] = ECADD(T[r[i+1]],T[2]) */
-		ret = prj_pt_add(&T[1-rbit], &T[rbit], &T[2]); EG(ret, err);
+		ret_ops |= prj_pt_add(&T[1-rbit], &T[rbit], &T[2]);
 
 		/*
 		 * T[r[i]] = T[d[i] ^ r[i+1]]
@@ -1398,7 +1428,10 @@ ATTRIBUTE_WARN_UNUSED_RET static int _prj_pt_mul_ltr_monty_dbl_add_always(prj_pt
 		rbit = rbit_next;
 	}
 	/* Output: T[r[0]] */
-	ret = prj_pt_copy(out, &T[rbit]);
+	ret = prj_pt_copy(out, &T[rbit]); EG(ret, err);
+
+	/* Take into consideration our double and add errors */
+	ret |= ret_ops;
 
 err:
 	prj_pt_uninit(&T[0]);
@@ -1420,7 +1453,12 @@ err:
  */
 ATTRIBUTE_WARN_UNUSED_RET static int _prj_pt_mul_ltr_monty_dbl_add_always(prj_pt_t out, nn_src_t m, prj_pt_src_t in)
 {
-	int ret;
+	int ret, ret_ops;
+
+	/* Hide possible internal failures for double and add
+	 * operations and perform the operation in constant time.
+	 */
+	ret_ops = 0;
 
 	/* Blind the input point projective coordinates */
 	ret = _blind_projective_point(out, in); EG(ret, err);
@@ -1499,11 +1537,11 @@ err1:
 				 * addition for doubling, incurring a small performance hit
 				 * for better SCA resistance.
 				 */
-				ret = prj_pt_add(&dbl, out, out); EG(ret, err2);
+				ret_ops |= prj_pt_add(&dbl, out, out);
 #else
-				ret = prj_pt_dbl(&dbl, out); EG(ret, err2);
+				ret_ops |= prj_pt_dbl(&dbl, out);
 #endif
-				ret = prj_pt_add(out, &dbl, in); EG(ret, err2);
+				ret_ops |= prj_pt_add(out, &dbl, in);
 				/* Swap */
 				ret = nn_cnd_swap(!mbit, &(out->X.fp_val), &(dbl.X.fp_val)); EG(ret, err2);
 				ret = nn_cnd_swap(!mbit, &(out->Y.fp_val), &(dbl.Y.fp_val)); EG(ret, err2);
@@ -1518,6 +1556,9 @@ err:
 
 		PTR_NULLIFY(curve_order);
 	}
+
+	/* Take into consideration our double and add errors */
+	ret |= ret_ops;
 
 	return ret;
 }
@@ -1539,7 +1580,7 @@ ATTRIBUTE_WARN_UNUSED_RET static int _prj_pt_mul_ltr_monty_ladder(prj_pt_t out, 
 	nn m_msb_fixed;
 	nn_src_t curve_order;
 	nn curve_order_square;
-	int ret, cmp;
+	int ret, ret_ops, cmp;
 	r.magic = m_msb_fixed.magic = curve_order_square.magic = WORD(0);
 	T[0].magic = T[1].magic = T[2].magic = WORD(0);
 
@@ -1581,6 +1622,11 @@ ATTRIBUTE_WARN_UNUSED_RET static int _prj_pt_mul_ltr_monty_ladder(prj_pt_t out, 
 	MUST_HAVE((mlen != 0), ret, err);
 	mlen--;
 
+	/* Hide possible internal failures for double and add
+	 * operations and perform the operation in constant time.
+	 */
+	ret_ops = 0;
+
 	/* Get a random r with the same size of m_msb_fixed */
 	ret = nn_get_random_len(&r, (u16)(m_msb_fixed.wlen * WORD_BYTES)); EG(ret, err);
 
@@ -1605,9 +1651,9 @@ ATTRIBUTE_WARN_UNUSED_RET static int _prj_pt_mul_ltr_monty_ladder(prj_pt_t out, 
 	 * addition for doubling, incurring a small performance hit
 	 * for better SCA resistance.
 	 */
-	ret = prj_pt_add(&T[1-rbit], &T[rbit], &T[rbit]); EG(ret, err);
+	ret_ops |= prj_pt_add(&T[1-rbit], &T[rbit], &T[rbit]);
 #else
-	ret = prj_pt_dbl(&T[1-rbit], &T[rbit]); EG(ret, err);
+	ret_ops |= prj_pt_dbl(&T[1-rbit], &T[rbit]);
 #endif
 
 	/* Main loop of the Montgomery Ladder */
@@ -1626,13 +1672,13 @@ ATTRIBUTE_WARN_UNUSED_RET static int _prj_pt_mul_ltr_monty_ladder(prj_pt_t out, 
 		 * addition for doubling, incurring a small performance hit
 		 * for better SCA resistance.
 		 */
-		ret = prj_pt_add(&T[2], &T[mbit ^ rbit], &T[mbit ^ rbit]); EG(ret, err);
+		ret_ops |= prj_pt_add(&T[2], &T[mbit ^ rbit], &T[mbit ^ rbit]);
 #else
-		ret = prj_pt_dbl(&T[2], &T[mbit ^ rbit]); EG(ret, err);
+		ret_ops |= prj_pt_dbl(&T[2], &T[mbit ^ rbit]);
 #endif
 
 		/* Add: T[1] = ECADD(T[0],T[1]) */
-		ret = prj_pt_add(&T[1], &T[0], &T[1]); EG(ret, err);
+		ret_ops |= prj_pt_add(&T[1], &T[0], &T[1]);
 
 		/* T[0] = T[2-(d[i] ^ r[i])] */
 		/*
@@ -1655,7 +1701,10 @@ ATTRIBUTE_WARN_UNUSED_RET static int _prj_pt_mul_ltr_monty_ladder(prj_pt_t out, 
 		rbit = rbit_next;
 	}
 	/* Output: T[r[0]] */
-	ret = prj_pt_copy(out, &T[rbit]);
+	ret = prj_pt_copy(out, &T[rbit]); EG(ret, err);
+
+	/* Take into consideration our double and add errors */
+	ret |= ret_ops;
 
 err:
 	prj_pt_uninit(&T[0]);
