@@ -4,6 +4,8 @@
 [![python](https://github.com/ANSSI-FR/libecc/actions/workflows/libecc_python_tests.yml/badge.svg?branch=master)](https://github.com/ANSSI-FR/libecc/actions/workflows/libecc_python_tests.yml)
 [![examples](https://github.com/ANSSI-FR/libecc/actions/workflows/libecc_examples.yml/badge.svg?branch=master)](https://github.com/ANSSI-FR/libecc/actions/workflows/libecc_examples.yml)
 
+**This project has been archived as of version v0.9.6.**
+The new upstream repository is [here](https://github.com/libecc/libecc.git): https://github.com/libecc/libecc.git.
 
 # libecc project
 
